@@ -1,0 +1,2037 @@
+// Microsoft Visual C++ generated resource script.
+//
+#pragma code_page(65001)
+
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+icon                    ICON                    "astrlog1.ico"
+
+icon2                   ICON                    "astrlog2.ico"
+
+icon3                   ICON                    "astrlog3.ico"
+
+icon4                   ICON                    "astrlog4.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+menu MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open Chart...\tAlt+o",       cmdOpenChart
+        MENUITEM "Open Chart #&2...\tAlt+O",    cmdOpenChart2
+        MENUITEM SEPARATOR
+        MENUITEM "&Save Chart Info...\tAlt+w",  cmdSaveChart
+        MENUITEM "Save Chart &Positions...\tAlt+W", cmdSavePositions
+        MENUITEM SEPARATOR
+        MENUITEM "Save Chart &Text Output...\tCtrl+5", cmdSaveText
+        MENUITEM "Save Chart &Bitmap...\tCtrl+6", cmdSaveBitmap
+        MENUITEM "Save Chart Pi&cture...\tCtrl+7", cmdSavePicture
+        MENUITEM "Save Chart P&ostScript...\tCtrl+8", cmdSavePS
+        MENUITEM "Save Chart Wire&frame...\tCtrl+-", cmdSaveWire
+        MENUITEM SEPARATOR
+        MENUITEM "Save Settin&gs...\tCtrl+9",   cmdSaveSettings
+        POPUP "Save As &Wallpaper"
+        BEGIN
+            MENUITEM "&Tile Bitmap\tCtrl+Alt+t",    cmdSaveWallTile
+            MENUITEM "&Center Bitmap\tCtrl+Alt+c",  cmdSaveWallCenter
+            MENUITEM "&Stretch Bitmap\tCtrl+Alt+s", cmdSaveWallStretch
+            MENUITEM "&Fit Bitmap\tCtrl+Alt+f",     cmdSaveWallFit
+            MENUITEM "Fi&ll Bitmap\tCtrl+Alt+l",    cmdSaveWallFill
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "P&rint...\tCtrl+p",           cmdPrint
+        MENUITEM "Pr&int Setup...\tCtrl+q",     cmdPrintSetup
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tEsc",                  cmdFileExit
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "Enter Command &Line...\tReturn", cmdCommand
+        MENUITEM SEPARATOR
+        POPUP "Run Macro (&Normal Set)"
+        BEGIN
+            MENUITEM "Macro &1\tF1",                cmdMacro01
+            MENUITEM "Macro &2\tF2",                cmdMacro02
+            MENUITEM "Macro &3\tF3",                cmdMacro03
+            MENUITEM "Macro &4\tF4",                cmdMacro04
+            MENUITEM "Macro &5\tF5",                cmdMacro05
+            MENUITEM "Macro &6\tF6",                cmdMacro06
+            MENUITEM "Macro &7\tF7",                cmdMacro07
+            MENUITEM "Macro &8\tF8",                cmdMacro08
+            MENUITEM "Macro &9\tF9",                cmdMacro09
+            MENUITEM "Macro 1&0\tF10",              cmdMacro10
+            MENUITEM "&Macro 11\tF11",              cmdMacro11
+            MENUITEM "M&acro 12\tF12",              cmdMacro12
+        END
+        POPUP "Run Macro (&Shift Set)"
+        BEGIN
+            MENUITEM "Macro 1&3\tShift+F1",         cmdMacro13
+            MENUITEM "Macro 1&4\tShift+F2",         cmdMacro14
+            MENUITEM "Macro 1&5\tShift+F3",         cmdMacro15
+            MENUITEM "Macro 1&6\tShift+F4",         cmdMacro16
+            MENUITEM "Macro 1&7\tShift+F5",         cmdMacro17
+            MENUITEM "Macro 1&8\tShift+F6",         cmdMacro18
+            MENUITEM "Macro 1&9\tShift+F7",         cmdMacro19
+            MENUITEM "Macro 2&0\tShift+F8",         cmdMacro20
+            MENUITEM "Macro 2&1\tShift+F9",         cmdMacro21
+            MENUITEM "Macro 2&2\tShift+F10",        cmdMacro22
+            MENUITEM "&Macro 23\tShift+F11",        cmdMacro23
+            MENUITEM "M&acro 24\tShift+F12",        cmdMacro24
+        END
+        POPUP "Run Macro (&Control Set)"
+        BEGIN
+            MENUITEM "Macro 2&5\tCtrl+F1",          cmdMacro25
+            MENUITEM "Macro 2&6\tCtrl+F2",          cmdMacro26
+            MENUITEM "Macro 2&7\tCtrl+F3",          cmdMacro27
+            MENUITEM "Macro 2&8\tCtrl+F4",          cmdMacro28
+            MENUITEM "Macro 2&9\tCtrl+F5",          cmdMacro29
+            MENUITEM "Macro 3&0\tCtrl+F6",          cmdMacro30
+            MENUITEM "Macro 3&1\tCtrl+F7",          cmdMacro31
+            MENUITEM "Macro 3&2\tCtrl+F8",          cmdMacro32
+            MENUITEM "Macro 3&3\tCtrl+F9",          cmdMacro33
+            MENUITEM "Macro 3&4\tCtrl+F10",         cmdMacro34
+            MENUITEM "&Macro 35\tCtrl+F11",         cmdMacro35
+            MENUITEM "M&acro 36\tCtrl+F12",         cmdMacro36
+        END
+        POPUP "Run Macro (&Alt Set)"
+        BEGIN
+            MENUITEM "Macro 3&7\tAlt+F1",           cmdMacro37
+            MENUITEM "Macro 3&8\tAlt+F2",           cmdMacro38
+            MENUITEM "Macro 3&9\tAlt+F3",           cmdMacro39
+            MENUITEM "Macro 4&0\tAlt+F4",           cmdMacro40
+            MENUITEM "Macro 4&1\tAlt+F5",           cmdMacro41
+            MENUITEM "Macro 4&2\tAlt+F6",           cmdMacro42
+            MENUITEM "Macro 4&3\tAlt+F7",           cmdMacro43
+            MENUITEM "Macro 4&4\tAlt+F8",           cmdMacro44
+            MENUITEM "Macro 4&5\tAlt+F9",           cmdMacro45
+            MENUITEM "Macro 4&6\tAlt+F10",          cmdMacro46
+            MENUITEM "&Macro 47\tAlt+F11",          cmdMacro47
+            MENUITEM "M&acro 48\tAlt+F12",          cmdMacro48
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Copy Chart &Text Output\tCtrl+%", cmdCopyText
+        MENUITEM "Copy Chart &Bitmap\tCtrl+^",  cmdCopyBitmap
+        MENUITEM "Copy Chart &Picture\tCtrl+&&", cmdCopyPicture
+        MENUITEM "Copy Chart P&ostScript\tCtrl+*", cmdCopyPS
+        MENUITEM "Copy Chart &Wireframe\tCtrl+_", cmdCopyWire
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "Show &Graphics\tv",           cmdGraphics
+        POPUP "&Window Settings"
+        BEGIN
+            MENUITEM "&Buffer Redraws\tTab",        cmdWinBuffer
+            MENUITEM "&Redraw Screen\tSpace",       cmdWinRedraw
+            MENUITEM "&Clear Screen\tDel",          cmdWinClear
+            MENUITEM "&Hourglass On Redraw\tAlt+u", cmdWinHourglass
+            MENUITEM SEPARATOR
+            MENUITEM "Ch&art Resizes Window\tAlt+Q", cmdChartResizesWindow
+            MENUITEM "&Window Resizes Chart\tAlt+q", cmdWindowResizesChart
+            MENUITEM "Si&ze Chart To Window\tB",    cmdSizeChartToWindow
+            MENUITEM "&Size Window To Chart\tAlt+U", cmdSizeWindowToChart
+            MENUITEM "Size Window &Full Screen\tShift+Tab", cmdSizeWindowFull
+            MENUITEM SEPARATOR
+            MENUITEM "Scroll Page &Up\tPgUp",       cmdScrollPageUp
+            MENUITEM "Scroll Page &Down\tPgDn",     cmdScrollPageDown
+            MENUITEM "Scroll &To Beginning\tHome",  cmdScrollHome
+            MENUITEM "Scroll To &End\tEnd",         cmdScrollEnd
+        END
+        MENUITEM "&Colored Text\tAlt+k",        cmdColoredText
+        MENUITEM "&Set Colors...\tAlt+K",       cmdColor
+        MENUITEM SEPARATOR
+        MENUITEM "Show &Interpretations\tAlt+I", cmdInterpret
+        MENUITEM "Print &Nearest Second\tAlt+b", cmdSecond
+        MENUITEM "&Parallel Aspects\tAlt+x",    cmdParallel
+        MENUITEM "&Applying Aspects\tAlt+X",    cmdApplying
+    END
+    POPUP "&Info"
+    BEGIN
+        MENUITEM "Set Chart &Info...\tAlt+z",   cmdSetInfo
+        MENUITEM "Chart For &Now\tn",           cmdNow
+        MENUITEM "D&efault Chart Info...\tAlt+d", cmdDefaultInfo
+        MENUITEM SEPARATOR
+        MENUITEM "Set Chart #&2 Info...\tAlt+Z", cmdSetInfo2
+        MENUITEM "Charts #&3 And #4...\tCtrl+Z", cmdSetInfoAll
+        MENUITEM SEPARATOR
+        MENUITEM "No &Relationship Chart\tc",   cmdRelNo
+        MENUITEM "Com&parison Chart\tc",        cmdRelComparison
+        MENUITEM "&Synastry Chart\tAlt+y",      cmdRelSynastry
+        MENUITEM "&Composite Chart\tAlt+Y",     cmdRelComposite
+        MENUITEM "Time Space &Midpoint Chart\tAlt+M", cmdRelMidpoint
+        MENUITEM SEPARATOR
+        MENUITEM "Date &Difference Chart\tD",   cmdRelDate
+        MENUITEM "&Biorhythm Chart\tY",         cmdRelBiorhythm
+        MENUITEM "&Transit And Natal\tAlt+N",   cmdRelTransit
+        MENUITEM "&Progressed And Natal\tAlt+D", cmdRelProgressed
+    END
+    POPUP "&Setting"
+    BEGIN
+        MENUITEM "&Sidereal Zodiac\ts",         cmdSidereal
+        MENUITEM "He&liocentric\th",            cmdHeliocentric
+        POPUP "&House System"
+        BEGIN
+            MENUITEM "&Placidus\tCtrl+P",           cmdHouse00
+            MENUITEM "&Koch\tCtrl+K",               cmdHouse01
+            MENUITEM "&Campanus\tCtrl+C",           cmdHouse03
+            MENUITEM "&Regiomontanus\tCtrl+R",      cmdHouse05
+            MENUITEM "&Topocentric\tCtrl+T",        cmdHouse08
+            MENUITEM "&Alcabitius\tCtrl+A",         cmdHouse09
+            MENUITEM "Kr&usinski\tCtrl+S",          cmdHouse10
+            MENUITEM "A&.P.C.\tCtrl+X",             cmdHouse18
+            MENUITEM SEPARATOR
+            MENUITEM "Porph&yry\tCtrl+Y",           cmdHouse06
+            MENUITEM "Pullen (S.Rati&o)\tCtrl+O",   cmdHouse12
+            MENUITEM "Pullen (S.&Delta)\tCtrl+D",   cmdHouse13
+            MENUITEM SEPARATOR
+            MENUITEM "&Meridian\tCtrl+M",           cmdHouse04
+            MENUITEM "Morinu&s\tCtrl+U",            cmdHouse07
+            MENUITEM "&Horizon\tCtrl+H",            cmdHouse17
+            MENUITEM "Carter& P.Equat.\tCtrl+G",    cmdHouse19
+            MENUITEM "Sunshine\tCtrl+&J",           cmdHouse20
+            MENUITEM "Sr&ipati\tCtrl+I",            cmdHouse16
+            MENUITEM SEPARATOR
+            MENUITEM "&Equal\tCtrl+E",              cmdHouse02
+            MENUITEM "E&qual (MC)\tCtrl+Q",         cmdHouse11
+            MENUITEM "&Whole\tCtrl+W",              cmdHouse14
+            MENUITEM "&Vedic\tCtrl+V",              cmdHouse15
+            MENUITEM "&Null\tCtrl+N",               cmdHouse21
+        END
+        POPUP "House S&ettings"
+        BEGIN
+            MENUITEM "&Solar Chart\tAlt+1",         cmdHouseSetSolar
+            MENUITEM "&3D Houses\ta",               cmdHouseSet3D
+            MENUITEM "Show &Decans\tg",             cmdHouseSetDecan
+            MENUITEM "Show D&wads\tCtrl+w",         cmdHouseSetDwad
+            MENUITEM "&Flip Signs With Houses\tf",  cmdHouseSetFlip
+            MENUITEM "&Geodetic Houses\tAlt+H",     cmdHouseSetGeodetic
+            MENUITEM SEPARATOR
+            MENUITEM "&Vedic Wheel Display\tz",     cmdHouseSetVedic
+            MENUITEM "Show &Navamsas\ty",           cmdHouseSetNavamsa
+        END
+        MENUITEM "&Aspect Settings...\tAlt+A",  cmdAspect
+        MENUITEM "&Object Settings...\tAlt+j",  cmdObject
+        MENUITEM "More Ob&ject Settings...\tAlt+J", cmdObject2
+        MENUITEM SEPARATOR
+        MENUITEM "&Restrictions...\tAlt+r",     cmdRes
+        MENUITEM "Star Restr&ictions...\tAlt+F", cmdStar
+        MENUITEM "Include &Minors\tR",          cmdResMinor
+        MENUITEM "Include &Cusps\tC",           cmdResCusp
+        MENUITEM "Include &Uranians\tu",        cmdResUranian
+        MENUITEM "Include &Fixed Stars\tU",     cmdResStar
+        MENUITEM "&Transit Restrictions...\tAlt+R", cmdResTransit
+        MENUITEM SEPARATOR
+        MENUITEM "Calculation Settin&gs...\tAlt+S", cmdSettingCalc
+        MENUITEM "&Display Settings...\tAlt+B", cmdDisplay
+    END
+    POPUP "&Chart"
+    BEGIN
+        MENUITEM "Standard Radi&x\tV",          cmdChartList
+        MENUITEM "House &Wheel\tAlt+V",         cmdChartWheel
+        MENUITEM "Aspect Midpoint &Grid\tA",    cmdChartGrid
+        MENUITEM "&Aspect List\tAlt+l",         cmdChartAspect
+        MENUITEM "&Midpoint List\tAlt+m",       cmdChartMidpoint
+        MENUITEM "Local Hori&zon\tZ",           cmdChartHorizon
+        MENUITEM "Solar System &Orbit\tS",      cmdChartOrbit
+        MENUITEM "Ga&uquelin Sectors\tM",       cmdChartSector
+        MENUITEM "&Calendar\tK",                cmdChartCalendar
+        MENUITEM "Inf&luence\tJ",               cmdChartInfluence
+        MENUITEM "Esoter&ic\tAlt+7",            cmdChartEsoteric
+        MENUITEM "Astro-Grap&h\tL",             cmdChartAstroGraph
+        MENUITEM "&Ephemeris\tE",               cmdChartEphemeris
+        MENUITEM "A&rabic Parts\tAlt+p",        cmdChartArabic
+        MENUITEM "Risi&ng And Setting\tAlt+L",  cmdChartRising
+        MENUITEM SEPARATOR
+        MENUITEM "&Transits...\tAlt+T",         cmdTransit
+        MENUITEM "&Progressions...\tAlt+P",     cmdProgress
+        MENUITEM SEPARATOR
+        MENUITEM "Chart &Settings...\tAlt+C",   cmdChartSettings
+    END
+    POPUP "&Graphics"
+    BEGIN
+        MENUITEM "Draw Chart Sp&here\tX",       cmdChartSphere
+        MENUITEM "Draw &World Map\tW",          cmdChartMap
+        MENUITEM "Draw &Globe\tG",              cmdChartGlobe
+        MENUITEM "Draw &Polar Globe\tP",        cmdChartPolar
+        POPUP "Show Map &Effects"
+        BEGIN
+            MENUITEM "Show &Constellations\tF",     cmdConstellation
+            MENUITEM "Show All &Stars\tCtrl+s",     cmdGraphicsAllStar
+            MENUITEM "Show &House Details\td",      cmdGraphicsHouse
+            MENUITEM "Show &Equator\te",            cmdGraphicsEquator
+            MENUITEM "Show C&ities\tCtrl+c",        cmdGraphicsCity
+            MENUITEM "Show &Glyphs On Aspect Lines\tk", cmdGraphicsAspect
+            MENUITEM "Use Ecliptic &Axis\tCtrl+x",  cmdGraphicsAxis
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "&Reverse Background\tx",      cmdGraphicsReverse
+        MENUITEM "&Monochrome\tm",              cmdGraphicsMonochrome
+        MENUITEM "Show &Border\tb",             cmdGraphicsBorder
+        MENUITEM "Show Chart &Info\tt",         cmdGraphicsText
+        MENUITEM "Show I&nfo Sidebar\tAlt+t",   cmdGraphicsSidebar
+        MENUITEM "Show Glyph &Labels\tl",       cmdGraphicsLabel
+        MENUITEM "S&quare Screen\tQ",           cmdGraphicsSquare
+        POPUP "Character &Scale"
+        BEGIN
+            MENUITEM "&Small\tCtrl+1",              cmdScale1
+            MENUITEM "&Medium\tCtrl+2",             cmdScale2
+            MENUITEM "&Large\tCtrl+3",              cmdScale3
+            MENUITEM "&Huge\tCtrl+4",               cmdScale4
+            MENUITEM SEPARATOR
+            MENUITEM "&Decrease\t<",                cmdScaleDecrease
+            MENUITEM "&Increase\t>",                cmdScaleIncrease
+        END
+        POPUP "Globe &Tilt"
+        BEGIN
+            MENUITEM "Set Tilt to &Zero\tAlt+E",    cmdTiltZero
+            MENUITEM SEPARATOR
+            MENUITEM "Tilt &North\t[",              cmdTiltNorth
+            MENUITEM "Tilt &South\t]",              cmdTiltSouth
+            MENUITEM SEPARATOR
+            MENUITEM "Rotate &West\t{",             cmdRotateWest
+            MENUITEM "Rotate &East\t}",             cmdRotateEast
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Modify &Display\ti",          cmdGraphicsModify
+        MENUITEM "Modif&y Chart\t0",            cmdChartModify
+        POPUP "Scribb&le Color"
+        BEGIN
+            MENUITEM "Blac&k\tCtrl+z",              cmdPen00
+            MENUITEM "&White\tCtrl+a",              cmdPen15
+            MENUITEM "&Red\tCtrl+r",                cmdPen09
+            MENUITEM "&Green\tCtrl+g",              cmdPen10
+            MENUITEM "&Blue\tCtrl+b",               cmdPen12
+            MENUITEM "&Yellow\tCtrl+y",             cmdPen11
+            MENUITEM "&Magenta\tCtrl+v",            cmdPen13
+            MENUITEM "&Cyan\tCtrl+j",               cmdPen14
+            MENUITEM "Gr&ay\tCtrl+d",               cmdPen08
+            MENUITEM "&Lt. Gray\tCtrl+l",           cmdPen07
+            MENUITEM "Maroo&n\tCtrl+e",             cmdPen01
+            MENUITEM "Dk. Gr&een\tCtrl+f",          cmdPen02
+            MENUITEM "Dk. Bl&ue\tCtrl+n",           cmdPen04
+            MENUITEM "&Orange\tCtrl+o",             cmdPen03
+            MENUITEM "&Purple\tCtrl+u",             cmdPen05
+            MENUITEM "&Dk. Cyan\tCtrl+k",           cmdPen06
+        END
+        MENUITEM "&Graphics Settings...\tAlt+G", cmdSettingGraphics
+    END
+    POPUP "&Animate"
+    BEGIN
+        MENUITEM "Do &Animation\tN",            cmdAnimateNo
+        POPUP "&Jump Rate"
+        BEGIN
+            MENUITEM "Update To &Now\tAlt+n",       cmdAnimateNow
+            MENUITEM SEPARATOR
+            MENUITEM "&Seconds\t!",                 cmdAnimateNo1
+            MENUITEM "&Minutes\t@",                 cmdAnimateNo2
+            MENUITEM "&Hours\t#",                   cmdAnimateNo3
+            MENUITEM "&Days\t$",                    cmdAnimateNo4
+            MENUITEM "M&onths\t%",                  cmdAnimateNo5
+            MENUITEM "&Years\t^",                   cmdAnimateNo6
+            MENUITEM "&Decades\t&&",                cmdAnimateNo7
+            MENUITEM "&Centuries\t*",               cmdAnimateNo8
+            MENUITEM "Mi&llennia\t(",               cmdAnimateNo9
+        END
+        POPUP "Jump &Factor"
+        BEGIN
+            MENUITEM "&One Unit\t1",                cmdAnimateF1
+            MENUITEM "&Two Units\t2",               cmdAnimateF2
+            MENUITEM "T&hree Units\t3",             cmdAnimateF3
+            MENUITEM "&Four Units\t4",              cmdAnimateF4
+            MENUITEM "Fi&ve Units\t5",              cmdAnimateF5
+            MENUITEM "Si&x Units\t6",               cmdAnimateF6
+            MENUITEM "&Seven Units\t7",             cmdAnimateF7
+            MENUITEM "&Eight Units\t8",             cmdAnimateF8
+            MENUITEM "&Nine Units\t9",              cmdAnimateF9
+        END
+        MENUITEM "&Reverse Direction\tr",       cmdAnimateReverse
+        MENUITEM "&Pause Animation\tp",         cmdAnimatePause
+        MENUITEM "&Timed Exposure\tj",          cmdTimedExposure
+        MENUITEM SEPARATOR
+        MENUITEM "Step &Forward\t+",            cmdStepForward
+        MENUITEM "Step &Backward\t-",           cmdStepBackward
+        MENUITEM "&Store Chart Info\to",        cmdStore
+        MENUITEM "Re&call Chart Info\tO",       cmdRecall
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Open &Documentation\tCtrl+h", cmdDocHelpfile
+        POPUP "&More Documentation"
+        BEGIN
+            MENUITEM "Open &Defaults\tCtrl+(",      cmdDocDefault
+            MENUITEM SEPARATOR
+            MENUITEM "&Open Documentation\t)",      cmdDocHelpfile
+            MENUITEM "Open &Changes\tCtrl+!",       cmdDocUpdate
+            MENUITEM "Open &License\tCtrl+@",       cmdDocLicense
+            MENUITEM SEPARATOR
+            MENUITEM "Open &Website\tCtrl+#",       cmdDocWebsite
+            MENUITEM "Open Website &Mirror\tCtrl+$", cmdDocWebsite2
+        END
+        POPUP "&Setup"
+        BEGIN
+            MENUITEM "Create Program Group (&User)\tCtrl+Alt+g", cmdSetupUser
+            MENUITEM "Create Program Group (&All)\tCtrl+Alt+a", cmdSetupAll
+            MENUITEM "Create &Desktop Icon\tCtrl+Alt+d", cmdSetupDesktop
+            MENUITEM "Install File &Extensions\tCtrl+Alt+x", cmdSetupExtension
+            MENUITEM SEPARATOR
+            MENUITEM "Uninstall File E&xtensions\tCtrl+Alt+u", cmdUnsetup
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "List Si&gns\tAlt+2",          cmdHelpSign
+        MENUITEM "List &Objects\tAlt+3",        cmdHelpObject
+        MENUITEM "List Aspec&ts\tAlt+4",        cmdHelpAspect
+        MENUITEM "List &Constellations\tAlt+5", cmdHelpConstellation
+        MENUITEM "List &Planet Info\tAlt+6",    cmdHelpPlanetInfo
+        MENUITEM "List &Rays\tAlt+&&",          cmdHelpRay
+        MENUITEM "List &General Meanings\tI",   cmdHelpMeaning
+        MENUITEM "List S&witches\tAlt+8",       cmdHelpSwitch
+        MENUITEM "List O&bscure Switches\tAlt+9", cmdHelpObscure
+        MENUITEM "List &Keystrokes\t?",         cmdHelpKeystroke
+        MENUITEM "List Cr&edits\tCtrl+0",       cmdHelpCredit
+        MENUITEM SEPARATOR
+        MENUITEM "&About Astrolog...\tAlt+0",   cmdHelpAbout
+    END
+END
+
+menuV MENU
+BEGIN
+    POPUP "Wheel"
+    BEGIN
+        MENUITEM "Draw &Houses Same Size\t0",   cmdChartModify
+        MENUITEM "Position Planets Based On &3D Houses\ta", cmdHouseSet3D
+        MENUITEM "&Vedic Sign Arrangement\tz",  cmdHouseSetVedic
+        MENUITEM SEPARATOR
+        MENUITEM "Show &Aspect Lines\te",       cmdGraphicsEquator
+        MENUITEM "Aspect Lines Show &Glyphs\tk", cmdGraphicsAspect
+        MENUITEM "Aspect Lines Dotted Based On Max &Orb\ti", cmdGraphicsModify
+        MENUITEM "Show Big Planet &Dots\td",    cmdGraphicsHouse
+    END
+END
+
+menuA MENU
+BEGIN
+    POPUP "Grid"
+    BEGIN
+        MENUITEM "&Parallel Aspects\tAlt+x",    cmdParallel
+        MENUITEM "&Applying Aspects\tAlt+X",    cmdApplying
+        MENUITEM SEPARATOR
+        MENUITEM "&Transpose Grid\ti",          cmdGraphicsModify
+        MENUITEM "&Highlight Main Diagonal\tk", cmdGraphicsAspect
+    END
+END
+
+menuZ MENU
+BEGIN
+    POPUP "Horizon"
+    BEGIN
+        MENUITEM "Use &Polar Projection\t0",    cmdChartModify
+        MENUITEM SEPARATOR
+        MENUITEM "Show Sign &Boundaries\tz",    cmdHouseSetVedic
+        MENUITEM "Show &House Boundaries\td",   cmdGraphicsHouse
+        MENUITEM "House Boundaries Are &3D\ta", cmdHouseSet3D
+        MENUITEM SEPARATOR
+        MENUITEM "Show Earth's &Equator\te",    cmdGraphicsEquator
+        MENUITEM "Show All &Stars\tCtrl+s",     cmdGraphicsAllStar
+        MENUITEM "Show Planet &Glyphs\tl",      cmdGraphicsLabel
+        MENUITEM "Show Big Planet &Dots\ti",    cmdGraphicsModify
+        MENUITEM "Use Ecliptic &Axis\tCtrl+x",  cmdGraphicsAxis
+    END
+END
+
+menuS MENU
+BEGIN
+    POPUP "Orbit"
+    BEGIN
+        MENUITEM "&Logarithmic Distances\ta",   cmdHouseSet3D
+        MENUITEM "Show All &Stars\tCtrl+s",     cmdGraphicsAllStar
+        MENUITEM SEPARATOR
+        MENUITEM "Show Sign &Boundaries\td",    cmdGraphicsHouse
+        MENUITEM "Show &Aspect Lines\te",       cmdGraphicsEquator
+        MENUITEM "Aspect Lines Show Gl&yphs\tk", cmdGraphicsAspect
+        MENUITEM "Show Planet &Glyphs\tl",      cmdGraphicsLabel
+        MENUITEM "Show Big Planet &Dots\ti",    cmdGraphicsModify
+    END
+END
+
+menuM MENU
+BEGIN
+    POPUP "Sector"
+    BEGIN
+        MENUITEM "Show &Aspect Lines\te",       cmdGraphicsEquator
+        MENUITEM "Aspect Lines Show &Glyphs\tk", cmdGraphicsAspect
+        MENUITEM "Aspect Lines Dotted Based On Max &Orb\ti", cmdGraphicsModify
+        MENUITEM "Show Big Planet &Dots\td",    cmdGraphicsHouse
+    END
+END
+
+menuK MENU
+BEGIN
+    POPUP "Calendar"
+    BEGIN
+        MENUITEM "Show Entire &Year\t0",        cmdChartModify
+        MENUITEM "Show &Transits Within Days\tk", cmdGraphicsAspect
+        MENUITEM SEPARATOR
+        MENUITEM "&Center Date Numbers\ti",     cmdGraphicsModify
+        MENUITEM "&Justify Date Numbers\tt",    cmdGraphicsText
+        MENUITEM "Highlight Current &Date\tl",  cmdGraphicsLabel
+    END
+END
+
+menuJ MENU
+BEGIN
+    POPUP "Influence"
+    BEGIN
+        MENUITEM "&Circle Final Dispositors\ti", cmdGraphicsModify
+        MENUITEM "&Planets Arranged Clockwise\tz", cmdHouseSetVedic
+        MENUITEM "Sun At &Top Of Wheels\td",    cmdGraphicsHouse
+    END
+END
+
+menu7 MENU
+BEGIN
+    POPUP "Esoteric"
+    BEGIN
+        MENUITEM "Show Entire &Year\t0",        cmdChartModify
+        MENUITEM "Year Plots Every &Day\tAlt+b", cmdSecond
+        MENUITEM SEPARATOR
+        MENUITEM "Ray Powers Are &Slice Not Count\ti", cmdGraphicsModify
+        MENUITEM "Highlight &Current Date\tl",  cmdGraphicsLabel
+        MENUITEM "Show &Horizontal Lines\te",   cmdGraphicsEquator
+    END
+END
+
+menuL MENU
+BEGIN
+    POPUP "Astro-Graph"
+    BEGIN
+        MENUITEM "Show &3D Astro-Graph\ta",     cmdHouseSet3D
+        MENUITEM "Show Latitude &Crossing\t0",  cmdChartModify
+        MENUITEM "Only Show &Midheaven Lines\ti", cmdGraphicsModify
+    END
+END
+
+menuE MENU
+BEGIN
+    POPUP "Ephemeris"
+    BEGIN
+        MENUITEM "Show Entire &Year\t0",        cmdChartModify
+        MENUITEM "Year Plots Every &Day\tAlt+b", cmdSecond
+        MENUITEM "Plot Vertical &Latitudes\tAlt+x", cmdParallel
+        MENUITEM SEPARATOR
+        MENUITEM "Don't Show &Moon\ti",         cmdGraphicsModify
+        MENUITEM "Highlight &Current Date\tl",  cmdGraphicsLabel
+        MENUITEM "Show &Horizontal Lines\te",   cmdGraphicsEquator
+    END
+END
+
+menuD MENU
+BEGIN
+    POPUP "Transits"
+    BEGIN
+        MENUITEM "Show &All Aspects\t0",        cmdChartModify
+        MENUITEM "Highlight Chart &Time\ti",    cmdGraphicsModify
+    END
+END
+
+menuX MENU
+BEGIN
+    POPUP "Sphere"
+    BEGIN
+        MENUITEM "Show &Other Half Of Sphere\t0", cmdChartModify
+        MENUITEM "Show Just Half Of S&phere\ti", cmdGraphicsModify
+        MENUITEM SEPARATOR
+        MENUITEM "Show Sign &Boundaries\tz",    cmdHouseSetVedic
+        MENUITEM "Show &House Boundaries\td",   cmdGraphicsHouse
+        MENUITEM "House Boundaries Are &3D\ta", cmdHouseSet3D
+        MENUITEM SEPARATOR
+        MENUITEM "Aspect Lines Show &Glyphs\tk", cmdGraphicsAspect
+        MENUITEM "Show Earth's &Equator\te",    cmdGraphicsEquator
+        MENUITEM "Show &Constellations\tF",     cmdConstellation
+        MENUITEM "Show All &Stars\tCtrl+s",     cmdGraphicsAllStar
+        MENUITEM "Use Ecliptic &Axis\tCtrl+x",  cmdGraphicsAxis
+    END
+END
+
+menuG MENU
+BEGIN
+    POPUP "Globe"
+    BEGIN
+        MENUITEM "Show Astro-Graph &Lines\ti",  cmdGraphicsModify
+        MENUITEM "Show &Constellations\tF",     cmdConstellation
+        MENUITEM SEPARATOR
+        MENUITEM "Show Sign &Boundaries\td",    cmdGraphicsHouse
+        MENUITEM "Show &Equator\te",            cmdGraphicsEquator
+        MENUITEM "Show All &Stars\tCtrl+s",     cmdGraphicsAllStar
+        MENUITEM "Use Ecliptic &Axis\tCtrl+x",  cmdGraphicsAxis
+        MENUITEM SEPARATOR
+        MENUITEM "Show C&ities From Atlas\tCtrl+c", cmdGraphicsCity
+        MENUITEM "C&ities Colored By Country\tk", cmdGraphicsAspect
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+dlgInfo DIALOGEX 32, 32, 393, 158
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Enter Chart Info"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,105,105,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,105,85,50,14
+    COMBOBOX        dcInMon,45,5,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInDay,45,20,55,70,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInYea,45,35,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInTim,45,50,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInDst,45,65,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInZon,45,80,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInLon,45,95,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInLat,45,110,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        deInNam,45,125,110,13,ES_AUTOHSCROLL
+    EDITTEXT        deInLoc,45,140,110,13,ES_AUTOHSCROLL
+    PUSHBUTTON      "&Now",dbInNow,105,5,50,14
+    PUSHBUTTON      "&Previous",dbInSet,105,25,50,14
+    PUSHBUTTON      "Lookup &City",dbInCity,174,12,44,14
+    PUSHBUTTON      "Near&by Cities",dbInCoor,224,12,48,14
+    PUSHBUTTON      "&Time Changes",dbInChan,278,12,52,14
+    PUSHBUTTON      "&Apply Info",dbInAppl,342,12,42,14
+    LISTBOX         dlIn,174,30,210,118,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Month",IDC_STATIC,5,5,35,8
+    LTEXT           "Day",IDC_STATIC,5,20,35,8
+    LTEXT           "Year",IDC_STATIC,5,35,35,8
+    LTEXT           "Time",IDC_STATIC,5,50,35,8
+    LTEXT           "Daylight Saving?",IDC_STATIC,5,63,35,20
+    LTEXT           "Time Zone",IDC_STATIC,5,85,35,8
+    LTEXT           "Longitude",IDC_STATIC,5,100,35,8
+    LTEXT           "Latitude",IDC_STATIC,5,115,35,8
+    LTEXT           "Name",IDC_STATIC,5,130,35,8
+    LTEXT           "Location",IDC_STATIC,5,145,35,8
+    GROUPBOX        "Atlas Lookups",IDC_STATIC,168,1,222,153
+    ICON            icon2,IDC_STATIC,120,55,21,20
+END
+
+dlgAbout DIALOG 32, 32, 268, 238
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About Astrolog"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,208,218,50,14
+    LTEXT           "",ds1,32,4,132,8
+    LTEXT           "",ds2,32,12,132,8
+    LTEXT           "By Walter D. Pullen (Astara@msn.com)",IDC_STATIC,32,24,132,8
+    LTEXT           "Astrolog Website: http://www.astrolog.org/astrolog.htm",IDC_STATIC,32,32,240,8
+    LTEXT           "Astrolog Website mirror: http://www.magitech.com/astrolog/astrolog.htm",IDC_STATIC,32,40,240,8
+    LTEXT           "Main ephemeris databases and calculation routines are from the library",IDC_STATIC,32,52,240,8
+    LTEXT           "'Swiss Ephemeris' by Astrodienst AG, subject to license for Swiss",IDC_STATIC,32,60,240,8
+    LTEXT           "Ephemeris Free Edition at http://www.astro.com/swisseph. Old 'Placalc'",IDC_STATIC,32,68,240,8
+    LTEXT           "library and formulas are by Alois Treindl, also from Astrodienst AG.",IDC_STATIC,32,76,240,8
+    LTEXT           "Original planetary calculation formulas were converted from",IDC_STATIC,32,88,240,8
+    LTEXT           "routines by James Neely, as listed in 'Manual of Computer Programming",IDC_STATIC,32,96,230,9
+    LTEXT           "for Astrologers' by Michael Erlewine, available from Matrix Software.",IDC_STATIC,32,104,240,8
+    LTEXT           "Atlas list of city locations from GeoNames: https://www.geonames.org/",IDC_STATIC,32,116,240,8
+    LTEXT           "Timezone and Daylight Saving Time date changes converted from",IDC_STATIC,32,124,240,8
+    LTEXT           "TZ database: https://data.iana.org/time-zones/tz-link.html",IDC_STATIC,32,132,240,8
+    LTEXT           "PostScript graphics routines by Brian D. Willoughby.",IDC_STATIC,32,144,240,8
+    LTEXT           "IMPORTANT: Astrolog is free software. You can distribute and/or modify",IDC_STATIC,32,156,240,8
+    LTEXT           "it under the terms of the GNU General Public License, as described at",IDC_STATIC,32,164,240,8
+    LTEXT           "http://www.gnu.org and in the license.htm file included with the",IDC_STATIC,32,172,240,8
+    LTEXT           "program. Astrolog is distributed without any warranty expressed or",IDC_STATIC,32,180,240,8
+    LTEXT           "implied of any kind. These license and copyright notices must not be",IDC_STATIC,32,188,240,8
+    LTEXT           "changed or removed by any user or editor of the program.",IDC_STATIC,32,196,240,8
+    LTEXT           "Special thanks to all those unmentioned, seen and",IDC_STATIC,32,208,170,8
+    LTEXT           "unseen, who have pointed out problems, suggested",IDC_STATIC,32,216,170,8
+    LTEXT           "features, and sent many positive vibes! :-)",IDC_STATIC,32,224,170,8
+    ICON            icon,IDC_STATIC,5,5,18,20
+    ICON            icon2,IDC_STATIC,175,5,18,20
+    ICON            icon3,IDC_STATIC,205,5,18,20
+    ICON            icon4,IDC_STATIC,235,5,18,20
+END
+
+dlgCommand DIALOGEX 32, 32, 143, 62
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Enter Command Line"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,90,42,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,36,42,50,14
+    EDITTEXT        deCo,30,15,110,13,ES_AUTOHSCROLL
+    CONTROL         "Enable Astro&Expression hooks",dxCo_e,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,30,30,108,10
+    LTEXT           "Enter all command switches below:",IDC_STATIC,30,5,110,8
+    ICON            icon3,IDC_STATIC,5,15,21,20
+END
+
+dlgAspect DIALOGEX 32, 32, 422, 166
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Aspect Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,370,150,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,315,150,50,14
+    CONTROL         "&Conjunction",dxa01,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,15,63,10
+    CONTROL         "&Opposition",dxa02,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,30,63,10
+    CONTROL         "&Square",dxa03,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,45,63,10
+    CONTROL         "&Trine",dxa04,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,60,63,10
+    CONTROL         "Se&xtile",dxa05,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,75,63,10
+    CONTROL         "&Inconjunct",dxa06,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,90,63,10
+    CONTROL         "S&emisextile",dxa07,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,105,63,10
+    CONTROL         "Semisquare",dxa08,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,120,63,10
+    CONTROL         "Sesquiquadrate",dxa09,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,135,63,10
+    CONTROL         "&Quintile",dxa10,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,15,55,10
+    CONTROL         "&Biquintile",dxa11,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,30,55,10
+    CONTROL         "Semiquintile",dxa12,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,45,55,10
+    CONTROL         "Se&ptile",dxa13,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,60,55,10
+    CONTROL         "&Novile",dxa14,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,75,55,10
+    CONTROL         "Binovile",dxa15,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,90,55,10
+    CONTROL         "Biseptile",dxa16,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,105,55,10
+    CONTROL         "Triseptile",dxa17,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,120,55,10
+    CONTROL         "Quatronovile",dxa18,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,220,135,55,10
+    EDITTEXT        deo01,70,15,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo02,70,30,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo03,70,45,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo04,70,60,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo05,70,75,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo06,70,90,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo07,70,105,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo08,70,120,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo09,70,135,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo10,275,15,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo11,275,30,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo12,275,45,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo13,275,60,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo14,275,75,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo15,275,90,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo16,275,105,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo17,275,120,25,12,ES_AUTOHSCROLL
+    EDITTEXT        deo18,275,135,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dea01,100,15,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea02,100,30,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea03,100,45,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea04,100,60,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea05,100,75,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea06,100,90,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea07,100,105,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea08,100,120,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea09,100,135,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea10,305,15,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea11,305,30,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea12,305,45,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea13,305,60,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea14,305,75,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea15,305,90,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea16,305,105,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea17,305,120,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dea18,305,135,30,12,ES_AUTOHSCROLL
+    EDITTEXT        dei01,135,15,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei02,135,30,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei03,135,45,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei04,135,60,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei05,135,75,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei06,135,90,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei07,135,105,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei08,135,120,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei09,135,135,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei10,340,15,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei11,340,30,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei12,340,45,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei13,340,60,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei14,340,75,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei15,340,90,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei16,340,105,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei17,340,120,25,12,ES_AUTOHSCROLL
+    EDITTEXT        dei18,340,135,25,12,ES_AUTOHSCROLL
+    COMBOBOX        dck01,165,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck02,165,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck03,165,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck04,165,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck05,165,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck06,165,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck07,165,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck08,165,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck09,165,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck10,370,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck11,370,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck12,370,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck13,370,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck14,370,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck15,370,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck16,370,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck17,370,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck18,370,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Restrict All",dbAs_RA0,5,150,50,14
+    PUSHBUTTON      "&Unrestrict All",dbAs_RA1,60,150,50,14
+    PUSHBUTTON      "Toggle &Majors",dbAs_RA,115,150,50,14
+    LTEXT           "Angle",IDC_STATIC,101,5,24,8
+    LTEXT           "Orb",IDC_STATIC,70,5,25,8
+    LTEXT           "Influence",IDC_STATIC,130,5,35,8
+    LTEXT           "Color",IDC_STATIC,165,5,35,8
+    LTEXT           "Angle",IDC_STATIC,307,5,23,8
+    LTEXT           "Orb",IDC_STATIC,275,5,25,8
+    LTEXT           "Influence",IDC_STATIC,335,5,35,8
+    LTEXT           "Color",IDC_STATIC,370,5,35,8
+    ICON            icon2,IDC_STATIC,235,145,21,20
+END
+
+dlgColor DIALOGEX 32, 32, 351, 156
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Customize Colors"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,295,135,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,240,135,50,14
+    COMBOBOX        dck00,40,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck01,40,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck02,40,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck03,40,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck04,40,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck05,40,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck06,40,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck07,40,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck08,130,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck09,130,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck10,130,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck11,130,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck12,130,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck13,130,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck14,130,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck15,130,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dce0,215,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dce1,215,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dce2,295,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dce3,295,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr1,215,65,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr2,215,80,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr3,215,95,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr4,295,65,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr5,295,80,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr6,295,95,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcr7,295,110,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Black",IDC_STATIC,10,15,25,8
+    LTEXT           "White",IDC_STATIC,10,30,25,8
+    LTEXT           "Red",IDC_STATIC,10,45,25,8
+    LTEXT           "Green",IDC_STATIC,10,60,25,8
+    LTEXT           "Blue",IDC_STATIC,10,75,25,8
+    LTEXT           "Yellow",IDC_STATIC,10,90,25,8
+    LTEXT           "Magenta",IDC_STATIC,10,105,30,8
+    LTEXT           "Cyan",IDC_STATIC,10,120,25,8
+    LTEXT           "Gray",IDC_STATIC,95,15,25,8
+    LTEXT           "Lt. Gray",IDC_STATIC,95,30,30,8
+    LTEXT           "Maroon",IDC_STATIC,95,45,25,8
+    LTEXT           "Dk. Green",IDC_STATIC,95,60,33,8
+    LTEXT           "Dk. Blue",IDC_STATIC,95,75,30,8
+    LTEXT           "Orange",IDC_STATIC,95,90,25,8
+    LTEXT           "Purple",IDC_STATIC,95,105,25,8
+    LTEXT           "Dk. Cyan",IDC_STATIC,95,120,30,8
+    LTEXT           "Fire",IDC_STATIC,195,15,20,8
+    LTEXT           "Earth",IDC_STATIC,195,30,20,8
+    LTEXT           "Air",IDC_STATIC,270,15,20,8
+    LTEXT           "Water",IDC_STATIC,270,30,20,8
+    LTEXT           "1st",IDC_STATIC,195,65,20,8
+    LTEXT           "2nd",IDC_STATIC,195,80,20,8
+    LTEXT           "3rd",IDC_STATIC,195,95,20,8
+    LTEXT           "4th",IDC_STATIC,275,65,15,8
+    LTEXT           "5th",IDC_STATIC,275,80,15,8
+    LTEXT           "6th",IDC_STATIC,275,95,15,8
+    LTEXT           "7th",IDC_STATIC,275,110,15,8
+    GROUPBOX        "Standard Color Palette",IDC_STATIC,5,5,180,135
+    GROUPBOX        "Elements",IDC_STATIC,190,5,160,45
+    GROUPBOX        "Seven Rays",IDC_STATIC,190,55,160,75
+    ICON            icon3,IDC_STATIC,200,135,21,20
+END
+
+dlgRestrict DIALOG 32, 32, 311, 148
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Object Restrictions"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,255,130,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,255,110,50,14
+    CONTROL         "&Earth",dx01,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,10,40,10
+    CONTROL         "&Sun",dx02,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,20,40,10
+    CONTROL         "M&oon",dx03,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,30,40,10
+    CONTROL         "Mercur&y",dx04,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,40,40,10
+    CONTROL         "&Venus",dx05,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,50,40,10
+    CONTROL         "&Mars",dx06,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,60,40,10
+    CONTROL         "&Jupiter",dx07,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,70,40,10
+    CONTROL         "Sa&turn",dx08,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,80,40,10
+    CONTROL         "Ur&anus",dx09,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,90,40,10
+    CONTROL         "&Neptune",dx10,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,100,40,10
+    CONTROL         "&Pluto",dx11,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,110,40,10
+    CONTROL         "&Chiron",dx12,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,10,60,10
+    CONTROL         "Ceres",dx13,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,20,60,10
+    CONTROL         "Pallas Athena",dx14,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,30,60,10
+    CONTROL         "Juno",dx15,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,40,60,10
+    CONTROL         "Vesta",dx16,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,50,60,10
+    CONTROL         "North Node",dx17,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,60,60,10
+    CONTROL         "South Node",dx18,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,70,60,10
+    CONTROL         "Lilith",dx19,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,80,60,10
+    CONTROL         "Part of Fortune",dx20,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,90,60,10
+    CONTROL         "Vertex",dx21,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,100,60,10
+    CONTROL         "East Point",dx22,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,110,60,10
+    CONTROL         "Ascendant",dx23,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,10,52,10
+    CONTROL         "&2nd Cusp",dx24,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,20,52,10
+    CONTROL         "&3rd Cusp",dx25,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,30,52,10
+    CONTROL         "Nadir",dx26,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,40,52,10
+    CONTROL         "&5th Cusp",dx27,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,50,52,10
+    CONTROL         "&6th Cusp",dx28,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,60,52,10
+    CONTROL         "&Descendant",dx29,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,70,52,10
+    CONTROL         "&8th Cusp",dx30,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,80,52,10
+    CONTROL         "&9th Cusp",dx31,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,90,52,10
+    CONTROL         "Mid&heaven",dx32,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,100,52,10
+    CONTROL         "&11th Cusp",dx33,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,110,52,10
+    CONTROL         "12th Cusp",dx34,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,120,52,10
+    CONTROL         "Vu&lcan",dx35,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,10,42,10
+    CONTROL         "Cupido",dx36,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,20,42,10
+    CONTROL         "Hades",dx37,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,30,42,10
+    CONTROL         "Zeus",dx38,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,40,42,10
+    CONTROL         "Kronos",dx39,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,50,42,10
+    CONTROL         "Apollon",dx40,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,60,42,10
+    CONTROL         "Admetos",dx41,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,70,42,10
+    CONTROL         "Vulkanus",dx42,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,80,42,10
+    CONTROL         "Poseidon",dx43,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,205,90,42,10
+    PUSHBUTTON      "&Restrict All",dbRe_R0,255,5,50,14
+    PUSHBUTTON      "&Unrestrict All",dbRe_R1,255,20,50,14
+    PUSHBUTTON      "Toggle Minors",dbRe_R,255,45,50,14
+    PUSHBUTTON      "Toggle Cusps",dbRe_RC,255,60,50,14
+    PUSHBUTTON      "Toggle Uran.",dbRe_Ru,255,75,50,14
+    PUSHBUTTON      "Copy &From Transit Restriction Set",dbRT,5,130,125,14
+    GROUPBOX        "Planets",IDC_STATIC,5,0,50,125
+    GROUPBOX        "Minor Objects",IDC_STATIC,60,0,70,125
+    GROUPBOX        "Houses",IDC_STATIC,135,0,60,135
+    GROUPBOX        "Uranians",IDC_STATIC,200,0,50,105
+    ICON            icon2,IDC_STATIC,215,120,18,20
+END
+
+dlgDefault DIALOGEX 32, 32, 393, 130
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Default Info"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,105,75,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,105,55,50,14
+    COMBOBOX        dcDeDst,45,5,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeZon,45,20,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeCor,45,35,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeLon,45,50,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeLat,45,65,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeElv,45,80,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        deDeNam,45,95,110,13,ES_AUTOHSCROLL
+    EDITTEXT        deDeLoc,45,110,110,13,ES_AUTOHSCROLL
+    LTEXT           "Daylight?",IDC_STATIC,5,5,35,8
+    LTEXT           "Time Zone",IDC_STATIC,5,20,35,8
+    LTEXT           "Correction For Now",IDC_STATIC,5,33,35,20
+    LTEXT           "Longitude",IDC_STATIC,5,55,35,8
+    LTEXT           "Latitude",IDC_STATIC,5,70,35,8
+    LTEXT           "Elevation",IDC_STATIC,5,85,35,8
+    LTEXT           "Name",IDC_STATIC,5,100,35,8
+    LTEXT           "Location",IDC_STATIC,5,115,35,8
+    ICON            icon2,IDC_STATIC,120,15,20,20
+    PUSHBUTTON      "Lookup &City",dbInCity,174,11,44,14
+    PUSHBUTTON      "Near&by Cities",dbInCoor,224,11,48,14
+    PUSHBUTTON      "&Time Changes",dbInChan,278,11,52,14
+    PUSHBUTTON      "&Apply Info",dbInAppl,342,11,42,14
+    LISTBOX         dlIn,174,29,210,91,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Atlas Lookups",IDC_STATIC,168,0,222,126
+END
+
+dlgProgress DIALOGEX 32, 32, 172, 181
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Progressions"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,115,160,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,115,140,50,14
+    CONTROL         "Do &Progression",dxPr_p,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,85,10
+    CONTROL         "&Secondary (Calculated Cusps)",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,10,30,110,10
+    CONTROL         "Secondary (Solar Arc &Cusps)",dr03,"Button",BS_AUTORADIOBUTTON,10,40,110,10
+    CONTROL         "Solar &Arc",dr02,"Button",BS_AUTORADIOBUTTON,10,50,115,10
+    COMBOBOX        dcPr_pd,70,60,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcPr_pC,70,75,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcPrMon,50,110,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcPrDay,50,125,55,65,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcPrYea,50,140,55,110,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcPrTim,50,155,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Now",dbPr_pn,115,120,50,14
+    LTEXT           "Month",IDC_STATIC,10,110,35,8
+    LTEXT           "Day",IDC_STATIC,10,125,35,8
+    LTEXT           "Year",IDC_STATIC,10,140,35,8
+    LTEXT           "Time",IDC_STATIC,10,155,35,8
+    LTEXT           "Degrees Per Day",IDC_STATIC,10,60,55,8
+    LTEXT           "Cusp Move Ratio",IDC_STATIC,10,75,56,8
+    GROUPBOX        "Progression Type",IDC_STATIC,5,20,125,75
+    GROUPBOX        "Progressed Chart Info",IDC_STATIC,5,100,105,75
+    ICON            icon2,IDC_STATIC,140,50,21,20
+END
+
+dlgTransit DIALOGEX 32, 32, 229, 186
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Transits"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,170,165,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,170,145,50,14
+    CONTROL         "N&one",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,10,15,104,10
+    CONTROL         "Transit To Transit &Times",dr02,"Button",BS_AUTORADIOBUTTON,10,27,104,10
+    CONTROL         "Transit To Transit &Influence",dr03,"Button",BS_AUTORADIOBUTTON,10,37,104,10
+    CONTROL         "Transit To Transit &Graph",dr04,"Button",BS_AUTORADIOBUTTON,10,47,104,10
+    CONTROL         "Transit To N&atal Times",dr05,"Button",BS_AUTORADIOBUTTON,10,60,104,10
+    CONTROL         "Transit To Natal In&fluence",dr06,"Button",BS_AUTORADIOBUTTON,10,70,104,10
+    CONTROL         "Transit To Nata&l Graph",dr07,"Button",BS_AUTORADIOBUTTON,10,80,104,10
+    COMBOBOX        dcTrMon,50,115,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcTrDay,50,130,55,65,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcTrYea,50,145,55,110,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcTrTim,50,160,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Given &Day",dr08,"Button",BS_AUTORADIOBUTTON | WS_GROUP,131,15,65,10
+    CONTROL         "Given &Month",dr09,"Button",BS_AUTORADIOBUTTON,131,25,65,10
+    CONTROL         "Given &Year",dr10,"Button",BS_AUTORADIOBUTTON,131,35,65,10
+    CONTROL         "&Range Of Years",dr11,"Button",BS_AUTORADIOBUTTON,131,45,65,10
+    EDITTEXT        deTr_tY,185,55,30,13,ES_AUTOHSCROLL
+    CONTROL         "&Progress Instead Of Transit",dxTr_p,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,75,105,10
+    CONTROL         "Display Transit R&eturns Only",dxTr_r,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,85,105,10
+    CONTROL         "Grap&hs Include All Planets",dxTr_g,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,95,105,10
+    EDITTEXT        deTr_d,190,105,30,13,ES_AUTOHSCROLL
+    PUSHBUTTON      "&Now",dbTr_tn,170,125,50,14
+    LTEXT           "Month",IDC_STATIC,10,115,35,8
+    LTEXT           "Day",IDC_STATIC,10,130,35,8
+    LTEXT           "Year",IDC_STATIC,10,145,35,8
+    LTEXT           "Time",IDC_STATIC,10,160,35,8
+    LTEXT           "Years To Span:",IDC_STATIC,131,55,50,8
+    LTEXT           "Searching Divisions:",IDC_STATIC,120,105,70,8
+    GROUPBOX        "Transit Type",IDC_STATIC,5,5,110,90
+    GROUPBOX        "Transit To Natal Info",IDC_STATIC,5,100,105,80
+    GROUPBOX        "Times And Graph Cover",IDC_STATIC,125,5,95,65
+    ICON            icon2,IDC_STATIC,130,135,20,20
+END
+
+dlgCalc DIALOGEX 32, 32, 202, 196
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Calculation Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,145,175,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,145,155,50,14
+    COMBOBOX        dcSe_b,95,5,100,60,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcSe_s,95,20,100,60,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        deSe_h,65,35,40,13,ES_AUTOHSCROLL
+    EDITTEXT        deSe_x,85,50,20,13,ES_AUTOHSCROLL
+    EDITTEXT        deSe_4,85,65,20,13,ES_AUTOHSCROLL
+    CONTROL         "Compute Solar System Bar&ycenter Instead Of Sun",dxSe_Yh,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,80,180,10
+    CONTROL         "Compute True N&ode Instead Of Mean Node",dxSe_Yn,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,90,180,10
+    CONTROL         "&Cusp Objects Are House Positions Instead Of Angles",dxSe_Yc0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,100,180,10
+    CONTROL         "Sidereal Zodiac Relative To Plane Of So&lar System",dxSe_ys,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,110,180,10
+    CONTROL         "&None",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,10,130,35,10
+    CONTROL         "Object On &Ascendant",dr02,"Button",BS_AUTORADIOBUTTON,10,140,90,10
+    CONTROL         "Object On &Midheaven",dr03,"Button",BS_AUTORADIOBUTTON,10,149,90,10
+    EDITTEXT        deSe_1,65,160,40,13,ES_AUTOHSCROLL
+    CONTROL         "Use &Start Of Planet's Sign",dxSe_10,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,175,95,10
+    CONTROL         "&Equatorial Latitudes",dxSe_sr0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,40,80,10
+    CONTROL         "E&quatorial Longitudes",dxSe_sr,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,50,80,10
+    CONTROL         "&True Space Positions",dxSe_yt,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,60,80,10
+    CONTROL         "To&pocentric Positions",dxSe_yv,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,70,80,10
+    CONTROL         "&3D Houses",dxSe_c3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,122,80,10
+    CONTROL         "3&D Aspects",dxSe_A3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,132,80,10
+    CONTROL         "3D Or&bs",dxSe_Ap,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,142,80,10
+    LTEXT           "Calculation Method:",IDC_STATIC,5,5,85,8
+    LTEXT           "Zodiac Offset / Ayanamsa:",IDC_STATIC,5,20,85,8
+    LTEXT           "Central Planet:",IDC_STATIC,5,35,60,8
+    LTEXT           "Harmonic Chart Factor:",IDC_STATIC,5,50,80,8
+    LTEXT           "Dwad Nesting Level:",IDC_STATIC,5,65,80,8
+    LTEXT           "Use This Planet:",IDC_STATIC,10,160,55,8
+    GROUPBOX        "Solar Chart Setting",IDC_STATIC,5,120,105,70
+    ICON            icon3,IDC_STATIC,116,161,21,20
+END
+
+dlgChart DIALOGEX 32, 32, 266, 206
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Chart Setting Details"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,210,185,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,210,165,50,14
+    CONTROL         "Text Listing &Velocities Relative To Average Speed",dxCh_v0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,180,10
+    EDITTEXT        deCh_w,90,15,25,13,ES_AUTOHSCROLL
+    CONTROL         "Text House &Wheel Reverses Object Order",dxCh_w0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,30,175,10
+    CONTROL         "Text Aspect &Grid Shows Aspect Configurations",dxCh_g0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,40,175,10
+    CONTROL         "&Relationship Aspect Grid Shows Midpoints Instead",dxCh_gm,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,50,175,10
+    CONTROL         "Text &Aspect List Shows Aspect Summary",dxCh_a0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,60,175,10
+    CONTROL         "Text &Midpoint List Shows Midpoint Summary",dxCh_m0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,70,175,10
+    CONTROL         "Text Midpoint List Includes Aspects &To Midpoints",dxCh_ma,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,80,175,10
+    CONTROL         "Hori&zon Chart Displays With Polar Center",dxCh_Z0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,90,175,10
+    CONTROL         "&Sector Chart Approximated With Placidus Cusps",dxCh_l,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,100,175,10
+    CONTROL         "&Calendar Is For Entire Year",dxCh_Ky,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,110,175,10
+    CONTROL         "Text &Influence Chart Shows Sign Influences Too",dxCh_j0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,120,175,10
+    EDITTEXT        deCh_L,125,130,25,13,ES_AUTOHSCROLL
+    CONTROL         "Text Astro-Graph Shows &Latitude Crossings",dxCh_L0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,145,175,10
+    CONTROL         "Ephemeris Is For Entire Year",dxCh_Ey,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,155,160,10
+    EDITTEXT        deCh_P,125,166,25,13,ES_AUTOHSCROLL
+    CONTROL         "Display Arabic &Part Formulas With Terms Reversed",dxCh_P0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,180,175,10
+    EDITTEXT        deCh_Yb,140,190,25,13,ES_AUTOHSCROLL
+    CONTROL         "Default",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,190,15,60,10
+    CONTROL         "By Azimuth",dr02,"Button",BS_AUTORADIOBUTTON,190,25,60,10
+    CONTROL         "By Altitude",dr03,"Button",BS_AUTORADIOBUTTON,190,35,60,10
+    CONTROL         "By Name",dr04,"Button",BS_AUTORADIOBUTTON,190,45,60,10
+    CONTROL         "By Brightness",dr05,"Button",BS_AUTORADIOBUTTON,190,55,60,10
+    CONTROL         "By Distance",dr06,"Button",BS_AUTORADIOBUTTON,190,65,60,10
+    CONTROL         "By Velocity",dr07,"Button",BS_AUTORADIOBUTTON,190,75,60,10
+    CONTROL         "Default",dr08,"Button",BS_AUTORADIOBUTTON | WS_GROUP,190,105,50,10
+    CONTROL         "By Position",dr09,"Button",BS_AUTORADIOBUTTON,190,115,50,10
+    CONTROL         "By Name",dr10,"Button",BS_AUTORADIOBUTTON,190,125,50,10
+    CONTROL         "By Formula",dr11,"Button",BS_AUTORADIOBUTTON,190,135,50,10
+    LTEXT           "Text House Wheel Rows:",IDC_STATIC,5,15,82,8
+    LTEXT           "Text Astro-Graph Degree Step Rate:",IDC_STATIC,5,130,120,8
+    LTEXT           "Number of Arabic Parts To Display:",IDC_STATIC,5,165,120,8
+    LTEXT           "Number Of Days Biorhythm Chart Covers:",IDC_STATIC,5,190,130,8
+    GROUPBOX        "Fixed Star Ordering",IDC_STATIC,185,5,75,85
+    GROUPBOX        "Arabic Part Ordering",IDC_STATIC,185,95,75,55
+    ICON            icon3,IDC_STATIC,170,155,21,20
+END
+
+dlgDisplay DIALOGEX 32, 32, 272, 226
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Display Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,215,205,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,160,205,50,14
+    CONTROL         "Round Positions To &Nearest Unit Instead Of Crop",dxDi_Yr,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,175,10
+    CONTROL         "Display &Dates In D/M/Y Instead Of M/D/Y Format",dxDi_Yd,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,15,175,10
+    CONTROL         "Display &Times In 24 Hour Instead Of am/pm Format",dxDi_Yt,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,25,175,10
+    CONTROL         "Display &Lengths In Metric Instead Of Imperial Format",dxDi_Yv,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,35,175,10
+    CONTROL         "Ignore Insignificant House &Cusp Aspects",dxDi_YC,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,45,175,10
+    CONTROL         "Clip Text Charts At Rightmost (e.g. &80th) Column",dxDi_Y8,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,55,175,10
+    CONTROL         "Restrict &Sign Change Events In Searches",dxDi_YR0_s,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,65,175,10
+    CONTROL         "Restrict Di&rection Change Events In Searches",dxDi_YR0_d,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,75,175,10
+    EDITTEXT        deDi_RO,115,85,45,13,ES_AUTOHSCROLL
+    CONTROL         "&Export Text And Print In Intuitive Manner",dxDi_YO,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,100,155,10
+    CONTROL         "E&xport Text Files In HTML Format",dxDi_kh,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,110,155,10
+    CONTROL         "&Output Chart Data Files In Old Style Format",dxDi_Yo,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,120,155,10
+    CONTROL         "Use Real System &Fonts In Graphic Charts",dxDi_YXf,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,131,155,10
+    EDITTEXT        deDi_YXp0_x,115,145,25,13,ES_AUTOHSCROLL
+    EDITTEXT        deDi_YXp0_y,115,161,25,13,ES_AUTOHSCROLL
+    CONTROL         "&Portrait",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,10,185,105,10
+    CONTROL         "&Landscape",dr02,"Button",BS_AUTORADIOBUTTON,10,195,105,10
+    CONTROL         "&Based On Chart Dimensions",dr03,"Button",BS_AUTORADIOBUTTON,10,205,105,10
+    CONTROL         "&Zodiac Position",dr04,"Button",BS_AUTORADIOBUTTON | WS_GROUP,191,10,65,10
+    CONTROL         "&Hours && Minutes",dr05,"Button",BS_AUTORADIOBUTTON,191,20,65,10
+    CONTROL         "&360 Degrees",dr06,"Button",BS_AUTORADIOBUTTON,191,30,65,10
+    CONTROL         "Standard",dxDi_r0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,190,55,65,10
+    CONTROL         "Esoteric",dxDi_r1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,190,65,65,10
+    CONTROL         "Hierarchical",dxDi_r2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,190,75,65,10
+    CONTROL         "Exaltations",dxDi_r3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,190,85,65,10
+    CONTROL         "Ray Rulerships",dxDi_r4,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,190,95,65,10
+    CONTROL         "Sho&w Eclipse Information",dxDi_Yu,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,168,144,96,10
+    CONTROL         "Rising",dxDi_z0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,155,166,35,10
+    CONTROL         "Setting",dxDi_z2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,155,176,35,10
+    CONTROL         "Zenith Crossing",dxDi_z1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,195,166,65,10
+    CONTROL         "Nadir Crossing",dxDi_z3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,195,176,65,10
+    EDITTEXT        deDi_A,243,114,20,13,ES_AUTOHSCROLL
+    EDITTEXT        deDi_I,243,129,20,13,ES_AUTOHSCROLL
+    LTEXT           "Required Object For Aspects:",IDC_STATIC,5,85,100,8
+    LTEXT           "Horizontal PostScript Paper Size:",IDC_STATIC,5,145,110,8
+    LTEXT           "Vertical PostScript Paper Size:",IDC_STATIC,5,161,110,8
+    LTEXT           "Aspects To Consider:",IDC_STATIC,168,114,70,8
+    LTEXT           "Text Columns:",IDC_STATIC,168,129,70,8
+    GROUPBOX        "PostScript Paper Orientation",IDC_STATIC,5,175,115,45
+    GROUPBOX        "Display Format",IDC_STATIC,185,0,80,45
+    GROUPBOX        "Rulership Restrictions",IDC_STATIC,185,45,80,65
+    GROUPBOX        "Rising And Setting Restrictions",IDC_STATIC,150,156,115,35
+    ICON            icon3,IDC_STATIC,130,195,20,20
+END
+
+dlgGraphics DIALOGEX 32, 32, 237, 226
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Graphics Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,185,205,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,185,185,50,14
+    EDITTEXT        deGr_Xw_x,80,5,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deGr_Xw_y,80,20,30,13,ES_AUTOHSCROLL
+    COMBOBOX        dcGr_Xs,60,35,30,50,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcGr_XS,135,35,30,50,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Ensure S&quare Charts Remain Square",dxGr_XQ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,50,140,10
+    EDITTEXT        deGr_YXg,140,60,25,13,ES_AUTOHSCROLL
+    EDITTEXT        deGr_XW,115,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deGr_XG,115,90,30,13,ES_AUTOHSCROLL
+    CONTROL         "Globe Halves Focus On &South Hemisphere",dxGr_XP0,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,105,160,10
+    CONTROL         "&World Map In Mollewide Projection",dxGr_XW0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,115,125,10
+    EDITTEXT        deGr_WN,90,125,30,13,ES_AUTOHSCROLL
+    CONTROL         "Animate &Map Instead Of Time",dxGr_XN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,140,125,10
+    CONTROL         "Don't &Automatically Redraw Screen",dxGr_Wn,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,150,125,10
+    CONTROL         "&None",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,10,170,35,10
+    CONTROL         "Object At &Left Edge",dr02,"Button",BS_AUTORADIOBUTTON,10,180,85,10
+    CONTROL         "Object At &Top Edge",dr03,"Button",BS_AUTORADIOBUTTON,10,190,85,10
+    EDITTEXT        deGr_X1,65,200,35,13,ES_AUTOHSCROLL
+    CONTROL         "American",dr04,"Button",BS_AUTORADIOBUTTON | WS_GROUP,175,10,50,10
+    CONTROL         "European",dr05,"Button",BS_AUTORADIOBUTTON,175,20,50,10
+    CONTROL         "Herschel's",dr06,"Button",BS_AUTORADIOBUTTON | WS_GROUP,175,45,50,10
+    CONTROL         "Astronomical",dr07,"Button",BS_AUTORADIOBUTTON,175,55,53,10
+    CONTROL         "Astrological",dr08,"Button",BS_AUTORADIOBUTTON | WS_GROUP,175,80,50,10
+    CONTROL         "Astronomical",dr09,"Button",BS_AUTORADIOBUTTON,175,90,53,10
+    CONTROL         "Esoteric",dr10,"Button",BS_AUTORADIOBUTTON,175,100,53,10
+    CONTROL         "American",dr11,"Button",BS_AUTORADIOBUTTON | WS_GROUP,175,125,50,10
+    CONTROL         "European",dr12,"Button",BS_AUTORADIOBUTTON,175,135,50,10
+    CONTROL         "None",dr13,"Button",BS_AUTORADIOBUTTON | WS_GROUP,115,170,55,10
+    CONTROL         "Spider Web",dr14,"Button",BS_AUTORADIOBUTTON,115,180,55,10
+    CONTROL         "Moire Pattern",dr15,"Button",BS_AUTORADIOBUTTON,115,190,55,10
+    EDITTEXT        deGr_YXv,150,200,25,13,ES_AUTOHSCROLL
+    LTEXT           "Horizontal Chart Size:",IDC_STATIC,5,5,70,8
+    LTEXT           "Vertical Chart Size:",IDC_STATIC,5,20,70,8
+    LTEXT           "Character Scale:",IDC_STATIC,5,35,53,8
+    LTEXT           "Text Scale:",IDC_STATIC,95,35,40,8
+    LTEXT           "Number Of Cells In Graphics Aspect Grid:",IDC_STATIC,5,60,130,8
+    LTEXT           "Horizontal Map Degree Rotation:",IDC_STATIC,5,75,108,8
+    LTEXT           "Vertical Globe Degree Tilt:",IDC_STATIC,5,90,105,8
+    LTEXT           "Animation Delay In Msec:",IDC_STATIC,5,125,80,8
+    LTEXT           "Use This Planet:",IDC_STATIC,10,200,55,8
+    LTEXT           "Coverage:",IDC_STATIC,115,200,33,8
+    GROUPBOX        "Wheel Chart Rotation",IDC_STATIC,5,160,100,60
+    GROUPBOX        "Capricorn Glyph",IDC_STATIC,170,0,65,35
+    GROUPBOX        "Uranus Glyph",IDC_STATIC,170,35,65,35
+    GROUPBOX        "Pluto Glyph",IDC_STATIC,170,70,65,45
+    GROUPBOX        "Lilith Glyph",IDC_STATIC,170,115,65,35
+    GROUPBOX        "Wheel Corners",IDC_STATIC,110,160,70,60
+    ICON            icon2,IDC_STATIC,200,160,21,20
+END
+
+dlgStar DIALOG 32, 32, 297, 130
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Fixed Star Restrictions"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,240,110,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,240,90,50,14
+    CONTROL         "Achernar",dx01,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,55,10
+    CONTROL         "Polaris",dx02,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,15,55,10
+    CONTROL         "&Zeta Reticuli",dx03,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,25,55,10
+    CONTROL         "&Pleiades",dx04,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,35,55,10
+    CONTROL         "Aldeberan",dx05,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,45,55,10
+    CONTROL         "Capella",dx06,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,55,55,10
+    CONTROL         "Rigel",dx07,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,65,55,10
+    CONTROL         "Bellatrix",dx08,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,75,55,10
+    CONTROL         "Alnath",dx09,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,85,55,10
+    CONTROL         "&Orion",dx10,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,95,55,10
+    CONTROL         "&Betelgeuse",dx11,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,105,55,10
+    CONTROL         "Menkalinan",dx12,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,115,55,10
+    CONTROL         "Murzim",dx13,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,5,50,10
+    CONTROL         "Canopus",dx14,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,15,50,10
+    CONTROL         "Alhena",dx15,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,25,50,10
+    CONTROL         "&Sirius",dx16,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,35,50,10
+    CONTROL         "Adara",dx17,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,45,50,10
+    CONTROL         "Wezen",dx18,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,55,50,10
+    CONTROL         "Castor",dx19,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,65,50,10
+    CONTROL         "Procyon",dx20,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,75,50,10
+    CONTROL         "Pollux",dx21,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,85,50,10
+    CONTROL         "Suhail",dx22,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,95,50,10
+    CONTROL         "Avior",dx23,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,105,50,10
+    CONTROL         "Miaplacidus",dx24,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,65,115,50,10
+    CONTROL         "Alphard",dx25,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,5,55,10
+    CONTROL         "Regulus",dx26,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,15,55,10
+    CONTROL         "Dubhe",dx27,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,25,55,10
+    CONTROL         "Acrux",dx28,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,35,55,10
+    CONTROL         "Gacrux",dx29,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,45,55,10
+    CONTROL         "Becrux",dx30,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,55,55,10
+    CONTROL         "Alioth",dx31,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,65,55,10
+    CONTROL         "Spica",dx32,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,75,55,10
+    CONTROL         "Alkaid",dx33,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,85,55,10
+    CONTROL         "Agena",dx34,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,95,55,10
+    CONTROL         "Arcturus",dx35,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,105,55,10
+    CONTROL         "Rigil Kentaurus",dx36,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,115,65,10
+    CONTROL         "Antares",dx37,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,5,60,10
+    CONTROL         "Shaula",dx38,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,15,60,10
+    CONTROL         "Sargas",dx39,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,25,60,10
+    CONTROL         "Kaus Australis",dx40,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,35,60,10
+    CONTROL         "&Vega",dx41,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,45,60,10
+    CONTROL         "Altair",dx42,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,55,60,10
+    CONTROL         "Peacock",dx43,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,65,60,10
+    CONTROL         "Deneb",dx44,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,75,60,10
+    CONTROL         "Alnair",dx45,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,85,60,10
+    CONTROL         "Fomalhaut",dx46,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,95,60,10
+    CONTROL         "&Andromeda",dx47,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,175,105,60,10
+    PUSHBUTTON      "&Restrict All",dbSt_RU0,240,5,50,14
+    PUSHBUTTON      "&Unrestrict All",dbSt_RU1,240,25,50,14
+    ICON            icon2,IDC_STATIC,255,55,18,20
+END
+
+dlgObject DIALOGEX 32, 32, 387, 202
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Object Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,335,185,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,280,185,50,14
+    EDITTEXT        deo01,40,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo02,40,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo03,40,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo04,40,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo05,40,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo06,40,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo07,40,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo08,40,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo09,40,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo10,40,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo11,40,165,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo12,240,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo13,240,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo14,240,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo15,240,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo16,240,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo17,240,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo18,240,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo19,240,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo20,240,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo21,240,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo22,240,165,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dea01,75,15,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea02,75,30,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea03,75,45,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea04,75,60,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea05,75,75,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea06,75,90,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea07,75,105,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea08,75,120,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea09,75,135,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea10,75,150,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea11,75,165,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea12,275,15,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea13,275,30,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea14,275,45,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea15,275,60,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea16,275,75,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea17,275,90,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea18,275,105,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea19,275,120,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea20,275,135,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea21,275,150,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea22,275,165,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dei01,100,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei02,100,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei03,100,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei04,100,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei05,100,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei06,100,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei07,100,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei08,100,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei09,100,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei10,100,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei11,100,165,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei12,300,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei13,300,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei14,300,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei15,300,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei16,300,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei17,300,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei18,300,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei19,300,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei20,300,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei21,300,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei22,300,165,30,13,ES_AUTOHSCROLL
+    COMBOBOX        dck00,135,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck01,135,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck02,135,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck03,135,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck04,135,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck05,135,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck06,135,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck07,135,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck08,135,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck09,135,150,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck10,135,165,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck11,335,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck12,335,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck13,335,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck14,335,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck15,335,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck16,335,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck17,335,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck18,335,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck19,335,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck20,335,150,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck21,335,165,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Earth",IDC_STATIC,5,15,30,8
+    LTEXT           "Sun",IDC_STATIC,5,30,30,8
+    LTEXT           "Moon",IDC_STATIC,5,45,30,8
+    LTEXT           "Mercury",IDC_STATIC,5,60,30,8
+    LTEXT           "Venus",IDC_STATIC,5,75,30,8
+    LTEXT           "Mars",IDC_STATIC,5,90,30,8
+    LTEXT           "Jupiter",IDC_STATIC,5,105,30,8
+    LTEXT           "Saturn",IDC_STATIC,5,120,30,8
+    LTEXT           "Uranus",IDC_STATIC,5,135,30,8
+    LTEXT           "Neptune",IDC_STATIC,5,150,30,8
+    LTEXT           "Pluto",IDC_STATIC,5,165,30,8
+    LTEXT           "Chiron",IDC_STATIC,190,15,50,8
+    LTEXT           "Ceres",IDC_STATIC,190,30,50,8
+    LTEXT           "Pallas Athena",IDC_STATIC,190,45,50,8
+    LTEXT           "Juno",IDC_STATIC,190,60,50,8
+    LTEXT           "Vesta",IDC_STATIC,190,75,50,8
+    LTEXT           "North Node",IDC_STATIC,190,90,50,8
+    LTEXT           "South Node",IDC_STATIC,190,105,50,8
+    LTEXT           "Lilith",IDC_STATIC,190,120,50,8
+    LTEXT           "Part of Fortune",IDC_STATIC,190,135,50,8
+    LTEXT           "Vertex",IDC_STATIC,190,150,50,8
+    LTEXT           "East Point",IDC_STATIC,190,165,50,8
+    LTEXT           "Max Orb",IDC_STATIC,40,5,30,8
+    LTEXT           "Add",IDC_STATIC,75,5,20,8
+    LTEXT           "Influence",IDC_STATIC,100,5,30,8
+    LTEXT           "Color",IDC_STATIC,135,5,30,8
+    LTEXT           "Max Orb",IDC_STATIC,240,5,30,8
+    LTEXT           "Add",IDC_STATIC,275,5,20,8
+    LTEXT           "Influence",IDC_STATIC,300,5,30,8
+    LTEXT           "Color",IDC_STATIC,335,5,30,8
+    ICON            icon2,IDC_STATIC,200,180,21,20
+END
+
+dlgObject2 DIALOGEX 32, 32, 382, 199
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Cusp & Uranian Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,330,180,45,14
+    PUSHBUTTON      "Cancel",IDCANCEL,280,180,45,14
+    EDITTEXT        deo01,50,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo02,50,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo03,50,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo04,50,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo05,50,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo06,50,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo07,50,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo08,50,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo09,50,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo10,50,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo11,50,165,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo12,50,180,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dea01,85,15,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea02,85,30,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea03,85,45,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea04,85,60,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea05,85,75,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea06,85,90,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea07,85,105,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea08,85,120,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea09,85,135,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea10,85,150,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea11,85,165,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea12,85,180,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dei01,110,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei02,110,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei03,110,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei04,110,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei05,110,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei06,110,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei07,110,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei08,110,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei09,110,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei10,110,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei11,110,165,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei12,110,180,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo13,235,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo14,235,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo15,235,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo16,235,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo17,235,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo18,235,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo19,235,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo20,235,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo21,235,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        deo22,235,150,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dea13,270,15,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea14,270,30,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea15,270,45,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea16,270,60,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea17,270,75,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea18,270,90,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea19,270,105,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea20,270,120,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea21,270,135,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dea22,270,150,20,13,ES_AUTOHSCROLL
+    EDITTEXT        dei13,295,15,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei14,295,30,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei15,295,45,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei16,295,60,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei17,295,75,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei18,295,90,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei19,295,105,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei20,295,120,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei21,295,135,30,13,ES_AUTOHSCROLL
+    EDITTEXT        dei22,295,150,30,13,ES_AUTOHSCROLL
+    COMBOBOX        dck00,145,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck01,145,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck02,145,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck03,145,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck04,145,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck05,145,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck06,145,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck07,145,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck08,145,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck09,145,150,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck10,145,165,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck11,145,180,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck12,330,15,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck13,330,30,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck14,330,45,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck15,330,60,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck16,330,75,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck17,330,90,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck18,330,105,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck19,330,120,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dck20,330,135,50,160,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Ascendant",IDC_STATIC,5,15,40,8
+    LTEXT           "2nd Cusp",IDC_STATIC,5,30,40,8
+    LTEXT           "3rd Cusp",IDC_STATIC,5,45,40,8
+    LTEXT           "Nadir",IDC_STATIC,5,60,40,8
+    LTEXT           "5th Cusp",IDC_STATIC,5,75,40,8
+    LTEXT           "6th Cusp",IDC_STATIC,5,90,40,8
+    LTEXT           "Descendant",IDC_STATIC,5,105,40,8
+    LTEXT           "8th Cusp",IDC_STATIC,5,120,40,8
+    LTEXT           "9th Cusp",IDC_STATIC,5,135,40,8
+    LTEXT           "Midheaven",IDC_STATIC,5,150,40,8
+    LTEXT           "11th Cusp",IDC_STATIC,5,165,40,8
+    LTEXT           "12th Cusp",IDC_STATIC,5,180,40,8
+    LTEXT           "Vulcan",IDC_STATIC,200,15,30,8
+    LTEXT           "Cupido",IDC_STATIC,200,30,30,8
+    LTEXT           "Hades",IDC_STATIC,200,45,30,8
+    LTEXT           "Zeus",IDC_STATIC,200,60,30,8
+    LTEXT           "Kronos",IDC_STATIC,200,75,30,8
+    LTEXT           "Apollon",IDC_STATIC,200,90,30,8
+    LTEXT           "Admetos",IDC_STATIC,200,105,30,8
+    LTEXT           "Vulkanus",IDC_STATIC,200,120,30,8
+    LTEXT           "Poseidon",IDC_STATIC,200,135,30,8
+    LTEXT           "Max Orb",IDC_STATIC,50,5,30,8
+    LTEXT           "Add",IDC_STATIC,85,5,20,8
+    LTEXT           "Influence",IDC_STATIC,110,5,30,8
+    LTEXT           "Color",IDC_STATIC,145,5,30,8
+    LTEXT           "Max Orb",IDC_STATIC,235,5,30,8
+    LTEXT           "Add",IDC_STATIC,270,5,20,8
+    LTEXT           "Influence",IDC_STATIC,295,5,30,8
+    LTEXT           "All Stars",IDC_STATIC,200,150,26,8
+    LTEXT           "Color",IDC_STATIC,330,5,30,8
+    ICON            icon2,IDC_STATIC,225,170,21,20
+END
+
+dlgAbort DIALOG 32, 32, 125, 38
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Print Progress"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Cancel",IDCANCEL,40,20,50,14
+    LTEXT           "The Astrolog chart is being printed.",IDC_STATIC,5,5,115,8
+    ICON            icon3,IDC_STATIC,5,15,18,20
+END
+
+dlgInfoAll DIALOG 32, 32, 143, 151
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Charts #3 And #4"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,90,130,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,35,130,50,14
+    ICON            icon2,IDC_STATIC,5,125,18,20
+    PUSHBUTTON      "&Open Chart...",dbIa_o1,5,5,60,14
+    PUSHBUTTON      "Set Chart &Info...",dbIa_i1,70,5,70,14
+    PUSHBUTTON      "O&pen Chart #2...",dbIa_o2,5,25,60,14
+    PUSHBUTTON      "Set Chart #&2 Info...",dbIa_i2,70,25,70,14
+    PUSHBUTTON      "Op&en Chart #3...",dbIa_o3,5,45,60,14
+    PUSHBUTTON      "Set Chart #&3 Info...",dbIa_i3,70,45,70,14
+    PUSHBUTTON      "Ope&n Chart #4...",dbIa_o4,5,65,60,14
+    PUSHBUTTON      "Set Chart #&4 Info...",dbIa_i4,70,65,70,14
+    GROUPBOX        "Wheel Chart Is",IDC_STATIC,5,85,135,35
+    CONTROL         "&Single Wheel",dr01,"Button",BS_AUTORADIOBUTTON,10,95,55,10
+    CONTROL         "&Dual Wheel",dr02,"Button",BS_AUTORADIOBUTTON,10,105,55,10
+    CONTROL         "&Tri-Wheel",dr03,"Button",BS_AUTORADIOBUTTON,75,95,55,10
+    CONTROL         "&Quad-Wheel",dr04,"Button",BS_AUTORADIOBUTTON,75,105,55,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+accelerator ACCELERATORS
+BEGIN
+    "!",            cmdAnimateNo1,          ASCII,  NOINVERT
+    "#",            cmdAnimateNo3,          ASCII,  NOINVERT
+    "$",            cmdAnimateNo4,          ASCII,  NOINVERT
+    "%",            cmdAnimateNo5,          ASCII,  NOINVERT
+    "&",            cmdAnimateNo7,          ASCII,  NOINVERT
+    "(",            cmdAnimateNo9,          ASCII,  NOINVERT
+    ")",            cmdDocHelpfile,         ASCII,  NOINVERT
+    "*",            cmdAnimateNo8,          ASCII,  NOINVERT
+    "+",            cmdStepForward,         ASCII,  NOINVERT
+    "-",            cmdStepBackward,        ASCII,  NOINVERT
+    "0",            cmdChartModify,         VIRTKEY, NOINVERT
+    "0",            cmdHelpCredit,          VIRTKEY, CONTROL, NOINVERT
+    "0",            cmdHelpAbout,           VIRTKEY, ALT, NOINVERT
+    " ",            cmdWinRedraw,           ASCII,  NOINVERT
+    "1",            cmdAnimateF1,           VIRTKEY, NOINVERT
+    "1",            cmdScale1,              VIRTKEY, CONTROL, NOINVERT
+    "1",            cmdHouseSetSolar,       VIRTKEY, ALT, NOINVERT
+    "1",            cmdDocUpdate,           VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "2",            cmdAnimateF2,           VIRTKEY, NOINVERT
+    "2",            cmdScale2,              VIRTKEY, CONTROL, NOINVERT
+    "2",            cmdHelpSign,            VIRTKEY, ALT, NOINVERT
+    "2",            cmdDocLicense,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "3",            cmdAnimateF3,           VIRTKEY, NOINVERT
+    "3",            cmdScale3,              VIRTKEY, CONTROL, NOINVERT
+    "3",            cmdHelpObject,          VIRTKEY, ALT, NOINVERT
+    "3",            cmdDocWebsite,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "4",            cmdAnimateF4,           VIRTKEY, NOINVERT
+    "4",            cmdScale4,              VIRTKEY, CONTROL, NOINVERT
+    "4",            cmdHelpAspect,          VIRTKEY, ALT, NOINVERT
+    "4",            cmdDocWebsite2,         VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "5",            cmdAnimateF5,           VIRTKEY, NOINVERT
+    "5",            cmdSaveText,            VIRTKEY, CONTROL, NOINVERT
+    "5",            cmdHelpConstellation,   VIRTKEY, ALT, NOINVERT
+    "5",            cmdCopyText,            VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "6",            cmdAnimateF6,           VIRTKEY, NOINVERT
+    "6",            cmdSaveBitmap,          VIRTKEY, CONTROL, NOINVERT
+    "6",            cmdHelpPlanetInfo,      VIRTKEY, ALT, NOINVERT
+    "6",            cmdCopyBitmap,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "7",            cmdAnimateF7,           VIRTKEY, NOINVERT
+    "7",            cmdSavePicture,         VIRTKEY, CONTROL, NOINVERT
+    "7",            cmdChartEsoteric,       VIRTKEY, ALT, NOINVERT
+    "7",            cmdCopyPicture,         VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "7",            cmdHelpRay,             VIRTKEY, SHIFT, ALT, NOINVERT
+    "8",            cmdAnimateF8,           VIRTKEY, NOINVERT
+    "8",            cmdSavePS,              VIRTKEY, CONTROL, NOINVERT
+    "8",            cmdHelpSwitch,          VIRTKEY, ALT, NOINVERT
+    "8",            cmdCopyPS,              VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "9",            cmdAnimateF9,           VIRTKEY, NOINVERT
+    "9",            cmdSaveSettings,        VIRTKEY, CONTROL, NOINVERT
+    "9",            cmdHelpObscure,         VIRTKEY, ALT, NOINVERT
+    "9",            cmdDocDefault,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "<",            cmdScaleDecrease,       ASCII,  NOINVERT
+    ">",            cmdScaleIncrease,       ASCII,  NOINVERT
+    "?",            cmdHelpKeystroke,       ASCII,  NOINVERT
+    "@",            cmdAnimateNo2,          ASCII,  NOINVERT
+    "[",            cmdTiltNorth,           ASCII,  NOINVERT
+    "]",            cmdTiltSouth,           ASCII,  NOINVERT
+    94,             cmdAnimateNo6,          ASCII,  NOINVERT
+    "A",            cmdHouseSet3D,          VIRTKEY, NOINVERT
+    "A",            cmdPen15,               VIRTKEY, CONTROL, NOINVERT
+    "A",            cmdSetupAll,            VIRTKEY, CONTROL, ALT, NOINVERT
+    "A",            cmdChartGrid,           VIRTKEY, SHIFT, NOINVERT
+    "A",            cmdHouse09,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "A",            cmdAspect,              VIRTKEY, SHIFT, ALT, NOINVERT
+    "B",            cmdGraphicsBorder,      VIRTKEY, NOINVERT
+    "B",            cmdPen12,               VIRTKEY, CONTROL, NOINVERT
+    "B",            cmdSecond,              VIRTKEY, ALT, NOINVERT
+    "B",            cmdSizeChartToWindow,   VIRTKEY, SHIFT, NOINVERT
+    "B",            cmdDisplay,             VIRTKEY, SHIFT, ALT, NOINVERT
+    "C",            cmdRelComparison,       VIRTKEY, NOINVERT
+    "C",            cmdGraphicsCity,        VIRTKEY, CONTROL, NOINVERT
+    "C",            cmdSaveWallCenter,      VIRTKEY, CONTROL, ALT, NOINVERT
+    "C",            cmdResCusp,             VIRTKEY, SHIFT, NOINVERT
+    "C",            cmdHouse03,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "C",            cmdChartSettings,       VIRTKEY, SHIFT, ALT, NOINVERT
+    "D",            cmdGraphicsHouse,       VIRTKEY, NOINVERT
+    "D",            cmdPen08,               VIRTKEY, CONTROL, NOINVERT
+    "D",            cmdDefaultInfo,         VIRTKEY, ALT, NOINVERT
+    "D",            cmdSetupDesktop,        VIRTKEY, CONTROL, ALT, NOINVERT
+    "D",            cmdRelDate,             VIRTKEY, SHIFT, NOINVERT
+    "D",            cmdHouse13,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "D",            cmdRelProgressed,       VIRTKEY, SHIFT, ALT, NOINVERT
+    "E",            cmdGraphicsEquator,     VIRTKEY, NOINVERT
+    "E",            cmdPen01,               VIRTKEY, CONTROL, NOINVERT
+    "E",            cmdChartEphemeris,      VIRTKEY, SHIFT, NOINVERT
+    "E",            cmdHouse02,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "E",            cmdTiltZero,            VIRTKEY, SHIFT, ALT, NOINVERT
+    "F",            cmdHouseSetFlip,        VIRTKEY, NOINVERT
+    "F",            cmdPen02,               VIRTKEY, CONTROL, NOINVERT
+    "F",            cmdSaveWallFit,         VIRTKEY, CONTROL, ALT, NOINVERT
+    "F",            cmdConstellation,       VIRTKEY, SHIFT, NOINVERT
+    "F",            cmdStar,                VIRTKEY, SHIFT, ALT, NOINVERT
+    "G",            cmdHouseSetDecan,       VIRTKEY, NOINVERT
+    "G",            cmdPen10,               VIRTKEY, CONTROL, NOINVERT
+    "G",            cmdSetupUser,           VIRTKEY, CONTROL, ALT, NOINVERT
+    "G",            cmdChartGlobe,          VIRTKEY, SHIFT, NOINVERT
+    "G",            cmdHouse19,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "G",            cmdSettingGraphics,     VIRTKEY, SHIFT, ALT, NOINVERT
+    "H",            cmdHeliocentric,        VIRTKEY, NOINVERT
+    "H",            cmdDocHelpfile,         VIRTKEY, CONTROL, NOINVERT
+    "H",            cmdHelpKeystroke,       VIRTKEY, SHIFT, NOINVERT
+    "H",            cmdHouse17,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "H",            cmdHouseSetGeodetic,    VIRTKEY, SHIFT, ALT, NOINVERT
+    "I",            cmdGraphicsModify,      VIRTKEY, NOINVERT
+    "I",            cmdHelpMeaning,         VIRTKEY, SHIFT, NOINVERT
+    "I",            cmdHouse16,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "I",            cmdInterpret,           VIRTKEY, SHIFT, ALT, NOINVERT
+    "J",            cmdTimedExposure,       VIRTKEY, NOINVERT
+    "J",            cmdPen14,               VIRTKEY, CONTROL, NOINVERT
+    "J",            cmdObject,              VIRTKEY, ALT, NOINVERT
+    "J",            cmdChartInfluence,      VIRTKEY, SHIFT, NOINVERT
+    "J",            cmdHouse20,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "J",            cmdObject2,             VIRTKEY, SHIFT, ALT, NOINVERT
+    "K",            cmdGraphicsAspect,      VIRTKEY, NOINVERT
+    "K",            cmdPen06,               VIRTKEY, CONTROL, NOINVERT
+    "K",            cmdColoredText,         VIRTKEY, ALT, NOINVERT
+    "K",            cmdChartCalendar,       VIRTKEY, SHIFT, NOINVERT
+    "K",            cmdHouse01,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "K",            cmdColor,               VIRTKEY, SHIFT, ALT, NOINVERT
+    "L",            cmdGraphicsLabel,       VIRTKEY, NOINVERT
+    "L",            cmdPen07,               VIRTKEY, CONTROL, NOINVERT
+    "L",            cmdChartAspect,         VIRTKEY, ALT, NOINVERT
+    "L",            cmdSaveWallFill,        VIRTKEY, CONTROL, ALT, NOINVERT
+    "L",            cmdChartAstroGraph,     VIRTKEY, SHIFT, NOINVERT
+    "L",            cmdChartRising,         VIRTKEY, SHIFT, ALT, NOINVERT
+    "M",            cmdGraphicsMonochrome,  VIRTKEY, NOINVERT
+    "M",            cmdChartMidpoint,       VIRTKEY, ALT, NOINVERT
+    "M",            cmdChartSector,         VIRTKEY, SHIFT, NOINVERT
+    "M",            cmdHouse04,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "M",            cmdRelMidpoint,         VIRTKEY, SHIFT, ALT, NOINVERT
+    "N",            cmdNow,                 VIRTKEY, NOINVERT
+    "N",            cmdPen04,               VIRTKEY, CONTROL, NOINVERT
+    "N",            cmdAnimateNow,          VIRTKEY, ALT, NOINVERT
+    "N",            cmdAnimateNo,           VIRTKEY, SHIFT, NOINVERT
+    "N",            cmdHouse21,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "N",            cmdRelTransit,          VIRTKEY, SHIFT, ALT, NOINVERT
+    "O",            cmdStore,               VIRTKEY, NOINVERT
+    "O",            cmdPen03,               VIRTKEY, CONTROL, NOINVERT
+    "O",            cmdOpenChart,           VIRTKEY, ALT, NOINVERT
+    "O",            cmdRecall,              VIRTKEY, SHIFT, NOINVERT
+    "O",            cmdHouse12,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "O",            cmdOpenChart2,          VIRTKEY, SHIFT, ALT, NOINVERT
+    "P",            cmdAnimatePause,        VIRTKEY, NOINVERT
+    "P",            cmdPrint,               VIRTKEY, CONTROL, NOINVERT
+    "P",            cmdChartArabic,         VIRTKEY, ALT, NOINVERT
+    "P",            cmdChartPolar,          VIRTKEY, SHIFT, NOINVERT
+    "P",            cmdHouse00,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "P",            cmdProgress,            VIRTKEY, SHIFT, ALT, NOINVERT
+    "Q",            cmdFileExit,            VIRTKEY, NOINVERT
+    "Q",            cmdPrintSetup,          VIRTKEY, CONTROL, NOINVERT
+    "Q",            cmdWindowResizesChart,  VIRTKEY, ALT, NOINVERT
+    "Q",            cmdGraphicsSquare,      VIRTKEY, SHIFT, NOINVERT
+    "Q",            cmdHouse11,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "Q",            cmdChartResizesWindow,  VIRTKEY, SHIFT, ALT, NOINVERT
+    "R",            cmdAnimateReverse,      VIRTKEY, NOINVERT
+    "R",            cmdPen09,               VIRTKEY, CONTROL, NOINVERT
+    "R",            cmdRes,                 VIRTKEY, ALT, NOINVERT
+    "R",            cmdResMinor,            VIRTKEY, SHIFT, NOINVERT
+    "R",            cmdHouse05,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "R",            cmdResTransit,          VIRTKEY, SHIFT, ALT, NOINVERT
+    "S",            cmdSidereal,            VIRTKEY, NOINVERT
+    "S",            cmdGraphicsAllStar,     VIRTKEY, CONTROL, NOINVERT
+    "S",            cmdSaveWallStretch,     VIRTKEY, CONTROL, ALT, NOINVERT
+    "S",            cmdChartOrbit,          VIRTKEY, SHIFT, NOINVERT
+    "S",            cmdHouse10,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "S",            cmdSettingCalc,         VIRTKEY, SHIFT, ALT, NOINVERT
+    "T",            cmdGraphicsText,        VIRTKEY, NOINVERT
+    "T",            cmdGraphicsSidebar,     VIRTKEY, ALT, NOINVERT
+    "T",            cmdSaveWallTile,        VIRTKEY, CONTROL, ALT, NOINVERT
+    "T",            cmdHouse08,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "T",            cmdTransit,             VIRTKEY, SHIFT, ALT, NOINVERT
+    "U",            cmdResUranian,          VIRTKEY, NOINVERT
+    "U",            cmdPen05,               VIRTKEY, CONTROL, NOINVERT
+    "U",            cmdWinHourglass,        VIRTKEY, ALT, NOINVERT
+    "U",            cmdUnsetup,             VIRTKEY, CONTROL, ALT, NOINVERT
+    "U",            cmdResStar,             VIRTKEY, SHIFT, NOINVERT
+    "U",            cmdHouse07,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "U",            cmdSizeWindowToChart,   VIRTKEY, SHIFT, ALT, NOINVERT
+    "V",            cmdGraphics,            VIRTKEY, NOINVERT
+    "V",            cmdPen13,               VIRTKEY, CONTROL, NOINVERT
+    "V",            cmdChartList,           VIRTKEY, SHIFT, NOINVERT
+    "V",            cmdHouse15,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "V",            cmdChartWheel,          VIRTKEY, SHIFT, ALT, NOINVERT
+    VK_BACK,        cmdWinClear,            VIRTKEY, NOINVERT
+    VK_END,         cmdScrollEnd,           VIRTKEY, NOINVERT
+    VK_ESCAPE,      cmdFileExit,            VIRTKEY, NOINVERT
+    VK_F1,          cmdMacro01,             VIRTKEY, NOINVERT
+    VK_F1,          cmdMacro25,             VIRTKEY, CONTROL, NOINVERT
+    VK_F1,          cmdMacro37,             VIRTKEY, ALT, NOINVERT
+    VK_F1,          cmdMacro13,             VIRTKEY, SHIFT, NOINVERT
+    VK_F10,         cmdMacro10,             VIRTKEY, NOINVERT
+    VK_F10,         cmdMacro34,             VIRTKEY, CONTROL, NOINVERT
+    VK_F10,         cmdMacro46,             VIRTKEY, ALT, NOINVERT
+    VK_F10,         cmdMacro22,             VIRTKEY, SHIFT, NOINVERT
+    VK_F11,         cmdMacro11,             VIRTKEY, NOINVERT
+    VK_F11,         cmdMacro35,             VIRTKEY, CONTROL, NOINVERT
+    VK_F11,         cmdMacro47,             VIRTKEY, ALT, NOINVERT
+    VK_F11,         cmdMacro23,             VIRTKEY, SHIFT, NOINVERT
+    VK_F12,         cmdMacro12,             VIRTKEY, NOINVERT
+    VK_F12,         cmdMacro36,             VIRTKEY, CONTROL, NOINVERT
+    VK_F12,         cmdMacro48,             VIRTKEY, ALT, NOINVERT
+    VK_F12,         cmdMacro24,             VIRTKEY, SHIFT, NOINVERT
+    VK_F2,          cmdMacro02,             VIRTKEY, NOINVERT
+    VK_F2,          cmdMacro26,             VIRTKEY, CONTROL, NOINVERT
+    VK_F2,          cmdMacro38,             VIRTKEY, ALT, NOINVERT
+    VK_F2,          cmdMacro14,             VIRTKEY, SHIFT, NOINVERT
+    VK_F3,          cmdMacro03,             VIRTKEY, NOINVERT
+    VK_F3,          cmdMacro27,             VIRTKEY, CONTROL, NOINVERT
+    VK_F3,          cmdMacro39,             VIRTKEY, ALT, NOINVERT
+    VK_F3,          cmdMacro15,             VIRTKEY, SHIFT, NOINVERT
+    VK_F4,          cmdMacro04,             VIRTKEY, NOINVERT
+    VK_F4,          cmdMacro28,             VIRTKEY, CONTROL, NOINVERT
+    VK_F4,          cmdMacro40,             VIRTKEY, ALT, NOINVERT
+    VK_F4,          cmdMacro16,             VIRTKEY, SHIFT, NOINVERT
+    VK_F5,          cmdMacro05,             VIRTKEY, NOINVERT
+    VK_F5,          cmdMacro29,             VIRTKEY, CONTROL, NOINVERT
+    VK_F5,          cmdMacro41,             VIRTKEY, ALT, NOINVERT
+    VK_F5,          cmdMacro17,             VIRTKEY, SHIFT, NOINVERT
+    VK_F6,          cmdMacro06,             VIRTKEY, NOINVERT
+    VK_F6,          cmdMacro30,             VIRTKEY, CONTROL, NOINVERT
+    VK_F6,          cmdMacro42,             VIRTKEY, ALT, NOINVERT
+    VK_F6,          cmdMacro18,             VIRTKEY, SHIFT, NOINVERT
+    VK_F7,          cmdMacro07,             VIRTKEY, NOINVERT
+    VK_F7,          cmdMacro31,             VIRTKEY, CONTROL, NOINVERT
+    VK_F7,          cmdMacro43,             VIRTKEY, ALT, NOINVERT
+    VK_F7,          cmdMacro19,             VIRTKEY, SHIFT, NOINVERT
+    VK_F8,          cmdMacro08,             VIRTKEY, NOINVERT
+    VK_F8,          cmdMacro32,             VIRTKEY, CONTROL, NOINVERT
+    VK_F8,          cmdMacro44,             VIRTKEY, ALT, NOINVERT
+    VK_F8,          cmdMacro20,             VIRTKEY, SHIFT, NOINVERT
+    VK_F9,          cmdMacro09,             VIRTKEY, NOINVERT
+    VK_F9,          cmdMacro33,             VIRTKEY, CONTROL, NOINVERT
+    VK_F9,          cmdMacro45,             VIRTKEY, ALT, NOINVERT
+    VK_F9,          cmdMacro21,             VIRTKEY, SHIFT, NOINVERT
+    VK_HOME,        cmdScrollHome,          VIRTKEY, NOINVERT
+    VK_NEXT,        cmdScrollPageDown,      VIRTKEY, NOINVERT
+    VK_OEM_4,       cmdRotateWest,          VIRTKEY, SHIFT, NOINVERT
+    VK_OEM_6,       cmdRotateEast,          VIRTKEY, SHIFT, NOINVERT
+    VK_OEM_MINUS,   cmdSaveWire,            VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_MINUS,   cmdCopyWire,            VIRTKEY, SHIFT, CONTROL, NOINVERT
+    VK_PAUSE,       cmdAnimatePause,        VIRTKEY, NOINVERT
+    VK_PRIOR,       cmdScrollPageUp,        VIRTKEY, NOINVERT
+    VK_RETURN,      cmdCommand,             VIRTKEY, NOINVERT
+    VK_TAB,         cmdWinBuffer,           VIRTKEY, NOINVERT
+    VK_TAB,         cmdSizeWindowFull,      VIRTKEY, SHIFT, NOINVERT
+    "W",            cmdHouseSetDwad,        VIRTKEY, CONTROL, NOINVERT
+    "W",            cmdSaveChart,           VIRTKEY, ALT, NOINVERT
+    "W",            cmdChartMap,            VIRTKEY, SHIFT, NOINVERT
+    "W",            cmdHouse14,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "W",            cmdSavePositions,       VIRTKEY, SHIFT, ALT, NOINVERT
+    "X",            cmdGraphicsReverse,     VIRTKEY, NOINVERT
+    "X",            cmdGraphicsAxis,        VIRTKEY, CONTROL, NOINVERT
+    "X",            cmdParallel,            VIRTKEY, ALT, NOINVERT
+    "X",            cmdSetupExtension,      VIRTKEY, CONTROL, ALT, NOINVERT
+    "X",            cmdChartSphere,         VIRTKEY, SHIFT, NOINVERT
+    "X",            cmdHouse18,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "X",            cmdApplying,            VIRTKEY, SHIFT, ALT, NOINVERT
+    "Y",            cmdHouseSetNavamsa,     VIRTKEY, NOINVERT
+    "Y",            cmdPen11,               VIRTKEY, CONTROL, NOINVERT
+    "Y",            cmdRelSynastry,         VIRTKEY, ALT, NOINVERT
+    "Y",            cmdRelBiorhythm,        VIRTKEY, SHIFT, NOINVERT
+    "Y",            cmdHouse06,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "Y",            cmdRelComposite,        VIRTKEY, SHIFT, ALT, NOINVERT
+    "Z",            cmdHouseSetVedic,       VIRTKEY, NOINVERT
+    "Z",            cmdPen00,               VIRTKEY, CONTROL, NOINVERT
+    "Z",            cmdSetInfo,             VIRTKEY, ALT, NOINVERT
+    "Z",            cmdChartHorizon,        VIRTKEY, SHIFT, NOINVERT
+    "Z",            cmdSetInfoAll,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "Z",            cmdSetInfo2,            VIRTKEY, SHIFT, ALT, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 7,0,0,0
+ PRODUCTVERSION 7,0,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "astrolog.org"
+            VALUE "FileDescription", "Astrolog 7.00 for Windows"
+            VALUE "FileVersion", "7, 0, 0, 0"
+            VALUE "InternalName", "Astrolog"
+            VALUE "LegalCopyright", "Copyright (c) 2020"
+            VALUE "OriginalFilename", "astrolog.exe"
+            VALUE "ProductName", "Astrolog"
+            VALUE "ProductVersion", "7, 0, 0, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    dlgInfo, DIALOG
+    BEGIN
+        RIGHTMARGIN, 373
+    END
+
+    dlgCommand, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 50
+    END
+
+    dlgColor, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 146
+    END
+
+    dlgDefault, DIALOG
+    BEGIN
+        RIGHTMARGIN, 168
+    END
+
+    dlgCalc, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 177
+    END
+
+    dlgDisplay, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 211
+    END
+
+    dlgGraphics, DIALOG
+    BEGIN
+        RIGHTMARGIN, 170
+        BOTTOMMARGIN, 216
+    END
+
+    dlgObject, DIALOG
+    BEGIN
+    END
+
+    dlgInfoAll, DIALOG
+    BEGIN
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+dlgInfo AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+dlgDefault AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+dlgCommand AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+dlgDisplay AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
