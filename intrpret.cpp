@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: intrpret.cpp
+** Astrolog (Version 7.10) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -71,7 +71,7 @@ void FieldWord(CONST char *sz)
   int ich = 0, i, j;
   char ch;
 
-  /* Display buffer if function called with a null string. */
+  // Display buffer if function called with a null string.
 
   if (sz == NULL)
     sz = "\n";
@@ -90,7 +90,7 @@ void FieldWord(CONST char *sz)
     }
     line[cursor] = ch;
 
-    /* When buffer overflows 'n' columns, display one line and start over. */
+    // When buffer overflows 'n' columns, display one line and start over.
 
     if (cursor >= us.nScreenWidth-1) {
       for (i = us.nScreenWidth-1; i > 2 && line[i] != ' '; i--)
@@ -115,7 +115,7 @@ void FieldWord(CONST char *sz)
 void InterpretGeneral(void)
 {
   char sz[cchSzMax];
-  int i;
+  int i, j;
 
   FieldWord(
     "Signs of the zodiac represent psychological characteristics.\n\n");
@@ -139,7 +139,8 @@ void InterpretGeneral(void)
 
   PrintL();
   FieldWord("Planets represent various parts of one's mind or self.\n\n");
-  for (i = 0; i <= cObjInt; i++) {
+  for (j = 0; j <= cObjInt; j++) {
+    i = rgobjList[j];
     if (ignore[i] || FCusp(i))
       continue;
     AnsiColor(kObjA[i]);
@@ -214,7 +215,7 @@ void InterpretLocation(void)
     FieldWord("in the area of life dealing with");
     sprintf(sz, "%s.", szLifeArea[inhouse[i]]); FieldWord(sz);
 
-    /* Extra information if planet is in its ruling, falling, etc, sign. */
+    // Extra information if planet is in its ruling, exalting, etc, sign.
 
     if (c == 'R')
       FieldWord("This is a major aspect of their psyche!");
@@ -312,7 +313,7 @@ void InterpretInDay(int source, int aspect, int dest)
   if (source > cObjInt || dest > cObjInt)
     return;
 
-  /* Interpret object changing direction. */
+  // Interpret object changing direction.
 
   if (aspect == aDir) {
     AnsiColor(kObjA[source]);
@@ -322,7 +323,7 @@ void InterpretInDay(int source, int aspect, int dest)
       "the standard, direct, open");
     FieldWord("manner.\n");
 
-  /* Interpret object entering new sign. */
+  // Interpret object entering new sign.
 
   } else if (aspect == aSig) {
     AnsiColor(kObjA[source]);
@@ -331,7 +332,7 @@ void InterpretInDay(int source, int aspect, int dest)
     FieldWord(sz);
     sprintf(sz, "and it %s.\n", szDesire[dest]); FieldWord(sz);
 
-  /* Interpret aspect between transiting planets. */
+  // Interpret aspect between transiting planets.
 
   } else if (FInterpretAsp(aspect)) {
     AnsiColor(kAspA[aspect]);
@@ -417,7 +418,7 @@ void InterpretSynastry(void)
     sprintf(sz, "affects %s in the area of life dealing with %s.",
       szPerson1, szLifeArea[inhouse[i]]); FieldWord(sz);
 
-    /* Extra information if planet is in its ruling, falling, etc, sign. */
+    // Extra information if planet is in its ruling, exalting, etc, sign.
 
     if (c == 'R') {
       sprintf(sz, "This is a major aspect of %s's psyche!", szPerson2);
@@ -547,8 +548,7 @@ void SortRank(real *value, int *rank, int size)
       }
     }
 
-    /* 'k' is the current position of the 'i'th place planet. */
-
+    // 'k' is the current position of the 'i'th place planet.
     rank[k] = i;
   }
 }
@@ -567,32 +567,32 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
   for (i = 0; i <= cObj; i++)
     power1[i] = power2[i] = 0.0;
 
-  /* First, for each object, find its power based on its placement alone. */
+  // First, for each object, find its power based on its placement alone.
 
   for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
     j = SFromZ(planet[i]);
-    power1[i] += RObjInf(i);               /* Influence of planet itself. */
-    power1[i] += rHouseInf[inhouse[i]];    /* Influence of house it's in. */
+    power1[i] += RObjInf(i);               // Influence of planet itself.
+    power1[i] += rHouseInf[inhouse[i]];    // Influence of house it's in.
     x = 0.0;
     c = Dignify(i, j);
-    if (c[rrStd+1] == 'R') x += rObjInf[oNorm1+1]; /* Planets in signs they */
-    if (c[rrExa+1] == 'X') x += rObjInf[oNorm1+2]; /* rule or are exalted   */
-    if (c[rrEso+1] == 'S') x += rObjInf[oNorm1+3]; /* in have influence.    */
+    if (c[rrStd+1] == 'R') x += rObjInf[oNorm1+1];  // Planets in signs they
+    if (c[rrExa+1] == 'X') x += rObjInf[oNorm1+2];  // rule or are exalted
+    if (c[rrEso+1] == 'S') x += rObjInf[oNorm1+3];  // in have influence.
     if (c[rrHie+1] == 'H') x += rObjInf[oNorm1+4];
     if (c[rrRay+1] == 'Y') x += rObjInf[oNorm1+5];
     c = Dignify(i, inhouse[i]);
-    if (c[rrStd+1] == 'R') x += rHouseInf[cSign+1]; /* Planets in houses  */
-    if (c[rrExa+1] == 'X') x += rHouseInf[cSign+2]; /* aligned with sign  */
-    if (c[rrEso+1] == 'S') x += rHouseInf[cSign+3]; /* ruled or exalted   */
-    if (c[rrHie+1] == 'H') x += rHouseInf[cSign+4]; /* in have influence. */
+    if (c[rrStd+1] == 'R') x += rHouseInf[cSign+1];  // Planets in houses
+    if (c[rrExa+1] == 'X') x += rHouseInf[cSign+2];  // aligned with sign
+    if (c[rrEso+1] == 'S') x += rHouseInf[cSign+3];  // ruled or exalted
+    if (c[rrHie+1] == 'H') x += rHouseInf[cSign+4];  // in have influence.
     if (c[rrRay+1] == 'Y') x += rHouseInf[cSign+5];
     power1[i] += x;
     x = RObjInf(i)/2.0;
     if (!ignore7[rrStd]) {
-      if (i != rules[j])                      /* The planet ruling the sign */
-        power1[rules[j]] += x;                /* and the house that the     */
-      if (i != (j = rules[inhouse[i]]))       /* current planet is in, gets */
-        power1[j] += x;                       /* extra influence.           */
+      if (i != rules[j])                       // The planet ruling the sign
+        power1[rules[j]] += x;                 // and the house that the
+      if (i != (j = rules[inhouse[i]]))        // current planet is in, gets
+        power1[j] += x;                        // extra influence.
     }
     if (!ignore7[rrEso]) {
       k = rgSignEso1[j];          if (k > 0 && i != k) power1[k] += x;
@@ -607,9 +607,9 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
       k = rgSignHie2[inhouse[i]]; if (k > 0 && i != k) power1[k] += x;
     }
   }
-  for (i = 1; i <= cSign; i++) {         /* Various planets get influence */
-    j = SFromZ(chouse[i]);               /* if house cusps fall in signs  */
-    power1[rules[j]] += rHouseInf[i];    /* they rule.                    */
+  for (i = 1; i <= cSign; i++) {         // Various planets get influence
+    j = SFromZ(chouse[i]);               // if house cusps fall in signs
+    power1[rules[j]] += rHouseInf[i];    // they rule.
     if (!ignore7[rrEso]) {
       k = rgSignEso1[j]; if (k) power1[k] += rHouseInf[i];
       k = rgSignEso2[j]; if (k) power1[k] += rHouseInf[i];
@@ -620,7 +620,7 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
     }
   }
 
-  /* Second, for each object, find its power based on aspects it makes. */
+  // Second, for each object, find its power based on aspects it makes.
 
   if (!FCreateGrid(fFalse))
     return;
@@ -635,14 +635,14 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
     }
 
 #ifdef EXPRESS
-  /* Adjust powers if AstroExpression set to do so. */
+  // Adjust powers if AstroExpression set to do so.
 
   if (!us.fExpOff && FSzSet(us.szExpInf))
     for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
       ExpSetN(iLetterX, i);
       ExpSetR(iLetterY, power1[i]);
       ExpSetR(iLetterZ, power2[i]);
-      NParseExpression(us.szExpInf);
+      ParseExpression(us.szExpInf);
       power1[i] = RExpGet(iLetterY);
       power2[i] = RExpGet(iLetterZ);
     }
@@ -663,7 +663,7 @@ void ChartInfluence(void)
 
   ComputeInfluence(power1, power2);
 
-  /* Calculate total power of each planet. */
+  // Calculate total power of each planet.
 
   total = total1 = total2 = 0.0;
   for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
@@ -671,12 +671,15 @@ void ChartInfluence(void)
   }
   total = total1+total2;
 
-  /* Finally, determine ranks of the arrays, then print everything out. */
+  // Finally, determine ranks of the arrays, then print everything out.
 
   SortRank(power1, rank1, cObj); SortRank(power2, rank2, cObj);
   SortRank(power, rank, cObj);
   PrintSz("  Planet:    Position      Aspects    Total Rank  Percent\n");
-  for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+  for (j = 0; j <= cObj; j++) {
+    i = rgobjList[j];
+    if (FIgnore(i))
+      continue;
     AnsiColor(kObjA[i]);
     sprintf(sz, "%8.8s: ", szObjDisp[i]); PrintSz(sz);
     sprintf(sz, "%6.1f (%2d) +%6.1f (%2d) =%7.1f (%2d) /%6.1f%%\n",
@@ -687,16 +690,16 @@ void ChartInfluence(void)
   sprintf(sz, "   Total: %6.1f      +%6.1f      =%7.1f      / 100.0%%\n",
     total1, total2, total); PrintSz(sz);
 
-  /* Now, print out a list of power values and relative rankings, based on  */
-  /* the power of each sign of the zodiac, as indicated by the placement of */
-  /* the planets above, in the chart, as specified with the -j0 switch.     */
+  // Now, print out a list of power values and relative rankings, based on the
+  // power of each sign of the zodiac, as indicated by the placement of the
+  // planets above, in the chart, as specified with the -j0 switch.
 
   if (!us.fInfluenceSign)
     return;
   for (i = 1; i <= cSign; i++)
     power1[i] = 0.0;
 
-  /* For each sign, determine its power based on the power of the object. */
+  // For each sign, determine its power based on the power of the object.
 
   for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
     power1[SFromZ(planet[i])] += power[i] / 2.0;
@@ -705,7 +708,7 @@ void ChartInfluence(void)
     if (ruler2[i])
       power1[ruler2[i]]       += power[i] / 4.0;
   }
-  for (i = cThing+1; i <= oCore; i++) if (!ignore[i]) {
+  for (i = cThing+1; i <= oCore; i++) if (!FIgnore(i)) {
     power1[SFromZ(planet[i])] += rObjInf[i];
   }
 
@@ -717,7 +720,7 @@ void ChartInfluence(void)
       power1[i] *= total/total1;
   total1 = total;
 
-  /* Again, determine ranks in the array, and print everything out. */
+  // Again, determine ranks in the array, and print everything out.
 
   SortRank(power1, rank1, cSign);
   PrintSz(

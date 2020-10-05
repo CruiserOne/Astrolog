@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: data.cpp
+** Astrolog (Version 7.10) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -66,17 +66,17 @@ extern unsigned _stklen = 0x4000;
 
 US us = {
 
-  /* Chart types */
+  // Chart types
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-  /* Chart suboptions */
+  // Chart suboptions
   0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
 
-  /* Table chart types */
+  // Table chart types
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-  /* Main flags */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  // Main flags
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef EPHEM
   1,
 #else
@@ -84,7 +84,7 @@ US us = {
 #endif
   0, 0, 0,
 
-  /* Main subflags */
+  // Main subflags
 #ifdef SWITCHES
   0,
 #else
@@ -105,13 +105,13 @@ US us = {
 #else
   1,
 #endif
-  0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
 
-  /* Rare flags */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0,
+  // Rare flags
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-  /* Value settings */
+  // Value settings
   0,
   0,
   0,
@@ -143,16 +143,19 @@ US us = {
   "",
   "",
 
-  /* Value subsettings */
+  // Value subsettings
   0, 5, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, oEar, oEar, 0,
   BIODAYS, 1,
+
+  // AstroExpressions
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 IS is = {
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0.0, 0.0, 0.0, 0.0, rAxis};
+  fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0.0, 0.0, 0.0, 0.0, rAxis};
 
 CI ciCore = {11, 19, 1971, HM(11, 1),       0.0, 8.0, DEFAULT_LOC, "", ""};
 CI ciMain = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
@@ -160,7 +163,7 @@ CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),   0.0, 0.0, DEFAULT_LOC, "", ""};
 CI ciThre = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CI ciFour = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CI ciTran = {1,  1,  2019, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {6,  5,  2020, HMS(12, 12, 23), 1.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciSave = {10, 1,  2020, HMS(14, 5, 15),  1.0, 8.0, DEFAULT_LOC, "", ""};
 CI ciGreg = {10, 15, 1582, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CP cp0, cp1, cp2, cp3, cp4;
 
@@ -177,7 +180,7 @@ CONST CP *rgpcp[5] = {&cp0, &cp1, &cp2, &cp3, &cp4};
 PT3R space[objMax];
 real force[objMax];
 GridInfo *grid = NULL;
-int starname[cStar+1], kObjA[objMax];
+int rgobjList[objMax], starname[cStar+1], kObjA[objMax];
 char *szMacro[48], *szWheel[4+1] = {"", "", "", "", ""};
 real rStarBrightDef[cStar+1] = {-1.0}, rStarBright[cStar+1],
   rStarDistDef[cStar+1], rStarDist[cStar+1];
@@ -242,7 +245,7 @@ CONST char *szHouseTradition[cSign+1] = {"",
   "Children", "Servants", "Marriage", "Death",
   "Long Journeys Over Water", "Career", "Friends", "Troubles"};
 
-CONST char *szObjName[objMax] = {
+CONST char *szObjName[objMax+4] = {
   "Earth", "Sun", "Moon", "Mercury", "Venus", "Mars",       // Planets
   "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
   "Chiron", "Ceres", "Pallas", "Juno", "Vesta",             // Asteroids
@@ -263,9 +266,12 @@ CONST char *szObjName[objMax] = {
   "Becrux", "Alioth", "Spica", "Alkaid", "Agena",
   "Arcturus", "Rigil Kent.", "Antares", "Shaula", "Sargas",
   "Kaus Austr.", "Vega", "Altair", "Peacock", "Deneb",
-  "Alnair", "Fomalhaut", "Andromeda"};
+  "Alnair", "Fomalhaut", "Andromeda",
+
+  "1st Cusp", "4th Cusp", "7th Cusp", "10th Cusp"};
 CONST StrLook rgObjName[] = {{"Node", oNod}, {"Nod:", oNod},
   {"M.C.", oMC}, {"I.C.", oNad},
+  {"1st", oAsc}, {"4th", oNad}, {"7th", oDes}, {"10th", oMC},
   {"Star", starLo}, {"Alnilam", oOri}, {"M31", oAnd}, {"", -1}};
 CONST char *szObjDisp[objMax];
 
@@ -352,8 +358,8 @@ CONST char *szSuffix[cSign+1] = {"",
   "st", "nd", "rd", "th", "th", "th", "th", "th", "th", "th", "th", "th"};
 
 CONST char *szEphem[cmMax] = {
-  "Swiss Ephemeris 2.08", "Moshier Formulas 2.08", "Placalc Ephemeris",
-  "Matrix Formulas", "None"};
+  "Swiss Ephemeris 2.09.03m", "Moshier Formulas 2.09.03m",
+  "Placalc Ephemeris", "Matrix Formulas", "None"};
 
 CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},
   {"Lahiri", 0.883333}, {"Krishnamurti", 0.98}, {"Raman", 2.329444},
@@ -572,12 +578,12 @@ CONST AI ai[cPart] = {
   {"    01 07Fh", "Understanding & Wisdom"},
   {"    06 01Fh", "Fame & Recognition"},
   {"    02 05Fh", "Rulers & Disassociation"},
-  {"    07 01Fh", "Father, Fate & Karma"}, /* Combust */
+  {"    07 01Fh", "Father, Fate & Karma"}, // Combust
   {"    F  07Fh", "Sudden Advancement"},
   {"    01 07 h", "Celebrity of Rank"},
   {"    07 05Fh", "Surgery & Accident"},
   {"    04 03Fh", "Merchants & Their Work"},
-  {"    F  S Fh", "Merchandise (Exchange)"}, /* Moon */
+  {"    F  S Fh", "Merchandise (Exchange)"}, // Moon
   {"    02 04Fh", "Mother"},
   {"    S  F Fh", "Glory & Constancy"},
   {"    01 F Fh", "Honorable Acquaintances"},
@@ -597,7 +603,7 @@ CONST AI ai[cPart] = {
   {"    01 05F ", "Retribution"},
   {"    06 02  ", "Children (Male)"},
   {"    04 02  ", "Children (Female)"},
-  {"    05 04  ", "Play & Variety"}, /* Change */
+  {"    05 04  ", "Play & Variety"}, // Change
   {"    07 03 h", "Stability"},
   {"   h05 06Fh", "Speculation"},
   {"    03 04Fh", "Art"},

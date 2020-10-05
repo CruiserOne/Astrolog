@@ -1,5 +1,4 @@
 /* 
- | $Header: /home/dieter/sweph/RCS/swejpl.c,v 1.76 2008/08/26 13:55:36 dieter Exp $
  |
  | Subroutines for reading JPL ephemerides.
  | derived from testeph.f as contained in DE403 distribution July 1995.

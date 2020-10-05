@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: xcharts2.cpp
+** Astrolog (Version 7.10) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -80,6 +80,8 @@ flag FProper(int i)
     f &= !(gs.fAlt && (i == oMoo || i == oFor));
   else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
     f &= FProperGraph(i);
+  else if (gi.nMode == gTelescope)
+    f &= (i != us.objCenter || us.objCenter == oEar);
   return f;
 }
 
@@ -94,14 +96,14 @@ void FillSymbolRing(real *symbol, real factor)
   real orb = DEFORB*256.0/(real)gs.yWin*(real)gi.nScale*factor, k1, k2, temp;
   int i, j, k = 1, l;
 
-  /* Keep adjusting as long as we can still make changes, or until we do 'n' */
-  /* rounds. (With many objects, there just may not be enough room for all.) */
+  // Keep adjusting as long as can still make changes, or until 'n' rounds are
+  // done. (With many objects, there just may not be enough room for all.)
 
   for (l = 0; k && l < us.nDivision*2; l++) {
     k = 0;
     for (i = 0; i <= cObj; i++) if (FProper(i)) {
 
-      /* For each object, determine who is closest on either side. */
+      // For each object, determine who is closest on either side.
 
       k1 = rLarge; k2 = -rLarge;
       for (j = 0; j <= cObj; j++)
@@ -115,15 +117,15 @@ void FillSymbolRing(real *symbol, real factor)
             k2 = temp;
         }
 
-      /* If an object's too close on one side, then we move to the other. */
+      // If an object's too close on one side, then move in other direction.
 
       if (k2 > -orb && k1 > orb) {
         k = 1; symbol[i] = Mod(symbol[i]+orb*0.51+k2*0.49);
       } else if (k1 < orb && k2 < -orb) {
         k = 1; symbol[i] = Mod(symbol[i]-orb*0.51+k1*0.49);
 
-      /* If we are bracketed by close objects on both sides, then let's move */
-      /* to the midpoint, so we are as far away as possible from either one. */
+      // If object bracketed by close objects on both sides, then move it to
+      // the midpoint, so it's as far away as possible from either one.
 
       } else if (k2 > -orb && k1 < orb) {
         k = 1; symbol[i] = Mod(symbol[i]+(k1+k2)*0.5);
@@ -151,14 +153,14 @@ void FillSymbolLine(real *symbol)
   else
     orb *= rDegMax/(real)gs.xWin;
 
-  /* Keep adjusting as long as we can still make changes. */
+  // Keep adjusting as long as can still make changes.
 
   for (l = 0; k && l < us.nDivision*2; l++) {
     k = 0;
     for (i = 0; i <= cObj*2+1; i++)
       if (FProper(i >> 1) && symbol[i] >= 0.0) {
 
-        /* For each object, determine who is closest to the left and right. */
+        // For each object, determine who is closest to the left and right.
 
         k1 = max-symbol[i]; k2 = -symbol[i];
         for (j = 0; j <= cObj*2+1; j++) {
@@ -171,7 +173,7 @@ void FillSymbolLine(real *symbol)
           }
         }
 
-        /* If an object's too close on one side, then we move to the other. */
+        // If an object's too close on one side, then move in other direction.
 
         if (k2 > -orb && k1 > orb) {
           k = 1; symbol[i] = symbol[i]+orb*0.51+k2*0.49;
@@ -212,7 +214,7 @@ real HousePlaceInX(real deg, real degalt)
     deg = Mod(chouse[in] +
       (rIn - RFloor(rIn)) * MinDistance(chouse[in], chouse[Mod12(in+1)]));
   }
-  if (gi.nMode == gWheel)    /* We only adjust for the -w -X combination. */
+  if (gi.nMode == gWheel)    // Only adjust for the -w -X combination.
     return deg;
   in = NHousePlaceIn2D(deg);
   return Mod(ZFromS(in)+MinDistance(chouse[in], deg)/
@@ -229,7 +231,7 @@ void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
   CP cpA, cpB;
   int i, j;
 
-  /* Put the two sets of chart data to compare in cp1 and cp2. */
+  // Put the two sets of chart data to compare in cp1 and cp2.
   if (n1 != 1) {
     cpA = cp1;
     switch (n1) {
@@ -245,7 +247,7 @@ void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
     }
   }
 
-  /* Compute and draw the aspect lines. */
+  // Compute and draw the aspect lines.
   if (!FCreateGridRelation(fFalse))
     goto LExit;
   for (j = cObj; j >= 0; j--)
@@ -280,8 +282,8 @@ void XChartWheelRelation()
   int cx, cy, i;
   real unitx, unity, temp;
 
-  /* Set up variables and temporarily automatically decrease the horizontal */
-  /* chart size to leave room for the sidebar if that mode is in effect.    */
+  // Set up variables and temporarily automatically decrease the horizontal
+  // chart size to leave room for the sidebar if that mode is in effect.
 
   if (gs.fText && !us.fVelocity)
     gs.xWin -= xSideT;
@@ -292,7 +294,7 @@ void XChartWheelRelation()
   if (us.fVedic)
     gi.rAsc = gs.objLeft ? (gs.objLeft < 0 ? 120.0 : -60.0)-gi.rAsc : 0.0;
 
-  /* Fill out arrays with the degree of each object, cusp, and sign glyph. */
+  // Fill out arrays with the degree of each object, cusp, and sign glyph.
 
   if (gi.nMode == gWheel) {
     for (i = 1; i <= cSign; i++)
@@ -309,8 +311,8 @@ void XChartWheelRelation()
   for (i = 0; i <= cObj; i++)
     xplanet2[i] = PZ(HousePlaceInX(cp2.obj[i], cp2.alt[i]));
 
-  /* Go draw the outer sign and house rings. We are drawing only the */
-  /* houses of one of the two charts in the relationship, however.   */
+  // Go draw the outer sign and house rings. We are drawing only the houses
+  // of one of the two charts in the relationship, however.
 
   DrawWheel(xsign, xhouse1, cx, cy, unitx, unity,
     0.70, 0.74, 0.78, 0.82, 0.885);
@@ -378,12 +380,12 @@ void XChartWheelRelation()
       xplanet1[i] = -1.0;
   FProcessCommandLine(szWheelX[0]);
 
-  /* Draw lines connecting planets between the two charts that have aspects. */
+  // Draw lines connecting planets between the two charts that have aspects.
 
   if (!gs.fEquator)
     DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, unitx, unity, 0.41);
 
-  /* Go draw sidebar with chart information and positions if need be. */
+  // Draw sidebar with chart information and positions if need be.
 
   DrawSidebar();
 }
@@ -400,8 +402,8 @@ void XChartWheelThreeFour()
   int cx, cy, i, fQuad;
   real unitx, unity, base;
 
-  /* Set up variables and temporarily automatically decrease the horizontal */
-  /* chart size to leave room for the sidebar if that mode is in effect.    */
+  // Set up variables and temporarily automatically decrease the horizontal
+  // chart size to leave room for the sidebar if that mode is in effect.
 
   if (gs.fText && !us.fVelocity)
     gs.xWin -= xSideT;
@@ -414,8 +416,8 @@ void XChartWheelThreeFour()
   fQuad = (us.nRel == rcQuadWheel);
   base = (fQuad ? 0.23 : 0.36);
 
-  /* Fill out arrays with the degrees of the cusps and sign glyphs, and the */
-  /* positions of the planet rings.                                         */
+  // Fill out arrays with the degrees of the cusps and sign glyphs, and the
+  // positions of the planet rings.
 
   if (gi.nMode == gWheel) {
     for (i = 1; i <= cSign; i++)
@@ -435,8 +437,8 @@ void XChartWheelThreeFour()
       xplanet4[i] = PZ(HousePlaceInX(cp4.obj[i], cp4.alt[i]));
   }
 
-  /* Go draw the outer sign and house rings. We are drawing the houses */
-  /* of only the outermost ring of the wheel, however.                 */
+  // Go draw the outer sign and house rings. We are drawing the houses of only
+  // the outermost ring of the wheel, however.
 
   if (gs.fColor) {
     DrawColor(kDkGreenB);
@@ -475,8 +477,8 @@ void XChartWheelThreeFour()
     if (!FProper(i))
       xplanet1[i] = -1.0;
 
-  /* Now draw the second to outermost ring of planets. Again, draw each */
-  /* glyph, a line to its true point, and a line to the innermost ring. */
+  // Now draw the second to outermost ring of planets. Again, draw each glyph,
+  // a line to its true point, and a line to the innermost ring.
 
   FProcessCommandLine(szWheelX[2]);
   for (i = 0; i <= cObj; i++)
@@ -500,8 +502,8 @@ void XChartWheelThreeFour()
     if (!FProper(i))
       xplanet2[i] = -1.0;
 
-  /* The third ring (either the innermost or second to innermost) is next. */
-  /* Chart was cast earlier, and draw the glyphs and lines to true point.  */
+  // The third ring (either the innermost or second to innermost) is next.
+  // Chart was cast earlier, and draw the glyphs and lines to true point.
 
   FProcessCommandLine(szWheelX[3]);
   for (i = 0; i <= cObj; i++)
@@ -515,8 +517,8 @@ void XChartWheelThreeFour()
 
   if (fQuad) {
 
-    /* If a fourth ring is being done, first finish the third one by */
-    /* drawing lines from the true positions to the inner ring.      */
+    // If a fourth ring is being done, first finish the third one by drawing
+    // lines from the true positions to the inner ring.
 
     for (i = cObj; i >= 0; i--) if (FProper(i)) {
       DrawColor(kObjB[i]);
@@ -531,8 +533,8 @@ void XChartWheelThreeFour()
       }
     }
 
-    /* If the fourth (innermost) ring is being done, take the chart that  */
-    /* was cast earlier, and draw glyphs and lines to the true positions. */
+    // If the fourth (innermost) ring is being done, take the chart that was
+    // cast earlier, and draw glyphs and lines to the true positions.
 
     FProcessCommandLine(szWheelX[4]);
     for (i = 0; i <= cObj; i++)
@@ -548,7 +550,7 @@ void XChartWheelThreeFour()
   }
   FProcessCommandLine(szWheelX[0]);
 
-  /* Draw lines connecting planets between the charts that have aspects. */
+  // Draw lines connecting planets between the charts that have aspects.
 
   if (!gs.fEquator) {
     base -= 0.02;
@@ -562,7 +564,7 @@ void XChartWheelThreeFour()
     }
   }
 
-  /* Go draw sidebar with chart information and positions if need be. */
+  // Draw sidebar with chart information and positions if need be.
 
   ciCore = ciMain;
   DrawSidebar();
@@ -577,7 +579,7 @@ void XChartWheelThreeFour()
 void XChartGridRelation()
 {
   char sz[cchSzDef], szT[cchSzDef];
-  int nScale, unit, siz, x, y, i, j, k, l;
+  int nScale, unit, siz, x, y, i, j, i0, j0, k, l;
   KI c;
 
   nScale = gi.nScale/gi.nScaleT;
@@ -588,12 +590,13 @@ void XChartGridRelation()
     return;
   us.fSmartCusp = i;
 
-  /* Loop through each cell in each row and column of grid. */
+  // Loop through each cell in each row and column of grid.
 
-  for (y = 0, j = -2; y <= gi.nGridCell; y++) {
+  for (y = 0, j0 = -2; y <= gi.nGridCell; y++) {
     do {
-      j++;
-    } while (j >= 0 && ignore[j] && j <= cObj);
+      j0++;
+      j = rgobjList[j0];
+    } while (j0 >= 0 && ignore[j] && j0 <= cObj);
     DrawColor(gi.kiGray);
     DrawDash(0, (y+1)*unit, siz, (y+1)*unit, !gs.fColor);
     DrawDash((y+1)*unit, 0, (y+1)*unit, siz, !gs.fColor);
@@ -601,20 +604,21 @@ void XChartGridRelation()
     DrawEdge(0, y*unit, unit, (y+1)*unit);
     DrawEdge(y*unit, 0, (y+1)*unit, unit);
     DrawEdge(y*unit, y*unit, (y+1)*unit, (y+1)*unit);
-    if (j <= cObj) for (x = 0, i = -2; x <= gi.nGridCell; x++) {
+    if (j0 <= cObj) for (x = 0, i0 = -2; x <= gi.nGridCell; x++) {
       do {
-        i++;
-      } while (i >= 0 && ignore[i] && i <= cObj);
+        i0++;
+        i = rgobjList[i0];
+      } while (i0 >= 0 && ignore[i] && i0 <= cObj);
 
-      /* Again, we are looping through each cell in each row and column. */
+      // Again, are looping through each cell in each row and column.
 
-      if (i <= cObj) {
+      if (i0 <= cObj) {
         gi.xTurtle = x*unit+unit/2;
         gi.yTurtle = y*unit+unit/2 - (nScale > 2 ? 5*gi.nScaleT : 0);
         k = i >= 0 && j >= 0 ? grid->n[i][j] : 0;
 
-        /* If current cell is on top row or left hand column, draw glyph */
-        /* of planet owning the particular row or column in question.    */
+        // If current cell is on top row or left hand column, draw glyph of
+        // planet owning the particular row or column in question.
 
         if (y == 0 || x == 0) {
           if (gs.fLabelAsp) {
@@ -625,8 +629,8 @@ void XChartGridRelation()
             DrawObject(y == 0 ? i : j, gi.xTurtle, gi.yTurtle);
         } else {
 
-        /* Otherwise, draw glyph of aspect in effect, or glyph of */
-        /* sign of midpoint, between the two planets in question. */
+        // Otherwise, draw glyph of aspect in effect, or glyph of sign of
+        // midpoint, between the two planets in question.
 
           if (gs.fAlt == us.fGridMidpoint) {
             if (k) {
@@ -639,11 +643,11 @@ void XChartGridRelation()
           }
         }
 
-        /* Again, when scale size is 300+, print some text in current cell: */
+        // When scale size is 300+, print some text in current cell.
 
         if (nScale > 2 && gs.fLabel) {
 
-          /* For top and left edges, print sign and degree of the planet. */
+          // For top and left edges, print sign and degree of the planet.
 
           if (y == 0 || x == 0) {
             if (x+y > 0) {
@@ -655,8 +659,8 @@ void XChartGridRelation()
                   (int)((y == 0 ? cp2.obj[i] : cp1.obj[j])*60.0)%60);
               sprintf(sz, "%.3s %02d%s", szSignName[k], l, szT);
 
-              /* For extreme upper left corner, print some little arrows */
-              /* pointing out chart1's planets and chart2's planets.     */
+              // For extreme upper left corner, print some little arrows
+              // pointing out chart1's planets and chart2's planets.
 
             } else {
               c = gi.kiLite;
@@ -667,7 +671,7 @@ void XChartGridRelation()
             if (nScale > 3 && is.fSeconds)
               sprintf(szT, "%02d", l);
 
-            /* For aspect cells, print the orb in degrees and minutes. */
+            // For aspect cells, print the orb in degrees and minutes.
 
             if (gs.fAlt == us.fGridMidpoint) {
               if (grid->n[i][j]) {
@@ -679,7 +683,7 @@ void XChartGridRelation()
               } else
                 sprintf(sz, "");
 
-            /* For midpoint cells, print degree and minute. */
+            // For midpoint cells, print degree and minute.
 
             } else
               sprintf(sz, "%2d%c%02d'%s", k/60, chDeg2, k%60, szT);
@@ -705,7 +709,7 @@ void XChartEphemeris()
     x1, y1, x2, y2, xs, ys, m, n, u, v = 0, i, j, dx;
   flag fSav;
 
-  cYea = us.nEphemYears;    /* Is this -Ey -X or just -E -X? */
+  cYea = us.nEphemYears;    // Is this -Ey -X or just -E -X?
   if (cYea) {
     daytot = 0;
     for (i = 0; i < cYea; i++)
@@ -713,14 +717,14 @@ void XChartEphemeris()
     day = 1; mon = 1; yea = Yea; monsiz = 31;
   } else
     daytot = DayInMonth(Mon, Yea);
-  x1 = (Min(cYea, 2)*xFont + 24)*gi.nScaleT; y1 = unit*2;
+  x1 = (3 + Min(cYea, 2))*xFontT; y1 = unit*2;
   x2 = gs.xWin - x1;
-  y2 = gs.yWin - y1 - gs.fText * (yFont*gi.nScaleText*gi.nScaleT);
+  y2 = gs.yWin - y1 - gs.fText*yFontT;
   xs = x2 - x1; ys = y2 - y1;
   dd = (daytot / ys + 2) * (2 - us.fSeconds);
   dd = Min(dd, 28);
 
-  /* Display glyphs of the zodiac along the bottom axis. */
+  // Display glyphs of the zodiac along the bottom axis.
 
   if (!us.fParallel)
     for (i = 1; i <= cSign+1; i++) {
@@ -741,13 +745,13 @@ void XChartEphemeris()
       j = i > cSign ? 1 : i;
       DrawColor(i ? gi.kiLite : gi.kiOn);
       sprintf(sz, "%s%d", i > 0 ? "+" : "", i);
-      DrawSz(sz, m, y2+2, dtTop);
+      DrawSz(sz, m, y2+2, dtTop | dtScale2);
       DrawColor(gi.kiGray);
       DrawDash(m, y1, m, y2, 2);
     }
   }
 
-  /* Loop and display planet movements for one day segment. */
+  // Loop and display planet movements for one day segment.
 
   while (d <= daytot + 1) {
     n = v;
@@ -775,7 +779,7 @@ void XChartEphemeris()
       MM = mon; DD = day; YY = yea;
     } else
       DD = d;
-    CastChart(fTrue);
+    CastChart(-1);
     if (us.fParallel)
       for (i = 0; i <= cObj; i++) {
         rT = (planetalt[i] * rDegHalf / (real)dx) + rDegHalf;
@@ -784,8 +788,7 @@ void XChartEphemeris()
         planet[i] = rT;
       }
 
-    /* Draw planet glyphs along top of chart. */
-
+    // Draw planet glyphs along top of chart.
     if (d <= 1) {
       for (i = 0; i <= cObj; i++) {
         j = !FProper(i);
@@ -810,8 +813,7 @@ void XChartEphemeris()
         }
       }
 
-    /* Draw a line segment for each object during this time section. */
-
+    // Draw a line segment for each object during this time section.
     } else
       for (i = cObj; i >= 0; i--) {
         if (!FProper(i))
@@ -823,8 +825,7 @@ void XChartEphemeris()
           !us.fParallel && ret[i] > 0.0 && i != oFor ? -x1 : x1, x2);
       }
 
-    /* Label months or days in the month along the left and right edges. */
-
+    // Label months or days in the month along the left and right edges.
     if (d <= daytot && (!cYea || (day == 1 && (cYea <= 1 || mon == 1)))) {
       if (cYea) {
         if (cYea <= 1)
@@ -837,15 +838,14 @@ void XChartEphemeris()
         i = (d == Day);
       }
       DrawColor(gs.fLabel && i ? gi.kiOn : gi.kiLite);
-      DrawSz(sz,     xFont   *gi.nScaleT, v + (yFont-2)*gi.nScaleT,
-        dtLeft | dtBottom);
-      DrawSz(sz, x2+(xFont-1)*gi.nScaleT, v + (yFont-2)*gi.nScaleT,
-        dtLeft | dtBottom);
+      DrawSz(sz,      xFontT/2, v + (yFont-2)*gi.nScaleTextT,
+        dtLeft | dtBottom | dtScale2);
+      DrawSz(sz, x2 + xFontT/2, v + (yFont-2)*gi.nScaleTextT,
+        dtLeft | dtBottom | dtScale2);
     }
 
-    /* Now increment the day counter. For a month we always go up by one. */
-    /* For a year we go up by four or until the end of the month reached. */
-
+    // Now increment the day counter. For a month we always go up by one.
+    // For a year we go up by four or until the end of the month reached.
     if (cYea) {
       day += dd;
       if (day > monsiz) {
@@ -867,8 +867,144 @@ void XChartEphemeris()
   DrawColor(gi.kiLite);
   DrawEdge(x1, y1, x2, y2);
 
-  ciCore = ciMain;    /* Recast original chart. */
-  CastChart(fTrue);
+  ciCore = ciMain;    // Recast original chart.
+  CastChart(1);
+}
+
+
+/* Draw a chart showing a graphical ephemeris of Ray influences for the   */
+/* given month or year, with the date on the vertical axis and each Ray   */
+/* on the horizontal, as done when the -7 is combined with the -X switch. */
+
+void XChartEsoteric()
+{
+  real rRay[cRay+2], rRaySav[cRay+2], power1[objMax], power2[objMax],
+    power[oNorm+1];
+  char sz[cchSzDef];
+  int daytot, d = 1, day, mon, monsiz,
+    x1, y1, x2, y2, xs, ys, m, n, u, v = 0, i, j, k;
+  flag fYea;
+
+  EnsureRay();
+  fYea = (us.nEphemYears > 0);    // Doing an entire year or just a month?
+  if (fYea) {
+    daytot = DayInYear(Yea);
+    day = 1; mon = 1; monsiz = 31;
+  } else
+    daytot = DayInMonth(Mon, Yea);
+  x1 = (3 + fYea) * xFontT; y1 = 12 * gi.nScaleTextT;
+  x2 = gs.xWin - x1; y2 = gs.yWin - y1;
+  xs = x2 - x1; ys = y2 - y1;
+
+  // Label Rays along the top axis.
+
+  for (i = 1; i <= cRay+1; i++) {
+    m = x1 + NMultDiv(xs, i-1, cRay+1);
+    DrawColor(gi.kiGray);
+    DrawDash(m, y1, m, y2, 2);
+    if (i <= cRay)
+      sprintf(sz, "Ray %d", i);
+    else
+      sprintf(sz, "Average");
+    DrawColor(i <= cRay ? kRayB[i] : gi.kiOn);
+    DrawSz(sz, x1 + xs*(i-1)/8, y1 - 3*gi.nScaleTextT,
+      dtLeft | dtBottom | dtScale2);
+  }
+
+  // Loop and display Ray influences for one day segment.
+
+  while (d <= daytot + 1) {
+    n = v;
+    if (gs.fLabel && (fYea ? (mon == Mon && day == 1) : (d == Day))) {
+      if (fYea)
+        v = y1 + NMultDiv(ys, d-2+Day, daytot);
+      else
+        v = y1 + NMultDiv(ys, (d-1)*24 + (int)Tim, daytot*24);
+      DrawColor(kDkCyanB);
+      DrawLine(x1, v, x2, v);       // Marker line for specific day.
+    }
+    v = y1 + NMultDiv(ys, d-1, daytot);
+    if (!gs.fEquator && (!fYea || day == 1)) {
+      DrawColor(gi.kiGray);
+      DrawDash(x1, v, x2, v, 1);    // Marker line for day or month.
+    }
+    if (d > 1)
+      for (i = 1; i <= cRay+1; i++)
+        rRaySav[i] = rRay[i];
+    ciCore = ciMain;
+    if (fYea) {
+      MM = mon; DD = day;
+    } else
+      DD = d;
+    CastChart(-1);
+
+    // Compute Ray influences for current day.
+    for (i = 0; i <= cRay+1; i++)
+      rRay[i] = 0.0;
+    ComputeInfluence(power1, power2);
+    for (i = 0; i <= oNorm; i++) {
+      power[i] = power1[i] + power2[i];
+      if (FIgnore(i))
+        continue;
+      k = SFromZ(planet[i]);
+      for (j = 1; j <= cRay; j++)
+        if (rgSignRay2[k][j]) {
+          if (!gs.fAlt)
+            rRay[j] += power[i];
+          else
+            rRay[j] += power[i] / (420 / rgSignRay2[k][j]);
+        }
+    }
+    for (i = 0; i <= cRay; i++)
+      rRay[cRay+1] += rRay[i] / 7.0;
+
+    // Draw a line segment for each Ray during this time section.
+    if (d > 1)
+      for (i = 1; i <= cRay+1; i++) {
+        k = x1 + (i-1)*xs/8;
+        m = k + (int)((real)xs * rRaySav[i] / 8.0 / (real)gs.nRayWidth);
+        u = k + (int)((real)xs * rRay[i]    / 8.0 / (real)gs.nRayWidth);
+        DrawColor(i <= cRay ? kRayB[i] : gi.kiOn);
+        DrawLine(m, n, u, v);
+      }
+
+    // Label months or days in the month along the left and right edges.
+    if (d <= daytot && (!fYea || day == 1)) {
+      if (fYea) {
+        sprintf(sz, "%.3s", szMonth[mon]);
+        i = (mon == Mon);
+      } else {
+        sprintf(sz, "%2d", d);
+        i = (d == Day);
+      }
+      DrawColor(gs.fLabel && i ? gi.kiOn : gi.kiLite);
+      i = v + gi.nScaleT;
+      DrawSz(sz,      xFontT/2,              i, dtLeft | dtTop | dtScale2);
+      DrawSz(sz, x2 + xFontT/2, i, dtLeft | dtTop | dtScale2);
+    }
+
+    // Now increment the day counter. For a month we always go up by one.
+    // For a year we go up by four or until the end of the month reached.
+    if (fYea) {
+      i = us.fSeconds ? 1 : 4;
+      day += i;
+      if (day > monsiz) {
+        d += i-(day-monsiz-1);
+        if (d <= daytot + 1) {
+          mon++;
+          monsiz = DayInMonth(mon, Yea);
+          day = 1;
+        }
+      } else
+        d += i;
+    } else
+      d++;
+  }
+  DrawColor(gi.kiLite);
+  DrawEdge(x1, y1, x2, y2);
+
+  ciCore = ciMain;    // Recast original chart.
+  CastChart(1);
 }
 
 
@@ -889,7 +1025,7 @@ void XChartTransit(flag fTrans, flag fProg)
   CI ciT;
   real rT, rPct;
 
-  /* Initialize variables. */
+  // Initialize variables.
   rgEph = (TransGraInfo *)PAllocate(sizeof(TransGraInfo),
     "transit graph grid");
   if (rgEph == NULL)
@@ -905,7 +1041,7 @@ void XChartTransit(flag fTrans, flag fProg)
   xo = yRow*3 + fTrans*gi.nScaleT*20;
   ymin = 1-fTrans;
 
-  /* Determine pixel width of chart based on time period being graphed. */
+  // Determine pixel width of chart based on time period being graphed.
   if (!fMonth)
     cSect = 24;
   else if (!fYear)
@@ -917,11 +1053,11 @@ void XChartTransit(flag fTrans, flag fProg)
   xWid = (gs.xWin - xo - 2) / cSect; xWid = Max(xWid, 1);
   cTot = cSect * xWid + 1;
 
-  /* Calculate and fill out aspect strength arrays for each aspect present. */
+  // Calculate and fill out aspect strength arrays for each aspect present.
   if (fTrans || fProg) {
     ciCore = ciMain;
     us.fProgress = fFalse;
-    CastChart(fTrue);
+    CastChart(0);
     cp1 = cp0;
   }
   if (!gs.fAlt) {
@@ -941,7 +1077,7 @@ void XChartTransit(flag fTrans, flag fProg)
   for (iw = 0; iw < cTot; iw++) {
     iSect = iw / xWid; iFrac = iw % xWid;
 
-    /* Cast chart for current time slice. */
+    // Cast chart for current time slice.
     ciCore = ciT;
     rT = (real)iFrac / (real)xWid;
     if (!fMonth) {
@@ -969,12 +1105,12 @@ void XChartTransit(flag fTrans, flag fProg)
       is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
       ciCore = ciMain;
     }
-    CastChart(fTrue);
+    CastChart(-1);
     if (fTrans)
       for (obj = 0; obj <= oNorm; obj++)
         SwapN(ignore[obj], ignore2[obj]);
 
-    /* Compute aspects present for current time slice. */
+    // Compute aspects present for current time slice.
     if (!fTrans) {
       if (!FCreateGrid(fFalse))
         goto LDone;
@@ -984,7 +1120,7 @@ void XChartTransit(flag fTrans, flag fProg)
         goto LDone;
     }
 
-    /* For each aspect present in slice, add its strength to array. */
+    // For each aspect present in slice, add its strength to array.
     for (y = ymin; y <= cObj; y++) {
       if (FIgnore(y) || (!fTrans && !FProperGraph(y)))
         continue;
@@ -1011,7 +1147,7 @@ void XChartTransit(flag fTrans, flag fProg)
         rT /= GetOrb(x, y, asp);
         pw[iw] = 65535 - (int)(rT * (65536.0 - rSmall));
 
-        /* Check for and add eclipse information to array too. */
+        // Check for and add eclipse information to array too.
         if (fEclipse) {
           et = etNone;
           if (asp == aCon)
@@ -1038,9 +1174,9 @@ void XChartTransit(flag fTrans, flag fProg)
     }
   }
 
-  /* Print chart header row(s). */
-  yo = gi.nScaleT*gi.nScaleText*12;
-  yp = gi.nScaleT*gi.nScaleText*2;
+  // Print chart header row.
+  yo = gi.nScaleTextT*12;
+  yp = gi.nScaleTextT*2;
 
   DrawColor(gi.kiOn);
   if (!fMonth)
@@ -1051,7 +1187,7 @@ void XChartTransit(flag fTrans, flag fProg)
     sprintf(sz, "%4d", ciT.yea);
   else
     sz[0] = chNull;
-  if (CchSz(sz) * xFont * gi.nScaleText < xo)
+  if (CchSz(sz) * xFontT < xo)
     DrawSz(sz, yp, yp, dtLeft | dtTop | dtScale2);
 
   DrawColor(gi.kiLite);
@@ -1086,14 +1222,14 @@ void XChartTransit(flag fTrans, flag fProg)
     }
   }
 
-  /* Determine scrolling position if too many aspects to fit on bitmap. */
+  // Determine scrolling position if too many aspects to fit on bitmap.
 #ifdef WIN
   cRow = (cRow - (gs.yWin / (yRow + 1))) * wi.yScroll / nScrollDiv;
 #else
   cRow = 0;
 #endif
 
-  /* Draw the individual aspects present in order. */
+  // Draw the individual aspects present in order.
   iy = 0;
   for (y = ymin; y <= cObj; y++)
     for (x = 0; x < (fTrans ? cObj+1 : y); x++)
@@ -1112,11 +1248,11 @@ void XChartTransit(flag fTrans, flag fProg)
           goto LDone;
         xp = 0;
 
-        /* Draw the glyphs for the aspect in question. */
+        // Draw the glyphs for the aspect in question.
         if (fTrans) {
           DrawColor(gi.kiGray);
-          DrawSz(!fProg ? "T." : "P.",
-            xp + gi.nScaleT*5 + gi.nScale, yp2 + gi.nScaleT*2, dtCent);
+          DrawSz(!fProg ? "T." : "P.", xp + gi.nScaleT*5 + gi.nScale,
+            yp2 + gi.nScaleT*2, dtCent | dtScale2);
           xp += gi.nScaleT*10;
         }
         xp += yRow/2;
@@ -1128,7 +1264,7 @@ void XChartTransit(flag fTrans, flag fProg)
         if (fTrans) {
           DrawColor(kSignB(SFromZ(cp1.obj[y])));
           DrawSz("N.", xp + gi.nScaleT*5 - gi.nScale*5, yp2 + gi.nScaleT*2,
-            dtCent);
+            dtCent | dtScale2);
           xp += gi.nScaleT*10;
         }
         DrawObject(y, xp, yp2);
@@ -1137,7 +1273,7 @@ void XChartTransit(flag fTrans, flag fProg)
         if (iy <= 1)
           DrawBlock(0, yp - yRow, xo + iw - 1, yp - yRow);
 
-        /* Draw the graph itself for the aspect in question. */
+        // Draw the graph itself for the aspect in question.
         nMax = -1;
         for (iw = 0; iw < cTot; iw++) {
           n = pw[iw];
@@ -1161,6 +1297,8 @@ void XChartTransit(flag fTrans, flag fProg)
             DrawColor(n >= nMax || ((iw <= 0 || n > pw[iw-1]) &&
               (iw >= cTot-1 || n > pw[iw+1])) ? gi.kiOn : kAspB[asp]);
             DrawBlock(xo + iw, yp-1 - dyp, xo + iw, yp-1);
+
+            // Draw eclipse strength overlaying aspect strength, if present.
             if (fEclipse) {
               pw2 = (*rgEph)[y][x][asp];
               if (pw2 != NULL && pw2[iw] > 0) {
@@ -1180,10 +1318,10 @@ LDone:
     DrawEdge(0, 0, xo + cTot, gs.yWin-1);
   }
 
-  /* Free temporarily allocated data, and restore original chart. */
+  // Free temporarily allocated data, and restore original chart.
   for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1-10 : y); x++)
-      for (asp = 1; asp <= cAspect; asp++) {
+    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+      for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw != NULL)
           DeallocateP(pw);
@@ -1197,7 +1335,7 @@ LDone:
     DeallocateP(rgEph);
   ciCore = ciMain;
   us.fProgress = fFalse;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -1215,12 +1353,12 @@ void XChartBiorhythm()
   real jd, r, a;
   int x1, x2, xs, cx, y1, y2, ys, cy, i, j, k, x, y, x0, y0;
 
-  k = xFont*6*gi.nScaleT;
+  k = xFontT*6;
   x1 = k; x2 = gs.xWin-k; xs = x2-x1; cx = (x1+x2)/2;
-  k = CELLSIZE;
+  k = CELLSIZE*gi.nScaleTextT;
   y1 = k; y2 = gs.yWin-k; ys = y2-y1; cy = (y1+y2)/2;
 
-  /* Create a dotted day/percentage grid to graph on. */
+  // Create a dotted day/percentage grid to graph on.
   DrawColor(gi.kiGray);
   DrawDash(x1, cy, x2, cy, 1);
   DrawDash(cx, y1, cx, y2, 1);
@@ -1232,7 +1370,7 @@ void XChartBiorhythm()
     }
   }
 
-  /* Now actually draw the three biorhythm curves. */
+  // Now actually draw the three biorhythm curves.
   for (i = 1; i <= 3; i++) {
     jd = RFloor(is.JD + rRound);
     switch (i) {
@@ -1249,24 +1387,24 @@ void XChartBiorhythm()
       if (j > -us.nBioday)
         DrawLine(x0, y0, x, y);
       else
-        DrawSz(c, x1/2, y+2*gi.nScaleT, dtCent);
+        DrawSz(c, x1/2, y+2*gi.nScaleT, dtCent | dtScale2);
       x0 = x; y0 = y;
     }
   }
 
   DrawColor(gi.kiLite);
-  /* Label biorhythm percentages along right vertical axis. */
+  // Label biorhythm percentages along right vertical axis.
   for (k = -100; k <= 100; k += 10) {
     sprintf(sz, "%c%3d%%", k < 0 ? '-' : '+', NAbs(k));
     y = y1 + NMultDiv(ys, 100-k, 200);
-    DrawSz(sz, (x2+gs.xWin)/2, y+2*gi.nScaleT, dtCent);
+    DrawSz(sz, (x2+gs.xWin)/2, y+2*gi.nScaleTextT, dtCent | dtScale2);
   }
-  /* Label days on top horizontal axis. */
+  // Label days on top horizontal axis.
   k = Max(us.nBioday/7, 1);
   for (j = -(us.nBioday/k)*k; j < us.nBioday; j += k) {
     x = x1 + NMultDiv(xs, j+us.nBioday, us.nBioday*2);
     sprintf(sz, "%c%d", j < 0 ? '-' : '+', NAbs(j));
-    DrawSz(sz, x, y1-2*gi.nScaleT, dtBottom);
+    DrawSz(sz, x, y1-2*gi.nScaleTextT, dtBottom | dtScale2);
   }
   DrawEdge(x1, y1, x2, y2);
 }

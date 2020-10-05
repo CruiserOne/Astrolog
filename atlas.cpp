@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: atlas.cpp
+** Astrolog (Version 7.10) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -1220,6 +1220,14 @@ flag FLoadZoneRules(FILE *file, int irunMax, int irueMax)
     }
   }
 
+  // Sanity check results.
+  if (is.rgrun[irunMax].irue != irueMax) {
+    sprintf(szErr, "Zone rule error: The %d rules have %d entries, "
+      "which differs from total rule entry limit of %d\n",
+      irunMax, is.rgrun[irunMax].irue, irueMax);
+    PrintError(szErr);
+    return fFalse;
+  }
   is.crun = irunMax;
   is.crue = irueMax;
   return fTrue;
@@ -1236,6 +1244,7 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
 {
   char szLine[cchSzMax], szErr[cchSzMax], *pch, *pchT;
   int i, j, izn, czn, n;
+  flag rgfUsed[iznMax];
   ZoneChange *pzc;
 
   // Free previous zone change entry list if present, and allocate new list.
@@ -1248,6 +1257,7 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
   if (is.rgzc == NULL)
     return fFalse;
   ClearB((pbyte)is.rgzc, sizeof(ZoneChange) * izceMax);
+  ClearB((pbyte)rgfUsed, sizeof(rgfUsed));
   rgznChange[0] = 0;
 
   // Read in each zone change area.
@@ -1301,6 +1311,7 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
       for (n = 0; n < is.crun; n++)
         if (NCompareSz(pchT, is.rgrun[n].szNam) == 0) {
           pzc->irun = n;
+          rgfUsed[n] = fTrue;
           break;
         }
       if (pzc->irun < 0) {
@@ -1369,6 +1380,21 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
     }
   }
 
+  // Sanity check results.
+  for (i = 0; i < is.crun; i++)
+    if (!rgfUsed[i]) {
+      sprintf(szErr, "Zone change error: Rule %d (%s) is never used "
+        "by any zone change entry.\n", i, is.rgrun[i].szNam);
+      PrintError(szErr);
+      return fFalse;
+    }
+  if (rgizcChange[izcnMax] != izceMax) {
+    sprintf(szErr, "Zone change error: The %d zones have %d entries, "
+      "which differs from total entry limit of %d\n",
+      izcnMax, rgizcChange[izcnMax], izceMax);
+    PrintError(szErr);
+    return fFalse;
+  }
   is.czcn = izcnMax;
   is.czce = izceMax;
   return fTrue;
@@ -1421,6 +1447,17 @@ flag FLoadZoneLinks(FILE *file, int czl)
     }
     if (iznTo >= iznMax) {
       sprintf(szErr, "Zone link error: Link %d to unknown: '%s'\n", i, szTo);
+      PrintError(szErr);
+      return fFalse;
+    }
+
+    // Ensure "from" string zone hasn't been defined with zone change entries.
+    for (izc = 0; izc < is.czcn; izc++)
+      if (iznFrom == rgznChange[izc])
+        break;
+    if (izc < is.czcn) {
+      sprintf(szErr, "Zone link error: Link %d redirects defined: '%s'\n",
+        i, rgszzn[iznFrom]);
       PrintError(szErr);
       return fFalse;
     }
@@ -1660,7 +1697,7 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae)
   // Loop over all cities in atlas, computing their distance to location.
   for (iae = 0; iae < is.cae; iae++) {
     pae = &is.rgae[iae];
-    rDist = PolarDistance(lon, lat, pae->lon, pae->lat) / 360.0 *
+    rDist = SphDistance(lon, lat, pae->lon, pae->lat) / 360.0 *
       (us.fEuroDist ? 40075.0 : 24901.0);
     nDist = (int)rDist;
     for (i = 0; i < clist; i++)
@@ -1826,7 +1863,7 @@ flag FSetDstZon(CI *ci, int izn,
 
 flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
 {
-  char sz[cchSzMax*2], sz1[cchSzMax], sz2[cchSzDef];
+  char sz[cchSzMax*2], sz1[cchSzMax], sz2[cchSzDef], sz3[cchSzDef];
   int rgmon[ichngMax], rgday[ichngMax], rgtim[ichngMax], rgiru[ichngMax],
     izn, izcn, izce, czce,
     mon, day, yea, tim, dst, zon, off, doff,
@@ -1880,7 +1917,7 @@ flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
     pzc = &is.rgzc[izce + i];
     pzc2 = &pzc[1];
     mon = pzc->mon; day = pzc->day; yea = pzc->yea; tim = pzc->tim;
-    dst = pzc->dst < nLarge ? pzc->dst : 0;
+    dst = pzc2->dst < nLarge ? pzc2->dst : 0;
     zon = pzc2->zon;
     if (pzc->timtype == 1)
       tim += dst;
@@ -1891,7 +1928,7 @@ flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
       continue;
     off = zon - dst;
     doff = offPrev - off;
-    if (doff == 0 && zon == zonPrev)
+    if (doff == 0 && dst == dstPrev && zon == zonPrev)
       goto LSkip;
     cn++;
     if (ci != NULL && lDialog == 0) {
@@ -1914,12 +1951,14 @@ flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
       sprintf(sz1, "Change clock %s to", SzHMS(doff));
     else
       sprintf(sz1, "Define clock to be");
-    sz2[0] = chNull;
+    sz2[0] = sz3[0] = chNull;
     if (dst != 0 && (dst != 3600 || us.fSeconds))
       sprintf(sz2, " %s", SzHMS(dst));
-    sprintf(sz, "%s %s: %s: %s%s & Zone %s", SzDate(mon, day, yea, fFalse),
+    if (zon != zonPrev)
+      sprintf(sz3, " & Zone %s", SzZone(RTim(zon)));
+    sprintf(sz, "%s %s: %s: %s%s%s", SzDate(mon, day, yea, fFalse),
       SzTime(tim / 3600, tim / 60 % 60, us.fSeconds ? tim % 60 : -1),
-      sz1, dst == 0 ? "ST" : "DT", sz2, SzZone(RTim(zon)));
+      sz1, dst == 0 ? "ST" : "DT", sz2, sz3);
 #ifdef WIN
     if (lDialog != 0) {
       sprintf(sz1, "%.3s %s", szDay[DayOfWeek(mon, day, yea)], sz);
@@ -1991,12 +2030,12 @@ LSkip:
         k = yea;
         AdjustTime(&mon, &day, &k, &tim);
         // Rule doesn't apply if it's outside ZoneChange endpoint times.
-        /*if (yea == pzc->yea && (mon < pzc->mon || (mon == pzc->mon &&
+        if (yea == pzc->yea && (mon < pzc->mon || (mon == pzc->mon &&
           (day < pzc->day || (day == pzc->day && tim < pzc->tim)))))
           continue;
         if (yea == pzc2->yea && (mon > pzc2->mon || (mon == pzc2->mon &&
-          (day > pzc2->day || (day == pzc2->day && tim > pzc2->tim)))))
-          continue;*/
+          (day > pzc2->day || (day == pzc2->day && tim >= pzc2->tim)))))
+          continue;
         rgmon[ici] = mon; rgday[ici] = day; rgtim[ici] = tim;
         rgiru[ici] = irue + j;
         ici++;
@@ -2019,7 +2058,7 @@ LSkip:
       // Loop over the list of Daylight Saving changes found.
       for (j = 0; j < ici; j++) {
         monPrev = mon; dayPrev = day; yeaPrev = yea; timPrev = tim;
-        dstPrev = dst;
+        dstPrev = dst; zonPrev = zon;
         offPrev = off; doffPrev = doff;
         pru = &is.rgrue[rgiru[j]];
         mon = rgmon[j]; day = rgday[j]; tim = rgtim[j];

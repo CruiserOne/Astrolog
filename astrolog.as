@@ -1,10 +1,10 @@
-@AD700  ; Astrolog 7.00 default settings file astrolog.as
+@AD710  ; Astrolog 7.10 default settings file astrolog.as
 
 -z 8:00W                ; Default time zone     [hours W or E of UTC   ]
 -z0 Autodetect          ; Default Daylight time [0 standard, 1 daylight]
 -zl 122W19:59 47N36:35  ; Default location      [longitude and latitude]
 -zv 167ft               ; Default elevation     [in feet or meters     ]
--zj "Current moment now" "Seattle, WA" ; Default name and location
+-zj "Current moment now" "Seattle, WA, USA" ; Default name and location
 
 ;-n      ; Comment out this line to not start with chart for "now".
 -Yz 0   ; Time minute addition to be used if "now" charts are offset.
@@ -109,7 +109,7 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -YjT 43 43  60                             ; Fixed stars
 
 -Yj0 20 10 15 5  ; In ruling sign, exalted sign, ruling house, exalted house
--Yj7 10 10 10 5 5 5  ; Esoteric, Hierarchical, Ray ruling - sign, house
+-Yj7 10 10 10 5 5 5  ; In Esoteric, Hierarchical, Ray ruling (signs, houses)
 
 
 ; DEFAULT RAYS:
@@ -151,7 +151,7 @@ _Xr              ; Reverse background ["_Xr" is black, "=Xr" is white     ]
 :YXS 0.0         ; Orbit radius in AU ["0.0" for autodetect]
 :YXj 0           ; Orbit trail count
 :YX7 600         ; Esoteric ray column influence width
-:YXf 0           ; Use actual fonts
+:YXf 0000        ; Use system fonts   [signs, houses, planets, aspects]
 :YXp 0           ; PostScript paper orientation ["-1" portrait, "1" landscape]
 :YXp0 8.5in 11in ; PostScript paper X and Y sizes
 

@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: xdevice.cpp
+** Astrolog (Version 7.10) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -71,7 +71,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
   uint value;
   char szT[cchSzDef], *pchStart, *pchEnd;
 
-  /* Determine variable name from filename. */
+  // Determine variable name from filename.
   sprintf(szT, "%s", name);
   for (pchEnd = szT; *pchEnd != chNull; pchEnd++)
     ;
@@ -82,7 +82,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
     ;
   *pchEnd = chNull;
 
-  /* Output file header. */
+  // Output file header.
   fprintf(file, "#define %s_width %d\n" , pchStart, gs.xWin);
   fprintf(file, "#define %s_height %d\n", pchStart, gs.yWin);
   fprintf(file, "static %s %s_bits[] = {",
@@ -91,7 +91,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
     x = 0;
     do {
 
-      /* Process each row, eight columns at a time. */
+      // Process each row, eight columns at a time.
       if (y + x > 0)
         fprintf(file, ",");
       if (temp == 0)
@@ -111,7 +111,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
         ChHex((value >> 4) & 15), ChHex(value & 15));
       temp++;
 
-      /* Is it time to skip to the next line while writing the file yet? */
+      // Is it time to skip to the next line while writing the file yet?
       if ((mode == 'N' && temp >= 12) ||
           (mode == 'C' && temp >= 15) ||
           (mode == 'V' && temp >= 11))
@@ -155,20 +155,20 @@ void WriteBmp(FILE *file)
   int x, y;
   dword value;
 
-  /* BitmapFileHeader */
+  // BitmapFileHeader
   PutByte('B'); PutByte('M');
   PutLong(14+40 + (gs.fColor ? 64 : 8) +
     (long)4*gs.yWin*(((gs.xWin-1) >> (gs.fColor ? 3 : 5))+1));
   PutWord(0); PutWord(0);
   PutLong(14+40 + (gs.fColor ? 64 : 8));
-  /* BitmapInfo / BitmapInfoHeader */
+  // BitmapInfo / BitmapInfoHeader
   PutLong(40);
   PutLong(gs.xWin); PutLong(gs.yWin);
   PutWord(1); PutWord(gs.fColor ? 4 : 1);
   PutLong(0 /*BI_RGB*/); PutLong(0);
   PutLong(0); PutLong(0);
   PutLong(0); PutLong(0);
-  /* RgbQuad */
+  // RgbQuad
   if (gs.fColor)
     for (x = 0; x < 16; x++) {
       PutByte(RGBB(rgbbmp[x])); PutByte(RGBG(rgbbmp[x]));
@@ -178,7 +178,7 @@ void WriteBmp(FILE *file)
     PutLong(0);
     PutByte(255); PutByte(255); PutByte(255); PutByte(0);
   }
-  /* Data */
+  // Data
   for (y = gs.yWin-1; y >= 0; y--) {
     value = 0;
     for (x = 0; x < gs.xWin; x++) {
@@ -245,8 +245,8 @@ void BeginFileX()
       gi.szFileOut = SzPersist(sz);
    }
 #else
-    /* If autosaving in potentially rapid succession, ensure the file isn't */
-    /* being opened by some other application before saving over it again.  */
+    // If autosaving in potentially rapid succession, ensure the file isn't
+    // being opened by some other application before saving over it again.
     if (wi.fAutoSave) {
       if (wi.hMutex == NULL)
         wi.hMutex = CreateMutex(NULL, fFalse, szAppName);
@@ -332,7 +332,7 @@ void EndFileX()
 ******************************************************************************
 */
 
-/* Table of PostScript header alias lines used by the program. */
+// Table of PostScript header alias lines used by the program.
 
 CONST char szPsFunctions[] =
 "/languagelevel where{pop languagelevel}{1}ifelse"
@@ -362,17 +362,19 @@ CONST char szPsFunctions[] =
 "/l{4 2 roll moveto lineto}bind def\n"
 "/t{lineto}bind def\n"
 "/el{newpath matrix currentmatrix 5 1 roll translate scale"
-" 0 0 1 0 360 arc setmatrix stroke}bind def\n";
+" 0 0 1 0 360 arc setmatrix stroke}bind def\n"
+"/ef{newpath matrix currentmatrix 5 1 roll translate scale"
+" 0 0 1 0 360 arc fill setmatrix stroke}bind def\n";
 
 
 /* Write a command to flush the PostScript buffer. */
 
 void PsStrokeForce()
 {
-  if (gi.cStroke > 0) {              /* render any existing path */
+  if (gi.cStroke > 0) {              // Render any existing path
     fprintf(gi.file, "stroke\n");
     gi.cStroke = 0;
-    gi.xPen = -1;                    /* Invalidate PolyLine cache */
+    gi.xPen = -1;                    // Invalidate PolyLine cache
   }
 }
 
@@ -382,7 +384,7 @@ void PsStrokeForce()
 void PsStroke(int n)
 {
   gi.cStroke += n;
-  if (gi.cStroke > 2000)    /* Whenever we reach a certain limit, flush. */
+  if (gi.cStroke > 2000)    // Whenever we reach a certain limit, flush.
     PsStrokeForce();
 }
 
@@ -434,7 +436,7 @@ void PsFont(int psfont)
 {
   int z;
 
-  if (psfont != gi.nFont && gs.fFont) {
+  if (psfont != gi.nFontPS && gs.nFont > 0) {
     if (psfont <= 2) {
       z = psfont == 1 ? 32*PSMUL : 23*PSMUL;
       fprintf(gi.file, "/Astro[%d 0 0 -%d 0 0]sf\n", z, z);
@@ -445,7 +447,7 @@ void PsFont(int psfont)
       z = 10*PSMUL;
       fprintf(gi.file, "/Courier[%d 0 0 -%d 0 0]sf\n", z, z);
     }
-    gi.nFont = psfont;
+    gi.nFontPS = psfont;
   }
 }
 
@@ -500,7 +502,7 @@ void PsEnd()
     fprintf(gi.file, "%%%%PageTrailer\n");
     fprintf(gi.file, "%%%%Trailer\n");
     fprintf(gi.file, "%%%%DocumentFonts: Times-Roman\n");
-    if (gs.fFont) {
+    if (gs.nFont > 0) {
       fprintf(gi.file, "%%%%+ Courier\n");
       fprintf(gi.file, "%%%%+ Astro\n");
     }
@@ -567,7 +569,7 @@ void MetaSelect()
     MetaTextAlign(gi.nAlignDes);
     gi.nAlignAct = gi.nAlignDes;
   }
-  gi.xPen = -1;    /* Invalidate PolyLine cache */
+  gi.xPen = -1;    // Invalidate PolyLine cache
 }
 
 
@@ -580,36 +582,36 @@ void MetaInit()
   int i, j, k;
 
   gi.pwMetaCur = (word *)gi.bm;
-  /* Placeable Metaheader */
+  // Placeable Metaheader
   MetaLong(0x9AC6CDD7L);
-  MetaWord(0);      /* Not used */
+  MetaWord(0);                      // Not used
   MetaWord(0); MetaWord(0);
   MetaWord(gs.xWin); MetaWord(gs.yWin);
-  MetaWord(gs.xWin/6);                     /* Units per inch */
-  MetaLong(0L);     /* Not used */
-  MetaWord(0x9AC6 ^ 0xCDD7 ^ gs.xWin ^ gs.yWin ^ gs.xWin/6);  /* Checksum */
-  /* Metaheader */
-  MetaWord(1);                      /* Metafile type                    */
-  MetaWord(9);                      /* Size of header in words          */
-  MetaWord(0x300);                  /* Windows version                  */
-  MetaLong(0L);                     /* Size of entire metafile in words */
-  MetaWord(16*5+1+(gs.fFont>0)*4);  /* Number of objects in metafile    */
-  MetaLong(17L);                    /* Size of largest record in words  */
-  MetaWord(0);                      /* Not used                         */
-  /* Setup */
+  MetaWord(gs.xWin/6);                     // Units per inch
+  MetaLong(0L);                     // Not used
+  MetaWord(0x9AC6 ^ 0xCDD7 ^ gs.xWin ^ gs.yWin ^ gs.xWin/6);  // Checksum
+  // Metaheader
+  MetaWord(1);                      // Metafile type
+  MetaWord(9);                      // Size of header in words
+  MetaWord(0x300);                  // Windows version
+  MetaLong(0L);                     // Size of entire metafile in words
+  MetaWord(16*5+1+(gs.nFont>0)*4);  // Number of objects in metafile
+  MetaLong(17L);                    // Size of largest record in words
+  MetaWord(0);                      // Not used
+  // Setup
   MetaEscape(17);
-  MetaLong(LFromBB('A', 's', 't', 'r'));  /* "Astr" */
-  MetaWord(4);                            /* Creator */
-  MetaLong(14L);                          /* Bytes in string */
-  MetaLong(LFromBB('A', 's', 't', 'r'));  /* "Astr" */
-  MetaLong(LFromBB('o', 'l', 'o', 'g'));  /* "olog" */
-  MetaLong(LFromBB(' ', szVerCore[0], '.', szVerCore[1]));  /* Version */
-  MetaWord(WFromBB(szVerCore[2], 0));     /* Version part 2 */
+  MetaLong(LFromBB('A', 's', 't', 'r'));  // "Astr"
+  MetaWord(4);                            // Creator
+  MetaLong(14L);                          // Bytes in string
+  MetaLong(LFromBB('A', 's', 't', 'r'));  // "Astr"
+  MetaLong(LFromBB('o', 'l', 'o', 'g'));  // "olog"
+  MetaLong(LFromBB(' ', szVerCore[0], '.', szVerCore[1]));  // Version
+  MetaWord(WFromBB(szVerCore[2], 0));     // Version part 2
   MetaSaveDc();
   MetaWindowOrg(0, 0);
   MetaWindowExt(gs.xWin, gs.yWin);
   MetaBkMode(1 /* Transparent */);
-  /* Colors */
+  // Colors
   for (j = 1; j <= 4; j++)
     for (i = 0; i < 16; i++) {
       k = j <= 1 ? gi.nPenWid : 0;
@@ -620,8 +622,8 @@ void MetaInit()
     MetaCreateBrush(0 /* BS_SOLID */, rgbbmp[i]);
   }
   MetaCreateBrush(1 /* BS_NULL */, 0L);
-  /* Fonts */
-  if (gs.fFont) {
+  // Fonts
+  if (gs.nFont > 0) {
     MetaCreateFont(5, 0, -8*gi.nScale, 2 /* Symbol Charset */);
     MetaWord(WFromBB(1 /* Draft */, 1 | 0x10 /* Fixed | Roman */));
     MetaLong(LFromBB('W', 'i', 'n', 'g'));
@@ -659,12 +661,12 @@ void WriteMeta(FILE *file)
 #if FALSE
   int i;
 
-  for (i = 16*5+1+(gs.fFont>0)*4; i >= 0; i--) {
+  for (i = 16*5+1+(gs.nFont > 0)*4; i >= 0; i--) {
     MetaDeleteObject(i);
   }
 #endif
   MetaRestoreDc();
-  MetaRecord(3, 0);    /* End record */
+  MetaRecord(3, 0);    // End record
   *(long *)(gi.bm + 22 + 6) =
     ((long)((pbyte)gi.pwMetaCur - gi.bm) - 22) / 2;
   for (w = (word *)gi.bm; w < gi.pwMetaCur; w++) {
@@ -697,14 +699,14 @@ void WriteWire(FILE *file)
   while (pw < gi.pwWireCur) {
     if (*pw != 32768) {
 
-      /* Output one line segment. */
+      // Output one line segment.
       x1 = (short)pw[0]; y1 = (short)pw[1]; z1 = (short)pw[2];
       x2 = (short)pw[3]; y2 = (short)pw[4]; z2 = (short)pw[5];
       fprintf(file, "%d %d %d %d %d %d\n", x1, y1, z1, x2, y2, z2);
       pw += 6;
     } else {
 
-      /* Output a color change. */
+      // Output a color change.
       if (gs.fColor) {
         n = pw[1];
         if (n < cColor) {
@@ -790,7 +792,7 @@ void WireStar(int x, int y, int z, ES *pes)
   char *pch = pes->sz;
   int n;
 
-  /* Determine star color. */
+  // Determine star color.
   if (gs.fColor) {
     if (pes->ki != kDefault)
       n = pes->ki;
@@ -801,7 +803,7 @@ void WireStar(int x, int y, int z, ES *pes)
     DrawColor(n);
   }
 
-  /* Draw star point. */
+  // Draw star point.
   if (!FOdd(gs.nAllStar)) {
     WireLine(x-1, y, z, x+1, y, z);
     WireLine(x, y-1, z, x, y+1, z);
@@ -809,7 +811,7 @@ void WireStar(int x, int y, int z, ES *pes)
   } else
     WireOctahedron(x, y, z, 3 * gi.nScaleT);
 
-  /* Draw star's name label. */
+  // Draw star's name label.
   if (!gs.fLabel || gs.nAllStar < 2)
     return;
   gi.zDefault = z + 8*gi.nScaleT;
@@ -827,10 +829,10 @@ void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 {
   real lonMC, latMC;
 
-  /* Compute coordinates for a general globe invoked with -XG switch. */
+  // Compute coordinates for a general globe invoked with -XG switch.
 
   if (gi.nMode == gSphere) {
-    /* Chart sphere coordinates are relative to the local horizon. */
+    // Chart sphere coordinates are relative to the local horizon.
     lonMC = Tropical(is.MC); latMC = 0.0;
     EclToEqu(&lonMC, &latMC);
     x1 = Mod(rDegMax - (x1 + lonMC) + rDegQuad);
@@ -839,9 +841,9 @@ void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
     y1 = rDegQuad - y1;
   }
 
-  x1 = Mod(x1+deg);      /* Shift by current globe rotation value. */
+  x1 = Mod(x1+deg);       // Shift by current globe rotation value.
   if (gs.rTilt != 0.0) {
-    /* Do another coordinate shift if the globe's equator is tilted any. */
+    // Do another coordinate shift if the globe's equator is tilted any.
     y1 = rDegQuad - y1;
     CoorXform(&x1, &y1, gs.rTilt);
     x1 = Mod(x1); y1 = rDegQuad - y1;
@@ -877,194 +879,57 @@ void WireMapCalc(real x1, real y1, int *xp, int *yp, int *zp, flag fSky,
 
 void WireDrawGlobe(flag fSky, real deg)
 {
-  char *nam, *loc, *lin, chCmd;
   int X[objMax], Y[objMax], Z[objMax], M[objMax], N[objMax], O[objMax],
-    rz, lon, lat, unit = 12*gi.nScale,
-    x, y, z, xold, yold, zold, m, n, o, u, v, w, i, j, k, l, nScl = gi.nScale;
-  flag fNext = fTrue;
+    rz, unit = 12*gi.nScale,
+    x, y, z, xold, yold, zold, m, n, o, u, v, w, i, j, k, l;
   real planet1[objMax], planet2[objMax], x1, y1, rT;
-#ifdef CONSTEL
-  CONST char *pch;
-  flag fBlank;
-  int isz = 0, nC, xT, yT, xDelta, yDelta, xLo, xHi, yLo, yHi;
-#endif
 #ifdef SWISS
   ES es;
 #endif
-#ifdef ATLAS
-  real rgzon[iznMax], zon;
-  CI ci;
-#endif
 
-  /* Set up some variables. */
+  // Set up some variables.
   rz = Min(gs.xWin/2, gs.yWin/2);
   if (gi.nMode == gSphere)
     rz -= 7*gi.nScale;
 
-  loop {
+  // Draw the map (either a constellation map, or a world map).
 
-    /* Get the next chunk of data to process. Get the starting position, */
-    /* map it to the screen, and set the drawing color appropriately.    */
-
-    if (fNext) {
-      fNext = fFalse;
-
-      /* For constellations, get data for the next constellation shape. */
-
-      if (fSky) {
+  rT = fSky ? rDegMax - deg : deg;
 #ifdef CONSTEL
-        isz++;
-        if (isz > cCnstl)
-          break;
+  if (fSky)
+    EnumConstelLines(NULL, NULL, NULL, NULL, NULL);
+  else
+#endif
+    EnumWorldLines(NULL, NULL, NULL, NULL, NULL);
+  while (
+#ifdef CONSTEL
+    fSky ? EnumConstelLines(&xold, &yold, &x, &y, &i) :
+#endif
+    EnumWorldLines(&xold, &yold, &x, &y, &i)) {
+    if (fSky) {
+      if (i > 0)
+        DrawColor(gi.nMode == gSphere || !gs.fAlt ? gi.kiGray : kDkGreenB);
+      else
         DrawColor(gi.nMode == gSphere ? kPurpleB :
           (gs.fAlt ? kBlueB : kDkBlueB));
-        pch = szDrawConstel[isz];
-        lon = nDegMax -
-          (((pch[2]-'0')*10+(pch[3]-'0'))*15+(pch[4]-'0')*10+(pch[5]-'0'));
-        lat = 90-((pch[6] == '-' ? -1 : 1)*((pch[7]-'0')*10+(pch[8]-'0')));
-        if (lon >= nDegMax)
-          lon -= nDegMax;
-        pch += 9;
-        xLo = xHi = xT = xold = x = lon;
-        yLo = yHi = yT = yold = y = lat;
-        nC = 0;
-        WireGlobeCalc((real)x, (real)y, &m, &n, &o, rz, rDegMax - deg);
-        k = l = fTrue;
-#else
-        ;
-#endif
-
-      /* For world maps, get data for the next coastline piece. */
-
-      } else {
-        if (!FReadWorldData(&nam, &loc, &lin))
-          break;
-        i = nam[0]-'0';
+    } else {
+      if (i >= 0)
         DrawColor(!gs.fAlt && !gs.fColorHouse ? gi.kiGray :
           (i ? kRainbowB[i] : kDkBlueB));
-        lon = (loc[0] == '+' ? 1 : -1)*
-          ((loc[1]-'0')*100 + (loc[2]-'0')*10 + (loc[3]-'0'));
-        lat = (loc[4] == '+' ? 1 : -1)*((loc[5]-'0')*10 + (loc[6]-'0'));
-        x = 180-lon;
-        y = 90-lat;
-        WireGlobeCalc((real)x, (real)y, &m, &n, &o, rz, deg);
-        k = l = fTrue;
-      }
     }
-
-    /* Get the next unit from the string to draw on the screen as a line. */
-
-    if (fSky) {
-
-      /* For constellations we have a cache of how long we should keep    */
-      /* going in the previous direction, as say "u5" for up five should  */
-      /* move our pointer up five times without advancing string pointer. */
-
-#ifdef CONSTEL
-      if (nC <= 0) {
-        if (!(chCmd = *pch)) {
-          fNext = fTrue;
-          if (gs.fText) {
-
-            /* If we've reached the end of current constellation, compute */
-            /* the center location in it based on lower and upper bounds  */
-            /* we've maintained, and print the name of the constel there. */
-
-            xT = xLo + (xHi - xLo)*(szDrawConstel[isz][0]-'1')/8;
-            yT = yLo + (yHi - yLo)*(szDrawConstel[isz][1]-'1')/8;
-            if (xT < 0)
-              xT += nDegMax;
-            else if (xT > nDegMax)
-              xT -= nDegMax;
-            WireGlobeCalc((real)xT, (real)yT, &x, &y, &z, rz, deg);
-            DrawColor(gi.nMode == gSphere || !gs.fAlt ? gi.kiGray : kDkGreenB);
-            gi.zDefault = z;
-            DrawSz(szCnstlAbbrev[isz], x, y, dtCent);
-          }
-          continue;
-        }
-        pch++;
-
-        /* Get the next direction and distance from constellation string. */
-
-        if (fBlank = (chCmd == 'b'))
-          chCmd = *pch++;
-        xDelta = yDelta = 0;
-        switch (chCmd) {
-        case 'u': yDelta = -1; break;    /* Up    */
-        case 'd': yDelta =  1; break;    /* Down  */
-        case 'l': xDelta = -1; break;    /* Left  */
-        case 'r': xDelta =  1; break;    /* Right */
-        case 'U': yDelta = -1; nC = (yT-1)%10+1;    break;  /* Up until    */
-        case 'D': yDelta =  1; nC = 10-yT%10;       break;  /* Down until  */
-        case 'L': xDelta = -1; nC = (xT+599)%15+1;  break;  /* Left until  */
-        case 'R': xDelta =  1; nC = 15-(xT+600)%15; break;  /* Right until */
-        default: PrintError("Bad wire draw.");        /* Shouldn't happen. */
-        }
-        if (chCmd >= 'a')
-          nC = NFromPch(&pch);  /* Figure out how far to draw. */
-      }
-      nC--;
-      xT += xDelta; x += xDelta;
-      yT += yDelta; y += yDelta;
-      if (fBlank) {
-        xold = x; yold = y;    /* We occasionally want to move the pointer */
-        l = fFalse;            /* without drawing the line on the screen.  */
-        continue;
-      }
-      if (xT < xLo)         /* Maintain our bounding rectangle for this */
-        xLo = xT;           /* constellation if we crossed over it any. */
-      else if (xT > xHi)
-        xHi = xT;
-      if (yT < yLo)
-        yLo = yT;
-      else if (yT > yHi)
-        yHi = yT;
-#else
-      ;
-#endif
-
-    } else {
-
-      /* Get the next unit from the much simpler world map strings. */
-
-      if (!(chCmd = *lin)) {
-        fNext = fTrue;
-        continue;
-      }
-      lin++;
-
-      /* Each unit is exactly one character in the coastline string. */
-
-      if (chCmd == 'L' || chCmd == 'H' || chCmd == 'G')
-        x--;
-      else if (chCmd == 'R' || chCmd == 'E' || chCmd == 'F')
-        x++;
-      if (chCmd == 'U' || chCmd == 'H' || chCmd == 'E')
-        y--;
-      else if (chCmd == 'D' || chCmd == 'G' || chCmd == 'F')
-        y++;
+    // For globes, have to do a complicated transformation.
+    WireGlobeCalc((real)xold, (real)yold, &m, &n, &o, rz, rT);
+    if (fSky && i > 0) {
+      gi.zDefault = o;
+      DrawSz(szCnstlAbbrev[i], m, n, dtCent | dtScale2);
+      continue;
     }
-
-    /* Transform map coordinates to screen coordinates and draw a line. */
-
-    while (x >= nDegMax)    /* Take care of coordinate wrap around. */
-      x -= nDegMax;
-    while (x < 0)
-      x += nDegMax;
-
-    /* For globes, we have to go do a complicated transformation. */
-
-    WireGlobeCalc((real)x, (real)y, &u, &v, &w, rz, deg);
-    if (l && !(fSky && (x > xold || y > yold)))
-      WireLine(m, n, o, u, v, w);
-    m = u; n = v; o = w;
-    l = fTrue;
-    xold = x; yold = y;
+    WireGlobeCalc((real)x, (real)y, &u, &v, &w, rz, rT);
+    WireLine(m, n, o, u, v, w);
   }
 
-  /* Now, if we are in an appropriate bonus chart mode, draw each planet at */
-  /* its zenith or visible location on the globe, if not hidden.            */
+  // Now, if in an appropriate bonus chart mode, draw each planet at its
+  // zenith or visible location on the globe, if not hidden.
 
   if (gs.fAlt || gi.nMode == gAstroGraph || gi.nMode == gSphere)
     return;
@@ -1074,10 +939,10 @@ void WireDrawGlobe(flag fSky, real deg)
   for (i = 0; i <= cObj; i++) {
     planet1[i] = Tropical(planet[i]);
     planet2[i] = planetalt[i];
-    EclToEqu(&planet1[i], &planet2[i]);    /* Calculate zenith long. & lat. */
+    EclToEqu(&planet1[i], &planet2[i]);    // Calculate zenith long. & lat.
   }
 
-  /* Compute screen coordinates of each object, if it's even visible. */
+  // Compute screen coordinates of each object, if it's even visible.
 
   for (i = 0; i <= cObj; i++) if (FProper(i)) {
     WireMapCalc(planet1[i], planet2[i], &u, &v, &w, fSky,
@@ -1088,7 +953,7 @@ void WireDrawGlobe(flag fSky, real deg)
     M[i] = X[i]; N[i] = Y[i]; O[i] = Z[i]-unit/2;
   }
 
-  /* Draw ecliptic equator and zodiac sign wedges. */
+  // Draw ecliptic equator and zodiac sign wedges.
 
   if (gs.fHouseExtra) {
     if (!gs.fColorSign)
@@ -1100,10 +965,10 @@ void WireDrawGlobe(flag fSky, real deg)
         if (gs.fColorSign && l < 0 && i % 30 == 0)
           DrawColor(kSignB((i+90)/30 + (l < -1)*6 + 1));
         if (l >= 0) {
-          /* Coordinates for zodiac sign wedge longitude lines. */
+          // Coordinates for zodiac sign wedge longitude lines.
           j = l*30; k = i;
         } else {
-          /* Coordinates for ecliptic equator latitude line. */
+          // Coordinates for ecliptic equator latitude line.
           j = i+90 + (l < -1)*180; k = 0;
         }
         x1 = Tropical((real)j);
@@ -1116,7 +981,7 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 
-  /* Draw Earth's equator. */
+  // Draw Earth's equator.
 
   if (gs.fEquator) {
     DrawColor(kPurpleB);
@@ -1127,7 +992,7 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 
-  /* Draw chart latitude and plot chart location. */
+  // Draw chart latitude and plot chart location.
 
   if (us.fLatitudeCross && !fSky) {
     DrawColor(kMagentaB);
@@ -1142,7 +1007,7 @@ void WireDrawGlobe(flag fSky, real deg)
   }
 
 #ifdef SWISS
-  /* Draw extra stars. */
+  // Draw extra stars.
 
   if (gs.fAllStar) {
     DrawColor(gi.kiGray);
@@ -1156,7 +1021,7 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 
-  /* Draw extra asteroids. */
+  // Draw extra asteroids.
 
   if (gs.nAstLo > 0) {
     DrawColor(gi.kiGray);
@@ -1172,58 +1037,24 @@ void WireDrawGlobe(flag fSky, real deg)
 #endif
 
 #ifdef ATLAS
-  /* Draw locations of cities from atlas. */
+  // Draw locations of cities from atlas.
 
   if (gs.fLabelCity && !fSky && FEnsureAtlas()) {
     if (!gs.fLabelAsp)
       DrawColor(kOrangeB);
-    if (gs.nLabelCity >= 4) {
-      // Initialize array of current offsets for each time zone area.
-      ci = ciMain;
-#ifdef WIN
-      l = wi.fNoPopup; wi.fNoPopup = fTrue;
-#endif
-      for (i = 0; i < iznMax; i++) {
-        DisplayTimezoneChanges(i, 0, &ci);
-        rgzon[i] = ci.zon - ci.dst;
-      }
-#ifdef WIN
-      wi.fNoPopup = l;
-#endif
-    }
+    KiCity(-1);
     for (i = 0; i < is.cae; i++) {
       x1 = nDegHalf - is.rgae[i].lon;
       y1 = rDegQuad - is.rgae[i].lat;
       WireGlobeCalc(x1, y1, &u, &v, &w, rz, deg);
-      if (gs.fLabelAsp) {
-        if (gs.nLabelCity < 3) {
-          l = is.rgae[i].icn;
-          if (gs.nLabelCity == 2 && (l == icnUS || l == icnCA))
-            DrawColor(kRainbowB[is.rgae[i].istate % 7 + 1]);
-          else
-            DrawColor(kRainbowB[l == icnUS ? 6 :
-              (l == icnFR ? 5 : l % 7 + 1)]);
-        } else if (FEnsureTimezoneChanges()) {
-          l = is.rgae[i].izn;
-          if (gs.nLabelCity == 3)
-            zon = ZondefFromIzn(l);
-          else
-            zon = rgzon[l];
-          if (zon == zonLMT)
-            DrawColor(kDkGrayB);
-          else if (zon == RFloor(zon)) {
-            l = (int)(zon + rDegMax) % 6;
-            DrawColor(kRainbowB[l + (l > 0) + 1]);
-          } else
-            DrawColor(kMagentaB);
-        }
-      }
+      if (gs.fLabelAsp)
+        DrawColor(KiCity(i));
       WirePoint(u, v, w);
     }
   }
 #endif
 
-  /* Draw ecliptic equator and zodiac sign wedges. */
+  // Draw ecliptic equator and zodiac sign wedges.
 
   if (us.fHouse3D) {
     if (!gs.fColorSign)
@@ -1235,10 +1066,10 @@ void WireDrawGlobe(flag fSky, real deg)
         if (gs.fColorSign && l < 0 && i % 30 == 0)
           DrawColor(kSignB((i+90)/30 + (l < -1)*6 + 1));
         if (l >= 0) {
-          /* Coordinates for zodiac sign wedge longitude lines. */
+          // Coordinates for zodiac sign wedge longitude lines.
           j = l*30; k = i;
         } else {
-          /* Coordinates for ecliptic equator latitude line. */
+          // Coordinates for ecliptic equator latitude line.
           j = i+90 + (l < -1)*180; k = 0;
         }
         x1 = Tropical((real)j);
@@ -1250,8 +1081,8 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 
-  /* Draw MC, IC, Asc, and Des lines for each object, as great circles */
-  /* around the globe. The result is a 3D astro-graph chart.           */
+  // Draw MC, IC, Asc, and Des lines for each object, as great circles around
+  // the globe. The result is a 3D astro-graph chart.
 
   if (!fSky) for (i = 0; i <= cObj; i++) if (FProper(i)) {
     for (k = 0; k < 4; k++) {
@@ -1299,7 +1130,7 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 
-  /* Now that we have the coordinates of each object, draw their glyphs. */
+  // Now that we have the coordinates of each object, draw their glyphs.
 
   for (i = 0; i <= cObj; i++) if (FProper(i)) {
     gi.zDefault = O[i];
@@ -1323,7 +1154,7 @@ void WireChartOrbit()
   int xT, yT, zT, x2, y2, z2;
 #endif
 
-  /* Compute coordinates of planets. */
+  // Compute coordinates of planets.
   i = gi.nScale/gi.nScaleT;
   sz = gs.rspace > 0.0 ? gs.rspace : (i <= 1 ? 90.0 : (i == 2 ? 30.0 :
     (i == 3 ? 6.0 : (gi.nScaleText <= 1 ? 1.0 : 0.006))));
@@ -1335,11 +1166,11 @@ void WireChartOrbit()
       xp /= rLYToAU; yp /= rLYToAU; zp /= rLYToAU;
     }
     if (us.fHouse3D)
-      OrbitPlot(&xp, &yp, &zp, sz, i, &space[oEar]);
+      OrbitPlot(&xp, &yp, &zp, sz, i, space);
     x[i] = -(int)(xp*sx); y[i] = (int)(yp*sx); z[i] = (int)(zp*sx);
   }
 
-  /* Draw zodiac lines. */
+  // Draw zodiac lines.
   if (!gs.fHouseExtra) {
     k = zWin;
     if (!gs.fColorSign)
@@ -1355,7 +1186,7 @@ void WireChartOrbit()
     }
   }
 
-  /* Draw lines connecting planets which have aspects between them. */
+  // Draw lines connecting planets which have aspects between them.
   if (!gs.fEquator && us.nAsp > 0) {
     if (!FCreateGrid(fFalse))
       return;
@@ -1367,14 +1198,14 @@ void WireChartOrbit()
         }
   }
 
-  /* Prepare to draw orbital trails. */
+  // Prepare to draw orbital trails.
   if (gs.cspace > 0 && gi.rgspace == NULL) {
-    gi.rgspace = (PT3R *)PAllocate(sizeof(PT3R)*oNorm1*gs.cspace, "orbits");
+    gi.rgspace = RgAllocate(oNorm1*gs.cspace, PT3R, "orbits");
     if (gi.rgspace == NULL)
       return;
   }
 
-  /* Draw planets. */
+  // Draw planets.
   for (i = 0; i <= cObj; i++) if (FProper(i)) {
     DrawColor(kObjB[i]);
     if (!gs.fAlt || i > oVes)
@@ -1385,19 +1216,19 @@ void WireChartOrbit()
     gi.zDefault = z[i] + (j + 5*gi.nScaleT);
     DrawObject(i, x[i], y[i]);
 
-    /* Draw orbital trails. */
+    // Draw orbital trails.
     for (j = 0; j < gi.cspace-1; j++) {
       k = (gi.ispace - gi.cspace + j + gs.cspace) % gs.cspace;
       k = k*oNorm1 + i;
       xp = gi.rgspace[k].x; yp = gi.rgspace[k].y; zp = gi.rgspace[k].z;
       if (us.fHouse3D)
-        OrbitPlot(&xp, &yp, &zp, sz, i, &gi.rgspace[k - i + oEar]);
+        OrbitPlot(&xp, &yp, &zp, sz, i, &gi.rgspace[k - i]);
 
       k = (gi.ispace - gi.cspace + j + 1 + gs.cspace) % gs.cspace;
       k = k*oNorm1 + i;
       xp2 = gi.rgspace[k].x; yp2 = gi.rgspace[k].y; zp2 = gi.rgspace[k].z;
       if (us.fHouse3D)
-        OrbitPlot(&xp2, &yp2, &zp2, sz, i, &gi.rgspace[k - i + oEar]);
+        OrbitPlot(&xp2, &yp2, &zp2, sz, i, &gi.rgspace[k - i]);
 
       k = gi.cspace - j;
       WireLine(-(int)(xp*sx), (int)(yp*sx), (int)(zp*sx) - k*gs.zspace,
@@ -1416,7 +1247,7 @@ void WireChartOrbit()
   OrbitRecord();
 
 #ifdef SWISS
-  /* Draw extra stars. */
+  // Draw extra stars.
   if (gs.fAllStar) {
     DrawColor(gi.kiGray);
     SwissComputeStar(0.0, NULL);
@@ -1428,6 +1259,8 @@ void WireChartOrbit()
       xT = -(int)(xp*sx); yT = (int)(yp*sx); zT = (int)(zp*sx);
       WireStar(xT, yT, zT, &es);
     }
+
+    // Draw constellation lines between stars.
     DrawColor(gi.kiLite);
     EnumStarsLines(fTrue, NULL, NULL);
     while (EnumStarsLines(fFalse, &pes1, &pes2)) {
@@ -1445,7 +1278,7 @@ void WireChartOrbit()
     }
   }
 
-  /* Draw extra asteroids. */
+  // Draw extra asteroids.
   if (!gs.fAllStar && gs.nAstLo > 0) {
     DrawColor(gi.kiGray);
     SwissComputeAsteroid(0.0, NULL, fFalse);
@@ -1531,7 +1364,7 @@ void WireChartSphere()
   ES es, *pes1, *pes2;
 #endif
 
-  /* Initialize variables. */
+  // Initialize variables.
   if (gs.fText && !us.fVelocity)
     gs.xWin -= xSideT;
 
@@ -1546,14 +1379,14 @@ void WireChartSphere()
   latMC = Lat;
   is.lonMC = lonMC; is.latMC = latMC;
 
-  /* Draw constellations. */
+  // Draw constellations.
   if (gs.fConstel) {
     neg(gs.rTilt);
     WireDrawGlobe(fTrue, rDegMax - gs.rRot);
     neg(gs.rTilt);
   }
 
-  /* Draw horizon. */
+  // Draw horizon.
   if (!fNoHorizon || (!gs.fHouseExtra && !us.fHouse3D)) {
     if (!gs.fColorHouse)
       DrawColor(gi.kiOn);
@@ -1573,7 +1406,7 @@ void WireChartSphere()
     }
   }
 
-  /* Draw Earth's equator. */
+  // Draw Earth's equator.
   if (gs.fEquator) {
     DrawColor(kPurpleB);
     for (i = 0; i <= nDegMax; i++) {
@@ -1584,7 +1417,7 @@ void WireChartSphere()
     }
   }
 
-  /* Draw prime vertical. */
+  // Draw prime vertical.
   if (!fNoHorizon) {
     if (!gs.fColorHouse)
       DrawColor(gi.kiGray);
@@ -1604,7 +1437,7 @@ void WireChartSphere()
     }
   }
 
-  /* Draw house wedges and meridian. */
+  // Draw house wedges and meridian.
   if (!gs.fColorHouse)
     DrawColor(kDkGreenB);
   for (j = 30; j < nDegMax; j += (j != 150 ? 30 : 60)) {
@@ -1641,7 +1474,7 @@ void WireChartSphere()
       }
     }
 
-  /* Draw sign wedges. */
+  // Draw sign wedges.
   if (!us.fVedic) {
     if (!gs.fColorSign)
       DrawColor(kDkBlueB);
@@ -1673,10 +1506,10 @@ void WireChartSphere()
     }
   }
 
-  /* Label signs. */
+  // Label signs.
   if (!us.fVedic) {
     nSav = gi.nScale;
-    gi.nScale = gi.nScaleText * gi.nScaleT;
+    gi.nScale = gi.nScaleTextT;
     for (j = -80; j <= 80; j += 160)
       for (i = 1; i <= cSign; i++) {
         WireSphereZodiac((real)(i*30-15), (real)j, zr, &xp, &yp, &zp);
@@ -1687,10 +1520,10 @@ void WireChartSphere()
     gi.nScale = nSav;
   }
 
-  /* Label houses. */
+  // Label houses.
   if (!gs.fHouseExtra) {
     nSav = gi.nScale;
-    gi.nScale = gi.nScaleText * gi.nScaleT;
+    gi.nScale = gi.nScaleTextT;
     for (j = -82; j <= 82; j += 164)
       for (i = 1; i <= cSign; i++) {
         WireSpherePrime((real)(i*30-15), (real)j, zr, &xp, &yp, &zp);
@@ -1701,7 +1534,7 @@ void WireChartSphere()
     gi.nScale = nSav;
   }
 
-  /* Label directions. */
+  // Label directions.
   if (!fNoHorizon) {
     k = zGlyph >> 1;
     for (i = 0; i < nDegMax; i += 90) {
@@ -1727,7 +1560,7 @@ void WireChartSphere()
   }
 
 #ifdef SWISS
-  /* Draw extra stars. */
+  // Draw extra stars.
   if (gs.fAllStar) {
     DrawColor(gi.kiGray);
     SwissComputeStar(0.0, NULL);
@@ -1735,6 +1568,8 @@ void WireChartSphere()
       WireSphereZodiac(es.lon, es.lat, zr, &xp, &yp, &zp);
       WireStar(xp, yp, zp, &es);
     }
+
+    // Draw constellation lines between stars.
     DrawColor(gi.kiLite);
     EnumStarsLines(fTrue, NULL, NULL);
     while (EnumStarsLines(fFalse, &pes1, &pes2)) {
@@ -1744,7 +1579,7 @@ void WireChartSphere()
     }
   }
 
-  /* Draw extra asteroids. */
+  // Draw extra asteroids.
   if (gs.nAstLo > 0) {
     DrawColor(gi.kiGray);
     SwissComputeAsteroid(0.0, NULL, fFalse);
@@ -1755,7 +1590,7 @@ void WireChartSphere()
   }
 #endif
 
-  /* Determine set of planet data to use. */
+  // Determine set of planet data to use.
   for (iChart = 1; iChart <= cChart; iChart++) {
     FProcessCommandLine(szWheelX[iChart]);
     if (iChart <= 1)
@@ -1765,7 +1600,7 @@ void WireChartSphere()
     cpSav = cp0;
     cp0 = *pcp;
 
-  /* Draw planet glyphs, and spots for actual local location. */
+  // Draw planet glyphs, and spots for actual local location.
   for (i = 0; i <= cObj; i++) if (FProper(i)) {
     WireSphereZodiac(planet[i], planetalt[i], zr, &xp, &yp, &zp);
     rgx[i] = xp; rgy[i] = yp; rgz[i] = zp;
@@ -1775,7 +1610,7 @@ void WireChartSphere()
     WireOctahedron(rgx[i], rgy[i], rgz[i], gi.nScale);
   }
 
-  /* Draw lines connecting planets which have aspects between them. */
+  // Draw lines connecting planets which have aspects between them.
   if (!FCreateGrid(fFalse))
     return;
   for (j = cObj; j >= 1; j--)
@@ -1789,7 +1624,7 @@ void WireChartSphere()
   } /* iChart */
   FProcessCommandLine(szWheelX[0]);
 
-  /* Draw center point. */
+  // Draw center point.
   DrawColor(gi.kiOn);
   WireOctahedron(0, 0, 0, gi.nScale * 2);
 }

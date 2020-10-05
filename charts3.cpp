@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: charts3.cpp
+** Astrolog (Version 7.10) File: charts3.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -73,9 +73,9 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
 
   for (i = 0; i < occurcount; i++) {
 
-    /* Detect whether this aspect indicates the Moon going void of course, */
-    /* and if so how long the Moon is v/c before entering next sign. This  */
-    /* requires the sign event to be in the same list as the Moon aspect.  */
+    // Detect whether this aspect indicates the Moon going void of course, and
+    // if so how long the Moon is v/c before entering next sign. This requires
+    // the sign change event to be in the same list as the Moon aspect.
     nVoid = -1;
     if (pid[i].aspect > 0 && (pid[i].source == oMoo || pid[i].dest == oMoo)) {
       for (j = i+1; j < counttotal; j++) {
@@ -93,7 +93,7 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
       }
     }
 
-    /* Display the current transit event. */
+    // Display the current transit event.
     s1 = (int)pid[i].time/60;
     s2 = (int)pid[i].time-s1*60;
     s3 = us.fSeconds ? (int)(pid[i].time*60.0)-((s1*60+s2)*60) : -1;
@@ -102,10 +102,10 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     if ((!us.fExpOff && FSzSet(us.szExpDay)) || (us.fEclipse &&
       !us.fParallel && (pid[i].aspect == aCon || pid[i].aspect == aOpp))) {
       ciCore = ciSave;
-      CastChart(fTrue);
+      CastChart(-1);
     }
 #ifdef EXPRESS
-    /* May want to skip current event if AstroExpression says to do so. */
+    // May want to skip current event if AstroExpression says to do so.
     if (!us.fExpOff && FSzSet(us.szExpDay)) {
       nEclipse = etUndefined; rEclipse = 0.0;
       if (us.fEclipse && !us.fParallel) {
@@ -115,13 +115,9 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
           pid[i].aspect == aOpp && us.objCenter == oEar)
           nEclipse = NCheckEclipseLunar(&rEclipse);
       }
-      ExpSetN(iLetterQ, pid[i].source);
-      ExpSetR(iLetterR, pid[i].pos1);
-      ExpSetN(iLetterS, pid[i].ret1);
-      ExpSetN(iLetterT, pid[i].aspect);
-      ExpSetN(iLetterU, pid[i].dest);
-      ExpSetR(iLetterV, pid[i].pos2);
-      ExpSetN(iLetterW, pid[i].ret2);
+      ExpSetN(iLetterU, pid[i].source);
+      ExpSetN(iLetterV, pid[i].aspect);
+      ExpSetN(iLetterW, pid[i].dest);
       ExpSetN(iLetterX, nVoid);
       ExpSetN(iLetterY, nEclipse);
       ExpSetR(iLetterZ, rEclipse);
@@ -130,7 +126,7 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     }
 #endif
 #ifdef GRAPH
-    /* May want to draw current event within a graphic calendar box. */
+    // May want to draw current event within a graphic calendar box.
     if (gi.rgzCalendar) {
       for (j = i; j >= 0 && pid[j].day == pid[i].day; j--)
         ;
@@ -169,7 +165,7 @@ void ChartInDaySearch(flag fProg)
   real divsiz, d1, d2, e1, e2, f1, f2, g;
   flag fYear, fVoid, fPrint = fTrue;
 
-  /* If parameter 'fProg' is set, look for changes in a progressed chart. */
+  // If parameter 'fProg' is set, look for changes in a progressed chart.
 
 #ifdef GRAPH
   fPrint &= (gi.rgzCalendar == NULL);
@@ -180,7 +176,7 @@ void ChartInDaySearch(flag fProg)
   divsiz = 24.0 / (real)division*60.0;
   divSign = cSign * us.nSignDiv;
 
-  /* If -dY in effect, then search through a range of years. */
+  // If -dY in effect, then search through a range of years.
 
   yea1 = yea2 = !fProg ? Yea : YeaT;
   if (fYear && us.nEphemYears != 0) {
@@ -191,14 +187,14 @@ void ChartInDaySearch(flag fProg)
   }
   for (yea0 = yea1; yea0 <= yea2; yea0++) {
 
-  /* If -dy in effect, then search through the whole year, month by month. */
+  // If -dy in effect, then search through the whole year, month by month.
 
   if (fYear) {
     mon1 = 1; mon2 = 12;
   } else
     mon1 = mon2 = !fProg ? Mon : MonT;
 
-  /* Start searching the month or months in question for exciting events. */
+  // Start searching the month or months in question for exciting events.
 
   for (mon0 = mon1; mon0 <= mon2; mon0++) {
     if (us.fInDayMonth) {
@@ -207,29 +203,29 @@ void ChartInDaySearch(flag fProg)
     } else
       day1 = day2 = !fProg ? Day : DayT;
 
-  /* Start searching the day or days in question for exciting events. */
+  // Start searching the day or days in question for exciting events.
 
   for (day0 = day1; day0 <= day2; day0 = AddDay(mon0, day0, yea0, 1)) {
     occurcount = 0;
     maxinday = MAXINDAY - (int)(pid - id);
 
-    /* Cast chart for beginning of day and store it for future use. */
+    // Cast chart for beginning of day and store it for future use.
 
     SetCI(ciCore, mon0, day0, yea0, 0.0, Dst, Zon, Lon, Lat);
     if (us.fProgress = fProg) {
       is.JDp = MdytszToJulian(mon0, day0, yea0, 0.0, Dst, Zon);
       ciCore = ciMain;
     }
-    CastChart(fTrue);
+    CastChart(-1);
     cp2 = cp0;
 
-    /* Now divide the day into segments and search each segment in turn. */
-    /* More segments is slower, but has slightly better time accuracy.   */
+    // Now divide the day into segments and search each segment in turn.
+    // More segments is slower, but has slightly better time accuracy.
 
     for (div = 1; div <= division; div++) {
 
-      /* Cast the chart for the ending time of the present segment. The   */
-      /* beginning time chart is copied from the previous end time chart. */
+      // Cast the chart for the ending time of the present segment. The
+      // beginning time chart is copied from the previous end time chart.
 
       SetCI(ciCore, mon0, day0, yea0,
         24.0*(real)div/(real)division, Dst, Zon, Lon, Lat);
@@ -237,17 +233,17 @@ void ChartInDaySearch(flag fProg)
         is.JDp = MdytszToJulian(mon0, day0, yea0, TT, Dst, Zon);
         ciCore = ciMain;
       }
-      CastChart(fTrue);
+      CastChart(-1);
       cp1 = cp2; cp2 = cp0;
 
-      /* Now search through the present segment for anything exciting. */
+      // Now search through the present segment for anything exciting.
 
       for (i = 0; i <= cObj; i++)
         if (!FIgnore(i) && (fProg || us.fGraphAll || FThing(i))) {
         s1 = SFromZ(cp1.obj[i])-1;
         s2 = SFromZ(cp2.obj[i])-1;
 
-        /* Does the current planet change into the next or previous sign? */
+        // Does the current planet change into the next or previous sign?
 
         if (!us.fIgnoreSign && FAllow(i) && occurcount < maxinday) {
           l = NAbs(s1-s2);
@@ -266,7 +262,7 @@ void ChartInDaySearch(flag fProg)
             pid[occurcount].yea = yea0;
             occurcount++;
 
-          /* Does the current planet change into next or previous degree? */
+          // Does the current planet change into next or previous degree?
 
           } else if (us.nSignDiv > 1) {
             j = (int)(cp1.obj[i] / (rDegMax / (real)divSign));
@@ -292,7 +288,7 @@ void ChartInDaySearch(flag fProg)
           }
         }
 
-        /* Does the current planet go retrograde or direct? */
+        // Does the current planet go retrograde or direct?
 
         if (!us.fIgnoreDir && (cp1.dir[i] < 0.0) != (cp2.dir[i] < 0.0) &&
           FAllow(i) && occurcount < maxinday) {
@@ -310,7 +306,7 @@ void ChartInDaySearch(flag fProg)
           occurcount++;
         }
 
-        /* Now search for anything making an aspect to the current planet. */
+        // Now search for anything making an aspect to the current planet.
 
         for (j = i+1; j <= cObj; j++)
           if (!FIgnore(j) && (fProg || us.fGraphAll || FThing(j)))
@@ -324,9 +320,9 @@ void ChartInDaySearch(flag fProg)
               SwapR(&d2, &e2);
             }
 
-            /* We are searching each aspect in turn. Let's subtract the  */
-            /* size of the aspect from the angular difference, so we can */
-            /* then treat it like a conjunction.                         */
+            // Search each potential aspect in turn. First subtract the size
+            // of the aspect from the angular difference, so can then treat it
+            // like a conjunction.
 
             if (MinDistance(e1, Mod(d1-rAspAngle[k])) <
                 MinDistance(e2, Mod(d2+rAspAngle[k]))) {
@@ -337,9 +333,9 @@ void ChartInDaySearch(flag fProg)
               e2 = Mod(e2-rAspAngle[k]);
             }
 
-            /* Check to see if the aspect actually occurs during our    */
-            /* segment, making sure we take into account if one or both */
-            /* planets are retrograde or if they cross the Aries point. */
+            // Check to see if the aspect actually occurs during this segment,
+            // making sure to take into account if one or both planets are
+            // retrograde or if they cross the Aries point.
 
             f1 = e1-d1;
             if (RAbs(f1) > rDegHalf)
@@ -356,9 +352,9 @@ void ChartInDaySearch(flag fProg)
               pid[occurcount].day = day0;
               pid[occurcount].yea = yea0;
 
-              /* Horray! The aspect occurs sometime during the interval.   */
-              /* Now we just have to solve an equation in two variables to */
-              /* find out where the "lines" cross, i.e. the aspect's time. */
+              // Horray! The aspect occurs sometime during the interval. Now
+              // just have to solve an equation in two variables to find out
+              // where their "lines" of motion cross, i.e. the aspect's time.
 
               f1 = d2-d1;
               if (RAbs(f1) > rDegHalf)
@@ -397,17 +393,16 @@ void ChartInDaySearch(flag fProg)
             g = cp1.obj[j]; EclToEqu(&g, &e1);
             g = cp2.obj[j]; EclToEqu(&g, &e2);
 
-            /* We are searching each aspect in turn. Negate the sign of the */
-            /* aspect if needed, so we can then treat it like a parallel.   */
+            // Search each potential aspect in turn. Negate the sign of the
+            // aspect if needed, so can then treat it like a parallel.
 
             if (k == aOpp) {
               neg(e1);
               neg(e2);
             }
 
-            /* Check to see if the aspect actually occurs during our    */
-            /* segment, making sure we take into account if one or both */
-            /* planets are retrograde.                                  */
+            // Check if the aspect actually occurs during this segment, making
+            // sure to take into account if one or both planets are retrograde.
 
             f1 = e1-d1;
             f2 = e2-d2;
@@ -419,9 +414,9 @@ void ChartInDaySearch(flag fProg)
               pid[occurcount].day = day0;
               pid[occurcount].yea = yea0;
 
-              /* Horray! The aspect occurs sometime during the interval.   */
-              /* Now we just have to solve an equation in two variables to */
-              /* find out where the "lines" cross, i.e. the aspect's time. */
+              // Horray! The aspect occurs sometime during the interval. Now
+              // just have to solve an equation in two variables to find out
+              // where their "lines" of motion cross, i.e. the aspect's time.
 
               f1 = d2-d1;
               f2 = e2-e1;
@@ -442,12 +437,12 @@ void ChartInDaySearch(flag fProg)
               occurcount++;
             }
           }
-          } /* us.fParallel */
-      } /* i */
-    } /* div */
+          } // us.fParallel
+      } // i
+    } // div
 
-    /* After all the aspects, etc, in the day have been located, sort   */
-    /* them by time at which they occur, so we can print them in order. */
+    // After all the aspects and evemts in the day have been located, sort
+    // them by time at which they occur, so can print them in order.
 
     for (i = 1; i < occurcount; i++) {
       j = i-1;
@@ -457,7 +452,7 @@ void ChartInDaySearch(flag fProg)
       }
     }
 
-    /* Finally, loop through and display each aspect and when it occurs. */
+    // Finally, loop through and display each aspect and when it occurs.
 
     if (!fVoid || (day0 >= day2 && mon0 >= mon2 && yea0 >= yea2)) {
       if (fVoid) {
@@ -471,7 +466,7 @@ void ChartInDaySearch(flag fProg)
       if (pid - id > j << 1) {
 #ifdef GRAPH
         if (gi.rgzCalendar != NULL && id[j].day != id[0].day) {
-          /* Don't split day when drawing within calendar boxes. */
+          // Don't split day when drawing within calendar boxes.
           while (j > 0 && id[j].day == id[j-1].day)
             j--;
         }
@@ -485,16 +480,16 @@ void ChartInDaySearch(flag fProg)
     if (occurcount >= maxinday && fPrint)
       PrintSz("Too many transit events found.\n");
     counttotal += occurcount;
-  } /* day0 */
-  } /* mon0 */
-  } /* yea0 */
+  } // day0
+  } // mon0
+  } // yea0
   if (counttotal == 0 && fPrint)
     PrintSz("No transit events found.\n");
 
-  /* Recompute original chart placements as we've overwritten them. */
+  // Recompute original chart placements as have overwritten them.
 
   ciCore = ciMain;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -516,7 +511,7 @@ void ChartTransitSearch(flag fProg)
   CP cpT = cp0;
   CI ciT;
 
-  /* Save away natal chart and initialize things. */
+  // Save away natal chart and initialize things.
 
   ciT = ciTran;
   if (fProg)
@@ -545,17 +540,17 @@ void ChartTransitSearch(flag fProg)
     }
   }
 
-  /* Start searching the year or years in question for any transits. */
+  // Start searching the year or years in question for any transits.
 
   for (YeaT = Y1; YeaT <= Y2; YeaT++)
 
-  /* Start searching the month or months in question for any transits. */
+  // Start searching the month or months in question for any transits.
 
   for (MonT = M1; MonT <= M2; MonT++) {
     daysiz = (real)(us.fInDayMonth ? DayInMonth(MonT, YeaT) : 1)*24.0*60.0;
     divsiz = daysiz / (real)division;
 
-    /* Cast chart for beginning of month and store it for future use. */
+    // Cast chart for beginning of month and store it for future use.
 
     SetCI(ciCore, MonT, us.fInDayMonth ? 1 : DayT, YeaT, 0.0, DstT, ZonT,
       LonT, LatT);
@@ -565,18 +560,18 @@ void ChartTransitSearch(flag fProg)
     }
     for (i = 0; i <= oNorm; i++)
       SwapN(ignore[i], ignore2[i]);
-    CastChart(fTrue);
+    CastChart(-1);
     for (i = 0; i <= oNorm; i++)
       SwapN(ignore[i], ignore2[i]);
     cp2 = cp0;
 
-    /* Divide our month into segments and then search each segment in turn. */
+    // Divide month into segments and then search each segment in turn.
 
     for (div = 1; div <= division; div++) {
       occurcount = 0;
 
-      /* Cast the chart for the ending time of the present segment, and */
-      /* copy the start time chart from the previous end time chart.    */
+      // Cast the chart for the ending time of the present segment, and copy
+      // the start time chart from the previous end time chart.
 
       d = (us.fInDayMonth ? 1.0 : (real)DayT) +
         (daysiz/24.0/60.0)*(real)div/(real)division;
@@ -588,17 +583,17 @@ void ChartTransitSearch(flag fProg)
       }
       for (i = 0; i <= oNorm; i++)
         SwapN(ignore[i], ignore2[i]);
-      CastChart(fTrue);
+      CastChart(-1);
       for (i = 0; i <= oNorm; i++)
         SwapN(ignore[i], ignore2[i]);
       cp1 = cp2; cp2 = cp0;
 
-      /* Now search through the present segment for any transits. Note that */
-      /* stars can be transited, but they can't make transits themselves.   */
+      // Now search through the present segment for any transits. Note that
+      // stars can be transited, but they can't make transits themselves.
 
       for (i = 0; i <= cObj; i++) {
 
-        /* Check if 3D house change occurs during time segment. */
+        // Check if 3D house change occurs during time segment.
 
         if (us.fHouse3D && !us.fIgnoreSign && !FIgnore2(i)) {
           is.MC = mc; is.OB = ob;
@@ -627,7 +622,7 @@ void ChartTransitSearch(flag fProg)
           if ((is.fReturn ? i != j : FIgnore2(j)) || (fNoCusp && !FThing(j)))
             continue;
 
-          /* Between each pair of planets, check if they make any aspects. */
+          // Between each pair of planets, check if they make any aspects.
 
           if (!us.fParallel) {
 
@@ -642,8 +637,8 @@ void ChartTransitSearch(flag fProg)
               e2 = Mod(e2-rAspAngle[k]);
             }
 
-            /* Check to see if the present aspect actually occurs during the */
-            /* segment, making sure we check any Aries point crossings.      */
+            // Check to see if the present aspect actually occurs during the
+            // segment, making sure we check any Aries point crossings.
 
             f1 = e1-d;
             if (RAbs(f1) > rDegHalf)
@@ -654,8 +649,8 @@ void ChartTransitSearch(flag fProg)
             if (MinDistance(d, Midpoint(e1, e2)) < rDegQuad &&
               RSgn(f1) != RSgn(f2) && occurcount < MAXINDAY) {
 
-              /* Ok, we have found a transit. Now determine the time */
-              /* and save this transit in our list to be printed.    */
+              // Ok, have found a transit! Now determine the time and save
+              // this transit in our list to be printed.
 
               source[occurcount] = j;
               aspect[occurcount] = k;
@@ -681,14 +676,14 @@ void ChartTransitSearch(flag fProg)
               neg(e2);
             }
 
-            /* Check if parallel aspect occurs during time segment. */
+            // Check if parallel aspect occurs during time segment.
 
             f1 = e1-d;
             f2 = e2-d;
             if (RSgn(f1) != RSgn(f2) && occurcount < MAXINDAY) {
 
-              /* Ok, found a parallel transit. Now determine the time */
-              /* and save this transit in our list to be printed.     */
+              // Ok, found a parallel transit. Now determine the time and save
+              // this transit in the list to be printed.
 
               source[occurcount] = j;
               aspect[occurcount] = k;
@@ -701,11 +696,11 @@ void ChartTransitSearch(flag fProg)
               occurcount++;
             }
           }
-          } /* us.fParallel */
-        } /* j */
-      } /* i */
+          } // us.fParallel
+        } // j
+      } // i
 
-      /* After all transits located, sort them by time at which they occur. */
+      // After all transits located, sort them by time at which they occur.
 
       for (i = 1; i < occurcount; i++) {
         j = i-1;
@@ -720,7 +715,7 @@ void ChartTransitSearch(flag fProg)
         }
       }
 
-      /* Now loop through list and display all the transits. */
+      // Now loop through list and display all the transits.
 
       for (i = 0; i < occurcount; i++) {
         j = (int)(time[i] * 60.0);
@@ -736,17 +731,13 @@ void ChartTransitSearch(flag fProg)
         SetCI(ciSave, MonT, s1+1, YeaT, (real)j / (60.0*60.0),
           DstT, ZonT, LonT, LatT);
 #ifdef EXPRESS
-        /* May want to skip this transit if AstroExpression says to do so. */
+        // May want to skip this transit if AstroExpression says to do so.
         if (!us.fExpOff && FSzSet(us.szExpTra)) {
           ciCore = ciSave;
-          CastChart(fTrue);
-          ExpSetN(iLetterT, source[i]);
-          ExpSetR(iLetterU, pos[i]);
-          ExpSetN(iLetterV, isret[i]);
-          ExpSetN(iLetterW, aspect[i]);
-          ExpSetN(iLetterX, dest[i]);
-          ExpSetR(iLetterY, cpT.obj[dest[i]]);
-          ExpSetN(iLetterZ, (int)RSgn(cpT.dir[dest[i]]));
+          CastChart(-1);
+          ExpSetN(iLetterX, source[i]);
+          ExpSetN(iLetterY, aspect[i]);
+          ExpSetN(iLetterZ, dest[i]);
           if (!NParseExpression(us.szExpTra))
             continue;
         }
@@ -763,7 +754,7 @@ void ChartTransitSearch(flag fProg)
           dest[i], cpT.obj[dest[i]], (int)RSgn(cpT.dir[dest[i]]),
           (char)(fProg ? 'u' : 't'));
 
-        /* Check for a Solar, Lunar, or any other return. */
+        // Check for a Solar, Lunar, or any other return.
 
         if (aspect[i] == aCon && source[i] == dest[i]) {
           AnsiColor(kWhiteA);
@@ -781,17 +772,17 @@ void ChartTransitSearch(flag fProg)
       if (occurcount >= MAXINDAY)
         PrintSz("Too many transits found.\n");
       counttotal += occurcount;
-    } /* div */
-  } /* MonT */
+    } // div
+  } // MonT
   if (counttotal == 0)
     PrintSz("No transits found.\n");
 
-  /* Recompute original chart placements as we've overwritten them. */
+  // Recompute original chart placements as have overwritten them.
 
   ciCore = ciMain; ciTran = ciT;
   cp0 = cpT;
   us.fProgress = fFalse;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -812,7 +803,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   CI ciT;
   real rT, rPct;
 
-  /* Initialize variables. */
+  // Initialize variables.
   rgEph = (TransGraInfo *)PAllocate(sizeof(TransGraInfo),
     "transit graph grid");
   if (rgEph == NULL)
@@ -826,7 +817,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   cAsp = fTrans && is.fReturn ? aCon : us.nAsp;
   ymin = 1-fTrans;
 
-  /* Determine character width of chart based on time period being graphed. */
+  // Determine character width of chart based on time period being graphed.
   if (!fMonth) {
     cSlice = 49;
     iwFocus = (int)(ciT.tim / 0.5);
@@ -843,16 +834,16 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   if (iwFocus == 0 && ciT.tim <= 0.0)
     iwFocus = -1;
 
-  /* Calculate and fill out aspect strength arrays for each aspect present. */
+  // Calculate and fill out aspect strength arrays for each aspect present.
   if (fTrans || fProg) {
     ciCore = ciMain;
     us.fProgress = fFalse;
-    CastChart(fTrue);
+    CastChart(0);
     cp1 = cp0;
   }
   for (iw = 0; iw < cSlice; iw++) {
 
-    /* Cast chart for current time slice. */
+    // Cast chart for current time slice.
     ciCore = ciT;
     if (!fMonth) {
       TT = (real)iw * 0.5;
@@ -877,12 +868,12 @@ void ChartTransitGraph(flag fTrans, flag fProg)
       is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
       ciCore = ciMain;
     }
-    CastChart(fTrue);
+    CastChart(-1);
     if (fTrans)
       for (obj = 0; obj <= oNorm; obj++)
         SwapN(ignore[obj], ignore2[obj]);
 
-    /* Compute aspects present for current time slice. */
+    // Compute aspects present for current time slice.
     if (!fTrans) {
       if (!FCreateGrid(fFalse))
         goto LDone;
@@ -892,7 +883,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
         goto LDone;
     }
 
-    /* For each aspect present in slice, add its strength to array. */
+    // For each aspect present in slice, add its strength to array.
     for (y = ymin; y <= cObj; y++) {
       if (FIgnore(y) || (!fTrans && !FProperGraph(y)))
         continue;
@@ -918,7 +909,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
         rT /= GetOrb(x, y, asp);
         pw[iw] = 65535 - (int)(rT * (65536.0 - rSmall));
 
-        /* Check for and add eclipse information to array too. */
+        // Check for and add eclipse information to array too.
         if (fEclipse) {
           et = etNone;
           if (asp == aCon)
@@ -943,7 +934,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
     }
   }
 
-  /* Print chart header row(s). */
+  // Print chart header row(s).
   AnsiColor(kWhiteA);
   if (!fMonth)
     sprintf(sz, SzDate(ciT.mon, ciT.day, ciT.yea, fFalse));
@@ -1002,7 +993,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   }
   PrintL();
 
-  /* Print the individual aspects present in order. */
+  // Print the individual aspects present in order.
   for (y = ymin; y <= cObj; y++)
     for (x = 0; x < (fTrans ? cObj+1 : y); x++)
       for (asp = 1; asp <= cAsp; asp++) {
@@ -1011,7 +1002,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
           continue;
         occurcount++;
 
-        /* Print the name of the aspect in question. */
+        // Print the name of the aspect in question.
         if (fTrans) {
           AnsiColor(kDkGrayA);
           PrintSz(!fProg ? "T." : "P.");
@@ -1034,7 +1025,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
             nMax = n;
         }
 
-        /* Print the graph itself for the aspect in question. */
+        // Print the graph itself for the aspect in question.
         fMark = fFalse;
         for (iw = 0; iw < cSlice; iw++) {
           n = pw[iw];
@@ -1075,12 +1066,12 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   if (occurcount == 0)
     PrintSz("No transits found.\n");
 
-  /* Free temporarily allocated data, and restore original chart. */
+  // Free temporarily allocated data, and restore original chart.
 LDone:
   AnsiColor(kDefault);
   for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1-10 : y); x++)
-      for (asp = 1; asp <= cAspect; asp++) {
+    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+      for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw != NULL)
           DeallocateP(pw);
@@ -1094,7 +1085,7 @@ LDone:
     DeallocateP(rgEph);
   ciCore = ciMain;
   us.fProgress = fFalse;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -1120,7 +1111,7 @@ void ChartInDayHorizon(void)
   division = us.nDivision;
   fYear = us.fInDayMonth && us.fInDayYear;
 
-  /* If -dY in effect, then search through a range of years. */
+  // If -dY in effect, then search through a range of years.
 
   yea1 = yea2 = Yea;
   if (fYear && us.nEphemYears != 0) {
@@ -1131,7 +1122,7 @@ void ChartInDayHorizon(void)
   }
   for (yea0 = yea1; yea0 <= yea2; yea0++) {
 
-  /* If -dy in effect, then search through the whole year, month by month. */
+  // If -dy in effect, then search through the whole year, month by month.
 
   if (fYear) {
     mon1 = 1; mon2 = 12;
@@ -1139,7 +1130,7 @@ void ChartInDayHorizon(void)
     mon1 = mon2 = Mon;
   for (mon0 = mon1; mon0 <= mon2; mon0++) {
 
-  /* If -dm in effect, then search through the whole month, day by day. */
+  // If -dm in effect, then search through the whole month, day by day.
 
   if (us.fInDayMonth) {
     day1 = 1;
@@ -1151,20 +1142,20 @@ void ChartInDayHorizon(void)
   occurcount = 0;
   ciSav = ciTwin;
   SetCI(ciCore, mon0, day0, yea0, 0.0, Dst, Zon, Lon, Lat);
-  CastChart(fTrue);
+  CastChart(-1);
   mc2 = planet[oMC]; k = planetalt[oMC];
   EclToEqu(&mc2, &k);
   cp2 = cp0;
   for (i = 0; i <= cObj; i++)
     rgalt2[i] = planetalt[i];
 
-  /* Loop through the day, dividing it into a certain number of segments. */
-  /* For each segment we get the planet positions at its endpoints.       */
+  // Loop through the day, dividing it into a certain number of segments.
+  // For each segment we get the planet positions at its endpoints.
 
   for (div = 1; div <= division; div++) {
     SetCI(ciCore, mon0, day0, yea0, 24.0*(real)div/(real)division,
       Dst, Zon, Lon, Lat);
-    CastChart(fTrue);
+    CastChart(-1);
     mc1 = mc2;
     mc2 = planet[oMC]; k = planetalt[oMC];
     EclToEqu(&mc2, &k);
@@ -1173,21 +1164,21 @@ void ChartInDayHorizon(void)
       rgalt1[i] = rgalt2[i]; rgalt2[i] = planetalt[i];
     }
 
-    /* For our segment, check to see if each planet during it rises, sets, */
-    /* reaches its zenith, or reaches its nadir.                           */
+    // For our segment, check to see if each planet during it rises, sets,
+    // reaches its zenith, or reaches its nadir.
 
     for (i = 0; i <= cObj; i++) if (!ignore[i] && FThing(i)) {
       EclToHorizon(&azi1, &alt1, cp1.obj[i], rgalt1[i], mc1, Lat);
       EclToHorizon(&azi2, &alt2, cp2.obj[i], rgalt2[i], mc2, Lat);
       j = 0;
 
-      /* Check for transits to the horizon. */
+      // Check for transits to the horizon.
       if ((alt1 > 0.0) != (alt2 > 0.0)) {
         d = RAbs(alt1)/(RAbs(alt1)+RAbs(alt2));
         k = Mod(azi1 + d*MinDifference(azi1, azi2));
         j = 1 + 2*(MinDistance(k, rDegHalf) < rDegQuad);
 
-      /* Check for transits to the meridian. */
+      // Check for transits to the meridian.
       } else if (RSgn(MinDifference(azi1, rDegQuad)) !=
         RSgn(MinDifference(azi2, rDegQuad))) {
         j = 2 + 2*(MinDistance(azi1, rDegQuad) < rDegQuad);
@@ -1209,7 +1200,7 @@ void ChartInDayHorizon(void)
     }
   }
 
-  /* Sort each event in order of time when it happens during the day. */
+  // Sort each event in order of time when it happens during the day.
 
   for (i = 1; i < occurcount; i++) {
     j = i-1;
@@ -1224,7 +1215,7 @@ void ChartInDayHorizon(void)
     }
   }
 
-  /* Finally display the list showing each event and when it occurs. */
+  // Finally display the list showing each event and when it occurs.
 
   for (i = 0; i < occurcount; i++) {
     ciSave = ciMain;
@@ -1275,8 +1266,8 @@ void ChartInDayHorizon(void)
         sprintf(sz, "%02d\"", (int)(azialt[i]*3600.0)%60); PrintSz(sz);
       }
 
-      /* For rising and setting events, we'll also display a direction  */
-      /* vector to make the 360 degree azimuth value thought of easier. */
+      // For rising and setting events, also display a direction vector to
+      // make the 360 degree azimuth value thought of easier.
 
       xA = RCosD(azialt[i]); yA = RSinD(azialt[i]);
       if (RAbs(xA) < RAbs(yA)) {
@@ -1291,17 +1282,17 @@ void ChartInDayHorizon(void)
     PrintL();
   }
   counttotal += occurcount;
-  } /* day0 */
-  } /* mon0 */
-  } /* yea0 */
+  } // day0
+  } // mon0
+  } // yea0
   if (counttotal == 0)
     PrintSz("No horizon events found.\n");
 
-  /* Recompute original chart placements as we've overwritten them. */
+  // Recompute original chart placements as have overwritten them.
 
   ciCore = ciMain; ciTwin = ciSav;
   us.fSidereal = fT;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -1312,10 +1303,10 @@ void ChartInDayHorizon(void)
 void ChartEphemeris(void)
 {
   char sz[cchSzDef];
-  int yea, yea1, yea2, mon, mon1, mon2, daysiz, i, j, s, d, m;
-  flag fDidBlank = fFalse;
+  int yea, yea1, yea2, mon, mon1, mon2, daysiz, i, j, k, s, d, m;
+  flag fDidBlank = fFalse, fWantHeader = fTrue;
 
-  /* If -Ey is in effect, then loop through all months in the whole year. */
+  // If -Ey is in effect, then loop through all months in the whole year.
 
   if (us.nEphemYears) {
     yea1 = Yea; yea2 = yea1 + us.nEphemYears - 1;
@@ -1324,18 +1315,22 @@ void ChartEphemeris(void)
     yea1 = yea2 = Yea; mon1 = mon2 = Mon;
   }
 
-  /* Loop through the year or years in question. */
+  // Loop through the year or years in question.
 
   for (yea = yea1; yea <= yea2;
     yea += (us.nEphemRate > 1 ? us.nEphemFactor : 1))
 
-  /* Loop through the month or months in question, printing each ephemeris. */
+  // Loop through the month or months in question, printing each ephemeris.
 
   for (mon = mon1; mon <= mon2;
     mon += (us.nEphemRate == 1 ? us.nEphemFactor : 1)) {
     daysiz = us.nEphemRate < 1 ? DayInMonth(mon, yea) : 1;
-    if (us.nEphemRate < 1 || (us.nEphemRate == 1 && mon == mon1) ||
-      (us.nEphemRate > 1 && yea == yea1)) {
+    if ((us.nEphemRate < 1 || (us.nEphemRate == 1 && mon == mon1) ||
+      (us.nEphemRate > 1 && yea == yea1)) && fWantHeader) {
+
+      // Print header row before certain months.
+
+      fWantHeader = fFalse;
       if (!fDidBlank)
         fDidBlank = fTrue;
       else
@@ -1344,78 +1339,82 @@ void ChartEphemeris(void)
         PrintSz(us.fEuroDate ? "Dy/Mo/Year" : "Mo/Dy/Year");
       else
         PrintSz(us.fEuroDate ? "Dy/Mo/Yr" : "Mo/Dy/Yr");
-      for (j = 0; j <= cObj; j++) {
-        if (!FIgnore(j)) {
-          if (is.fSeconds)
-            sprintf(sz, "  %-10.10s", szObjDisp[j]);
-          else
-            sprintf(sz, "  %-4.4s", szObjDisp[j]);
-          PrintSz(sz);
-          PrintTab(' ', us.fParallel ? 2*!is.fSeconds : 1);
-        }
+      for (k = 0; k <= cObj; k++) {
+        j = rgobjList[k];
+        if (FIgnore(j))
+          continue;
+        if (is.fSeconds)
+          sprintf(sz, "  %-10.10s", szObjDisp[j]);
+        else
+          sprintf(sz, "  %-4.4s", szObjDisp[j]);
+        PrintSz(sz);
+        PrintTab(' ', us.fParallel ? 2*!is.fSeconds : 1);
       }
       PrintL();
     }
     for (i = 1; i <= daysiz;
       i = AddDay(mon, i, yea, us.nEphemRate < 1 ? us.nEphemFactor : 1)) {
 
-      /* Loop through each day in the month, casting a chart for that day. */
+      // Loop through each day in the month, casting a chart for that day.
 
       SetCI(ciCore, mon, i, yea, Tim, Dst, Zon, Lon, Lat);
-      CastChart(fTrue);
+      CastChart(-1);
 #ifdef EXPRESS
       if (FSzSet(us.szExpEph) && !NParseExpression(us.szExpEph))
         continue;
 #endif
+      fWantHeader = fTrue;
       PrintSz(SzDate(mon, i, yea, is.fSeconds-1));
       PrintCh(' ');
-      for (j = 0; j <= cObj; j++)
-        if (!FIgnore(j)) {
-          if (!us.fParallel) {
-            if (is.fSeconds)
-              PrintZodiac(planet[j]);
-            else {
-              AnsiColor(kObjA[j]);
-              switch (us.nDegForm) {
-              case 0:
-                /* -sz: Format position in degrees/sign/minutes format. */
-                s = SFromZ(planet[j]);
-                d = (int)planet[j] - (s-1)*30;
-                m = (int)(RFract(planet[j])*60.0);
-                sprintf(sz, "%2d%s%02d", d, szSignAbbrev[s], m);
-                break;
-              case 1:
-                /* -sh: Format position in hours/minutes. */
-                s = (int)Mod(planet[j] + rRound/4.0);
-                d = (int)planet[j] / 15;
-                m = (int)((planet[j] - (real)d*15.0)*4.0);
-                sprintf(sz, "%2dh%02dm", d, m);
-                break;
-              default:
-                /* -sd: Format position as a simple degree. */
-                sprintf(sz, "%6.2f", planet[j]);
-                break;
-              }
-              PrintSz(sz);
-            }
-          } else {
+      for (k = 0; k <= cObj; k++) {
+        j = rgobjList[k];
+        if (FIgnore(j))
+          continue;
+        if (!us.fParallel) {
+          if (is.fSeconds)
+            PrintZodiac(planet[j]);
+          else {
             AnsiColor(kObjA[j]);
-            PrintAltitude(planetalt[j]);
+            switch (us.nDegForm) {
+            case 0:
+              // -sz: Format position in degrees/sign/minutes format.
+              s = SFromZ(planet[j]);
+              d = (int)planet[j] - (s-1)*30;
+              m = (int)(RFract(planet[j])*60.0);
+              sprintf(sz, "%2d%s%02d", d, szSignAbbrev[s], m);
+              break;
+            case 1:
+              // -sh: Format position in hours/minutes.
+              s = (int)Mod(planet[j] + rRound/4.0);
+              d = (int)planet[j] / 15;
+              m = (int)((planet[j] - (real)d*15.0)*4.0);
+              sprintf(sz, "%2dh%02dm", d, m);
+              break;
+            default:
+              // -sd: Format position as a simple degree.
+              sprintf(sz, "%6.2f", planet[j]);
+              break;
+            }
+            PrintSz(sz);
           }
-          if (ret[j] < 0.0) {
-            AnsiColor(kDefault);
-            PrintCh(chRet2);
-          }
-          if (j < cObj)
-            PrintTab(' ', 1 - (ret[j] < 0.0) + is.fSeconds);
+        } else {
+          AnsiColor(kObjA[j]);
+          PrintAltitude(planetalt[j]);
         }
+        if (ret[j] < 0.0) {
+          AnsiColor(kDefault);
+          PrintCh(chRet2);
+        }
+        if (k < cObj)
+          PrintTab(' ', 1 - (ret[j] < 0.0) + is.fSeconds);
+      }
       PrintL();
       AnsiColor(kDefault);
     }
   }
 
-  ciCore = ciMain;    /* Recast original chart. */
-  CastChart(fTrue);
+  ciCore = ciMain;    // Recast original chart.
+  CastChart(1);
 }
 
 /* charts3.cpp */

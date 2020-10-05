@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: matrix.cpp
+** Astrolog (Version 7.10) File: matrix.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -176,11 +176,11 @@ long MatrixMdyToJulian(int mon, int day, int yea)
 {
   long im, j;
 
-  im = 12*((long)yea+4800)+(long)mon-3;
+  im = 12*(yea + 4800) + mon - 3;
   j = (2*(im%12) + 7 + 365*im)/12;
-  j += (long)day + im/48 - 32083;
-  if (j > 2299171)                   /* Take care of dates in */
-    j += im/4800 - im/1200 + 38;     /* Gregorian calendar.   */
+  j += day + im/48 - 32083;
+  if (j > 2299171)                // Take care of dates in Gregorian calendar.
+    j += im/4800 - im/1200 + 38;
   return j;
 }
 
@@ -190,19 +190,19 @@ long MatrixMdyToJulian(int mon, int day, int yea)
 
 void MatrixJulianToMdy(real JD, int *mon, int *day, int *yea)
 {
-  long L, N, IT, JT, K, IK;
+  long l, n, it, jt, k, ik;
 
-  L  = (long)RFloor(JD+rRound)+68569L;
-  N  = Dvd(4L*L, 146097L);
-  L  -= Dvd(146097L*N + 3L, 4L);
-  IT = Dvd(4000L*(L+1L), 1461001L);
-  L  -= Dvd(1461L*IT, 4L) - 31L;
-  JT = Dvd(80L*L, 2447L);
-  K  = L-Dvd(2447L*JT, 80L);
-  L  = Dvd(JT, 11L);
-  JT += 2L - 12L*L;
-  IK = 100L*(N-49L) + IT + L;
-  *mon = (int)JT; *day = (int)K; *yea = (int)IK;
+  l = (long)RFloor(JD + rRound) + 68569;
+  n = Dvd(4*l, 146097);
+  l -= Dvd(146097*n + 3, 4);
+  it = Dvd(4000*(l+1), 1461001);
+  l -= Dvd(1461*it, 4) - 31;
+  jt = Dvd(80*l, 2447);
+  k = l - Dvd(2447*jt, 80);
+  l = Dvd(jt, 11);
+  jt += 2 - 12*l;
+  ik = 100*(n-49) + it + l;
+  *mon = jt; *day = k; *yea = ik;
 }
 
 
@@ -211,20 +211,32 @@ void MatrixJulianToMdy(real JD, int *mon, int *day, int *yea)
 /* time, the Julian day and fractional part of the day, the offset to the   */
 /* sidereal, and a couple of other things.                                  */
 
-real ProcessInput(flag fDate)
+real ProcessInput(void)
 {
   real Ln, Off;
 
-  /* Compute angle that the ecliptic is inclined to the Celestial Equator */
+  // Compute angle that the ecliptic is inclined to the Celestial Equator.
   is.OB = 23.452294 - 0.0130125*is.T;
 
-  Ln = Mod((933060-6962911*is.T+7.5*is.T*is.T)/3600.0); /* Mean lunar node */
-  Off = (259205536.0*is.T+2013816.0)/3600.0;            /* Mean Sun        */
+  Ln = Mod((933060-6962911*is.T+7.5*is.T*is.T)/3600.0);    // Mean lunar node
+  Off = (259205536.0*is.T+2013816.0)/3600.0;               // Mean Sun
   Off = 17.23*RSin(RFromD(Ln)) + 1.27*RSin(RFromD(Off)) -
     (5025.64+1.11*is.T)*is.T;
   Off = (Off-84038.27)/3600.0;
   is.rSid = (us.fSidereal ? Off : 0.0) + us.rZodiacOffset;
   return Off;
+}
+
+
+/* Another modulus function, this time for the range of 0 to 2 Pi. */
+
+real ModRad(real r)
+{
+  while (r >= rPi2)    // Assume value is only slightly out of range, so
+    r -= rPi2;         // test and never do any complicated math.
+  while (r < 0.0)
+    r += rPi2;
+  return r;
 }
 
 
@@ -259,7 +271,7 @@ real RecToSph(real B, real L, real O)
   if (A < 0.0)
     A += 2*rPi;
   G = A;
-  return G;  /* We only ever care about and return one of the coordinates. */
+  return G;  // We only ever care about and return one of the coordinates.
 }
 
 
@@ -281,7 +293,7 @@ void ComputeVariables(real *vtx)
   if (AA < 0.0)
     B = -B;
   G = RecToSph(B, L, -is.OB);
-  *vtx = Mod(is.rSid + DFromR(G+rPiHalf));    /* Vertex */
+  *vtx = Mod(is.rSid + DFromR(G+rPiHalf));    // Vertex
 }
 
 
@@ -313,7 +325,7 @@ real CuspAscendant(void)
 {
   real Asc;
 
-  Asc = Angle(-RSin(is.RA)*RCosD(is.OB)-RTanD(AA)*RSinD(is.OB), RCos(is.RA));
+  Asc = RAngle(-RSin(is.RA)*RCosD(is.OB)-RTanD(AA)*RSinD(is.OB), RCos(is.RA));
   return Mod(DFromR(Asc)+is.rSid);
 }
 
@@ -321,7 +333,7 @@ real CuspEastPoint(void)
 {
   real EP;
 
-  EP = Angle(-RSin(is.RA)*RCosD(is.OB), RCos(is.RA));
+  EP = RAngle(-RSin(is.RA)*RCosD(is.OB), RCos(is.RA));
   return Mod(DFromR(EP)+is.rSid);
 }
 
@@ -335,11 +347,10 @@ real CuspPlacidus(real deg, real FF, flag fNeg)
 
   R1 = is.RA+RFromD(deg);
   X = fNeg ? 1.0 : -1.0;
-  /* Looping 10 times is arbitrary, but it's what other programs do. */
+  // Looping 10 times is arbitrary, but it's what other programs do.
   for (i = 1; i <= 10; i++) {
 
-    /* This formula works except at 0 latitude (AA == 0.0). */
-
+    // This formula works except at 0 latitude (AA == 0.0).
     XS = X*RSin(R1)*RTanD(is.OB)*RTanD(AA == 0.0 ? 0.0001 : AA);
     XS = RAcos(XS);
     if (XS < 0.0)
@@ -387,7 +398,7 @@ void HouseKoch(void)
       A2 = D/rDegQuad-3.0;
     }
     A3 = RFromD(Mod(DFromR(is.RA)+D+A2*DFromR(A1)));
-    X = Angle(RCos(A3)*RCosD(is.OB)-KN*RTanD(AA)*RSinD(is.OB), RSin(A3));
+    X = RAngle(RCos(A3)*RCosD(is.OB)-KN*RTanD(AA)*RSinD(is.OB), RSin(A3));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
 }
@@ -404,7 +415,7 @@ void HouseCampanus(void)
       DN += rPi;
     if (RSin(KO) < 0.0)
       DN += rPi;
-    X = Angle(RCos(is.RA+DN)*RCosD(is.OB)-RSin(DN)*RTanD(AA)*RSinD(is.OB),
+    X = RAngle(RCos(is.RA+DN)*RCosD(is.OB)-RSin(DN)*RTanD(AA)*RSinD(is.OB),
       RSin(is.RA+DN));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
@@ -417,7 +428,7 @@ void HouseMeridian(void)
 
   for (i = 1; i <= cSign; i++) {
     D = RFromD(60.0+30.0*(real)i);
-    X = Angle(RCos(is.RA+D)*RCosD(is.OB), RSin(is.RA+D));
+    X = RAngle(RCos(is.RA+D)*RCosD(is.OB), RSin(is.RA+D));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
 }
@@ -429,7 +440,7 @@ void HouseRegiomontanus(void)
 
   for (i = 1; i <= cSign; i++) {
     D = RFromD(60.0+30.0*(real)i);
-    X = Angle(RCos(is.RA+D)*RCosD(is.OB)-RSin(D)*RTanD(AA)*RSinD(is.OB),
+    X = RAngle(RCos(is.RA+D)*RCosD(is.OB)-RSin(D)*RTanD(AA)*RSinD(is.OB),
       RSin(is.RA+D));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
@@ -442,7 +453,7 @@ void HouseMorinus(void)
 
   for (i = 1; i <= cSign; i++) {
     D = RFromD(60.0+30.0*(real)i);
-    X = Angle(RCos(is.RA+D), RSin(is.RA+D)*RCosD(is.OB));
+    X = RAngle(RCos(is.RA+D), RSin(is.RA+D)*RCosD(is.OB));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
 }
@@ -561,27 +572,27 @@ void ComputePlanets(void)
     EA = M = ModRad(ReadThree(poe->ma0, poe->ma1, poe->ma2));
     E = DFromR(ReadThree(poe->ec0, poe->ec1, poe->ec2));
     for (i = 1; i <= 5; i++)
-      EA = M+E*RSin(EA);            /* Solve Kepler's equation */
-    AU = poe->sma;                  /* Semi-major axis         */
+      EA = M+E*RSin(EA);            // Solve Kepler's equation
+    AU = poe->sma;                  // Semi-major axis
     E1 = 0.01720209/(pow(AU, 1.5)*
-      (1.0-E*RCos(EA)));                     /* Begin velocity coordinates */
-    XW = -AU*E1*RSin(EA);                    /* Perifocal coordinates      */
+      (1.0-E*RCos(EA)));                     // Begin velocity coordinates
+    XW = -AU*E1*RSin(EA);                    // Perifocal coordinates
     YW = AU*E1*pow(1.0-E*E,0.5)*RCos(EA);
     AP = ReadThree(poe->ap0, poe->ap1, poe->ap2);
     AN = ReadThree(poe->an0, poe->an1, poe->an2);
-    _IN = ReadThree(poe->in0, poe->in1, poe->in2); /* Calculate inclination  */
+    _IN = ReadThree(poe->in0, poe->in1, poe->in2); // Calculate inclination
     X = XW; Y = YW;
-    RecToSph2(AP, AN, _IN, &X, &Y, &G);  /* Rotate velocity coords */
+    RecToSph2(AP, AN, _IN, &X, &Y, &G);  // Rotate velocity coords
     heliox[ind] = X; helioy[ind] = Y;
-    helioz[ind] = G;                     /* Helio ecliptic rectangular */
-    X = AU*(RCos(EA)-E);                 /* Perifocal coordinates for        */
-    Y = AU*RSin(EA)*pow(1.0-E*E,0.5);    /* rectangular position coordinates */
-    RecToSph2(AP, AN, _IN, &X, &Y, &G);  /* Rotate for rectangular */
-    XS = X; YS = Y; ZS = G;              /* position coordinates   */
+    helioz[ind] = G;                     // Helio ecliptic rectangular
+    X = AU*(RCos(EA)-E);                 // Perifocal coordinates for
+    Y = AU*RSin(EA)*pow(1.0-E*E,0.5);    // rectangular position coordinates
+    RecToSph2(AP, AN, _IN, &X, &Y, &G);  // Rotate for rectangular
+    XS = X; YS = Y; ZS = G;              // position coordinates
     if (FBetween(ind, oJup, oPlu))
       ErrorCorrect(ind, &XS, &YS, &ZS);
     ret[ind] = DFromR((XS*helioy[ind]-YS*heliox[ind]) /
-      (XS*XS+YS*YS));  /* Helio daily motion */
+      (XS*XS+YS*YS));  // Helio daily motion
     space[ind].x = XS; space[ind].y = YS; space[ind].z = ZS;
     ProcessPlanet(ind, 0.0);
 LNextPlanet:
@@ -596,9 +607,10 @@ LNextPlanet:
   space[oSun].x = space[oSun].y = space[oSun].z =
     planet[oSun] = planetalt[oSun] = heliox[oSun] = helioy[oSun] = 0.0;
   if (us.objCenter == oSun) {
+    // Use relative velocity if -v0 is in effect.
     if (us.fVelocity)
-      for (i = 0; i <= oNorm; i++)    /* Use relative velocity */
-        ret[i] = 1.0;                 /* if -v0 is in effect.  */
+      for (i = 0; i <= oNorm; i++)
+        ret[i] = 1.0;
     return;
   }
 
@@ -624,10 +636,11 @@ LNextPlanet:
     ret[i] = DFromR((XS*(helioy[i]-helioy[ind])-YS*(heliox[i]-heliox[ind])) /
       (XS*XS + YS*YS));
     if (ind == oEar && !us.fTruePos)
-      aber = 0.0057756 * RLength3(XS, YS, ZS) * ret[i];  /* Aberration */
+      aber = 0.0057756 * RLength3(XS, YS, ZS) * ret[i];  // Aberration
     ProcessPlanet(i, aber);
-    if (us.fVelocity)                 /* Use relative velocity */
-      ret[i] = ret[i]/helioret[i];    /* if -v0 is in effect   */
+    // Use relative velocity if -v0 is in effect.
+    if (us.fVelocity)
+      ret[i] = ret[i]/helioret[i];
   }
   space[ind].x = space[ind].y = space[ind].z = 0.0;
 }
@@ -648,15 +661,15 @@ void ComputeLunar(real *moonlo, real *moonla, real *nodelo, real *nodela)
   real LL, G, N, G1, D, L, ML, L1, MB, T1, Y, M = 3600.0, T2;
 
   T2 = is.T*is.T;
-  LL = 973563.0+1732564379.0*is.T-4.0*T2; /* Compute mean lunar longitude    */
-  G = 1012395.0+6189.0*is.T;              /* Sun's mean longitude of perigee */
-  N = 933060.0-6962911.0*is.T+7.5*T2;     /* Compute mean lunar node         */
-  G1 = 1203586.0+14648523.0*is.T-37.0*T2; /* Mean longitude of lunar perigee */
-  D = 1262655.0+1602961611.0*is.T-5.0*T2; /* Mean elongation of Moo from Sun */
-  L = (LL-G1)/M; L1 = ((LL-D)-G)/M;       /* Some auxiliary angles           */
+  LL = 973563.0+1732564379.0*is.T-4.0*T2;  // Compute mean lunar longitude
+  G = 1012395.0+6189.0*is.T;               // Sun's mean longitude of perigee
+  N = 933060.0-6962911.0*is.T+7.5*T2;      // Compute mean lunar node
+  G1 = 1203586.0+14648523.0*is.T-37.0*T2;  // Mean longitude of lunar perigee
+  D = 1262655.0+1602961611.0*is.T-5.0*T2;  // Mean elongation of Moo from Sun
+  L = (LL-G1)/M; L1 = ((LL-D)-G)/M;        // Some auxiliary angles
   T1 = (LL-N)/M; D = D/M; Y = 2.0*D;
 
-  /* Compute Moon's perturbations. */
+  // Compute Moon's perturbations.
 
   ML = 22639.6*RSinD(L) - 4586.4*RSinD(L-Y) + 2369.9*RSinD(Y) +
     769.0*RSinD(2.0*L) - 669.0*RSinD(L1) - 411.6*RSinD(2.0*T1) -
@@ -665,9 +678,9 @@ void ComputeLunar(real *moonlo, real *moonla, real *nodelo, real *nodela)
     125.0*RSinD(D) - 110.0*RSinD(L+L1) - 55.0*RSinD(2.0*T1-Y) -
     45.0*RSinD(L+2.0*T1) + 40.0*RSinD(L-2.0*T1);
 
-  *moonlo = G = Mod((LL+ML)/M+is.rSid);    /* Lunar longitude */
+  *moonlo = G = Mod((LL+ML)/M+is.rSid);    // Lunar longitude
 
-  /* Compute lunar latitude. */
+  // Compute lunar latitude.
 
   MB = 18461.5*RSinD(T1) + 1010.0*RSinD(L+T1) - 999.0*RSinD(T1-L) -
     624.0*RSinD(T1-Y) + 199.0*RSinD(T1+Y-L) - 167.0*RSinD(L+T1-Y);
@@ -676,7 +689,7 @@ void ComputeLunar(real *moonlo, real *moonla, real *nodelo, real *nodela)
   *moonla = MB =
     RSgn(MB)*((RAbs(MB)/M)/rDegMax-RFloor((RAbs(MB)/M)/rDegMax))*rDegMax;
 
-  /* Compute position of the North Lunar Node, either True or Mean. */
+  // Compute position of the North Lunar Node, either True or Mean.
 
   if (us.fTrueNode)
     N = N+5392.0*RSinD(2.0*T1-Y)-541.0*RSinD(L1)-442.0*RSinD(Y)+

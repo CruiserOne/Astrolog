@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: general.cpp
+** Astrolog (Version 7.10) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -182,7 +182,7 @@ real RSgn(real r)
 /* origin to this coordinate. This is just converting from rectangular to  */
 /* polar coordinates, however this doesn't involve the radius here.        */
 
-real Angle(real x, real y)
+real RAngle(real x, real y)
 {
   real a;
 
@@ -206,9 +206,9 @@ real Angle(real x, real y)
 
 real Mod(real d)
 {
-  if (d >= rDegMax)        /* In most cases, our value is only slightly */
-    d -= rDegMax;          /* out of range, so we can test for it and   */
-  else if (d < 0.0)        /* avoid the more complicated arithmetic.    */
+  if (d >= rDegMax)         // In most cases, value is only slightly
+    d -= rDegMax;           // out of range, so can test for it and
+  else if (d < 0.0)         // avoid the more complicated arithmetic.
     d += rDegMax;
   if (d >= 0 && d < rDegMax)
     return d;
@@ -216,19 +216,7 @@ real Mod(real d)
 }
 
 
-/* Another modulus function, this time for the range of 0 to 2 Pi. */
-
-real ModRad(real r)
-{
-  while (r >= rPi2)    /* We assume our value is only slightly out of       */
-    r -= rPi2;         /* range, so test and never do any complicated math. */
-  while (r < 0.0)
-    r += rPi2;
-  return r;
-}
-
-
-/* Integer division - like the "/" operator but always rounds result down. */
+// Integer division, like the "/" operator but always rounds result down.
 
 long Dvd(long x, long y)
 {
@@ -284,9 +272,9 @@ void FormatR(char *sz, real r, int n)
   sprintf(sz, szT, r);
   for (pch = sz; *pch; pch++)
     ;
-  while (pch > sz && *(--pch) == '0')  /* Drop off any trailing 0 digits. */
+  while (pch > sz && *(--pch) == '0')    // Drop off any trailing 0 digits.
     ;
-  /* Positive n means ensure at least one fractional digit. */
+  // Positive n means ensure at least one fractional digit.
   pch[n > 0 ? 1 + (*pch == '.') : (*pch != '.')] = chNull;
 }
 
@@ -297,7 +285,7 @@ void FormatR(char *sz, real r, int n)
 ******************************************************************************
 */
 
-/* A similar modulus function: convert an integer to value from 1..12. */
+// A similar modulus function: Convert an integer to value from 1-12.
 
 int Mod12(int i)
 {
@@ -335,10 +323,10 @@ real DegToDec(real d)
 
 real MinDistance(real deg1, real deg2)
 {
-  real i;
+  real r;
 
-  i = RAbs(deg1-deg2);
-  return i < rDegHalf ? i : rDegMax - i;
+  r = RAbs(deg1-deg2);
+  return r <= rDegHalf ? r : rDegMax - r;
 }
 
 
@@ -348,12 +336,12 @@ real MinDistance(real deg1, real deg2)
 
 real MinDifference(real deg1, real deg2)
 {
-  real i;
+  real r;
 
-  i = deg2 - deg1;
-  if (RAbs(i) < rDegHalf)
-    return i;
-  return RSgn(i)*(RAbs(i) - rDegMax);
+  r = deg2 - deg1;
+  if (RAbs(r) < rDegHalf)
+    return r;
+  return r >= 0 ? r - rDegMax : r + rDegMax;
 }
 
 
@@ -372,13 +360,30 @@ real Midpoint(real deg1, real deg2)
 /* Return the minimum great circle distance between two sets of spherical   */
 /* coordinates. This is like MinDistance() but takes latitude into account. */
 
-real PolarDistance(real lon1, real lat1, real lon2, real lat2)
+real SphDistance(real lon1, real lat1, real lon2, real lat2)
 {
   real dLat, r;
 
   dLat = RAbs(lon1 - lon2);
-  r = RAcos(RSinD(lat1)*RSinD(lat2) + RCosD(lat1)*RCosD(lat2)*RCosD(dLat));
-  return DFromR(r);
+  r = RAcosD(RSinD(lat1)*RSinD(lat2) + RCosD(lat1)*RCosD(lat2)*RCosD(dLat));
+  return r;
+}
+
+
+/* Given two pairs of coordinates on a sphere, return coordinates at some */
+/* proportion (0.0-1.0) along the great circle path between them.         */
+
+void SphRatio(real lon1, real lat1, real lon2, real lat2, real rRatio,
+  real *lon, real *lat)
+{
+  real x1, y1, z1, x2, y2, z2, x, y, z;
+
+  SphToRec(1.0, lon1, lat1, &x1, &y1, &z1);
+  SphToRec(1.0, lon2, lat2, &x2, &y2, &z2);
+  x = x1 + (x2 - x1) * rRatio;
+  y = y1 + (y2 - y1) * rRatio;
+  z = z1 + (z2 - z1) * rRatio;
+  RecToSph3(x, y, z, lon, lat);
 }
 
 
@@ -396,7 +401,7 @@ char *Dignify(int obj, int sign)
   if (obj > oNorm)
     goto LExit;
 
-  /* Check standard rulerships. */
+  // Check standard rulerships.
   if (!ignore7[rrStd]) {
     if (ruler1[obj] == sign || ruler2[obj] == sign)
       szDignify[rrStd+1] = 'R';
@@ -410,7 +415,7 @@ char *Dignify(int obj, int sign)
       szDignify[rrExa+1] = 'f';
   }
 
-  /* Check esoteric rulerships. */
+  // Check esoteric rulerships.
   if (!ignore7[rrEso]) {
     if (rgObjEso1[obj] == sign || rgObjEso2[obj] == sign)
       szDignify[rrEso+1] = 'S';
@@ -434,6 +439,7 @@ char *Dignify(int obj, int sign)
   }
 
 LExit:
+  // Put "most significant" rulership state present in the first character.
   for (ich = 1; ich <= 5; ich += ich == 1 ? 3 :
     (ich == 4 ? -2 : (ich == 3 ? 2 : 1))) {
     if (szDignify[ich] != '_') {
@@ -483,7 +489,7 @@ void EnsureStarBright()
   if (rStarBrightDef[0] != rMode) {
     rStarBrightDef[0] = rMode;
 
-    /* Matrix formulas have star brightnesses in a simple table. */
+    // Matrix formulas have star brightnesses in a simple table.
     for (i = 1; i <= cStar; i++) {
 #ifdef MATRIX
       rStarBrightDef[i] = rStarBrightMatrix[i];
@@ -491,12 +497,12 @@ void EnsureStarBright()
       rStarBrightDef[i] = 1.0;
 #endif
       rStarBright[i] = rStarBrightDef[i];
-      /* Assume each star is 100 LY away. */
+      // Assume each star is 100 LY away.
       rStarDistDef[i] = rStarDist[i] = 100.0 * rLYToAU;
     }
 
 #ifdef SWISS
-    /* Swiss Ephemeris reads star brightnesses from an external file. */
+    // Swiss Ephemeris reads star brightnesses from an external file.
     if (FCmSwissStar())
       SwissComputeStars(0.0, fTrue);
 #endif
@@ -564,8 +570,8 @@ int AddDay(int month, int day, int year, int delta)
 
   d = day + delta;
   if (ciGreg.yea == yeaJ2G && ciGreg.mon == monJ2G && ciGreg.day == dayJ2G2 &&
-    year == yeaJ2G && month == monJ2G) {       /* Check for Julian to  */
-    if (d > dayJ2G1 && d < dayJ2G2)            /* Gregorian crossover. */
+    year == yeaJ2G && month == monJ2G) {       // Check for Julian to
+    if (d > dayJ2G1 && d < dayJ2G2)            // Gregorian crossover.
       d += NSgn(delta)*(dayJ2G2-dayJ2G1-1);
   }
   return d;
@@ -617,11 +623,34 @@ CONST char *SzAspectAbbrev(int asp)
 void SetCentric(int obj)
 {
   if (!us.fIgnoreAuto && ignore[us.objCenter] && !ignore[obj]) {
-    /* If -YRh switch in effect, might auto(un)restrict central object. */
+    // If -YRh switch in effect, might auto(un)restrict central object.
     inv(ignore[us.objCenter]);
     inv(ignore[obj]);
   }
   us.objCenter = obj;
+}
+
+
+/* Return the planet this object orbits, if any. */
+
+int ObjOrbit(int obj)
+{
+  if (FGeo(obj))
+    return oEar;
+  if (FUranian(obj)) {
+#ifdef SWISS
+    // Check if this Uranian has been redefined to be related to Earth's Moon.
+    if (rgTypSwiss[obj - uranLo] == 2 && FGeo(rgObjSwiss[obj - uranLo]))
+      return oEar;
+    // Check if this Uranian has been redefined to be a planetary moon.
+    if (rgTypSwiss[obj - uranLo] == 3)
+      return rgObjSwiss[obj - uranLo] / 100 + 1;
+#endif
+    return oSun;
+  }
+  if (FBetween(obj, oMer, cPlanet))
+    return oSun;
+  return -1;
 }
 
 
@@ -650,7 +679,7 @@ void Terminate(int tc)
   if (tc == tcError && us.fLoop)
     return;
   if (us.fAnsiColor) {
-    sprintf(sz, "%c[0m", chEscape);    /* Get out of any Ansi color mode. */
+    sprintf(sz, "%c[0m", chEscape);    // Get out of any Ansi color mode.
     PrintSz(sz);
   }
   FinalizeProgram();
@@ -674,7 +703,7 @@ void PrintSz(CONST char *sz)
     if (*pch != '\n') {
       if (is.nHTML != 2) {
         is.cchCol++;
-        if (us.fClip80 && is.cchCol >= us.nScreenWidth)  /* Clip if needed. */
+        if (us.fClip80 && is.cchCol >= us.nScreenWidth)  // Clip if needed.
           continue;
       }
     } else {
@@ -711,7 +740,7 @@ void PrintSz(CONST char *sz)
     if (*pch == '\n' && is.S == stdout &&
       us.nScrollRow > 0 && is.cchRow >= us.nScrollRow) {
 
-      /* If we've printed 'n' rows, stop and wait for a line to be entered. */
+      // If have printed 'n' rows, stop and wait for a line to be entered.
 
       fT = us.fAnsiColor;
       us.fAnsiColor = fFalse;
@@ -719,7 +748,7 @@ void PrintSz(CONST char *sz)
       us.fAnsiColor = fT;
       is.cchRow = 0;
 
-      /* One can actually give a few simple commands before hitting return. */
+      // One can actually give a few simple commands before hitting return.
 
       if (szInput[0] == 'q' || szInput[0] == '.')
         Terminate(tcForce);
@@ -737,13 +766,13 @@ void PrintSz(CONST char *sz)
     if (*pch == '\n' && is.S == stdout && wi.hdcPrint != hdcNil &&
       is.cchRow >= us.nScrollRow) {
 
-      /* If writing to the printer, start a new page when appropriate. */
+      // If writing to the printer, start a new page when appropriate.
 
       is.cchRow = 0;
       EndPage(wi.hdcPrint);
       StartPage(wi.hdcPrint);
-      /* StartPage clobbers all the DC settings */
-      SetMapMode(wi.hdcPrint, MM_ANISOTROPIC);      /* For SetViewportExt */
+      // StartPage clobbers all the DC settings.
+      SetMapMode(wi.hdcPrint, MM_ANISOTROPIC);      // For SetViewportExt
       SetViewportOrg(wi.hdcPrint, 0, 0);
       SetViewportExt(wi.hdcPrint, GetDeviceCaps(wi.hdcPrint, HORZRES),
         GetDeviceCaps(wi.hdcPrint, VERTRES));
@@ -763,8 +792,8 @@ void PrintCh(char ch)
 {
   char sz[2];
 
-  sz[0] = ch; sz[1] = chNull;    /* Treat char as a string of length one. */
-  PrintSz(sz);                   /* Then call above to print the string.  */
+  sz[0] = ch; sz[1] = chNull;    // Treat char as a string of length one.
+  PrintSz(sz);                   // Then call above to print the string.
 }
 
 
@@ -788,7 +817,7 @@ void PrintSzScreen(CONST char *sz)
 void PrintProgress(CONST char *sz)
 {
 #ifndef WIN
-  /* Progress messages are ignored in the Windows version. */
+  // Progress messages are ignored in the Windows version.
   AnsiColor(kYellowA);
   fprintf(stderr, "%s\n", sz);
   AnsiColor(kDefault);
@@ -858,30 +887,66 @@ void PrintError(CONST char *sz)
 }
 
 
-/* Simplification for a commonly printed error message. */
+// Print error message for missing parameters to a command switch.
 
-void ErrorArgc(CONST char *szOpt)
+flag FErrorArgc(CONST char *szOpt, int carg, int cargMax)
 {
   char sz[cchSzDef];
 
-  sprintf(sz, "Too few options to switch %c%s", chSwitch, szOpt);
+  carg--;
+  if (carg >= cargMax)
+    return fFalse;
+  sprintf(sz, "Too few options to switch %c%s (%d given, %d required)",
+    chSwitch, szOpt, carg, cargMax);
   PrintError(sz);
+  return fTrue;
 }
 
 
-/* Another simplification for a commonly printed error message. */
+// Print error message for out of range integer parameter to a command switch.
 
-void ErrorValN(CONST char *szOpt, int nVal)
+flag FErrorValN(CONST char *szOpt, flag f, int nVal, int nPar)
 {
-  char sz[cchSzDef];
+  char sz[cchSzMax], szPar[cchSzDef];
 
-  sprintf(sz, "Value %d passed to switch %c%s out of range.\n",
-    nVal, chSwitch, szOpt);
+  if (!f)
+    return fFalse;
+  if (nPar <= 0)
+    szPar[0] = chNull;
+  else
+    sprintf(szPar, "parameter #%d of ", nPar);
+  sprintf(sz, "Value %d passed to %sswitch %c%s out of range.\n",
+    nVal, szPar, chSwitch, szOpt);
   PrintError(sz);
+  return fTrue;
 }
 
 
-/* Yet another place to print a type of error message. */
+// Print error message for out of range real parameter to a command switch.
+
+flag FErrorValR(CONST char *szOpt, flag f, real rVal, int nPar)
+{
+  char sz[cchSzMax], szPar[cchSzDef], szVal[cchSzDef];
+
+  if (!f)
+    return fFalse;
+  if (nPar <= 0)
+    szPar[0] = chNull;
+  else
+    sprintf(szPar, "parameter #%d of ", nPar);
+  if (rVal != rLarge) {
+    FormatR(szVal, rVal, -6);
+    sprintf(sz, "Value %s passed to %sswitch %c%s out of range.\n",
+      szVal, szPar, chSwitch, szOpt);
+  } else
+    sprintf(sz, "Bad value passed to %sswitch %c%s\n",
+      szPar, chSwitch, szOpt);
+  PrintError(sz);
+  return fTrue;
+}
+
+
+// Print error message for a disallowed command switch.
 
 void ErrorArgv(CONST char *szOpt)
 {
@@ -892,7 +957,7 @@ void ErrorArgv(CONST char *szOpt)
 }
 
 
-/* Still another place to print a type of error message. */
+// Print error message for a completely unknown command switch.
 
 void ErrorSwitch(CONST char *szOpt)
 {
@@ -948,8 +1013,8 @@ void AnsiColor(int k)
   }
 #endif
 
-  /* Special case: If we are passed the value Reverse, and Ansi color is */
-  /* not only on but set to a value > 1, then enter reverse video mode.  */
+  // Special case: If passed the "color" Reverse, and Ansi color is not only
+  // on but set to a value > 1, then enter reverse video mode.
 
   if (!us.fAnsiColor || (k == kReverse && us.fAnsiColor < 2))
     return;
@@ -1005,13 +1070,13 @@ void PrintZodiac(real deg)
 
 char *SzZodiac(real deg)
 {
-  static char szZod[11];
+  static char szZod[12];
   int sign, d, m;
   real s;
 
   switch (us.nDegForm) {
   case 0:
-    /* Normally, we format the position in degrees/sign/minutes format. */
+    // Normally, format the position in degrees/sign/minutes format.
 
     sign = (int)deg / 30;
     d = (int)deg - sign*30;
@@ -1024,7 +1089,7 @@ char *SzZodiac(real deg)
     break;
 
   case 1:
-    /* However, if -sh switch in effect, get position in hours/minutes. */
+    // However, if -sh switch in effect, get position in hours/minutes.
 
     d = (int)deg / 15;
     m = (int)((deg - (real)d*15.0)*4.0);
@@ -1036,7 +1101,7 @@ char *SzZodiac(real deg)
     break;
 
   default:
-    /* Otherwise, if -sd in effect, format position as a simple degree. */
+    // Otherwise, if -sd in effect, format position as a simple degree.
 
     sprintf(szZod, is.fSeconds ? "%11.7f" : "%7.3f", deg);
     break;
@@ -1275,14 +1340,9 @@ char *SzElevation(real elv)
   static char szElev[21];
   char *pch;
 
-  sprintf(szElev, "%.2f", us.fEuroDist ? elv : elv / rFtToM);
+  FormatR(szElev, us.fEuroDist ? elv : elv / rFtToM, -2);
   for (pch = szElev; *pch; pch++)
     ;
-  while (*(--pch) == '0')  /* Drop off any trailing 0 digits. */
-    ;
-  if (*pch != '.')
-    pch++;
-  *pch = chNull;
   sprintf(pch, "%s", us.fEuroDist ? "m" : "ft");
   return szElev;
 }
@@ -1296,14 +1356,9 @@ char *SzLength(real len)
   static char szLen[21];
   char *pch;
 
-  sprintf(szLen, "%.2f", !us.fEuroDist ? len : len * rInToCm);
+  FormatR(szLen, !us.fEuroDist ? len : len * rInToCm, -2);
   for (pch = szLen; *pch; pch++)
     ;
-  while (*(--pch) == '0')  /* Drop off any trailing 0 digits. */
-    ;
-  if (*pch != '.')
-    pch++;
-  *pch = chNull;
   sprintf(pch, "%s", us.fEuroDist ? "cm" : "in");
   return szLen;
 }
@@ -1324,7 +1379,7 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
 
   GetSystemTime(&st);
   if (dst == dstAuto) {
-    /* Daylight field of 24 means autodetect whether Daylight Saving Time. */
+    // Daylight field of 24 means autodetect whether Daylight Saving Time.
 
     GetLocalTime(&lt);
     dh = NAbs(st.wHour - lt.wHour);
@@ -1363,11 +1418,11 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
     curtimer++;
     hr -= 24.0;
   }
-  curtimer += ldTime;  /* Number of days between 1/1/1970 and 1/1/4713 BC. */
+  curtimer += ldTime;  // Number of days between 1/1/1970 and 1/1/4713 BC.
   JulianToMdy((real)curtimer, mon, day, yea);
   *tim = HMS(hr, min, sec);
   if (dst == dstAuto) {
-    /* Daylight field of 24 means autodetect whether Daylight Saving Time. */
+    // Daylight field of 24 means autodetect whether Daylight Saving Time.
 
     SetCI(ci, *mon, *day, *yea, *tim, 0.0, zon, us.lonDef, us.latDef);
     if (DisplayAtlasLookup(us.locDef, 0, &i) &&
@@ -1431,12 +1486,12 @@ char *SzPersist(char *szSrc)
   char *szNew;
   int cb;
 
-  /* Some strings such as outer level command line parameter arguments */
-  /* already persist, so we can just return the same string passed in. */
+  // Some strings such as outer level command line parameter arguments
+  // already persist, so we can just return the same string passed in.
   if (is.fSzPersist)
     return szSrc;
 
-  /* Otherwise make a copy of the string and use it. */
+  // Otherwise make a copy of the string and use it.
   cb = CchSz(szSrc)+1;
   szNew = (char *)PAllocate(cb, "string");
   is.cAlloc--;
@@ -1460,7 +1515,7 @@ pbyte PAllocate(long cb, CONST char *szType)
   pb = (pbyte)PAllocateCore(cb);
 #endif
 
-  /* Handle success or failure of the allocation. */
+  // Handle success or failure of the allocation.
   if (pb == NULL && szType) {
     sprintf(szT, "%s: Not enough memory for %s (%ld bytes).",
       szAppName, szType, cb);
@@ -1472,7 +1527,7 @@ pbyte PAllocate(long cb, CONST char *szType)
   }
 
 #ifdef DEBUG
-  /* Put sentinels at ends of allocation to check for buffer overruns. */
+  // Put sentinels at ends of allocation to check for buffer overruns.
   *(dword *)pb = dwCanary;
   *(dword *)(pb + sizeof(dword)) = cb;
   *(dword *)(pb + sizeof(dword)*2 + cb) = dwCanary;
@@ -1489,7 +1544,7 @@ void DeallocateP(void *pv)
 {
   Assert(pv != NULL);
 #ifdef DEBUG
-  /* Ensure buffer wasn't overrun during its existence. */
+  // Ensure buffer wasn't overrun during its existence.
   pbyte pbSys;
   dword lcb, dw;
 

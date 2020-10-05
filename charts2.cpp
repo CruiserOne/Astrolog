@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: charts2.cpp
+** Astrolog (Version 7.10) File: charts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -66,13 +66,13 @@
 void ChartListingRelation(void)
 {
   char sz[cchSzDef], szT[cchSzDef];
-  int cChart, i, j, k, n;
+  int cChart, i, j, k, l, n;
   real r, rT;
 
   cChart = 2 + (us.nRel == rcTriWheel || us.nRel == rcQuadWheel) +
     (us.nRel == rcQuadWheel);
 
-  /* Print header rows. */
+  // Print header rows.
   AnsiColor(kWhiteA);
   PrintTab(' ', 5);
   n = us.fSeconds ? 23 : 16;
@@ -108,8 +108,11 @@ void ChartListingRelation(void)
   PrintTab(' ', 3 + us.fSeconds);
   PrintSz("Delta\n");
 
-  /* Print object positions. */
-  for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+  // Print object positions.
+  for (l = 0; l <= cObj; l++) {
+    i = rgobjList[l];
+    if (FIgnore(i))
+      continue;
     AnsiColor(kObjA[i]);
     sprintf(sz, "%-4.4s:", szObjDisp[i]); PrintSz(sz);
     for (j = 1; j <= cChart; j++) {
@@ -119,14 +122,14 @@ void ChartListingRelation(void)
       PrintAltitude(rgpcp[j]->alt[i]);
     }
 
-    /* Compute maximum offset between any two instances of this planet. */
+    // Compute maximum offset between any two instances of this planet.
     r = 0.0;
     for (j = 1; j <= cChart; j++)
       for (k = 1; k < j; k++) {
         if (!us.fAspect3D)
           rT = MinDistance(rgpcp[j]->obj[i], rgpcp[k]->obj[i]);
         else
-          rT = PolarDistance(rgpcp[j]->obj[i], rgpcp[j]->alt[i],
+          rT = SphDistance(rgpcp[j]->obj[i], rgpcp[j]->alt[i],
             rgpcp[k]->obj[i], rgpcp[k]->alt[i]);
         r = Max(r, rT);
       }
@@ -146,7 +149,7 @@ void ChartListingRelation(void)
 void ChartGridRelation(void)
 {
   char sz[cchSzDef];
-  int i, j, k, tot = cObj, temp;
+  int i0, j0, i, j, k, tot = cObj, temp;
 
 #ifdef INTERPRET
   if (us.fInterpret && !us.fGridMidpoint) {
@@ -155,22 +158,30 @@ void ChartGridRelation(void)
   }
 #endif
   PrintSz(" 2>");
-  for (temp = 0, i = 0; i <= cObj; i++) if (!ignore[i]) {
+  for (i0 = 0; i0 <= tot; i0++) {
+    i = rgobjList[i0];
+    if (ignore[i])
+      continue;
     PrintCh(chV);
     AnsiColor(kObjA[i]);
     sprintf(sz, "%.3s", szObjDisp[i]); PrintSz(sz);
     AnsiColor(kDefault);
-    temp++;
   }
   PrintSz("\n1  ");
-  for (i = 0; i <= tot; i++) if (!ignore[i]) {
+  for (i0 = 0; i0 <= tot; i0++) {
+    i = rgobjList[i0];
+    if (ignore[i])
+      continue;
     PrintCh(chV);
     AnsiColor(kSignA(SFromZ(cp2.obj[i])));
     sprintf(sz, "%2d%c", (int)cp2.obj[i] % 30, chDeg0); PrintSz(sz);
     AnsiColor(kDefault);
   }
   PrintSz("\nV  ");
-  for (i = 0; i <= tot; i++) if (!ignore[i]) {
+  for (i0 = 0; i0 <= tot; i0++) {
+    i = rgobjList[i0];
+    if (ignore[i])
+      continue;
     PrintCh(chV);
     temp = SFromZ(cp2.obj[i]);
     AnsiColor(kSignA(temp));
@@ -179,7 +190,10 @@ void ChartGridRelation(void)
   }
   if (us.fSeconds) {
     PrintSz("\n   ");
-    for (i = 0; i <= tot; i++) if (!ignore[i]) {
+    for (i0 = 0; i0 <= tot; i0++) {
+      i = rgobjList[i0];
+      if (ignore[i])
+        continue;
       PrintCh(chV);
       temp = SFromZ(cp2.obj[i]);
       AnsiColor(kSignA(temp));
@@ -188,7 +202,10 @@ void ChartGridRelation(void)
     }
   }
   PrintL();
-  for (j = 0; j <= cObj; j++) if (!ignore[j])
+  for (j0 = 0; j0 <= tot; j0++) {
+    j = rgobjList[j0];
+    if (ignore[j])
+      continue;
     for (k = 1; k <= 4 + us.fSeconds; k++) {
       if (k < 2)
         PrintTab(chH, 3);
@@ -208,7 +225,10 @@ void ChartGridRelation(void)
       }
       if (k > 1)
         AnsiColor(kDefault);
-      for (i = 0; i <= tot; i++) if (!ignore[i]) {
+      for (i0 = 0; i0 <= tot; i0++) {
+        i = rgobjList[i0];
+        if (ignore[i])
+          continue;
         PrintCh((char)(k < 2 ? chC : chV));
         temp = grid->n[i][j];
         if (k > 1) {
@@ -229,7 +249,7 @@ void ChartGridRelation(void)
             sprintf(sz, "%2d%c", grid->v[i][j]/3600, chDeg0); PrintSz(sz);
           } else
             if (grid->n[i][j]) {
-              if (grid->v[i][j] < 6000*60)
+              if (NAbs(grid->v[i][j]) < 6000*60)
                 sprintf(sz, "%c%2d", us.fAppSep ?
                   (grid->v[i][j] < 0 ? 'a' : 's') :
                   (grid->v[i][j] < 0 ? '-' : '+'), NAbs(grid->v[i][j])/3600);
@@ -252,6 +272,7 @@ void ChartGridRelation(void)
       }
       PrintL();
     }
+  }
 }
 
 
@@ -272,7 +293,7 @@ void ChartAspectRelation(void)
   loop {
     vhi = -nLarge;
 
-    /* Search for the next most powerful aspect in the aspect grid. */
+    // Search for the next most powerful aspect in the aspect grid.
 
     for (i = 0; i <= cObj; i++) if (!FIgnore(i))
       for (j = 0; j <= cObj; j++) if (!FIgnore(j))
@@ -283,12 +304,13 @@ void ChartAspectRelation(void)
             (1.0-RAbs((real)(grid->v[i][j]))/3600.0/GetOrb(i, j, k))*1000.0);
 #ifdef EXPRESS
           // Adjust power with AstroExpression if one set.
-          if (FSzSet(us.szExpAsplist)) {
+          if (FSzSet(us.szExpAspList)) {
             ExpSetN(iLetterW, i);
             ExpSetN(iLetterX, k);
             ExpSetN(iLetterY, j);
             ExpSetN(iLetterZ, p);
-            p = NParseExpression(us.szExpAsplist);
+            ParseExpression(us.szExpAspList);
+            p = NExpGet(iLetterZ);
           }
 #endif
           switch (us.nAspectSort) {
@@ -307,15 +329,15 @@ void ChartAspectRelation(void)
             vhi = v; ihi = i; jhi = j; ahi = k; phi = p;
           }
         }
-    if (vhi <= -nLarge)    /* Exit when no less powerful aspect found. */
+    if (vhi <= -nLarge)    // Exit when no less powerful aspect found.
       break;
     vcut = vhi; icut = ihi; jcut = jhi;
-    count++;                              /* Display the current aspect.   */
+    count++;                              // Display the current aspect.
     rPowSum += (real)phi/1000.0;
     ca[ahi]++;
     co[jhi]++; co[ihi]++;
 #ifdef INTERPRET
-    if (us.fInterpret) {                  /* Interpret it if -I in effect. */
+    if (us.fInterpret) {                  // Interpret it if -I in effect.
       InterpretAspectRelation(jhi, ihi);
       AnsiColor(kDefault);
       continue;
@@ -337,6 +359,14 @@ void ChartAspectRelation(void)
     AnsiColor(kDefault);
   }
 
+#ifdef EXPRESS
+  // Send summary to AstroExpression if one set.
+  if (!us.fExpOff && FSzSet(us.szExpAspSumm)) {
+    ExpSetN(iLetterY, count);
+    ExpSetR(iLetterZ, rPowSum);
+    ParseExpression(us.szExpAspSumm);
+  }
+#endif
   PrintAspectSummary(ca, co, count, rPowSum);
 }
 
@@ -351,12 +381,13 @@ void ChartMidpointRelation(void)
   char sz[cchSzDef];
   int mcut = -1, icut, jcut, mlo, ilo, jlo, m, i, j, count = 0;
   long lSpanSum = 0;
+  real mid, dist;
 
   ClearB((pbyte)cs, sizeof(cs));
   loop {
     mlo = 360*60*60;
 
-    /* Search for the next closest midpoint farther down in the zodiac. */
+    // Search for the next closest midpoint farther down in the zodiac.
 
     for (i = 0; i <= cObj; i++) if (!FIgnore(i))
       for (j = 0; j <= cObj; j++) if (!FIgnore(j)) {
@@ -366,24 +397,37 @@ void ChartMidpointRelation(void)
           ilo = i; jlo = j; mlo = m;
         }
       }
-    if (mlo >= 360*60*60) /* Exit when no midpoint farther in zodiac found. */
+    if (mlo >= 360*60*60)  // Exit when no midpoint farther in zodiac found.
       break;
     mcut = mlo; icut = ilo; jcut = jlo;
     if (us.objRequire >= 0 && ilo != us.objRequire && jlo != us.objRequire)
       continue;
-    count++;                               /* Display the current midpoint. */
+    mid  = Midpoint   (cp1.obj[ilo], cp2.obj[jlo]);
+    dist = MinDistance(cp1.obj[ilo], cp2.obj[jlo]);
+#ifdef EXPRESS
+    // Skip current midpoint if AstroExpression says to do so.
+    if (!us.fExpOff && FSzSet(us.szExpMid)) {
+      ExpSetN(iLetterW, ilo);
+      ExpSetN(iLetterX, jlo);
+      ExpSetR(iLetterY, mid);
+      ExpSetR(iLetterZ, dist);
+      if (!NParseExpression(us.szExpMid))
+        continue;
+    }
+#endif
+    count++;                               // Display the current midpoint.
     cs[mlo/(30*60*60)+1]++;
-    m = (int)(MinDistance(cp1.obj[ilo], cp2.obj[jlo])*3600.0);
+    m = (int)(dist*3600.0);
     lSpanSum += m;
 #ifdef INTERPRET
-    if (us.fInterpret) {                   /* Interpret it if -I in effect. */
+    if (us.fInterpret) {                   // Interpret it if -I in effect.
       InterpretMidpointRelation(ilo, jlo);
       AnsiColor(kDefault);
       continue;
     }
 #endif
     sprintf(sz, "%4d: ", count); PrintSz(sz);
-    PrintZodiac((real)mlo/3600.0);
+    PrintZodiac(mid);
     PrintCh(' ');
     PrintAspect(ilo, cp1.obj[ilo], (int)RSgn(cp1.dir[ilo]), 0,
       jlo, cp2.obj[jlo], (int)RSgn(cp2.dir[jlo]), 'M');
@@ -411,7 +455,7 @@ void CastRelation(void)
   real ratio, t1, t2, t, rSav;
   flag fSav;
 
-  /* Cast the first chart. */
+  // Cast the first chart.
 
   ciCore = ciMain;
   if (us.nRel == rcProgress) {
@@ -425,11 +469,11 @@ void CastRelation(void)
   FProcessCommandLine(szWheel[1]);
   if (FNoTimeOrSpace(ciCore))
     cp0 = cp1;
-  t1 = CastChart(fTrue);
+  t1 = CastChart(1);
   cp1 = cp0;
   rSav = is.MC;
 
-  /* Cast the second chart. */
+  // Cast the second chart.
 
   ciCore = ciTwin;
   if (us.nRel == rcTransit) {
@@ -445,7 +489,7 @@ void CastRelation(void)
   FProcessCommandLine(szWheel[2]);
   if (FNoTimeOrSpace(ciCore))
     cp0 = cp2;
-  t2 = CastChart(fTrue);
+  t2 = CastChart(2);
   if (us.nRel == rcTransit) {
     for (i = 0; i <= cObj; i++)
       ignore[i] = ignoreT[i];
@@ -453,21 +497,21 @@ void CastRelation(void)
     us.fProgress = fSav;
   cp2 = cp0;
 
-  /* Cast the third and fourth charts. */
+  // Cast the third and fourth charts.
 
   if (us.nRel == rcTriWheel || us.nRel == rcQuadWheel) {
     ciCore = ciThre;
     FProcessCommandLine(szWheel[3]);
     if (FNoTimeOrSpace(ciCore))
       cp0 = cp3;
-    CastChart(fTrue);
+    CastChart(3);
     cp3 = cp0;
     if (us.nRel == rcQuadWheel) {
       ciCore = ciFour;
       FProcessCommandLine(szWheel[4]);
       if (FNoTimeOrSpace(ciCore))
         cp0 = cp4;
-      CastChart(fTrue);
+      CastChart(4);
       cp4 = cp0;
     }
   }
@@ -475,16 +519,16 @@ void CastRelation(void)
   FProcessCommandLine(szWheel[0]);
   is.MC = rSav;
 
-  /* Now combine the two charts based on what relation we are doing.   */
-  /* For the standard -r synastry chart, use the house cusps of chart1 */
-  /* and the planet positions of chart2.                               */
+  // Now combine the two charts based on what relation we are doing.
+  // For the standard -r synastry chart, use the house cusps of chart1
+  // and the planet positions of chart2.
 
   ratio = (real)us.nRatio1 / ((real)(us.nRatio1 + us.nRatio2));
   if (us.nRel <= rcSynastry) {
     for (i = 1; i <= cSign; i++)
       chouse[i] = cp1.cusp[i];
 
-  /* For the -rc composite chart, take the midpoints of the planets/houses. */
+  // For the -rc composite chart, take the midpoints of the planets/houses.
 
   } else if (us.nRel == rcComposite) {
     for (i = 0; i <= cObj; i++) {
@@ -500,8 +544,8 @@ void CastRelation(void)
         chouse[i] = Mod(chouse[i] + rDegMax*ratio);
     }
 
-    /* Make sure we don't have any 180 degree errors in house cusp    */
-    /* complement pairs, which may happen if the cusps are far apart. */
+    // Make sure don't have any 180 degree errors in house cusp complement
+    // pairs, which may happen if the cusps are far apart.
 
     j = us.fPolarAsc ? sAri : sCap;
     for (i = 1; i <= cSign; i++)
@@ -511,8 +555,8 @@ void CastRelation(void)
       if (RAbs(MinDistance(chouse[i], planet[oAsc - 1 + i])) > rDegQuad)
         planet[oAsc - 1 + i] = Mod(planet[oAsc - 1 + i]+rDegHalf);
 
-  /* For the -rm time space midpoint chart, calculate the midpoint time and */
-  /* place between the two charts and then recast for the new chart info.   */
+  // For the -rm time space midpoint chart, calculate the midpoint time and
+  // place between the two charts and then recast for the new chart info.
 
   } else if (us.nRel == rcMidpoint) {
     is.T = Ratio(t1, t2, ratio);
@@ -530,13 +574,13 @@ void CastRelation(void)
       OO = Mod(OO+rDegMax*ratio);
     AA = Ratio(Lat, ciTwin.lat, ratio);
     ciMain = ciCore;
-    CastChart(fTrue);
+    CastChart(0);
 #ifndef WIN
-    us.nRel = rcNone;  /* Turn off so don't move to midpoint again. */
+    us.nRel = rcNone;  // Turn off so don't move to midpoint again.
 #endif
 
-  /* There are a couple of non-astrological charts, which only require the */
-  /* number of days that have passed between the two charts to be done.    */
+  // There are a couple of non-astrological charts, which only require the
+  // number of days that have passed between the two charts to be done.
 
   } else {
     is.JD = RAbs(t2-t1)*36525.0;
@@ -564,7 +608,7 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
   int nEclipse;
   real rPct;
 
-  /* If the Sun changes sign, then print out if this is a season change. */
+  // If the Sun changes sign, then print out if this is a season change.
   if (aspect == aSig) {
     if (source == oSun) {
       AnsiColor(kWhiteA);
@@ -581,7 +625,7 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
       }
     }
 
-  /* Print if the present aspect is a New, Full, or Half Moon. */
+  // Print if the present aspect is a New, Full, or Half Moon.
   } else if (aspect > 0) {
     if (source == oSun && dest == oMoo && !us.fParallel) {
       if (aspect <= aSqu)
@@ -590,7 +634,7 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
         PrintSz(" (New Moon)");
       else if (aspect == aOpp) {
         PrintSz(" (Full Moon)");
-        /* Full Moons may be a lunar eclipse. */
+        // Full Moons may be a lunar eclipse.
         if (us.fEclipse && us.objCenter == oEar) {
           nEclipse = NCheckEclipseLunar(&rPct);
           if (nEclipse > etNone) {
@@ -606,7 +650,7 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
       } else if (aspect == aSqu)
         PrintSz(" (Half Moon)");
     }
-    /* Conjunctions may be a solar eclipse or other occultation. */
+    // Conjunctions may be a solar eclipse or other occultation.
     if (us.fEclipse && aspect == aCon && !us.fParallel) {
       nEclipse = NCheckEclipse(source, dest, &rPct);
       if (nEclipse > etNone) {
@@ -622,7 +666,7 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
     }
   }
 
-  /* Print if the present aspect is the Moon going void of course. */
+  // Print if the present aspect is the Moon going void of course.
   if (nVoid >= 0) {
     AnsiColor(kDefault);
     sprintf(sz, " (v/c %d:%02d", nVoid / 3600, nVoid / 60 % 60); PrintSz(sz);
@@ -679,15 +723,15 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
   PrintCh(' ');
 
   if (asp == aSig || asp == aHou)
-    sprintf(sz, "-->");                        /* Print a sign change. */
+    sprintf(sz, "-->");                        // Print a sign change.
   else if (asp == aDir)
-    sprintf(sz, "S/%c", obj2 ? chRet : 'D');   /* Print a direction change. */
+    sprintf(sz, "S/%c", obj2 ? chRet : 'D');   // Print a direction change.
   else if (asp == aDeg)
-    sprintf(sz, "At:");                        /* Print a degree change. */
+    sprintf(sz, "At:");                        // Print a degree change.
   else if (asp == 0)
     sprintf(sz, chart == 'm' ? "&" : "with");
   else
-    sprintf(sz, "%s", SzAspectAbbrev(asp));    /* Print an aspect. */
+    sprintf(sz, "%s", SzAspectAbbrev(asp));    // Print an aspect.
   PrintSz(sz);
   if (asp != aDir)
     PrintCh(' ');
@@ -747,14 +791,14 @@ void ChartInDayInfluence(void)
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
 
-  /* Go compute the aspects in the chart. */
+  // Go compute the aspects in the chart.
 
   i = us.fAppSep;
-  us.fAppSep = fTrue;     /* We always want applying vs. separating orbs. */
+  us.fAppSep = fTrue;     // Always want applying vs. separating orbs.
   FCreateGrid(fFalse);
   us.fAppSep = i;
 
-  /* Search through the grid and build up the list of aspects. */
+  // Search through the grid and build up the list of aspects.
 
   for (j = 1; j <= cObj; j++) {
     if (FIgnore(j))
@@ -773,7 +817,7 @@ void ChartInDayInfluence(void)
     }
   }
 
-  /* Sort aspects by order of influence. */
+  // Sort aspects by order of influence.
 
   for (i = 1; i < occurcount; i++) {
     j = i-1;
@@ -806,7 +850,7 @@ void ChartInDayInfluence(void)
     }
   }
 
-  /* Now display each aspect line. */
+  // Now display each aspect line.
 
   for (i = 0; i < occurcount; i++) {
     sprintf(sz, "%3d: ", i+1); PrintSz(sz);
@@ -842,12 +886,12 @@ void ChartTransitInfluence(flag fProg)
   byte ignore3[objMax];
   char sz[cchSzDef];
   int occurcount = 0, fProgress = us.fProgress, i, j, k, l, m;
-  flag f;
+  flag fSav, f;
 
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
 
-  /* Cast the natal and transiting charts as with a relationship chart. */
+  // Cast the natal and transiting charts as with a relationship chart.
 
   cp1 = cp0;
   for (i = 0; i <= cObj; i++) {
@@ -859,18 +903,18 @@ void ChartTransitInfluence(flag fProg)
     is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
     ciCore = ciMain;
   }
-  CastChart(fTrue);
+  CastChart(0);
   cp2 = cp0;
   for (i = 0; i <= cObj; i++) {
     ignore[i] = ignore3[i];
   }
 
-  /* Do a relationship aspect grid to get the transits. We have to make and */
-  /* restore three changes to get it right for this chart. (1) We make the  */
-  /* natal planets have zero velocity so applying vs. separating is only a  */
-  /* function of the transiter. (2) We force applying vs. separating orbs   */
-  /* regardless if -ga or -ma is in effect or not. (3) Finally we tweak the */
-  /* main restrictions to allow for transiting objects not restricted.      */
+  // Do a relationship aspect grid to get the transits. Have to make and
+  // restore three changes to get it right for this chart: (1) Make the natal
+  // planets have zero velocity so applying vs. separating is only a function
+  // of the transiter. (2) Force applying vs. separating orbs regardless if
+  // -ga or -ma is in effect or not. (3) Finally tweak the main restrictions
+  // to allow for transiting objects not restricted.
 
   for (i = 0; i <= cObj; i++) {
     ret[i] = cp1.dir[i];
@@ -878,15 +922,17 @@ void ChartTransitInfluence(flag fProg)
     ignore3[i] = ignore[i];
     ignore[i] = ignore[i] && ignore2[i];
   }
-  i = us.fAppSep; us.fAppSep = fTrue;
-  FCreateGridRelation(fFalse);
-  us.fAppSep = i;
+  fSav = us.fAppSep; us.fAppSep = fTrue;
+  f = FCreateGridRelation(fFalse);
+  us.fAppSep = fSav;
   for (i = 0; i <= cObj; i++) {
     cp1.dir[i] = ret[i];
     ignore[i] = ignore3[i];
   }
+  if (!f)
+    return;
 
-  /* Loop through the grid, and build up a list of the valid transits. */
+  // Loop through the grid, and build up a list of the valid transits.
 
   for (i = 0; i <= cObj; i++) {
     if (FIgnore2(i))
@@ -906,7 +952,7 @@ void ChartTransitInfluence(flag fProg)
     }
   }
 
-  /* After all transits located, sort them by their total power. */
+  // After all transits located, sort them by their total power.
 
   for (i = 1; i < occurcount; i++) {
     j = i-1;
@@ -939,7 +985,7 @@ void ChartTransitInfluence(flag fProg)
     }
   }
 
-  /* Now loop through list and display each transit in effect at the time. */
+  // Now loop through list and display each transit in effect at the time.
 
   for (i = 0; i < occurcount; i++) {
     k = aspect[i];
@@ -957,7 +1003,7 @@ void ChartTransitInfluence(flag fProg)
     }
     AnsiColor(kDkGreenA);
     sprintf(sz, " - power:%6.2f", power[i]); PrintSz(sz);
-    if (k == aCon && l == dest[i]) {    /* Print a small "R" for returns. */
+    if (k == aCon && l == dest[i]) {    // Print a "R" to mark returns.
       AnsiColor(kWhiteA);
       PrintSz(" R");
       if (is.fSeconds)
@@ -976,7 +1022,7 @@ void ChartTransitInfluence(flag fProg)
   PrintAspectSummary(ca, co, occurcount, rPowSum);
   us.fProgress = fProgress;
   ciCore = ciMain;
-  CastChart(fTrue);
+  CastChart(1);
 }
 
 
@@ -1060,7 +1106,7 @@ void ChartCalendarYear(void)
   int r, w, c, m, d, dy, p[3], l[3], n[3];
 
   dy = DayOfWeek(1, 1, Yea);
-  for (r = 0; r < 4; r++) {     /* Loop over one set of three months */
+  for (r = 0; r < 4; r++) {     // Loop over one set of three months.
     AnsiColor(kWhiteA);
     for (c = 0; c < 3; c++) {
       m = r*3+c+1;
@@ -1084,8 +1130,8 @@ void ChartCalendarYear(void)
       n[c] = 0;
       dy += DaysInMonth(m, Yea);
     }
-    for (w = 0; w < cWeek-1; w++) {    /* Loop over one set of week rows */
-      for (c = 0; c < 3; c++) {        /* Loop over one week in a month  */
+    for (w = 0; w < cWeek-1; w++) {    // Loop over one set of week rows.
+      for (c = 0; c < 3; c++) {        // Loop over one week in a month.
         m = r*3+c+1;
         d = 0;
         if (w == 0)
@@ -1143,8 +1189,8 @@ void DisplayRelation(void)
   int j;
 #endif
 
-  /* If we are calculating the difference between two dates, then display */
-  /* the value and return, as with the -rd switch.                        */
+  // If calculating the difference between two dates, then display the value
+  // and return, as with the -rd switch.
 
   if (us.nRel == rcDifference) {
     PrintSz("Differences between the dates in the two charts:\n");
@@ -1166,7 +1212,7 @@ void DisplayRelation(void)
       case 8: sprintf(sz, "Longitude: %.2f", k);                 break;
       case 9: sprintf(sz, "Latitude : %.2f", l);                 break;
       case 10:
-        l = PolarDistance(ciMain.lon, ciMain.lat, ciTwin.lon, ciTwin.lat);
+        l = SphDistance(ciMain.lon, ciMain.lat, ciTwin.lon, ciTwin.lat);
         sprintf(sz, "Distance : %.2f (%.2f %s)", l, l / 360.0 *
           (us.fEuroDist ? 40075.0 : 24901.0), us.fEuroDist ? "km" : "miles");
         break;
@@ -1179,9 +1225,9 @@ void DisplayRelation(void)
   }
 
 #ifdef BIORHYTHM
-  /* If we are doing a biorhythm (-rb switch), then we'll calculate it for */
-  /* someone born on the older date, at the time of the younger date. Loop */
-  /* through the week preceeding and following the date in question.       */
+  // If doing a biorhythm (-rb switch), then calculate it for someone born on
+  // the older date, at the time of the younger date. Loop through the days
+  // preceeding and following the date in question.
 
   is.JD = RFloor(is.JD + rRound);
   for (is.JD -= (real)(us.nBioday/2), i = -us.nBioday/2; i <= us.nBioday/2;
@@ -1203,12 +1249,12 @@ void DisplayRelation(void)
       }
       AnsiColor(i ? kDefault : kWhiteA);
 
-      /* The biorhythm calculation is below. */
+      // The biorhythm calculation is below.
 
       l = RBiorhythm(is.JD, k);
       sprintf(sz, " at %c%3.0f%%", l < 0.0 ? '-' : '+', RAbs(l)); PrintSz(sz);
 
-      /* Print smiley face, medium face, or sad face based on current cycle. */
+      // Print smiley face, medium face, or sad face based on current cycle.
 
       AnsiColor(kDkGreenA);
       sprintf(sz, " :%c", l > 50.0 ? ')' : (l < -50.0 ? '(' : '|'));

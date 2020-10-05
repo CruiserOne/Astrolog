@@ -1,5 +1,4 @@
 /*********************************************************
-  $Header: /home/dieter/sweph/RCS/swedate.c,v 1.75 2009/04/08 07:17:29 dieter Exp $
   version 15-feb-89 16:30
   
   swe_date_conversion()

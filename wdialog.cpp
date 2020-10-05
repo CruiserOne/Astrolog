@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.00) File: wdialog.cpp
+** Astrolog (Version 7.10) File: wdialog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2020 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 6/4/2020.
+** Last code change made 9/30/2020.
 */
 
 #include "astrolog.h"
@@ -65,7 +65,7 @@
 
 void SetEditSz(HWND hdlg, int id, CONST char *sz)
 {
-  while (*sz == ' ')    /* Strip off any extra leading spaces. */
+  while (*sz == ' ')    // Strip off any extra leading spaces.
     sz++;
   SetEdit(id, sz);
 }
@@ -144,8 +144,9 @@ void SetEditSZOA(HWND hdlg, int idDst, int idZon, int idLon, int idLat,
   SetCombo(idDst, "No"); SetCombo(idDst, "Yes");
   sprintf(sz, "%s", SzZone(zon));
   SetEdit(idZon, (char *)(sz[0] == '+' ? &sz[1] : sz));
-  /* For the time zone dropdown, fill it out with all abbreviations of */
-  /* three letters that don't reference daylight or war time.          */
+
+  // For the time zone dropdown, fill it out with all abbreviations of three
+  // letters that don't reference daylight or war time.
   for (i = 0; i < cZone; i++) {
     if (szZon[i][1] && szZon[i][1] != 'D' && szZon[i][1] != 'W' &&
       szZon[i][2] && szZon[i][2] != 'D') {
@@ -188,7 +189,7 @@ real GetEditR(HWND hdlg, int id)
   char sz[cchSzMax];
 
   GetEdit(id, sz);
-  return atof(sz);
+  return RFromSz(sz);
 }
 
 
@@ -200,331 +201,6 @@ void ErrorEnsure(int n, CONST char *sz)
 
   sprintf(szT, "The value %d is not a valid %s setting.", n, sz);
   PrintWarning(szT);
-}
-
-
-/* Take many of the user visible settings, and write them out to a new   */
-/* command switch file, which may be read in to restore those settings.  */
-/* Most often this would be used to create a new astrolog.as default     */
-/* settings file. This is called from File / Save Settings menu command. */
-
-flag FOutputSettings()
-{
-  char sz[cchSzDef];
-  FILE *file;
-  int i;
-  flag f1, f2;
-
-  if (us.fNoWrite)
-    return fFalse;
-  file = fopen(is.szFileOut, "w");  /* Create and open the file for output. */
-  if (file == NULL) {
-    sprintf(sz, "Settings file %s can not be created.", is.szFileOut);
-    PrintError(sz);
-    return fFalse;
-  }
-
-  sprintf(sz, "@AD%s  ; %s %s default settings file %s\n\n",
-    szVerCore, szAppName, szVersionCore, DEFAULT_INFOFILE); PrintFSz();
-
-  sprintf(sz, "-z %s                ", SzZone(us.zonDef)); PrintFSz();
-  PrintF("; Default time zone     [hours W or E of UTC   ]\n");
-  if (us.dstDef != dstAuto)
-    sprintf(sz, "-z0 %d                   ", (int)us.dstDef);
-  else
-    sprintf(sz, "-z0 Autodetect          ");
-  PrintFSz();
-  PrintF("; Default Daylight time [0 standard, 1 daylight]\n");
-  f1 = us.fAnsiChar; us.fAnsiChar = 3;
-  f2 = is.fSeconds; is.fSeconds = fTrue;
-  sprintf(sz, "-zl %s  ", SzLocation(us.lonDef, us.latDef)); PrintFSz();
-  us.fAnsiChar = f1; is.fSeconds = f2;
-  PrintF("; Default location      [longitude and latitude]\n");
-  sprintf(sz, "-zv %s               ", SzElevation(us.elvDef)); PrintFSz();
-  PrintF("; Default elevation     [in feet or meters     ]\n");
-  sprintf(sz, "-zj \"%s\" \"%s\" ; Default name and location\n\n",
-    us.namDef, us.locDef); PrintFSz();
-
-  PrintF("-n      "
-    "; Comment out this line to not start with chart for \"now\".\n");
-  sprintf(sz, "-Yz %ld   ", us.lTimeAddition); PrintFSz();
-  PrintF(
-    "; Time minute addition to be used if \"now\" charts are offset.\n\n");
-
-  sprintf(sz, "%cs      ", ChDashF(us.fSidereal)); PrintFSz();
-  PrintF(
-    "; Zodiac selection          [\"_s\" is tropical, \"=s\" is sidereal]\n");
-  PrintF(":s "); FormatR(sz, us.rZodiacOffset, 6); PrintFSz();
-  PrintF(
-    "  ; Zodiac offset value       [Change \"0.0\" to desired ayanamsa  ]\n");
-  sprintf(sz, "-A %d    ", us.nAsp); PrintFSz();
-  PrintF(
-    "; Number of aspects         [Change \"5\" to desired number      ]\n");
-  i = us.nHouseSystem; sprintf(sz, "-c %.4s ", i == hsEqualMC ?
-    rgSystem[1].sz : (i == hsSinewaveDelta ? rgSystem[3].sz : szSystem[i]));
-  PrintFSz();
-  PrintF(
-    "; House system              [Change \"Plac\" to desired system   ]\n");
-  sprintf(sz, "%cc3     ", ChDashF(us.fHouse3D)); PrintFSz();
-  PrintF(
-    "; 3D house boundaries       [\"=c3\" is 3D houses, \"_c3\" is 2D   ]\n");
-  sprintf(sz, "%ck      ", ChDashF(us.fAnsiColor)); PrintFSz();
-  PrintF(
-    "; Ansi color text           [\"=k\" is color, \"_k\" is monochrome ]\n");
-  sprintf(sz, ":d %d   ", us.nDivision); PrintFSz();
-  PrintF(
-    "; Searching divisions       [Change \"48\" to desired divisions  ]\n");
-  sprintf(sz, "%cb0     ", ChDashF(us.fSeconds)); PrintFSz();
-  PrintF(
-    "; Print zodiac seconds      [\"_b0\" to minute, \"=b0\" to second  ]\n");
-  sprintf(sz, "%cb      ", ChDashF(us.fEphemFiles)); PrintFSz();
-  PrintF(
-    "; Use ephemeris files       [\"=b\" uses them, \"_b\" doesn't      ]\n");
-  sprintf(sz, ":w %d    ", us.nWheelRows); PrintFSz();
-  PrintF(
-    "; Wheel chart text rows     [Change \"0\" to desired wheel rows  ]\n");
-  sprintf(sz, ":I %d   ", us.nScreenWidth); PrintFSz();
-  PrintF(
-    "; Text screen columns       [Change \"80\" to desired columns    ]\n");
-  sprintf(sz, "-YQ %d   ", us.nScrollRow); PrintFSz();
-  PrintF(
-    "; Text screen scroll limit  [Change \"24\" or set to \"0\" for none]\n");
-  sprintf(sz, "%cYd     ", ChDashF(us.fEuroDate)); PrintFSz();
-  PrintF(
-    "; European date format      [\"_Yd\" is MDY, \"=Yd\" is DMY        ]\n");
-  sprintf(sz, "%cYt     ", ChDashF(us.fEuroTime)); PrintFSz();
-  PrintF(
-    "; European time format      [\"_Yt\" is AM/PM, \"=Yt\" is 24 hour  ]\n");
-  sprintf(sz, "%cYv     ", ChDashF(us.fEuroDist)); PrintFSz();
-  PrintF(
-    "; European length units     [\"_Yv\" is imperial, \"=Yv\" is metric]\n");
-  sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
-  PrintF(
-    "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
-  sprintf(sz, "%cYC     ", ChDashF(us.fSmartCusp)); PrintFSz();
-  PrintF(
-    "; Smart cusp displays       [\"=YC\" is smart, \"_YC\" is normal   ]\n");
-  sprintf(sz, "%cYO     ", ChDashF(us.fSmartSave)); PrintFSz();
-  PrintF(
-    "; Smart copy and printing   [\"=YO\" does it smart, \"_YO\" doesn't]\n");
-  sprintf(sz, "%cY8     ", ChDashF(us.fClip80)); PrintFSz();
-  PrintF(
-    "; Clip text to end of line  [\"=Y8\" clips, \"_Y8\" doesn't clip   ]\n");
-  sprintf(sz, "%cYu     ", ChDashF(us.fEclipse)); PrintFSz();
-  PrintF(
-    "; Show eclipse information  [\"=Yu\" shows, \"_Yu\" doesn't show   ]\n");
-
-  PrintF("\n\n; FILE PATHS (-Yi1 through -Yi9):\n; For example, "
-    "point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.\n\n");
-  for (i = 0; i < 10; i++)
-    if (us.rgszPath[i] && *us.rgszPath[i]) {
-      sprintf(sz, "-Yi%d \"%s\"\n", i, us.rgszPath[i]); PrintFSz();
-    }
-
-  PrintF("\n\n; DEFAULT RESTRICTIONS:\n"
-    ";  0-10: Ear Sun Moo Mer Ven Mar Jup Sat Ura Nep Plu\n"
-    "; 11-21: Chi Cer Pal Jun Ves Nor Sou Lil For Ver EP\n"
-    "; 22-33: Asc 2nd 3rd Nad 5th 6th Des 8th 9th MC 11th 12th\n"
-    "; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos\n\n-YR 0 10     ");
-  for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("   ; Planets\n-YR 11 21    ");
-  for (i = 11; i <= 21; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("   ; Minor planets\n-YR 22 33    ");
-  for (i = 22; i <= 33; i++) PrintF(SzNumF(ignore[i]));
-  PrintF(" ; House cusps\n-YR 34 42    ");
-  for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("       ; Uranians\n\n");
-
-  PrintF("; DEFAULT TRANSIT RESTRICTIONS:\n\n-YRT 0 10    ");
-  for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF("   ; Planets\n-YRT 11 21   ");
-  for (i = 11; i <= 21; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF("   ; Minor planets\n-YRT 22 33   ");
-  for (i = 22; i <= 33; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF(" ; House cusps\n-YRT 34 42   ");
-  for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF("       ; Uranians\n\n");
-
-  sprintf(sz, "-YR0 %s%s ; Restrict sign, direction changes\n\n",
-    SzNumF(us.fIgnoreSign), SzNumF(us.fIgnoreDir)); PrintFSz();
-  PrintF("-YR7 ");
-  for (i = 0; i < 5; i++) PrintF(SzNumF(ignore7[i]));
-  PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n\n\n");
-
-  PrintF("; DEFAULT ASPECT ORBS:\n"
-    ";  1- 5: Con Opp Squ Tri Sex\n"
-    ";  6-11: Inc SSx SSq Ses Qui BQn\n"
-    "; 12-18: SQn Sep Nov BNv BSp TSp QNv\n\n-YAo 1 5    ");
-  for (i = 1; i <= 5; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
-  PrintF("      ; Major aspects\n-YAo 6 11   ");
-  for (i = 6; i <= 11; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
-  PrintF("    ; Minor aspects\n-YAo 12 18  ");
-  for (i = 12; i <= 18; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
-  PrintF("  ; Obscure aspects\n\n");
-
-  PrintF("; DEFAULT MAX PLANET ASPECT ORBS:\n\n-YAm 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
-  PrintF("      ; Planets\n-YAm 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
-  PrintF("      ; Minor planets\n-YAm 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
-  PrintF("  ; Cusp objects\n-YAm 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
-  PrintF("              ; Uranians\n-YAm 43 43  ");
-  sprintf(sz, "%4.0f", rObjOrb[43]); PrintFSz();
-  PrintF("                                              ; Fixed stars\n");
-
-  PrintF("\n; DEFAULT PLANET ASPECT ORB ADDITIONS:\n\n-YAd 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
-  PrintF("    ; Planets\n-YAd 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
-  PrintF("    ; Minor planets\n-YAd 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
-  PrintF("  ; Cusp objects\n-YAd 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
-  PrintF("        ; Uranians\n-YAd 43 43  ");
-  sprintf(sz, " %.0f", rObjAdd[43]); PrintFSz();
-  PrintF("                        ; Fixed stars\n\n\n");
-
-  PrintF("; DEFAULT INFLUENCES:\n\n-Yj 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("        ; Planets\n-Yj 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("                ; Minor planets\n-Yj 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("  ; Cusp objects\n-Yj 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("                    ; Uranians\n-Yj 43 43   ");
-  sprintf(sz, "%.0f", rObjInf[43]); PrintFSz();
-  PrintF("                                    ; Fixed stars\n\n");
-
-  PrintF("-YjC 1 12  ");
-  for (i = 1; i <= cSign; i++)
-    { sprintf(sz, " %.0f", rHouseInf[i]); PrintFSz(); }
-  PrintF("  ; Houses\n\n-YjA 1 5   ");
-
-  for (i = 1; i <= 5; i++) { sprintf(sz, "%4.1f", rAspInf[i]); PrintFSz(); }
-  PrintF("          ; Major aspects\n-YjA 6 11  ");
-  for (i = 6; i <= 11; i++) { sprintf(sz, "%4.1f", rAspInf[i]); PrintFSz(); }
-  PrintF("      ; Minor aspects\n-YjA 12 18 ");
-  for (i = 12; i <= 18; i++) { sprintf(sz, "%4.1f", rAspInf[i]); PrintFSz(); }
-  PrintF("  ; Obscure aspects\n\n");
-
-  PrintF("; DEFAULT TRANSIT INFLUENCES:\n\n-YjT 0 10  ");
-  for (i = 0; i <= 10; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
-  PrintF("  ; Planets\n-YjT 11 21 ");
-  for (i = 11; i <= 21; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
-  PrintF("    ; Minor planets\n-YjT 34 42 ");
-  for (i = 34; i <= 42; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
-  PrintF("      ; Uranians\n-YjT 43 43  ");
-  sprintf(sz, "%.0f", rTransitInf[43]); PrintFSz();
-  PrintF("                             ; Fixed stars\n\n");
-
-  sprintf(sz, "-Yj0 %.0f %.0f %.0f %.0f ",
-    rObjInf[oNorm1 + 1], rObjInf[oNorm1 + 2], rHouseInf[cSign + 1],
-    rHouseInf[cSign + 2]); PrintFSz();
-  PrintF(" ; In ruling sign, exalted sign, ruling house, exalted house\n");
-  sprintf(sz, "-Yj7 %.0f %.0f %.0f %.0f %.0f %.0f ", rObjInf[oNorm1 + 3],
-    rObjInf[oNorm1 + 4], rObjInf[oNorm1 + 5], rHouseInf[cSign + 3],
-    rHouseInf[cSign + 4], rHouseInf[cSign + 5]); PrintFSz();
-  PrintF(" ; Esoteric, Hierarchical, Ray ruling - sign, house\n\n\n");
-
-  PrintF("; DEFAULT RAYS:\n\n-Y7C 1 12  ");
-  for (i = 1; i <= cSign; i++)
-    { sprintf(sz, " %d", rgSignRay[i]); PrintFSz(); }
-  PrintF("  ; Signs\n-Y7O 0 10  ");
-  for (i = 0; i <= 10; i++)
-    { sprintf(sz, " %d", rgObjRay[i]); PrintFSz(); }
-  PrintF("             ; Planets\n-Y7O 34 42 ");
-  for (i = 34; i <= 42; i++)
-    { sprintf(sz, " %d", rgObjRay[i]); PrintFSz(); }
-  PrintF("                 ; Uranians\n\n\n");
-
-  PrintF("; DEFAULT COLORS:\n\n-YkO 0 10  ");
-  for (i = 0; i <= 10; i++)
-    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
-  PrintF("      ; Planet colors\n-YkO 11 21 ");
-  for (i = 11; i <= 21; i++)
-    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
-  PrintF("      ; Minor colors\n-YkO 22 33 ");
-  for (i = 22; i <= 33; i++)
-    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
-  PrintF("  ; Cusp colors\n-YkO 34 42 ");
-  for (i = 34; i <= 42; i++)
-    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
-  PrintF("              ; Uranian colors\n\n-YkA 1 5   ");
-
-  for (i = 1; i <= 5; i++)
-    { sprintf(sz, " %.3s", szColor[kAspA[i]]); PrintFSz(); }
-  PrintF("          ; Major aspect colors\n-YkA 6 11  ");
-  for (i = 6; i <= 11; i++)
-    { sprintf(sz, " %.3s", szColor[kAspA[i]]); PrintFSz(); }
-  PrintF("      ; Minor aspect colors\n-YkA 12 18 ");
-  for (i = 12; i <= 18; i++)
-    { sprintf(sz, " %.3s", szColor[kAspA[i]]); PrintFSz(); }
-  PrintF("  ; Obscure aspect colors\n\n-YkC       ");
-
-  for (i = eFir; i <= eWat; i++)
-    { sprintf(sz, " %.3s", szColor[kElemA[i]]); PrintFSz(); }
-  PrintF("                      ; Element colors\n-Yk7 1 7   ");
-  for (i = 1; i <= cRay; i++)
-    { sprintf(sz, " %.3s", szColor[kRayA[i]]); PrintFSz(); }
-  PrintF("          ; Ray colors\n-Yk0 1 7   ");
-  for (i = 1; i <= cRainbow; i++)
-    { sprintf(sz, " %.3s", szColor[kRainbowA[i]]); PrintFSz(); }
-  PrintF("          ; Rainbow colors\n-Yk  0 8   ");
-  for (i = 0; i <= 8; i++)
-    { sprintf(sz, " %.3s", szColor[kMainA[i]]); PrintFSz(); }
-  PrintF("  ; Main colors\n\n\n");
-
-  PrintF("; GRAPHICS DEFAULTS:\n\n");
-  sprintf(sz, "%cXm              ", ChDashF(gs.fColor)); PrintFSz();
-  PrintF("; Color charts       [\"=Xm\" is color, \"_Xm\" is monochrome]\n");
-  sprintf(sz, "%cXr              ", ChDashF(gs.fInverse)); PrintFSz();
-  PrintF("; Reverse background [\"_Xr\" is black, \"=Xr\" is white     ]\n");
-  i = gs.xWin; if (fSidebar) i -= SIDESIZE;
-  sprintf(sz, ":Xw %d %d      ", i, gs.yWin); PrintFSz();
-  PrintF("; Default X and Y resolution (not including sidebar)\n");
-  sprintf(sz, ":Xs %d          ", gs.nScale); PrintFSz();
-  PrintF("; Character scale     [100-400]\n");
-  sprintf(sz, ":XS %d          ", gs.nScaleText); PrintFSz();
-  PrintF("; Graphics text scale [100-400]\n");
-  sprintf(sz, "%cXQ              ", ChDashF(gs.fKeepSquare)); PrintFSz();
-  PrintF(
-    "; Square charts [\"=XQ\" forces square, \"_XQ\" allows rectangle]\n");
-  sprintf(sz, "%cXu              ", ChDashF(gs.fBorder)); PrintFSz();
-  PrintF(
-    "; Chart border  [\"=Xu\" shows border, \"_Xu\" doesn't show     ]\n");
-  sprintf(sz, ":Xb%c             ", ChUncap(gs.chBmpMode)); PrintFSz();
-  PrintF(
-    "; Bitmap file type   [\"Xbb\" is Windows .bmp, \"Xbn\" is X11   ]\n");
-  sprintf(sz, ":YXG %d        ", gs.nGlyphs); PrintFSz();
-  PrintF("; Glyph selections   [Capricorn, Uranus, Pluto, Lilith]\n");
-  sprintf(sz, ":YXg %d           ", gs.nGridCell); PrintFSz();
-  PrintF("; Aspect grid cells  [\"0\" for autodetect  ]\n");
-  sprintf(sz, ":YXS %.1f         ", gs.rspace); PrintFSz();
-  PrintF("; Orbit radius in AU [\"0.0\" for autodetect]\n");
-  sprintf(sz, ":YXj %d           ", gs.cspace); PrintFSz();
-  PrintF("; Orbit trail count\n");
-  sprintf(sz, ":YX7 %d         ", gs.nRayWidth); PrintFSz();
-  PrintF("; Esoteric ray column influence width\n");
-  sprintf(sz, ":YXf %d           ", gs.fFont); PrintFSz();
-  PrintF("; Use actual fonts\n");
-  sprintf(sz, ":YXp %d           ", gs.nOrient); PrintFSz();
-  PrintF(
-    "; PostScript paper orientation [\"-1\" portrait, \"1\" landscape]\n");
-  sprintf(sz, ":YXp0 %s ", SzLength(gs.xInch)); PrintFSz();
-  sprintf(sz, "%s ", SzLength(gs.yInch)); PrintFSz();
-  PrintF("; PostScript paper X and Y sizes\n\n");
-  sprintf(sz, "%cX               ", ChDashF(us.fGraphics)); PrintFSz();
-  PrintF("; Graphics chart display [\"_X\" is text, \"=X\" is graphics]\n");
-
-  sprintf(sz, "\n; %s\n", DEFAULT_INFOFILE); PrintFSz();
-  fclose(file);
-  return fTrue;
 }
 
 
@@ -618,7 +294,7 @@ flag API DlgOpenChart()
   char sz[cchSzDef];
   CI ciT;
 
-  /* Setup dialog title and settings and get the name of a file from it. */
+  // Setup dialog title and settings and get the name of a file from it.
   if (us.fNoRead) {
     PrintWarning("File input is not allowed now.");
     return fFalse;
@@ -632,7 +308,7 @@ flag API DlgOpenChart()
   if (!GetOpenFileName((LPOPENFILENAME)&ofn))
     return fFalse;
 
-  /* Process the given file based on what open command is being run. */
+  // Process the given file based on what open command is being run.
   ciT = ciCore;
   FInputData(ofn.lpstrFileTitle);
   if (wi.nDlgChart <= 1)
@@ -665,7 +341,7 @@ flag API DlgSaveChart()
 {
   char *pch;
 
-  /* Setup dialog title and settings and get the name of a file from it. */
+  // Setup dialog title and settings and get the name of a file from it.
   if (us.fNoWrite) {
     PrintWarning("File output is not allowed now.");
     return fFalse;
@@ -738,8 +414,8 @@ flag API DlgSaveChart()
     sprintf(pch, "%c%s%s", '\\', szAppName, ".bmp");
   }
 
-  /* Saving chart info, position, or setting command files can be done  */
-  /* here. Saving actual chart output isn't done until the next redraw. */
+  // Saving chart info, position, or setting command files can be done here.
+  // Saving actual chart output isn't done until the next redraw.
   is.szFileOut = gi.szFileOut = ofn.lpstrFile;
   switch (wi.wCmd) {
   case cmdSaveChart:
@@ -800,16 +476,16 @@ flag API DlgPrint()
   int xClient, yClient;
   flag fInverse;
 
-  /* Bring up the Windows print dialog. */
+  // Bring up the Windows print dialog.
   wi.fNoUpdate = fFalse;
   if (!PrintDlg((LPPRINTDLG)&prd))
     return fTrue;
 
-  /* Get the printer DC. */
+  // Get the printer DC.
   if (prd.hDC)
     hdc = prd.hDC;
   else {
-    /* If the dialog didn't just return the DC, try to make one manually. */
+    // If the dialog didn't just return the DC, try to make one manually.
     if (!prd.hDevNames)
       return fFalse;
     lpDevNames = (LPDEVNAMES)GlobalLock(prd.hDevNames);
@@ -833,7 +509,7 @@ flag API DlgPrint()
     prd.hDevMode = (HGLOBAL)NULL;
   }
 
-  /* Setup the abort dialog and start the print job. */
+  // Setup the Abort dialog and start the print job.
   lpAbortDlg = (DLGPROC)MakeProcInstance((FARPROC)DlgAbort, wi.hinst);
   lpAbortProc = (ABORTPROC)MakeProcInstance((FARPROC)DlgAbortProc, wi.hinst);
   SetAbortProc(hdc, lpAbortProc);
@@ -855,14 +531,14 @@ flag API DlgPrint()
   EnableWindow(wi.hwnd, fFalse);
   StartPage(hdc);
 
-  /* Scale the chart to the page. */
+  //  Scale the chart to the page.
   if (us.fGraphics) {
     gs.xWin *= METAMUL; gs.yWin *= METAMUL; gs.nScale *= METAMUL;
     fInverse = gs.fInverse;
     if (us.fSmartSave)
       gs.fInverse = fTrue;
   }
-  SetMapMode(hdc, MM_ANISOTROPIC);       /* So SetViewportExt can be called */
+  SetMapMode(hdc, MM_ANISOTROPIC);       // So SetViewportExt can be called.
   xPrint = GetDeviceCaps(hdc, HORZRES);
   yPrint = GetDeviceCaps(hdc, VERTRES);
   SetViewportOrg(hdc, 0, 0);
@@ -876,9 +552,9 @@ flag API DlgPrint()
   }
   wi.hdcPrint = hdc;
 
-  FRedraw();    /* Actually go "draw" the chart to the printer. */
+  FRedraw();    // Actually go "draw" the chart to the printer.
 
-  /* Restore globals that were temporarily changed to print above. */
+  // Restore globals that were temporarily changed to print above.
   wi.hdcPrint = hdcNil;
   wi.xClient = xClient; wi.yClient = yClient;
   if (us.fGraphics) {
@@ -886,7 +562,7 @@ flag API DlgPrint()
     gs.fInverse = fInverse;
   }
 
-  /* Finalize and cleanup everything. */
+  // Finalize and cleanup everything.
   if (!wi.fAbort) {
     EndPage(hdc);
     EndDoc(hdc);
@@ -1161,7 +837,7 @@ flag API DlgDefault(HWND hdlg, uint message, WORD wParam, LONG lParam)
       GetEdit(dcDeZon, sz); ci.zon = RParseSz(sz, pmZon);
       GetEdit(dcDeLon, sz); ci.lon = RParseSz(sz, pmLon);
       GetEdit(dcDeLat, sz); ci.lat = RParseSz(sz, pmLat);
-      GetEdit(dcDeCor, sz); us.lTimeAddition = atol(sz);
+      GetEdit(dcDeCor, sz); us.lTimeAddition = NFromSz(sz);
       GetEdit(dcDeElv, sz); us.elvDef = RParseSz(sz, pmElv);
       EnsureR(ci.dst, FValidZon(ci.dst), "daylight saving");
       EnsureR(ci.zon, FValidZon(ci.zon), "time zone");
@@ -1715,7 +1391,7 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetCheck(dxDi_YO, us.fSmartSave);
     SetCheck(dxDi_kh, us.fTextHTML);
     SetCheck(dxDi_Yo, us.fWriteOld);
-    SetCheck(dxDi_YXf, gs.fFont);
+    SetCheck(dxDi_YXf, gs.nFont > 0);
     SetEdit(deDi_YXp0_x, SzLength(gs.xInch));
     SetEdit(deDi_YXp0_y, SzLength(gs.yInch));
     SetRadio(gs.nOrient == 0 ? dr03 : (gs.nOrient > 0 ? dr01 : dr02),
@@ -1751,7 +1427,7 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
       us.fSmartSave = GetCheck(dxDi_YO);
       us.fTextHTML = GetCheck(dxDi_kh);
       us.fWriteOld = GetCheck(dxDi_Yo);
-      gs.fFont = GetCheck(dxDi_YXf);
+      gs.nFont = GetCheck(dxDi_YXf) * gi.nFontPrev;
       GetEdit(deDi_YXp0_x, sz); gs.xInch = RParseSz(sz, pmLength);
       GetEdit(deDi_YXp0_y, sz); gs.yInch = RParseSz(sz, pmLength);
       gs.nOrient = GetCheck(dr03) ? 0 : (GetCheck(dr01) ? 1 : -1);
@@ -2055,7 +1731,7 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
 flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
   char sz[cchSzMax];
-  int nx, ny, ns, nS, ng, nwn, nx1, nyxv, is;
+  int nx, ny, ns, nS, ng, nwn, nxz, nx1, nyxv, is;
   real rxw, rxg;
 
   switch (message) {
@@ -2075,6 +1751,10 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetCheck(dxGr_XP0, gs.fSouth);
     SetCheck(dxGr_XW0, gs.fMollewide);
     SetEditN(deGr_WN, wi.nTimerDelay);
+    if (gs.objTrack >= 0)
+      SetEdit(deGr_XZ, szObjName[gs.objTrack]);
+    else
+      SetEdit(deGr_XZ, "None");
     SetRadio(gs.objLeft > 0 ? dr02 :
       (gs.objLeft < 0 ? dr03 : dr01), dr01, dr03);
     SetEdit(deGr_X1, szObjName[gs.objLeft == 0 ? oSun : NAbs(gs.objLeft)-1]);
@@ -2082,9 +1762,13 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetCheck(dxGr_Wn, wi.fNoUpdate);
     SetRadio(dr04 + (gs.nGlyphs/1000 == 2), dr04, dr05);
     SetRadio(dr06 + ((gs.nGlyphs/100)%10 == 2), dr06, dr07);
-    SetRadio(dr08 + ((gs.nGlyphs/10)%10 -1), dr08, dr10);
+    SetRadio(dr08 + ((gs.nGlyphs/10)%10 - 1), dr08, dr10);
     SetRadio(dr11 + (gs.nGlyphs%10 == 2), dr11, dr12);
     SetRadio(dr13 + gs.nDecaType, dr13, dr15);
+    SetRadio(dr16 + (gs.nFont/1000)%10, dr16, dr20);
+    SetRadio(dr21 + Max((gs.nFont/100)%10 - 3, 0), dr21, dr22);
+    SetRadio(dr23 + Max((gs.nFont/10)%10 - 1, 0), dr23, dr26);
+    SetRadio(dr27 + Max(gs.nFont%10 - 1, 0), dr27, dr30);
     SetEditN(deGr_YXv, gs.nDecaSize);
     SetFocus(GetDlgItem(hdlg, deGr_Xw_x));
     return fTrue;
@@ -2099,6 +1783,7 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
       rxw = GetEditR(hdlg, deGr_XW);
       rxg = GetEditR(hdlg, deGr_XG);
       nwn = GetEditN(deGr_WN);
+      GetEdit(deGr_XZ, sz); nxz = NParseSz(sz, pmObject);
       nyxv = GetEditN(deGr_YXv);
       GetEdit(deGr_X1, sz); nx1 = NParseSz(sz, pmObject);
       EnsureN(nx, FValidGraphx(nx), "horizontal size");
@@ -2109,6 +1794,7 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
       EnsureR(rxw, FValidRotation(rxw), "horizontal rotation");
       EnsureR(rxg, FValidTilt(rxg), "vertical tilt");
       EnsureN(nwn, FValidTimer(nwn), "animation delay");
+      EnsureN(nxz, FItem(nxz) || nxz == -1, "telescope planet");
       EnsureN(nx1, FItem(nx1), "rotation planet");
       EnsureN(nyxv, FValidDecaSize(nyxv), "wheel corners coverage");
       if (gs.xWin != nx || gs.yWin != ny) {
@@ -2130,6 +1816,7 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
       gs.fSouth = GetCheck(dxGr_XP0);
       gs.fMollewide = GetCheck(dxGr_XW0);
       gs.fAnimMap = GetCheck(dxGr_XN);
+      gs.objTrack = nxz;
       wi.fNoUpdate = GetCheck(dxGr_Wn);
       gs.nGlyphs = (GetCheck(dr04) ? 1 : 2) * 1000 +
         (GetCheck(dr06) ? 1 : 2) * 100 + 
@@ -2137,6 +1824,13 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
         (GetCheck(dr11) ? 1 : 2);
       gs.nDecaType = GetCheck(dr13) ? 0 : (GetCheck(dr14) ? 1 : 2);
       gs.nDecaSize = nyxv;
+      gs.nFont = (GetCheck(dr17) ? 1000 : (GetCheck(dr18) ? 2000 :
+        (GetCheck(dr19) ? 3000 : GetCheck(dr20) ? 4000 : 0))) +
+        (GetCheck(dr22) ? 400 : 0) + (GetCheck(dr24) ? 20 :
+        (GetCheck(dr25) ? 30 : (GetCheck(dr26) ? 40 : 0))) + (GetCheck(dr28) ?
+        2 : (GetCheck(dr29) ? 3 : (GetCheck(dr30) ? 4 : 0)));
+      if (gs.nFont != 0)
+        gi.nFontPrev = gs.nFont;
       us.fGraphics = wi.fRedraw = wi.fMenuAll = fTrue;
     }
     if (wParam == IDOK || wParam == IDCANCEL) {
