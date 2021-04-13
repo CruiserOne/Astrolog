@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: charts0.cpp
+** Astrolog (Version 7.20) File: charts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,9 +60,9 @@
 ******************************************************************************
 */
 
-/* A subprocedure of the credit displayed below, this prints out one line */
-/* of credit information on the screen. Given a string, it's displayed    */
-/* centered with left and right borders around it, in the given color.    */
+// A subprocedure of the credit displayed below, this prints out one line of
+// credit information on the screen. Given a string, it's displayed centered
+// with left and right borders around it, in the given color.
 
 void PrintW(CONST char *sz, int col)
 {
@@ -90,9 +90,9 @@ void PrintW(CONST char *sz, int col)
 }
 
 
-/* Display a list of credits showing those who helped create the various  */
-/* parts of Astrolog, as well as important copyright and version info, as */
-/* displayed with the -Hc switch.                                         */
+// Display a list of credits showing those who helped create the various parts
+// of Astrolog, as well as important copyright and version info, as displayed
+// with the -Hc switch.
 
 void DisplayCredits(void)
 {
@@ -163,25 +163,28 @@ void DisplayCredits(void)
 }
 
 
-/* Print out a command switch or keypress info line to the screen, as done  */
-/* with the -H switch or 'H' key in a graphic window. This is just printing */
-/* out the string, except set the proper colors: Red for header lines,      */
-/* Green for individual switches or keys, dark green for subswitches, and   */
-/* White for the rest of the line telling what it does. Also prefix each    */
-/* switch with Unix's '-' or PC's '/', whichever is appropriate for system. */
+// Print out a command switch or keypress info line to the screen, as done
+// with the -H switch or 'H' key in a graphic window. This is just printing
+// out the string, except set the proper colors: Red for header lines, Green
+// for individual switches or keys, dark green for subswitches, and White for
+// the rest of the line telling what it does. Also prefix each switch with
+// Unix's '-' or PC's '/', whichever is appropriate for system.
 
 void PrintS(CONST char *sz)
 {
-  char ch, ch1, ch2, ch3;
-  static char ch1Prev = chNull, ch2Prev = chNull, ch3Prev = chNull;
+  char ch, ch1, ch2, ch3, ch4;
+  static char ch1Prev = chNull, ch2Prev = chNull, ch3Prev = chNull,
+    ch4Prev = chNull;
 
   // Determine color for first part of line.
-  ch1 = sz[1]; ch2 = sz[2]; ch3 = sz[3];
+  ch1 = sz[1]; ch2 = sz[2]; ch3 = sz[3]; ch4 = sz[4];
   if (*sz != ' ')
     AnsiColor(kRedA);
   else if (ch1 != ' ')
     AnsiColor(ch1 == 'P' || ch2 != ch2Prev ||
-      ((ch2 == 'Y' || ch2 == 'X' || ch2 == 'W') && ch3 != ch3Prev) ?
+      ((ch2 == 'Y' || ch2 == 'X' || ch2 == 'W' || ch2 == '~') &&
+        ch3 != ch3Prev) ||
+      (ch2 == 'Y' && ch3 == 'X' && ch4 != ch4Prev) ?
       kGreenA : kDkGreenA);
   else {
     AnsiColor(kDefault);
@@ -212,13 +215,13 @@ void PrintS(CONST char *sz)
   PrintL();
 
   if (ch1 != ' ') {
-    ch1Prev = ch1; ch2Prev = ch2; ch3Prev = ch3;
+    ch1Prev = ch1; ch2Prev = ch2; ch3Prev = ch3; ch4Prev = ch4;
   }
 }
 
 
-/* Print a list of every command switch that can be passed to the program, */
-/* and a description of what it does. This is what the -H switch prints.   */
+// Print a list of every command switch that can be passed to the program, and
+// a description of what it does. This is what the -H switch prints.
 
 void DisplaySwitches(void)
 {
@@ -259,7 +262,7 @@ void DisplaySwitches(void)
   PrintS(" _M <1-48>: Run the specified command switch macro.");
   PrintS(" _M0 <1-48> <string>: Define the specified command switch macro.");
   PrintS(
-    " _M[2-4][0] <strings>: Define macro(s) to run when chart calculated.");
+    " _M[1-4][0] <strings>: Define macro(s) to run when chart calculated.");
   PrintS(" _Y: Display help list of less commonly used command switches.");
   PrintS("\nSwitches which determine the type of chart to display:");
   PrintS(" _v: Display list of object positions (chosen by default).");
@@ -314,8 +317,9 @@ void DisplaySwitches(void)
   PrintS(" _Ey: Display planetary ephemeris for the entire year.");
   PrintS(" _EY <years>: Display planetary ephemeris for a number of years.");
   PrintS(" _E[]0 <step>: Display ephemeris times for days, months, or years.");
+  PrintS(" _8: Display planetary moons chart showing placements and aspects.");
   PrintS(
-    " _e: Print all charts together (_v_w_g_a_m_Z_S_l_j_7_L_K_Zd_d_D_B_E).");
+    " _e: Print all charts together (_v_w_g_a_m_Z_S_l_j_7_L_K_Zd_d_D_B_E_8).");
   PrintS(
     " _t <month> <year>: Compute all transits to natal planets in month.");
   PrintS(
@@ -370,6 +374,8 @@ void DisplaySwitches(void)
   PrintS(" _zi <name> <place>: Set name and place strings of current chart.");
 #ifdef ATLAS
   PrintS(
+    " _zL <city>: Lookup city in atlas and set location in current chart.");
+  PrintS(
     " _zN <city>: Lookup city in atlas and set zone, Daylight, and location.");
 #endif
   PrintS(" _q <month> <date> <year> <time>: Compute chart with defaults.");
@@ -385,18 +391,24 @@ void DisplaySwitches(void)
   PrintS(" _i[2,3,4] <file>: Load chart info into chart slots 2, 3, or 4.");
   PrintS(" _o <file> [..]: Write parameters of current chart to file.");
   PrintS(" _o0 <file> [..]: Like _o but output planet/house positions.");
+  PrintS(" _oa <file>: Write parameters of current chart to AAF format file.");
   PrintS(" _od <file>: Output program's current settings to switch file.");
   PrintS(" _os <file>, > <file>: Redirect output of text charts to file.");
   PrintS("\nSwitches which affect what information is used in a chart:");
   PrintS(" _R [<obj1> [<obj2> ..]]: Restrict specific bodies from displays.");
   PrintS(" _R0 [<obj1> ..]: Like _R but restrict everything first.");
   PrintS(" _R1 [<obj1> ..]: Like _R0 but unrestrict and show all objects.");
-  PrintS(" _R[C,u,U]: Restrict all minor cusps, all Uranians, or stars.");
-  PrintS(" _RT[0,1,C,u,U] [..]: Restrict transiting planets in _t lists.");
+  PrintS(
+    " _R[C,u,u0,8,U]: Restrict all cusps, Uranians, Dwarfs, moons, or stars.");
+  PrintS(
+    " _RT[0,1,C,u,u0,8,U] [..]: Restrict transiting planets in _t lists.");
   PrintS(" _RA [<asp1> ..]: Restrict specific aspects from displays.");
   PrintS(" _RO <obj>: Require object to be present in aspects.");
   PrintS(" _C: Include angular and non-angular house cusps in charts.");
-  PrintS(" _u: Include transneptunian/Uranian bodies in charts.");
+  PrintS(" _u: Include Uranian/transneptunian bodies in charts.");
+  PrintS(" _u0: Include Dwarf planets and related bodies in charts.");
+  PrintS(" _u8: Include planetary moon bodies in charts.");
+  PrintS(" _ub: Include planetary center of body (COB) objects in charts.");
   PrintS(" _U: Include locations of fixed background stars in charts.");
   PrintS(" _U[z,l,n,b,d,v]: Sort stars by zodiac position, latitude, name,");
   PrintS("   brightness, distance, or zodiac position velocity.");
@@ -416,6 +428,8 @@ void DisplaySwitches(void)
 #endif
   PrintS(" _b0: Display locations and times to the nearest second.");
 #ifdef SWISS
+  PrintS(
+    " _bj: Use more accurate JPL ephemeris file instead of Swiss Ephemeris.");
   PrintS(
     " _bs: Use less accurate Moshier formulas instead of Swiss Ephemeris.");
 #endif
@@ -440,7 +454,7 @@ void DisplaySwitches(void)
   PrintS(
     " _sr0: Like _sr but only display declinations instead of latitudes.");
   PrintS(
-    " _s[z,h,d]: Display locations as in zodiac, hours/minutes, or degrees.");
+    " _s[z,h,n,d]: Display as zodiac, hr/min, Nakshatras, or 0-360 degrees.");
   PrintS(" _h [<objnum>]: Compute positions centered on specified object.");
   PrintS(
     " _p <month> <day> <year>: Cast secondary progressed chart for date.");
@@ -488,7 +502,7 @@ void DisplaySwitches(void)
 #ifdef BIORHYTHM
   PrintS(" _y[b,d,p,t] <file>: Like _r0 but compare to current time now.");
 #endif
-#endif /* TIME */
+#endif // TIME
   PrintS("\nSwitches to access graphics options:");
   PrintS(" _k: Display text charts using Ansi characters and color.");
   PrintS(" _k0: Like _k but only use special characters, not Ansi color.");
@@ -502,12 +516,12 @@ void DisplaySwitches(void)
 #ifdef WIN
   DisplaySwitchesW();  // Windows version has its own set of switches too.
 #endif
-#endif /* GRAPH */
+#endif // GRAPH
 }
 
 
-/* Print a list of the obscure command switches that can be passed to the */
-/* program and a description of them. This is what the -Y switch prints.  */
+// Print a list of the obscure command switches that can be passed to the
+// program and a description of them. This is what the -Y switch prints.
 
 void DisplaySwitchesRare(void)
 {
@@ -523,9 +537,10 @@ void DisplaySwitchesRare(void)
   PrintS(" _Yh: Compute location of solar system barycenter instead of Sun.");
   PrintS(" _Ym: Position planetary moons around current central object.");
   PrintS(" _Ys: Sidereal zodiac positions are in plane of solar system.");
-  PrintS(" _Yn: Compute location of true instead of mean node.");
+  PrintS(" _Yn: Compute location of true instead of mean nodes and Lilith.");
   PrintS(" _Yn0: Don't consider nutation in tropical zodiac positions.");
   PrintS(" _Yu: Display eclipse and occultation information in charts.");
+  PrintS(" _Yu0: Like _Yu but detect maximum eclipse anywhere on Earth.");
   PrintS(" _Yd: Display dates in D/M/Y instead of M/D/Y format.");
   PrintS(" _Yt: Display times in 24 hour instead of am/pm format.");
   PrintS(" _Yv: Display distance in metric instead of imperial units.");
@@ -541,6 +556,7 @@ void DisplaySwitchesRare(void)
   PrintS(" _Yc: Angular cusp objects are house positions instead of angles.");
   PrintS(" _Yp: Fix polar houses by preserving Ascendant instead of MC.");
   PrintS(" _Yz <min>: Forward clock by amount for current moment charts.");
+  PrintS(" _Yz0 <sec>: Set seconds of Delta-T to always use for charts.");
   PrintS(
     " _Y1[0] <obj1> <obj2>: Rotate planets so one is at other's position.");
   PrintS(" _Yl <1-36>: Toggle plus zone status of sector for sector chart.");
@@ -576,12 +592,15 @@ void DisplaySwitchesRare(void)
     " _YUb: Adjust star brightness to apparent magnitude based on distance.");
   PrintS(
     " _YUb0: Set brightness to distance independent absolute magnitude.");
+  PrintS(" _YS <obj> <size>: Set diameter of object to be specified size.");
   PrintS(
     " _YR <obj1> <obj2> <flag1>..<flag2>: Set restrictions for object range.");
   PrintS(
     " _YRT <obj1> <obj2> <flag1>..<flag2>: Transit restrictions for range.");
   PrintS(
     " _YR0 <flag1> <flag2>: Set restrictions for sign, direction changes.");
+  PrintS(
+    " _YR1 <flag1> <flag2>: Set restrictions for latitude, distance events.");
   PrintS(
     " _YRZ <rise> <zenith> <set> <nadir>: Set restrictions for _Zd chart.");
   PrintS(
@@ -656,15 +675,18 @@ void DisplaySwitchesRare(void)
   PrintS(
     " _YXk0: Use more color for house boundaries in graphics charts too.");
   PrintS(" _YXK <col> <rgb>: Customize RGB value of color index.");
+  PrintS(" _YXK0: Use alternate color palette for white background mode.");
   PrintS(" _YXe: Align certain charts to plane of ecliptic.");
   PrintS(" _YXa <num>: Set limit to dashedness in aspect lines drawn.");
 #ifdef SWISS
-  PrintS(" _YXU <starlist> <linklist>: Define lines between extra stars."); 
+  PrintS(" _YXU <starlist> <linklist>: Define lines between extra stars.");
+  PrintS(" _YXU0 <starlist> <linklist>: Append instead of replace lines.");
 #endif
-  PrintS(" _YXf <0-4><0-1><0-3><0-3>: Set usage of fonts in graphic charts.");
+  PrintS(" _YXW <num>: Draw triangles or cubes grid over world maps.");
+  PrintS(" _YXf <0-6><0-6><0-6><0-6>: Set usage of fonts in graphic charts.");
   PrintS(" _YXp <-1,0,1>: Set paper orientation for PostScript files.");
   PrintS(" _YXp0 <hor> <ver>: Set paper size for PostScript files.");
-#endif /* GRAPH */
+#endif // GRAPH
   PrintS("\nSwitches to access obscure system options:");
   PrintS(" _YB: Make a beep sound at the time this switch is processed.");
   PrintS(" _YY <rows>: Load atlas list of city locations from current file.");
@@ -685,18 +707,24 @@ void DisplaySwitchesRare(void)
   PrintS(" _~a0 <string>: Set notification for aspect list summary.");
   PrintS(" _~m <string>: Set filter for midpoint display.");
   PrintS(" _~ma <string>: Set filter for displaying aspects to midpoints.");
+  PrintS(" _~j <string>: Set adjustment for object influence.");
+  PrintS(" _~j0 <string>: Set adjustment for sign influence.");
   PrintS(" _~L <string>: Set filter for astro-graph latitude crossings.");
   PrintS(" _~E <string>: Set filter for text ephemeris lines.");
   PrintS(" _~P <string>: Set filter for Arabic parts display.");
   PrintS(" _~d <string>: Set filter for transit to transit events.");
+  PrintS(" _~dv <string>: Set adjustment for void of course determinations.");
   PrintS(" _~t <string>: Set filter for transit to natal events.");
-  PrintS(" _~j <string>: Set adjustment for object influence.");
   PrintS(" _~O <string>: Set adjustment for object calculations.");
   PrintS(" _~C <string>: Set adjustment for house cusp calculations.");
   PrintS(" _~A <string>: Set adjustment for aspect orbs.");
   PrintS(" _~p[0] <string>: Set adjustment for progression offset.");
   PrintS(" _~kO <string>: Set adjustment for object colors.");
   PrintS(" _~kA <string>: Set adjustment for aspect colors.");
+  PrintS(" _~F[O,C,A] <string>: "
+    "Set adjustment for sign/object/house/aspect fonts.");
+  PrintS(" _~U <string>: Set filter for extra stars.");
+  PrintS(" _~U0 <string>: Set filter for extra asteroids.");
   PrintS(" _~q[1-2] <string>: Set notification before/after chart cast.");
   PrintS(" _~Q[1-2] <string>: Set notification before/after chart displayed.");
   PrintS(" _~M <0-26> <string>: Define the specified AstroExpression macro.");
@@ -706,11 +734,11 @@ void DisplaySwitchesRare(void)
 }
 
 
-/* Print out a list of the various objects - planets, asteroids, house     */
-/* cusps, stars - recognized by the program, and their index values. This  */
-/* is displayed when the -HO switch is invoked. For some objects, display  */
-/* additional information, e.g. ruling signs for planets, brightnesses and */
-/* positions in the sky for fixed stars, etc.                              */
+// Print out a list of the various objects - planets, asteroids, house 
+// cusps, stars - recognized by the program, and their index values. This
+// is displayed when the -HO switch is invoked. For some objects, display
+// additional information, e.g. ruling signs for planets, brightnesses and
+// positions in the sky for fixed stars, etc.
 
 void PrintObjects(void)
 {
@@ -850,9 +878,9 @@ void PrintObjects(void)
 }
 
 
-/* Print out a list of all the aspects recognized by the program, and info  */
-/* about them: their names, index numbers, degree angles, present orbs, and */
-/* the description of their glyph. This gets displayed by the -HA switch.   */
+// Print out a list of all the aspects recognized by the program, and info
+// about them: Their names, index numbers, degree angles, present orbs, and
+// the description of their glyph. This gets displayed by the -HA switch.
 
 void PrintAspects(void)
 {
@@ -893,8 +921,8 @@ void PrintAspects(void)
 }
 
 
-/* Print out a list of the 12 signs and houses of the zodiac, and their    */
-/* standard and traditional names, as done when the -HC switch is invoked. */
+// Print out a list of the 12 signs and houses of the zodiac, and their
+// standard and traditional names, as done when the -HC switch is invoked.
 
 void PrintSigns(void)
 {
@@ -984,9 +1012,9 @@ void PrintSigns(void)
 
 
 #ifdef CONSTEL
-/* Given the standard 'noun' form of a constellation string, convert it  */
-/* to its genitive or posessive form. Some standard rules are used but a */
-/* special instructions string is passed for special cases.              */
+// Given the standard 'noun' form of a constellation string, convert it to
+// its genitive or posessive form. Some standard rules are used but a special
+// instructions string is passed for special cases.
 
 CONST char *GetSzGenitive(char *szGen, CONST char *szInst)
 {
@@ -1002,7 +1030,7 @@ CONST char *GetSzGenitive(char *szGen, CONST char *szInst)
       szInst++;              // hack off that many characters of string.
       pch -= cch;
     }
-    while (*szInst > '9')  // Instructions end with characters to append.
+    while (*szInst > '9')    // Instructions end with characters to append.
       *pch++ = *szInst++;
     *pch = chNull;
     return szInst;
@@ -1024,9 +1052,9 @@ CONST char *GetSzGenitive(char *szGen, CONST char *szInst)
 }
 
 
-/* Given a constellation index, fill out a string with the genitive or   */
-/* posessive form of its name. This basically just calls GetSzGenitive() */
-/* above, however it has to be called twice for names having two words.  */
+// Given a constellation index, fill out a string with the genitive or
+// posessive form of its name. This basically just calls GetSzGenitive()
+// above, however it has to be called twice for names having two words.
 
 void GetSzConstel(char *szGen, int i)
 {
@@ -1054,8 +1082,8 @@ void GetSzConstel(char *szGen, int i)
 }
 
 
-/* Print out a list of the 88 constellations used in astronomy, in their  */
-/* standard, English, and genitive forms, as invoked with the -HF switch. */
+// Print out a list of the 88 constellations used in astronomy, in their
+// standard, English, and genitive forms, as invoked with the -HF switch.
 
 void PrintConstellations(void)
 {
@@ -1083,11 +1111,11 @@ void PrintConstellations(void)
   }
   AnsiColor(kDefault);
 }
-#endif /* CONSTEL */
+#endif // CONSTEL
 
 
-/* Print out a list of the planets in the solar system (and our Moon), */
-/* listing astronomical info on them, as invoked with the -HS switch.  */
+// Print out a list of the planets in the solar system (and our Moon),
+// listing astronomical info on them, as invoked with the -HS switch.
 
 void PrintOrbit(void)
 {
@@ -1101,25 +1129,28 @@ void PrintOrbit(void)
 
   // Loop over each object and print its data.
   sprintf(sz, "%s planets:\n", szAppName); PrintSz(sz);
-  PrintSz("   Name: Distance   Year Diameter     Day       Mass Density  ");
-  PrintSz("Axis Satellites\n\n");
-  for (i = 0; i <= cObj; i++) {
-    if (ignore[i] || (i > oLil && i < uranLo))
+  PrintSz("   Name: Distance   Year Diameter     Day       Mass Density  "
+    "Axis Satellites\n\n");
+  for (i = 0; i <= is.nObj; i++) {
+    if (ignore[i] || !FThing(i))
       continue;
     j = rgobjList[i];
     AnsiColor(kObjA[j]);
-    sprintf(sz, "%7.7s: %8.3f", szObjDisp[j],
+    sprintf(sz, "%7.7s: %8.4f", szObjDisp[j],
       j < starLo ? rObjDist[j]/rObjDist[oEar] : rStarDist[j-oNorm]/rLYToAU);
     PrintSz(sz);
     if (j < starLo) {
-      sprintf(sz, "%7.2f", rObjYear[j]);
+      if (j != oSed)
+        sprintf(sz, " %6.2f", rObjYear[j]);
+      else
+        sprintf(sz, " %6.0f", rObjYear[j]);
       PrintSz(sz);
-      if (j <= oVes) {
-        sprintf(sz, "%9.3f%8.2f", rObjDiam[j]/rObjDiam[oEar], rObjDay[j]);
+      if (j <= oVes || j >= dwarfLo) {
+        sprintf(sz, " %8.4f %7.2f", rObjDiam[j]/rObjDiam[oEar], rObjDay[j]);
         PrintSz(sz);
         if (j <= oPlu) {
           r = rObjDiam[j]*1000.0/2.0;
-          sprintf(sz, "%11.3f%8.2f%6.2f%11d", rObjMass[j],
+          sprintf(sz, " %10.3f %7.2f %5.2f %10d", rObjMass[j],
             (rObjMass[j]*5.974E24/1000.0)/((4.0/3.0)*(r*r*r)*rPi),
             rObjAxis[j], cSatellite[j]);
           PrintSz(sz);
@@ -1132,8 +1163,8 @@ void PrintOrbit(void)
 }
 
 
-/* Print out a list of the esoteric Rays, their names and keywords, and the */
-/* signs and planets that map to each Ray, as invoked with the -H7 switch.  */
+// Print out a list of the esoteric Rays, their names and keywords, and the
+// signs and planets that map to each Ray, as invoked with the -H7 switch.
 
 void PrintRay()
 {
@@ -1156,7 +1187,7 @@ void PrintRay()
       }
     sprintf(sz, "%6.2f ", (real)c / 420.0); PrintSz(sz);
     for (j = 0; j <= oNorm; j++)
-      if (rgObjRay[j] == i && !FCusp(j)) {
+      if (rgObjRay[j] == i && !FCusp(j) && (!FDwarf(j) || !ignore[j])) {
         sprintf(sz, " %-4.4s", szObjDisp[j]); PrintSz(sz);
       }
     PrintL();
@@ -1166,9 +1197,9 @@ void PrintRay()
 
 
 #ifdef ARABIC
-/* Compare the strings corresponding to two Arabic part formulas. Like   */
-/* NCompareSz, this returns 0 if they are equal, a positive value if the */
-/* first is greater, and negative if the second is greater.              */
+// Compare the strings corresponding to two Arabic part formulas. Like
+// NCompareSz(), this returns 0 if they are equal, a positive value if the
+// first is greater, and negative if the second is greater.
 
 int NCompareSzPart(int ap1, int ap2)
 {
@@ -1194,8 +1225,8 @@ int NCompareSzPart(int ap1, int ap2)
 }
 
 
-/* Print out a list of all the Arabic parts in the current chart, computing */
-/* their positions first, as brought up with the -P switch.                 */
+// Print out a list of all the Arabic parts in the current chart, computing
+// their positions first, as brought up with the -P switch.
 
 void DisplayArabic(void)
 {
@@ -1379,13 +1410,13 @@ LNextPart:
       PrintAspectsToPoint(rPart[l], -1, 0.0, "Part at");
   }
 }
-#endif /* ARABIC */
+#endif // ARABIC
 
 
 #ifdef GRAPH
-/* Print a list of every key that one can press in a graphics window to do  */
-/* a certain function, and a description of what it does, as displayed when */
-/* one presses the 'H' or '?' key, and as shown with the -HX switch.        */
+// Print a list of every key that one can press in a graphics window to do a
+// certain function, and a description of what it does, as displayed when one
+// presses the 'H' or '?' key, and as shown with the -HX switch.
 
 void DisplayKeysX(void)
 {
@@ -1394,7 +1425,7 @@ void DisplayKeysX(void)
   sprintf(sz, "%s graphics screen key press options (version %s):",
     szAppName, szVersionCore);
   PrintS(sz);
-  PrintS(" Press 'H' or '?' to display this list of key options.");
+  PrintS(" Press '?' to display this list of key options.");
   PrintS(" Press 'p' to toggle pause status on or off.");
   PrintS(" Press 'x' to toggle foreground/background colors on screen.");
   PrintS(" Press 'm' to toggle color/monochrome display on screen.");
@@ -1405,16 +1436,16 @@ void DisplayKeysX(void)
   PrintS(" Press 'k' to toggle labeling of glyphs on aspect lines.");
   PrintS(" Press 'j' to toggle not clearing screen between chart updates.");
   PrintS(" Press 'v' to display current chart positions on text screen.");
-  PrintS(" Press 'R', 'C', 'u', 'U' to toggle restriction status of minor");
-  PrintS("    objects, minor house cusps, Uranian planets, and stars.");
-  PrintS(" Press 'c' to toggle relationship comparison chart mode.");
+  PrintS(" Press 'R','C','u','y','`','~','U' to toggle restriction of minor");
   PrintS(
-    " Press 's', 'h', 'a', 'f', 'g', 'z', 'y' to toggle status of sidereal");
+    "    objects, cusps, Uranians, Dwarfs, moons, body centers, and stars.");
+  PrintS(" Press 'c' to toggle relationship comparison chart mode.");
+  PrintS(" Press 's', 'h', 'a', 'f', 'g', 'z', to toggle status of sidereal");
   PrintS("    zodiac, heliocentric charts, 3D houses, domal charts, decan");
-  PrintS("    charts, vedic format wheel charts, and navamsa charts.");
+  PrintS("    charts, and vedic format wheel charts.");
   PrintS(" Press 'O' and 'o' to recall/store a previous chart from memory.");
 #ifdef X11
-  PrintS(" Press 'B' to dump current window contents to root background.");
+  PrintS(" Press 'B' to save current window contents to root background.");
 #else
   PrintS(" Press 'B' to resize chart display to full size of screen.");
 #endif
@@ -1431,10 +1462,10 @@ void DisplayKeysX(void)
   PrintS("    be updated to current status and globes will rotate.");
   PrintS(" Press '!'-'(' to begin updating current chart by adding times.");
   PrintS("    !: seconds, @: minutes, #: hours, $: days, %: months,");
-  PrintS("    ^: years, &: years*10, *: years*100, (: years*1000.");
+  PrintS("    ^: years, &: decades, *: centuries, (: millennia.");
   PrintS(" Press 'r' to reverse direction of time-lapse or animation.");
   PrintS(" Press '1'-'9' to set rate of animation to 'n' degrees, etc.");
-  PrintS(" Press 'V','A','Z','S','M','K','J','L','E','X','W','G','P','T' to");
+  PrintS(" Press 'V','A','Z','S','H','K','J','L','E','X','W','G','P','T' to");
   PrintS(
     "    switch to normal (_v), grid (_g), local horizon (_Z), space (_S),");
   PrintS(
@@ -1447,12 +1478,13 @@ void DisplayKeysX(void)
 #ifdef CONSTEL
   PrintS(" Press 'F' to toggle between world and constellation map modes.");
 #endif
-  PrintS(" Press 'e' to toggle display of Earth's equator in map modes.");
   PrintS(" Press 'd' to toggle display of house information in map modes.");
+  PrintS(" Press 'e' to toggle display of Earth's equator in map modes.");
+  PrintS(" Press 'w' to toggle drawing world maps in detailed bitmap mode.");
   PrintS(" Press 'space' to force redraw of current graphics display.");
   PrintS(" Press 'del' to clear the graphics screen and not redraw.");
   PrintS(" Press 'enter' to input a command line of program switches.");
-  PrintS(" Press 'q' to close graphics window and exit program.");
+  PrintS(" Press 'escape' to close graphics window and exit program.");
 #ifdef X11
   PrintL();
   PrintS(" Left   mouse button: Draw line strokes on chart in window.");
@@ -1462,9 +1494,9 @@ void DisplayKeysX(void)
 }
 
 
-/* Print a list of every command switch dealing with the graphics features  */
-/* that can be passed to the program, and a description of what it does.    */
-/* This is part of what the -H switch prints, if graphics were compiled in. */
+// Print a list of every command switch dealing with the graphics features
+// that can be passed to the program, and a description of what it does.
+// This is part of what the -H switch prints, if graphics were compiled in.
 
 void DisplaySwitchesX(void)
 {
@@ -1472,8 +1504,9 @@ void DisplaySwitchesX(void)
 #ifdef ISG
   PrintS(" _Xb: Create bitmap file instead of putting graphics on screen.");
 #endif
-  PrintS(" _Xb[n,c,v,a,b]: Set bitmap file output mode to X11 normal,");
-  PrintS("  compacted, very compact, Ascii (bmtoa), or Windows bmp.");
+  PrintS(" _Xb[n,c,v,a,b,w]: Set bitmap file output mode to X11 normal,");
+  PrintS("  X11 compacted, X11 very compact, Ascii (bmtoa), Windows bitmap");
+  PrintS("  compact (16 color palette), or Windows bitmap (24 bit colors).");
 #ifdef PS
   PrintS(" _Xp: Create PostScript vector graphic instead of bitmap file.");
   PrintS(" _Xp0: Like _Xp but create complete instead of encapsulated file.");
@@ -1488,6 +1521,10 @@ void DisplaySwitchesX(void)
 #ifdef X11
   PrintS(" _XB: Display X chart on root instead of in a separate window.");
 #endif
+  PrintS(" _XI <file>: Display bitmap as background behind graphics charts.");
+  PrintS(
+    " _XI0 <trans> <pos>: Set transparency and positioning of background.");
+  PrintS(" _XIW <file>: Replace world map bitmap used for world map charts.");
   PrintS(" _Xm: Create monochrome graphic instead of one in color.");
   PrintS(" _Xr: Create chart graphic in reversed colors (white background).");
 #ifdef X11
@@ -1529,7 +1566,7 @@ void DisplaySwitchesX(void)
     " _XG[0] [<degrees> [<degrees>]]: Display image of world as a globe.");
   PrintS(
     " _XP[0] [<degrees>]: Like _XG but create globe from a polar projection.");
-  PrintS(" _XZ: Display telescope chart zoomed in on part of sky.");
+  PrintS(" _XZ [<object>]: Display telescope chart zoomed in on part of sky.");
 #ifdef CONSTEL
   PrintS(" _XF: Display maps as constellations on the celestial sphere.");
 #endif
@@ -1537,7 +1574,7 @@ void DisplaySwitchesX(void)
   PrintS(" _Xn [<mode>]: Start up chart or globe display in animation mode.");
   PrintS(" _XN: Map animates chart time instead of rotating map itself.");
 #endif
-  PrintS(" _XM[2-4][0] <strings>: Define macro(s) to run when chart drawn.");
+  PrintS(" _XM[1-4][0] <strings>: Define macro(s) to run when chart drawn.");
 #ifdef ISG
   PrintS(" _HX: Display list of key press options for screen graphics.");
 #endif
@@ -1545,9 +1582,9 @@ void DisplaySwitchesX(void)
 
 
 #ifdef WIN
-/* Print a list of every command switch dealing with the Windows features */
-/* that can be passed to the program, and a description of what it does.  */
-/* This is part of what the -H switch prints in the MS Windows version.   */
+// Print a list of every command switch dealing with the Windows features
+// that can be passed to the program, and a description of what it does.
+// This is part of what the -H switch prints in the MS Windows version.
 
 void DisplaySwitchesW(void)
 {
@@ -1571,12 +1608,12 @@ void DisplaySwitchesW(void)
   PrintS(" _WZ: Treat program as screen saver, and exit next user input.");
 }
 #endif
-#endif /* GRAPH */
+#endif // GRAPH
 
 
-/* This is the dispatch procedure for all the generic table information      */
-/* routines, such as those displaying the -H switch list, the list of signs, */
-/* objects, default interpretations, and so on not requiring a date or time. */
+// This is the dispatch procedure for all the generic table information
+// routines, such as those displaying the -H switch list, the list of signs,
+// objects, default interpretations, and so on not requiring a date or time.
 
 flag FPrintTables(void)
 {

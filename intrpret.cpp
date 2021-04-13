@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: intrpret.cpp
+** Astrolog (Version 7.20) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -61,8 +61,8 @@
 ******************************************************************************
 */
 
-/* This function is used by the interpretation routines to print out lines  */
-/* of text with newlines inserted just before the end of screen is reached. */
+// This function is used by the interpretation routines to print out lines of
+// text with newlines inserted just before the end of screen is reached.
 
 void FieldWord(CONST char *sz)
 {
@@ -109,8 +109,8 @@ void FieldWord(CONST char *sz)
 }
 
 
-/* Display a general interpretation of what each sign of the zodiac, house, */
-/* and planet or object means. This is called to do the -HI switch table.   */
+// Display a general interpretation of what each sign of the zodiac, house,
+// and planet or object means. This is called to do the -HI switch table.
 
 void InterpretGeneral(void)
 {
@@ -139,7 +139,7 @@ void InterpretGeneral(void)
 
   PrintL();
   FieldWord("Planets represent various parts of one's mind or self.\n\n");
-  for (j = 0; j <= cObjInt; j++) {
+  for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
     if (ignore[i] || FCusp(i))
       continue;
@@ -154,8 +154,8 @@ void InterpretGeneral(void)
 }
 
 
-/* Display a general interpretation of what each aspect type means. This */
-/* is called when printing the interpretation table in the -HI switch.   */
+// Display a general interpretation of what each aspect type means. This
+// is called when printing the interpretation table in the -HI switch.
 
 void InterpretAspectGeneral(void)
 {
@@ -180,9 +180,9 @@ void InterpretAspectGeneral(void)
 }
 
 
-/* Print the interpretation of each planet in sign and house, as specified */
-/* with the -I switch. This is basically array accessing combining the     */
-/* meanings of each planet, sign, and house, and a couple of other things. */
+// Print the interpretation of each planet in sign and house, as specified
+// with the -I switch. This is basically array accessing combining the
+// meanings of each planet, sign, and house, and a couple of other things.
 
 void InterpretLocation(void)
 {
@@ -190,7 +190,7 @@ void InterpretLocation(void)
   int i, j;
 
   PrintL();
-  for (i = 0; i <= cObjInt; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     if (ignore[i] || !FInterpretObj(i))
       continue;
     AnsiColor(kObjA[i]);
@@ -218,7 +218,7 @@ void InterpretLocation(void)
     // Extra information if planet is in its ruling, exalting, etc, sign.
 
     if (c == 'R')
-      FieldWord("This is a major aspect of their psyche!");
+      FieldWord("This is a major part of their psyche!");
     else if (c == 'd')
       FieldWord("(This bit plays only a minor part in their psyche.)");
     else if (c == 'X')
@@ -231,54 +231,64 @@ void InterpretLocation(void)
 }
 
 
-/* Print an interpretation for a particular aspect in effect in a chart. */
-/* This is called from the InterpretGrid and ChartAspect routines.       */
+// Print an interpretation for a particular aspect in effect in a chart.
 
-void InterpretAspect(int x, int y)
+void InterpretAspectCore(int x, int asp, int y, int nOrb)
 {
   char sz[cchSzMax];
-  int n;
 
-  n = grid->n[x][y];
-  if (n < 1 || !FInterpretAsp(n) || !FInterpretObj(x) || !FInterpretObj(y))
+  if (!FInterpretAsp(asp) || !FInterpretObj(x) || !FInterpretObj(y))
     return;
-  AnsiColor(kAspA[n]);
+  AnsiColor(kAspA[asp]);
   sprintf(sz, "%s %s %s: %s's",
-    szObjDisp[x], SzAspect(n), szObjDisp[y], szPerson);
+    szObjDisp[x], SzAspect(asp), szObjDisp[y], szPerson);
   FieldWord(sz); FieldWord(szMindPart[x]);
-  sprintf(sz, szInteract[n],
-    szModify[Min(NAbs(grid->v[x][y])/(150*60), 2)][n-1]);
+  sprintf(sz, szInteract[asp],
+    szModify[Min(nOrb, 2)][asp-1]);
   FieldWord(sz);
   sprintf(sz, "their %s.", szMindPart[y]); FieldWord(sz);
-  if (szTherefore[n][0]) {
-    sprintf(sz, "%s.", szTherefore[n]); FieldWord(sz);
+  if (szTherefore[asp][0]) {
+    sprintf(sz, "%s.", szTherefore[asp]); FieldWord(sz);
   }
   FieldWord(NULL);
 }
 
 
-/* Print the interpretation of each aspect in the aspect grid, as specified */
-/* with the -g -I switch. Again, this is done by basically array accessing  */
-/* of the meanings of the two planets in aspect and of the aspect itself.   */
+// Like InterpretAspectCore() but get data from the aspect grid. This is
+// called from the InterpretGrid() and ChartAspect() routines.
+
+void InterpretAspect(int x, int y)
+{
+  int nOrb;
+
+  nOrb = NAbs(grid->v[x][y]) / (150*60);
+  InterpretAspectCore(x, grid->n[x][y], y, nOrb);
+}
+
+
+// Print the interpretation of each aspect in the aspect grid, as specified
+// with the -g -I switch. Again, this is done by basically array accessing of
+// the meanings of the two planets in aspect and of the aspect itself.
 
 void InterpretGrid(void)
 {
   int i, j;
 
-  for (i = 0; i < cObjInt; i++) if (!ignore[i] && !FCusp(i))
-    for (j = i+1; j <= cObjInt; j++) if (!ignore[j] && !FCusp(i))
+  for (i = 0; i < is.nObj; i++) if (!ignore[i])
+    for (j = i+1; j <= is.nObj; j++) if (!ignore[j])
       InterpretAspect(i, j);
   AnsiColor(kDefault);
 }
 
 
-/* Print an interpretation for a particular midpoint in effect in a chart. */
-/* This is called from the ChartMidpoint() routine.                        */
+// Print an interpretation for a particular midpoint in effect in a chart.
+// This is called from the ChartMidpoint() routine.
 
 void InterpretMidpoint(int x, int y)
 {
   char sz[cchSzMax];
   int n, i;
+  real rT = 0.0;
 
   if (!FInterpretObj(x) || !FInterpretObj(y))
     return;
@@ -294,7 +304,12 @@ void InterpretMidpoint(int x, int y)
   sprintf(sz, "%s, and", szDesc[n]); FieldWord(sz);
   sprintf(sz, "%s.", szDesire[n]); FieldWord(sz);
   FieldWord("Most often this manifests in");
-  if (ret[x] + ret[y] < 0.0 && x != oNod && y != oNod)
+  // Nodes are always retrograde, so that shouldn't contribute to text.
+  if (!FBetween(x, oNod, oSou))
+    rT += ret[x];
+  if (!FBetween(y, oNod, oSou))
+    rT += ret[y];
+  if (rT < 0.0)
     FieldWord("an independent, backward, introverted manner, and");
   FieldWord("the area of life dealing with");
   i = NHousePlaceIn2D(ZFromS(n) + (real)grid->v[y][x]/3600.0);
@@ -303,19 +318,16 @@ void InterpretMidpoint(int x, int y)
 }
 
 
-/* This is a subprocedure of ChartInDaySearch(). Print the interpretation    */
-/* for a particular instance of the various exciting events that can happen. */
+// This is a subprocedure of ChartInDaySearch(). Print the interpretation for
+// a particular instance of the various exciting events that can happen.
 
 void InterpretInDay(int source, int aspect, int dest)
 {
   char sz[cchSzMax];
 
-  if (source > cObjInt || dest > cObjInt)
-    return;
-
   // Interpret object changing direction.
 
-  if (aspect == aDir) {
+  if (aspect == aDir && FInterpretObj(source)) {
     AnsiColor(kObjA[source]);
     FieldWord("Energy representing"); FieldWord(szMindPart[source]);
     FieldWord("will tend to manifest in");
@@ -334,7 +346,8 @@ void InterpretInDay(int source, int aspect, int dest)
 
   // Interpret aspect between transiting planets.
 
-  } else if (FInterpretAsp(aspect)) {
+  } else if (FInterpretAsp(aspect) &&
+    FInterpretObj(source) && FInterpretObj(dest)) {
     AnsiColor(kAspA[aspect]);
     FieldWord("Energy representing"); FieldWord(szMindPart[source]);
     sprintf(sz, szInteract[aspect], szModify[1][aspect-1]);
@@ -351,15 +364,17 @@ void InterpretInDay(int source, int aspect, int dest)
 }
 
 
-/* This is called from ChartTransitSearch() and ChartTransitInfluence(). */
-/* Print the interpretation for a particular transit of a planet making  */
-/* an aspect to a natal object of a chart.                               */
+// This is called from ChartTransitSearch() and ChartTransitInfluence(). Print
+// the interpretation for a particular transit of a planet making an aspect to
+// a natal object of a chart.
 
 void InterpretTransit(int source, int aspect, int dest)
 {
   char sz[cchSzMax];
 
-  if (FInterpretObj(source) && FInterpretObj(dest)) {
+  // Interpret transiting planet forming aspect.
+
+  if (FInterpretObj(source) && FInterpretAsp(aspect) && FInterpretObj(dest)) {
     AnsiColor(kAspA[aspect]);
     FieldWord("Energy representing"); FieldWord(szMindPart[source]);
     sprintf(sz, szInteract[aspect], szModify[1][aspect-1]);
@@ -367,7 +382,7 @@ void InterpretTransit(int source, int aspect, int dest)
     if (source != dest) {
       sprintf(sz, "%s's %s.", szPerson0, szMindPart[dest]);
     } else {
-      sprintf(sz, "the same aspect inside %s's makeup.", szPerson0);
+      sprintf(sz, "the same area inside %s's makeup.", szPerson0);
     }
     FieldWord(sz);
     if (szTherefore[aspect][0]) {
@@ -377,14 +392,23 @@ void InterpretTransit(int source, int aspect, int dest)
         FieldWord("This part of their psyche will be strongly influenced.");
     }
     FieldWord(NULL);
+
+  // Interpret transiting planet changing 3D house.
+
+  } else if (aspect == aHou && FInterpretObj(source)) {
+    AnsiColor(kSignA(dest));
+    FieldWord("Energy representing"); FieldWord(szMindPart[source]);
+    sprintf(sz, "is now affecting %s's area of life dealing with %s.\n",
+      szPerson0, szLifeArea[dest]);
+    FieldWord(sz);
   }
 }
 
 
-/* Print the interpretation of one person's planet in another's sign and    */
-/* house, in a synastry chart as specified with the -r switch combined with */
-/* -I. This is very similar to the interpretation of the standard -v chart  */
-/* in InterpretLocation(), but we treat the chart as a relationship here.   */
+// Print the interpretation of one person's planet in another's sign and
+// house, in a synastry chart as specified with the -r switch combined with
+// -I. This is very similar to the interpretation of the standard -v chart in
+// InterpretLocation(), but treat the chart as a relationship here.
 
 void InterpretSynastry(void)
 {
@@ -392,7 +416,7 @@ void InterpretSynastry(void)
   int i, j;
 
   PrintL();
-  for (i = 0; i <= cObjInt; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     if (ignore[i] || !FInterpretObj(i))
       continue;
     AnsiColor(kObjA[i]);
@@ -412,7 +436,7 @@ void InterpretSynastry(void)
     sprintf(sz, "%s, and", szDesc[j]); FieldWord(sz);
     sprintf(sz, "%s.", szDesire[j]); FieldWord(sz);
     FieldWord("This");
-    if (ret[i] < 0.0 && i != oNod)
+    if (ret[i] < 0.0 && !FBetween(i, oNod, oSou))
       FieldWord(
         "manifests in an independent, backward, introverted manner, and");
     sprintf(sz, "affects %s in the area of life dealing with %s.",
@@ -421,7 +445,7 @@ void InterpretSynastry(void)
     // Extra information if planet is in its ruling, exalting, etc, sign.
 
     if (c == 'R') {
-      sprintf(sz, "This is a major aspect of %s's psyche!", szPerson2);
+      sprintf(sz, "This is a major part of %s's psyche!", szPerson2);
       FieldWord(sz);
     } else if (c == 'd') {
       sprintf(sz, "(This bit plays only a minor part in %s's psyche.)",
@@ -439,29 +463,29 @@ void InterpretSynastry(void)
 }
 
 
-/* Print an interpretation for a particular aspect in effect in a comparison */
-/* relationship chart. This is called from the InterpretGridRelation and     */
-/* the ChartAspectRelation routines.                                         */
+// Print an interpretation for a particular aspect in effect in a comparison
+// relationship chart. This is called from the InterpretGridRelation() and the
+// ChartAspectRelation() routines.
 
 void InterpretAspectRelation(int x, int y)
 {
   char sz[cchSzMax];
-  int n;
+  int asp;
 
-  n = grid->n[y][x];
-  if (n < 1 || !FInterpretAsp(n) || !FInterpretObj(x) || !FInterpretObj(y))
+  asp = grid->n[y][x];
+  if (!FInterpretAsp(asp) || !FInterpretObj(x) || !FInterpretObj(y))
     return;
-  AnsiColor(kAspA[n]);
+  AnsiColor(kAspA[asp]);
   sprintf(sz, "%s %s %s: %s's",
-    szObjDisp[x], SzAspect(n), szObjDisp[y], szPerson1);
+    szObjDisp[x], SzAspect(asp), szObjDisp[y], szPerson1);
   FieldWord(sz); FieldWord(szMindPart[x]);
-  sprintf(sz, szInteract[n],
-    szModify[Min(NAbs(grid->v[y][x])/(150*60), 2)][n-1]);
+  sprintf(sz, szInteract[asp],
+    szModify[Min(NAbs(grid->v[y][x])/(150*60), 2)][asp-1]);
   FieldWord(sz);
   sprintf(sz, "%s's %s.", szPerson2, szMindPart[y]); FieldWord(sz);
-  if (szTherefore[n][0]) {
-    if (n != 1) {
-      sprintf(sz, "%s.", szTherefore[n]); FieldWord(sz);
+  if (szTherefore[asp][0]) {
+    if (asp != aCon) {
+      sprintf(sz, "%s.", szTherefore[asp]); FieldWord(sz);
     } else
       FieldWord("These parts affect each other prominently.");
   }
@@ -469,29 +493,29 @@ void InterpretAspectRelation(int x, int y)
 }
 
 
-/* Print the interpretation of each aspect in the relationship aspect grid, */
-/* as specified with the -r0 -g -I switch combination.                      */
+// Print the interpretation of each aspect in the relationship aspect grid, as
+// specified with the -r0 -g -I switch combination.
 
 void InterpretGridRelation(void)
 {
   int i, j;
 
-  for (i = 0; i <= cObjInt; i++) if (!ignore[i])
-    for (j = 0; j <= cObjInt; j++) if (!ignore[j])
+  for (i = 0; i <= is.nObj; i++) if (!ignore[i])
+    for (j = 0; j <= is.nObj; j++) if (!ignore[j])
       InterpretAspectRelation(i, j);
   AnsiColor(kDefault);
 }
 
 
-/* Print the interpretation of a midpoint in the relationship grid, as */
-/* specified with the -r0 -m -I switch combination.                    */
+// Print the interpretation of a midpoint in the relationship grid, as
+// specified with the -r0 -m -I switch combination.
 
 void InterpretMidpointRelation(int x, int y)
 {
   char sz[cchSzMax];
   int n;
 
-  if (FCusp(x) || FCusp(y) || x > cObjInt || y > cObjInt)
+  if (!FInterpretObj(x) || !FInterpretObj(y))
     return;
   n = grid->n[y][x];
   AnsiColor(kSignA(n));
@@ -511,7 +535,29 @@ void InterpretMidpointRelation(int x, int y)
   }
   FieldWord(NULL);
 }
-#endif /* INTERPRET */
+
+
+CONST char *szAngle[cElem] = {"project", "feel within",
+  "receive", "be seen as"};
+
+// Print an interpretation for a latitude crossing in effect in an astro-graph
+// chart. This is called from the ChartAstroGraph() routine.
+
+void InterpretAstroGraph(int obj1, int cusp1, int obj2, int cusp2)
+{
+  char sz[cchSzMax];
+  int c1 = (cusp1 - oAsc) / 3, c2 = (cusp2 - oAsc) / 3;
+
+  if (!FInterpretObj(obj1) || !FInterpretObj(obj2))
+    return;
+  FieldWord("At this location"); FieldWord(szPerson0);
+  FieldWord("can more easily");
+  sprintf(sz, "%s their %s, and also %s their %s.",
+    szAngle[c1], szMindPart[obj1], szAngle[c2], szMindPart[obj2]);
+  FieldWord(sz);
+  FieldWord(NULL);
+}
+#endif // INTERPRET
 
 
 /*
@@ -520,27 +566,27 @@ void InterpretMidpointRelation(int x, int y)
 ******************************************************************************
 */
 
-/* This is a subprocedure of ChartInfluence(). Based on the values in the */
-/* array parameter 'value', store numbers in array 'rank' reflecting the  */
-/* relative order, e.g. value[x] 2nd greatest array value -> rank[x] = 2. */
+// This is a subprocedure of ChartInfluence(). Based on the values in the
+// array parameter 'value', store numbers in array 'rank' reflecting the
+// relative order, e.g. value[x] 2nd greatest array value -> rank[x] = 2.
 
-void SortRank(real *value, int *rank, int size)
+void SortRank(real *value, int *rank, int size, flag fObj)
 {
   int h, i, j, k;
   real r;
 
-  if (size <= cSign)
+  if (!fObj)
     value[0] = -1.0;
   for (i = 0; i <= size; i++)
     rank[i] = -1;
   for (h = 0, i = 0; h <= size; h++) {
-    if (size > cSign && FIgnore(h))
+    if (fObj && FIgnore(h))
       continue;
     i++;
     k = 0;
     r = -1.0;
     for (j = 0; j <= size; j++) {
-      if (size > cSign && FIgnore(j))
+      if (fObj && FIgnore(j))
         continue;
       if (value[j] > r && rank[j] < 0) {
         k = j;
@@ -554,9 +600,9 @@ void SortRank(real *value, int *rank, int size)
 }
 
 
-/* Determine the influence of each planet's position and aspects. Called   */
-/* from the ChartInfluence routine for the -j chart, and the ChartEsoteric */
-/* routine for the -7 chart which also makes use of planet influences.     */
+// Determine the influence of each planet's position and aspects. Called from
+// the ChartInfluence() routine for the -j chart, and the ChartEsoteric()
+// routine for the -7 chart which also makes use of planet influences.
 
 void ComputeInfluence(real power1[objMax], real power2[objMax])
 {
@@ -564,12 +610,12 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
   real x;
   char *c;
 
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     power1[i] = power2[i] = 0.0;
 
   // First, for each object, find its power based on its placement alone.
 
-  for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+  for (i = 0; i <= is.nObj; i++) if (!FIgnore(i)) {
     j = SFromZ(planet[i]);
     power1[i] += RObjInf(i);               // Influence of planet itself.
     power1[i] += rHouseInf[inhouse[i]];    // Influence of house it's in.
@@ -624,8 +670,8 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
 
   if (!FCreateGrid(fFalse))
     return;
-  for (j = 0; j <= cObj; j++) if (!FIgnore(j))
-    for (i = 0; i <= cObj; i++) if (!FIgnore(i) && i != j) {
+  for (j = 0; j <= is.nObj; j++) if (!FIgnore(j))
+    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i) && i != j) {
       k = grid->n[Min(i, j)][Max(i, j)];
       if (k) {
         l = grid->v[Min(i, j)][Max(i, j)];
@@ -635,10 +681,10 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
     }
 
 #ifdef EXPRESS
-  // Adjust powers if AstroExpression set to do so.
+  // Adjust object powers if AstroExpression set to do so.
 
   if (!us.fExpOff && FSzSet(us.szExpInf))
-    for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i)) {
       ExpSetN(iLetterX, i);
       ExpSetR(iLetterY, power1[i]);
       ExpSetR(iLetterZ, power2[i]);
@@ -650,9 +696,9 @@ void ComputeInfluence(real power1[objMax], real power2[objMax])
 }
 
 
-/* Print out a list of power values and relative rankings, based on the */
-/* placements of the planets, and their aspects in the aspect grid, as  */
-/* specified with the -j "find influences" switch.                      */
+// Print out a list of power values and relative rankings, based on the
+// placements of the planets, and their aspects in the aspect grid, as
+// specified with the -j "find influences" switch.
 
 void ChartInfluence(void)
 {
@@ -666,17 +712,18 @@ void ChartInfluence(void)
   // Calculate total power of each planet.
 
   total = total1 = total2 = 0.0;
-  for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+  for (i = 0; i <= is.nObj; i++) if (!FIgnore(i)) {
     power[i] = power1[i]+power2[i]; total1 += power1[i]; total2 += power2[i];
   }
   total = total1+total2;
 
   // Finally, determine ranks of the arrays, then print everything out.
 
-  SortRank(power1, rank1, cObj); SortRank(power2, rank2, cObj);
-  SortRank(power, rank, cObj);
+  SortRank(power1, rank1, is.nObj, fTrue);
+  SortRank(power2, rank2, is.nObj, fTrue);
+  SortRank(power,  rank,  is.nObj, fTrue);
   PrintSz("  Planet:    Position      Aspects    Total Rank  Percent\n");
-  for (j = 0; j <= cObj; j++) {
+  for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
     if (FIgnore(i))
       continue;
@@ -701,7 +748,7 @@ void ChartInfluence(void)
 
   // For each sign, determine its power based on the power of the object.
 
-  for (i = 0; i <= cObj; i++) if (!FIgnore(i)) {
+  for (i = 0; i <= is.nObj; i++) if (!FIgnore(i)) {
     power1[SFromZ(planet[i])] += power[i] / 2.0;
     power1[inhouse[i]]        += power[i] / 4.0;
     power1[ruler1[i]]         += power[i] / 3.0;
@@ -711,6 +758,18 @@ void ChartInfluence(void)
   for (i = cThing+1; i <= oCore; i++) if (!FIgnore(i)) {
     power1[SFromZ(planet[i])] += rObjInf[i];
   }
+
+#ifdef EXPRESS
+  // Adjust sign powers if AstroExpression set to do so.
+
+  if (!us.fExpOff && FSzSet(us.szExpInf0))
+    for (i = 1; i <= cSign; i++) {
+      ExpSetN(iLetterY, i);
+      ExpSetR(iLetterZ, power1[i]);
+      ParseExpression(us.szExpInf0);
+      power1[i] = RExpGet(iLetterZ);
+    }
+#endif
 
   total1 = 0.0;
   for (i = 1; i <= cSign; i++)
@@ -722,7 +781,7 @@ void ChartInfluence(void)
 
   // Again, determine ranks in the array, and print everything out.
 
-  SortRank(power1, rank1, cSign);
+  SortRank(power1, rank1, cSign, fFalse);
   PrintSz(
     "\n       Sign:  Power Rank  Percent  -   Element  Power  Percent\n");
   for (i = 1; i <= cSign; i++) {

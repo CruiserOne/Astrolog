@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: wdriver.cpp
+** Astrolog (Version 7.20) File: wdriver.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -61,9 +61,9 @@
 ******************************************************************************
 */
 
-/* Process one command line switch passed to the program dealing with the   */
-/* Windows features. This is just like the processing of each switch in the */
-/* main program, however here each switch has been prefixed with an 'W'.    */
+// Process one command line switch passed to the program dealing with the
+// Windows features. This is just like the processing of each switch in the
+// main program, however here each switch has been prefixed with an 'W'.
 
 int NProcessSwitchesW(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
@@ -176,11 +176,11 @@ int NProcessSwitchesW(int argc, char **argv, int pos,
 }
 
 
-/* Launch an external application and have it open the specified file. */
+// Launch an external application and have it open the specified file.
 
 void BootExternal(CONST char *szApp, CONST char *szFile)
 {
-  char szCmd[cchSzDef], szPath[cchSzDef];
+  char szCmd[cchSzMax], szPath[cchSzMax];
 
   if (FileOpen(szFile, 2, szPath) != NULL) {
     if (szApp != NULL) {
@@ -195,12 +195,12 @@ void BootExternal(CONST char *szApp, CONST char *szFile)
 }
 
 
-/* Given a relationship chart mode, return the menu command that sets it. */
+// Given a relationship chart mode, return the menu command that sets it.
 
 int CmdFromRc(int rc)
 {
   switch (rc) {
-  case rcTriWheel: case rcQuadWheel: /* Fall through */
+  case rcTriWheel: case rcQuadWheel: // Fall through
   case rcDual:       return cmdRelComparison;
   case rcSynastry:   return cmdRelSynastry;
   case rcComposite:  return cmdRelComposite;
@@ -214,8 +214,8 @@ int CmdFromRc(int rc)
 }
 
 
-/* Change relationship chart modes. Given a new mode, we put a bullet by its */
-/* menu command, and erase the bullet by the menu command for the old mode.  */
+// Change relationship chart modes. Given a new mode, we put a bullet by its
+// menu command, and erase the bullet by the menu command for the old mode.
 
 void SetRel(int rc)
 {
@@ -234,7 +234,7 @@ void SetRel(int rc)
 }
 
 
-/* Display and process the specified right click context popup menu. */
+// Display and process the specified right click context popup menu.
 
 void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
 {
@@ -335,6 +335,9 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdChartModify,    us.fGraphAll);
     CheckPopup(cmdGraphicsModify, !gs.fAlt);
     break;
+  case menuY:
+    CheckPopup(cmdGraphicsModify, gs.fAlt);
+    break;
   case menuXX:
     CheckPopup(cmdChartModify,     gs.fSouth);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
@@ -378,9 +381,9 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
 }
 
 
-/* The main program, the starting point of Astrolog for Windows, follows.   */
-/* This is like the "main" function in standard C. The program initializes  */
-/* here, then spins in a tight message processing loop until it terminates. */
+// The main program, the starting point of Astrolog for Windows, follows. This
+// is like the "main" function in standard C. The program initializes here,
+// then spins in a tight message processing loop until it terminates.
 
 int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   LPSTR lpszCmdLine, int nCmdShow)
@@ -538,13 +541,17 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   FinalizeProgram();
   if (wi.hMutex != NULL)
     CloseHandle(wi.hMutex);
+  SelectObject(wi.hdcBack, wi.hbmpPrev);
+  if (wi.hbmpBack != NULL)
+    DeleteObject(wi.hbmpBack);
+  DeleteDC(wi.hdcBack);
   UnregisterClass(szAppName, wi.hinst);
   return (int)msg.wParam;
 }
 
 
-/* This is the main message processor for the Astrolog window. Given a */
-/* user input or other message, do the appropriate action and updates. */
+// This is the main message processor for the Astrolog window. Given a user
+// input or other message, do the appropriate action and updates.
 
 LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -648,9 +655,11 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
           gi.nMode == gLocal || gi.nMode == gSphere || gi.nMode == gGlobe ||
           gi.nMode == gPolar || gi.nMode == gTelescope)) {
           gs.rRot += (real)(x-WLo(wi.lParamRC)) * rDegHalf / (real)gs.xWin *
-            (gi.nMode == gLocal || gi.nMode == gTelescope ? -1 : 1);
+            (gi.nMode == gLocal || gi.nMode == gTelescope ? -gi.zViewRatio :
+            1.0);
           gs.rTilt += (real)(y-WHi(wi.lParamRC)) * rDegHalf / (real)gs.yWin *
-            (gi.nMode == gGlobe ? -1 : 1);
+            (gi.nMode == gLocal || gi.nMode == gTelescope ? gi.zViewRatio :
+            (gi.nMode == gGlobe ? -1.0 : 1.0));
           while (gs.rRot >= rDegMax)
             gs.rRot -= rDegMax;
           while (gs.rRot < 0.0)
@@ -761,6 +770,8 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
           DoPopup(menuE, hwnd, lParam);
         else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
           DoPopup(menuD, hwnd, lParam);
+        else if (gi.nMode == gBiorhythm)
+          DoPopup(menuY, hwnd, lParam);
       }
       break;
 
@@ -906,8 +917,8 @@ LClose:
 }
 
 
-/* This is called after some action has been done that probably changed the */
-/* chart state, such as a menu command was run. Update anything needing it. */
+// This is called after some action has been done that probably changed the
+// chart state, such as a menu command was run. Update anything needing it.
 
 void ProcessState()
 {
@@ -959,6 +970,7 @@ void ProcessState()
       case gKeystroke:  us.fKeyGraph   = fTrue; break;
       case gCredit:     us.fCredit     = fTrue; break;
       case gRising:     us.fHorizonSearch = fTrue; break;
+      case gMoons:      us.fMoonChart  = fTrue; break;
       case gTraTraTim:  us.fInDay      = fTrue; break;
       case gTraTraInf:  us.fInDayInf   = fTrue; break;
       case gTraTraGra:  us.fInDayGra   = fTrue; break;
@@ -991,10 +1003,10 @@ void ProcessState()
 }
 
 
-/* Given a command, process it, changing any appropriate program settings. */
-/* Return values are 0, meaning it was one of Astrolog's menu commands and */
-/* action was taken; 1, meaning it's the special end program command; or   */
-/* -1, meaning it's not a custom command and Windows can deal with it.     */
+// Given a command, process it, changing any appropriate program settings.
+// Return values are: 0 meaning it was one of Astrolog's menu commands and
+// action was taken, 1 meaning it's the special end program command, or
+// -1 meaning it's not a custom command and Windows should deal with it.
 
 int NWmCommand(WORD wCmd)
 {
@@ -1004,16 +1016,14 @@ int NWmCommand(WORD wCmd)
   POINT pt;
   int i;
   long l;
-  flag fGraphics, fT;
+  real r;
+  flag fGraphicsSav, fT;
 
   wi.wCmd = wCmd;
-  fGraphics = us.fGraphics;
+  fGraphicsSav = us.fGraphics;
   switch (wCmd) {
 
   // File Menu
-
-  case cmdFileExit:
-    return 1;
 
   case cmdOpenChart:
     wi.nDlgChart = 1;
@@ -1038,6 +1048,7 @@ int NWmCommand(WORD wCmd)
 #ifdef WIRE
   case cmdSaveWire:
 #endif
+  case cmdSaveAAF:
   case cmdSaveSettings:
   case cmdSaveWallTile:
   case cmdSaveWallCenter:
@@ -1045,6 +1056,17 @@ int NWmCommand(WORD wCmd)
   case cmdSaveWallFit:
   case cmdSaveWallFill:
     DlgSaveChart();
+    break;
+
+  case cmdOpenBackground:
+    wi.nDlgChart = 0;
+    if (DlgOpenChart())
+      gi.fBmp = fTrue;
+    break;
+
+  case cmdOpenWorld:
+    wi.nDlgChart = -1;
+    DlgOpenChart();
     break;
 
   case cmdPrint:
@@ -1058,6 +1080,9 @@ int NWmCommand(WORD wCmd)
     PrintDlg((LPPRINTDLG)&prd);
     prd.Flags = l;
     break;
+
+  case cmdFileExit:
+    return 1;
 
   // Edit Menu
 
@@ -1095,6 +1120,11 @@ int NWmCommand(WORD wCmd)
     case cmdCopyWire:    gs.ft = ftWire; break;
     }
     us.fGraphics = wi.fRedraw = fTrue;
+    break;
+
+  case cmdPaste:
+    FFilePaste();
+    wi.fCast = fTrue;
     break;
 
   // View Menu
@@ -1417,10 +1447,50 @@ int NWmCommand(WORD wCmd)
     WiDoDialog(DlgRestrict, dlgRestrict);
     break;
 
+  case cmdStar:
+    WiDoDialog(DlgStar, dlgStar);
+    break;
+
+  case cmdChartMoons:
+    wi.nMode = gMoons;
+    us.fGraphics = fFalse;
+    break;
+
+  case cmdMoons:
+    WiDoDialog(DlgMoons, dlgMoons);
+    break;
+
+  case cmdObjectM:
+    WiDoDialog(DlgObjectM, dlgObjectM);
+    break;
+
+  case cmdResMoons:
+    inv(us.fMoons);
+    for (i = moonsLo; i <= moonsHi; i++)
+      ignore[i] = !us.fMoons || !ignore[i];
+    AdjustRestrictions();
+    WiCheckMenu(cmdResMoons, us.fMoons);
+    wi.fCast = fTrue;
+    break;
+
+  case cmdResCOB:
+    inv(us.fCOB);
+    for (i = cobLo; i <= cobHi; i++)
+      ignore[i] = !us.fCOB || !ignore[i];
+    AdjustRestrictions();
+    WiCheckMenu(cmdResCOB, us.fCOB);
+    wi.fCast = fTrue;
+    break;
+
+  case cmdCustom:
+    WiDoDialog(DlgCustom, dlgCustom);
+    break;
+
   case cmdResMinor:
     for (i = oChi; i <= oEP; i++)
       if (i != oNod)
         inv(ignore[i]);
+    AdjustRestrictions();
     WiCheckMenu(cmdResMinor, !ignore[oChi]);
     wi.fCast = fTrue;
     break;
@@ -1429,6 +1499,7 @@ int NWmCommand(WORD wCmd)
     inv(us.fCusp);
     for (i = cuspLo; i <= cuspHi; i++)
       ignore[i] = !us.fCusp || !ignore[i];
+    AdjustRestrictions();
     WiCheckMenu(cmdResCusp, us.fCusp);
     wi.fCast = fTrue;
     break;
@@ -1437,7 +1508,17 @@ int NWmCommand(WORD wCmd)
     inv(us.fUranian);
     for (i = uranLo; i <= uranHi; i++)
       ignore[i] = !us.fUranian || !ignore[i];
+    AdjustRestrictions();
     WiCheckMenu(cmdResUranian, us.fUranian);
+    wi.fCast = fTrue;
+    break;
+
+  case cmdResDwarf:
+    inv(us.fDwarf);
+    for (i = dwarfLo; i <= dwarfHi; i++)
+      ignore[i] = !us.fDwarf || !ignore[i];
+    AdjustRestrictions();
+    WiCheckMenu(cmdResDwarf, us.fDwarf);
     wi.fCast = fTrue;
     break;
 
@@ -1445,12 +1526,9 @@ int NWmCommand(WORD wCmd)
     us.nStar = !us.nStar;
     for (i = starLo; i <= starHi; i++)
       ignore[i] = !us.nStar || !ignore[i];
+    AdjustRestrictions();
     WiCheckMenu(cmdResStar, us.nStar);
     wi.fCast = fTrue;
-    break;
-
-  case cmdStar:
-    WiDoDialog(DlgStar, dlgStar);
     break;
 
   case cmdSettingCalc:
@@ -1582,6 +1660,7 @@ int NWmCommand(WORD wCmd)
   case cmdGraphicsReverse:
     inv(gs.fInverse);
     WiCheckMenu(cmdGraphicsReverse, gs.fInverse);
+    InitColorPalette(gs.fInverse);
     wi.fRedraw = fTrue;
     break;
 
@@ -1695,6 +1774,16 @@ int NWmCommand(WORD wCmd)
     us.fGraphics = wi.fRedraw = fTrue;
     break;
 
+  case cmdGraphicsBmp:
+    if (!gi.fBmp && gi.bmpBack.rgb == NULL &&
+      gi.nMode != gLocal && gi.nMode != gAstroGraph &&
+      gi.nMode != gWorldMap && gi.nMode != gGlobe && gi.nMode != gPolar)
+      wi.nMode = gGlobe;
+    inv(gi.fBmp);
+    WiCheckMenu(cmdGraphicsBmp, gi.fBmp);
+    us.fGraphics = wi.fRedraw = fTrue;
+    break;
+
   case cmdGraphicsAxis:
     inv(gs.fEcliptic);
     WiCheckMenu(cmdGraphicsAxis, gs.fEcliptic);
@@ -1716,16 +1805,18 @@ int NWmCommand(WORD wCmd)
     if (gi.nMode != gLocal &&
       gi.nMode != gSphere && gi.nMode != gGlobe && gi.nMode != gTelescope)
       wi.nMode = gGlobe;
+    r = (real)NAbs(wi.nDir) *
+      (gi.nMode == gTelescope || gi.nMode == gLocal ? gi.zViewRatio : 1.0);
     if (wCmd == cmdTiltNorth) {
       if (gs.rTilt > -rDegQuad) {
-        gs.rTilt -= (real)NAbs(wi.nDir);
+        gs.rTilt -= r;
         if (gs.rTilt < -rDegQuad)
           gs.rTilt = -rDegQuad;
         wi.fRedraw = fTrue;
       }
     } else {
       if (gs.rTilt < rDegQuad) {
-        gs.rTilt += (real)NAbs(wi.nDir);
+        gs.rTilt += r;
         if (gs.rTilt > rDegQuad)
           gs.rTilt = rDegQuad;
         wi.fRedraw = fTrue;
@@ -1742,12 +1833,14 @@ int NWmCommand(WORD wCmd)
       gi.nMode != gSphere && gi.nMode != gWorldMap && gi.nMode != gGlobe &&
       gi.nMode != gPolar && gi.nMode != gTelescope)
       wi.nMode = gGlobe;
+    r = (real)NAbs(wi.nDir) *
+      (gi.nMode == gTelescope || gi.nMode == gLocal ? gi.zViewRatio : 1.0);
     if (wCmd == cmdRotateWest) {
-      gs.rRot += (real)NAbs(wi.nDir);
+      gs.rRot += r;
       if (gs.rRot >= rDegMax)
         gs.rRot -= rDegMax;
     } else {
-      gs.rRot -= (real)NAbs(wi.nDir);
+      gs.rRot -= r;
       if (gs.rRot < 0)
         gs.rRot += rDegMax;
     }
@@ -1763,7 +1856,7 @@ int NWmCommand(WORD wCmd)
     if (gs.rspace < rSmall)
       gs.rspace = (real)(1 << (4-gi.nScale/gi.nScaleT));
     if (wCmd == cmdZoomIn) {
-      if (gs.rspace > 0.006)
+      if (gs.rspace > 0.0001)
         gs.rspace /= 2.0;
     } else {
       if (gs.rspace < rDegQuad)
@@ -2024,16 +2117,16 @@ int NWmCommand(WORD wCmd)
 
   if (us.fNoGraphics)
     us.fGraphics = fFalse;
-  if (us.fGraphics != fGraphics)
+  if (us.fGraphics != fGraphicsSav)
     WiCheckMenu(cmdGraphics, us.fGraphics);
   return 0;
 }
 
 
-/* For each menu command that can have a check mark by it, determine its   */
-/* state and set or clear appropriately. This is called when the program   */
-/* is first started, and after commands that may change many settings that */
-/* can't be kept track of, such as running macro commands or script files. */
+// For each menu command that can have a check mark by it, determine its state
+// and set or clear appropriately. This is called when the program is first
+// started, and after commands that may change many settings that can't be
+// kept track of, such as running macro commands or script files.
 
 void API RedoMenu()
 {
@@ -2068,6 +2161,9 @@ void API RedoMenu()
   CheckMenu(cmdResMinor, !ignore[oChi]);
   CheckMenu(cmdResCusp, us.fCusp);
   CheckMenu(cmdResUranian, us.fUranian);
+  CheckMenu(cmdResDwarf, us.fDwarf);
+  CheckMenu(cmdResMoons, us.fMoons);
+  CheckMenu(cmdResCOB, us.fCOB);
   CheckMenu(cmdResStar, us.nStar);
   CheckMenu(cmdProgress, us.fProgress);
 #ifdef CONSTEL
@@ -2076,6 +2172,8 @@ void API RedoMenu()
   CheckMenu(cmdGraphicsAllStar, gs.fAllStar);
   CheckMenu(cmdGraphicsHouse, gs.fHouseExtra);
   CheckMenu(cmdGraphicsEquator, gs.fEquator);
+  CheckMenu(cmdGraphicsCity, gs.fLabelCity);
+  CheckMenu(cmdGraphicsBmp, gi.fBmp);
   CheckMenu(cmdGraphicsAxis, gs.fEcliptic);
   CheckMenu(cmdGraphicsReverse, gs.fInverse);
   CheckMenu(cmdGraphicsMonochrome, !gs.fColor);
@@ -2124,6 +2222,7 @@ void API RedoMenu()
   else if (us.nArabic)     nMode = gArabic;
   else if (us.fHorizonSearch) nMode = gRising;
   else if (us.fAtlasNear)  nMode = gLocal;
+  else if (us.fMoonChart)  nMode = gMoons;
   else if (us.fInDay || us.fInDayInf || us.fInDayGra ||
     us.fTransit || us.fTransitInf || us.fTransitGra)
     nMode = gTraTraGra;
@@ -2139,8 +2238,8 @@ void API RedoMenu()
 
 
 #ifdef DEBUG
-/* Determine whether a Windows font is installed. Have to enumarate all  */
-/* fonts on the system, and compare them to the font being searched for. */
+// Determine whether a Windows font is installed. Have to enumarate all fonts
+// on the system, and compare them to the font being searched for.
 
 static int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *pelf,
   NEWTEXTMETRICEX *pntm, int nFontType, LPARAM lParam)
@@ -2166,8 +2265,61 @@ flag FFontInstalled(CONST char *sz)
 #endif
 
 
-/* This important routine is the bottleneck to redraw the window and call */
-/* into the program to draw or do action with a particular chart type.    */
+// Implements the Paste menu command.
+
+flag FFilePaste(void)
+{
+  char szTmp[cchSzMax];
+  HFILE hfile;
+  LONG lSize;
+  HGLOBAL hglobal;
+  byte *hpb;
+  flag fText;
+
+  // Check for a bitmap or text on the Windows clipboard, the two formats
+  // that Astrolog knows how to paste.
+  if (!OpenClipboard(wi.hwnd))
+    return fFalse;
+  if (IsClipboardFormatAvailable(CF_DIB))
+    fText = fFalse;
+  else if (IsClipboardFormatAvailable(CF_TEXT))
+    fText = fTrue;
+  else {
+    PrintWarning("There is nothing on the clipboard to paste.\n");
+    return fFalse;
+  }
+
+  // Get a memory buffer containing the Windows clipboard.
+  hglobal = GetClipboardData(fText ? CF_TEXT : CF_DIB);
+  if (hglobal == (HGLOBAL)NULL)
+    return fFalse;
+
+  // Create a temporary file.
+  sprintf(szTmp, "%s.tmp", szAppName);
+  hfile = _lcreat(szTmp, 0);
+  if (hfile == HFILE_ERROR)
+    return fFalse;
+
+  // Save the contents of the memory buffer to that temporary file.
+  hpb = (byte *)GlobalLock(hglobal);
+  lSize = (LONG)GlobalSize(hglobal);
+  _hwrite(hfile, (char *)hpb, lSize);
+  _lclose(hfile);
+  GlobalUnlock(hglobal);
+
+  // Load the file's contents into the program.
+  if (fText)
+    FInputData(szTmp);
+  else
+    FLoadBmp(szTmp, &gi.bmpBack, fTrue);
+  _unlink(szTmp);
+  CloseClipboard();
+  return fTrue;
+}
+
+
+// This important routine is the bottleneck to redraw the window and call into
+// the program to draw or do action with a particular chart type.
 
 flag API FRedraw(void)
 {
@@ -2176,7 +2328,7 @@ flag API FRedraw(void)
   HDC hdcWin;
   HCURSOR hcurOld;
   HBITMAP hbmp, hbmpOld;
-  HFONT hfontOld;
+  HFONT hfontOld = NULL;
   char szFile[cchSzDef];
   int nScrollRow, i;
   flag fSmartText = fFalse, fAnsiColor, fAnsiChar,
@@ -2230,6 +2382,7 @@ flag API FRedraw(void)
     SetBkMode(wi.hdc, TRANSPARENT);
     if (wi.hdcPrint == hdcNil)
       TextClearScreen();
+    FBmpDrawBack(NULL);
     i = gs.nScale/100;
     wi.xChar = i < 2 ? 6 : (i < 3 ? 8 : (i < 4 ? 10 : 12));
     wi.yChar = i < 2 ? 8 : (i < 3 ? 12 : (i < 4 ? 18 : 16));
@@ -2243,6 +2396,8 @@ flag API FRedraw(void)
     if (wi.hdcPrint != hdcNil) {
       nScrollRow = us.nScrollRow;
       us.nScrollRow = wi.yClient / wi.yChar;
+      if (us.fSmartSave)
+        fSmartHTML = fTrue;
     }
     if (wi.wCmd == cmdCopyText && us.fTextHTML)
       is.nHTML = -1;
@@ -2253,6 +2408,7 @@ flag API FRedraw(void)
   } else if (fSmartHTML) {
     fInverse = gs.fInverse; fAnsiChar = us.fAnsiChar;
     gs.fInverse = fTrue; us.fAnsiChar = fFalse;
+    InitColorPalette(1);
   }
 
   Action();    // Actually go and create the chart here.
@@ -2284,6 +2440,7 @@ flag API FRedraw(void)
     us.fAnsiColor = fAnsiColor; us.fAnsiChar = fAnsiChar;
   } else if (fSmartHTML) {
     gs.fInverse = fInverse; us.fAnsiChar = fAnsiChar;
+    InitColorPalette(fInverse);
   }
   if (!us.fGraphics) {
     if (wi.hdcPrint != hdcNil)
@@ -2305,13 +2462,19 @@ flag API FRedraw(void)
     SetCursor(hcurOld);
 
   // If all text was scrolled off the top of the screen, scroll up.
+  // If all text was scrolled off the left of the screen, scroll left.
 
-  if (!us.fGraphics && is.S == stdout && is.cchRow - wi.yScroll * 10 < 0)
-    PostMessage(wi.hwnd, WM_VSCROLL,
-      LFromWW(SB_THUMBPOSITION, is.cchRow / 10 - 2), 0);
+  if (!us.fGraphics && is.S == stdout) {
+    if (is.cchRow - wi.yScroll * 10 < 0)
+      PostMessage(wi.hwnd, WM_VSCROLL,
+        LFromWW(SB_THUMBPOSITION, is.cchRow / 10 - 2), 0);
+    if (is.cchColMax - wi.xScroll * 10 < 0)
+      PostMessage(wi.hwnd, WM_HSCROLL,
+        LFromWW(SB_THUMBPOSITION, is.cchColMax / 10 - 2), 0);
+  }
 
   // Sometimes creating a chart means saving it to a file instead of drawing
-  // it on screen. If we were in file mode, cleanup things here.
+  // it on screen. If were in file mode, cleanup things here.
 
   if (is.szFileScreen != NULL || gs.ft != ftNone) {
     is.szFileScreen = NULL;
@@ -2408,8 +2571,8 @@ flag API FRedraw(void)
 ******************************************************************************
 */
 
-/* Create a Windows shortcut file, a link pointing to another file. Called */
-/* from FCreateProgramGroup() and FCreateDesktopIcon() to setup program.   */
+// Create a Windows shortcut file, a link pointing to another file. Called
+// from FCreateProgramGroup() and FCreateDesktopIcon() to setup program.
 
 flag FCreateShortcut(CONST char *szDir, CONST char *szName,
   CONST char *szFile, CONST char *szDesc, int nIcon)
@@ -2473,8 +2636,8 @@ LExit:
 }
 
 
-/* Delete a Windows shortcut file, a link pointing to another file. Called */
-/* from FCreateProgramGroup() to setup the program.                        */
+// Delete a Windows shortcut file, a link pointing to another file. Called
+// from FCreateProgramGroup() to setup the program.
 
 void DeleteShortcut(CONST char *szDir, CONST char *szFile)
 {
@@ -2485,7 +2648,7 @@ void DeleteShortcut(CONST char *szDir, CONST char *szFile)
 }
 
 
-/* Add an icon pointing to the Astrolog executable on the Windows desktop. */
+// Add an icon pointing to the Astrolog executable on the Windows desktop.
 
 flag FCreateDesktopIcon()
 {
@@ -2504,7 +2667,7 @@ flag FCreateDesktopIcon()
 }
 
 
-/* Create a Windows program group folder containing icons for Astrolog. */
+// Create a Windows program group folder containing icons for Astrolog.
 
 flag FCreateProgramGroup(flag fAll)
 {
@@ -2531,6 +2694,7 @@ flag FCreateProgramGroup(flag fAll)
   DeleteShortcut(szDir, "Astrolog 6.40");
   DeleteShortcut(szDir, "Astrolog 6.50");
   DeleteShortcut(szDir, "Astrolog 7.00");
+  DeleteShortcut(szDir, "Astrolog 7.10");
 
   // Add main shortcuts in folder.
   sprintf(szName, "%s %s", szAppName, szVersionCore);
@@ -2553,9 +2717,9 @@ LError:
 }
 
 
-/* Add info about Astrolog specific file extensions to the Windows registry. */
-/* Could edit HKCR\ instead of HKCU\Software\Classes\ to affect all users,   */
-/* but that would require Administrator priviledges on modern systems.       */
+// Add info about Astrolog specific file extensions to the Windows registry.
+// Could edit HKCR\ instead of HKCU\Software\Classes\ to affect all users,
+// but that would require Administrator priviledges on modern systems.
 
 flag FRegisterExtensions()
 {
@@ -2621,7 +2785,7 @@ LError:
 }
 
 
-/* Remove Astrolog specific data from the Windows registry. */
+// Remove Astrolog specific data from the Windows registry.
 
 flag FUnregisterExtensions()
 {
@@ -2642,6 +2806,6 @@ LError:
   PrintError("Failed to unregister Astrolog file extensions.");
   return fFalse;
 }
-#endif /* WIN */
+#endif // WIN
 
 /* wdriver.cpp */

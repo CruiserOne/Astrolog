@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: xdevice.cpp
+** Astrolog (Version 7.20) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -57,13 +57,706 @@
 #ifdef GRAPH
 /*
 ******************************************************************************
+** Windows Bitmap Routines.
+******************************************************************************
+*/
+
+#define cbPixelK 3
+#define CbColmapRow(x) ((x)*cbPixelK + 3 & ~3)
+#define CbColmap(x, y) ((y) * CbColmapRow(x))
+#define zColmap 65535
+
+// Functions to set or get a pixel within a 24 bit color bitmap.
+
+INLINE long _IbXY(CONST Bitmap *b, int x, int y)
+  { return y*(b->clRow << 2) + (x * cbPixelK); }
+INLINE byte *_PbXY(CONST Bitmap *b, int x, int y)
+  { return &(b->rgb)[_IbXY(b, x, y)]; }
+INLINE void _SetRGB(byte *pb, int r, int g, int b)
+  { *pb = b; *(pb+1) = g; *(pb+2) = r; }
+INLINE KV _GetP(CONST byte *pb)
+  { return (*pb << 16) | (*(pb+1) << 8) | *(pb+2); }
+INLINE KV _GetXY(CONST Bitmap *b, int x, int y)
+  { return _GetP(_PbXY(b, x, y)); }
+INLINE void _GetRGB(CONST byte *pb, int *r, int *g, int *b)
+  { *b = *pb; *g = *(pb+1); *r = *(pb+2); }
+void BmpSetXY(Bitmap *b, int x, int y, KV kv)
+  { _SetRGB(_PbXY(b, x, y), RgbR(kv), RgbG(kv), RgbB(kv)); }
+INLINE KI GetXY(int x, int y)
+  { return !gi.fBmp ? FBmGet(gi.bm, x, y) : (_GetXY(&gi.bmp, x, y) > 0)*15; }
+
+
+// Allocate or reallocate a 24 bit color bitmap to have a given size.
+
+flag FAllocateBmp(Bitmap *b, int x, int y)
+{
+  char sz[cchSzDef];
+  long cb;
+  byte *rgb;
+
+  if (x == b->x && y == b->y)
+    return fTrue;
+  if (x < 0 || y < 0 || x > zColmap || y > zColmap) {
+    sprintf(sz, "Can't create color bitmap larger than %d by %d!\n",
+      zColmap, zColmap);
+    PrintError(sz);
+    return fFalse;
+  }
+  cb = CbColmap(x, y);
+  if (cb < 0) {
+    sprintf(sz, "Can't allocate color bitmap of size %d by %d!\n", x, y);
+    PrintError(sz);
+    return fFalse;
+  }
+  if (cb != CbColmap(b->x, b->y)) {
+    rgb = (byte *)PAllocate(cb, "color bitmap");
+    if (rgb == NULL)
+      return fFalse;
+    if (b->rgb != NULL)
+      DeallocateP(b->rgb);
+    b->rgb = rgb;
+  }
+  b->x = x; b->y = y;
+  b->clRow = CbColmapRow(x) >> 2;
+  return fTrue;
+}
+
+
+// Load a bitmap from file into a 24 bit bitmap structure. This supports
+// Windows bitmap files stored with 4, 8, 16, 24, or 32 bits per pixel.
+
+flag FReadBmp(Bitmap *b, FILE *file, flag fNoHeader)
+{
+  byte *pb, bR, bG, bB, ch, ch2;
+  KV rgkv[256], kv;
+  int cbExtra, cb, x, y, z, k, i, m, n;
+  long l;
+
+  // BitmapFileHeader
+  if (!fNoHeader) {
+    ch = getbyte(); ch2 = getbyte();
+    if (ch != 'B' || ch2 != 'M') {
+      PrintError("This file does not look like a Windows bitmap.\n");
+      return fFalse;
+    }
+    skiplong();
+    skipword(); skipword();
+    skiplong();
+  }
+
+  // BitmapInfo / BitmapInfoHeader
+  cbExtra = getlong();
+  x = NAbs((int)getlong()); y = NAbs((int)getlong());
+  skipword(); z = getword();
+  l = getlong();
+  if (l != 0/*BI_RGB*/ && l != 3/*BI_BITFIELDS*/) {
+    PrintError("This Windows bitmap can't be uncompressed.\n");
+    return fFalse;
+  }
+  for (i = 0; i < 3; i++) {
+    skiplong();
+  }
+  k = getlong(); skiplong();
+  for (cbExtra -= 40; cbExtra > 0; cbExtra--)
+    skipbyte();
+  if (l == 3/*BI_BITFIELDS*/)
+    for (i = 0; i < 3; i++) {
+      skiplong();
+    }
+  if (!(z == 4 || z == 8 || z == 16 || z == 24 || z == 32)) {
+    PrintError("This Windows bitmap has bad number of bits per pixel.\n");
+    return fFalse;
+  }
+
+  // RgbQuad
+  // Data
+  if (!FAllocateBmp(b, x, y))
+    return fFalse;
+
+  // Figure out the bytes per row in this color bitmap.
+  if (z == 32)
+    cb = x << 2;
+  else if (z == 24)
+    cb = x * 3;
+  else if (z == 16) {
+    for (i = 0; i < 12; i++)
+      skipbyte();
+    cb = x << 1;
+  } else {
+    // Read in the color palette to translate indexes to RGB values.
+    Assert(k <= 256);
+    if (k == 0)
+      k = (z == 8) ? 256 : 16;
+    for (i = 0; i < k; i++) {
+      bB = getbyte(); bG = getbyte(); bR = getbyte();
+      skipbyte();
+      rgkv[i] = Rgb(bR, bG, bB);
+    }
+    if (z == 8)
+      cb = x;
+    else
+      cb = (x + 1) >> 1;
+  }
+  // Figure out the number of padding bytes after each row.
+  cb = (4 - (cb & 3)) & 3;
+
+  for (n = y-1; n >= 0; n--) {
+    pb = _PbXY(b, 0, n);
+    for (m = 0; m < x; m++) {
+      if (z >= 24) {
+        bB = getbyte(); bG = getbyte(); bR = getbyte();
+        if (z == 32)
+          skipbyte();
+      } else {
+        if (z == 16) {
+          i = WRead(file);
+          kv = Rgb((i >> 11) << 3, (i >> 5 & 63) << 2, (i & 31) << 3);
+        } else if (z == 8) {
+          ch = getbyte();
+          kv = rgkv[ch];
+        } else {
+          if (!FOdd(m))
+            ch = getbyte();
+          i = FOdd(m) ? (ch & 15) : (ch >> 4);
+          kv = rgkv[i];
+        }
+        bR = RgbR(kv); bG = RgbG(kv); bB = RgbB(kv);
+      }
+      _SetRGB(pb, bR, bG, bB);
+      pb += cbPixelK;
+    }
+    for (m = 0; m < cb; m++)
+      skipbyte();
+  }
+  return fTrue;
+}
+
+
+// Load a 24 bit bitmap given a filename.
+
+flag FLoadBmp(CONST char *szFile, Bitmap *bmp, flag fNoHeader)
+{
+  FILE *file;
+  flag fRet;
+
+  file = FileOpen(szFile, 3, NULL);
+  if (file == NULL)
+    return fFalse;
+  fRet = FReadBmp(bmp, file, fNoHeader);
+  fclose(file);
+  return fRet;
+}
+
+
+// Write a 24 bit bitmap to a previously opened file, in the 24 bit bitmap
+// format used by Microsoft Windows for its .bmp extension files.
+
+void WriteBmp2(CONST Bitmap *b, FILE *file)
+{
+  int x, y, cb;
+  dword dw;
+
+  cb = (4 - ((b->x*3) & 3)) & 3;
+  // BitmapFileHeader
+  PutByte('B'); PutByte('M');
+  dw = 14+40 + 0 + b->y*(b->x*3+cb);
+  PutLong(dw);
+  PutWord(0); PutWord(0);
+  PutLong(14+40 + 0);
+  // BitmapInfo / BitmapInfoHeader
+  PutLong(40);
+  PutLong(b->x); PutLong(b->y);
+  PutWord(1); PutWord(24);
+  PutLong(0 /*BI_RGB*/); PutLong(0);
+  PutLong(0); PutLong(0);
+  PutLong(0); PutLong(0);
+  // RgbQuad
+  // Data
+  for (y = b->y-1; y >= 0; y--) {
+    for (x = 0; x < b->x; x++) {
+      dw = _GetXY(b, x, y);
+      PutByte(RgbB(dw)); PutByte(RgbG(dw)); PutByte(RgbR(dw));
+    }
+    for (x = 0; x < cb; x++)
+      PutByte(0);
+  }
+}
+
+
+// Set all pixels in a 24 bit bitmap to the specified RGB color value.
+
+void BmpSetAll(Bitmap *b, KV kv)
+{
+  int x, y, nR, nG, nB;
+  byte *pb;
+
+  nR = RgbR(kv); nG = RgbG(kv); nB = RgbB(kv);
+  for (y = 0; y < b->y; y++) {
+    pb = _PbXY(b, 0, y);
+    for (x = 0; x < b->x; x++) {
+      _SetRGB(pb, nR, nG, nB);
+      pb += cbPixelK;
+    }
+  }
+}
+
+
+// Copy a rectangle from one bitmap structure to a different rectangle in
+// another, stretching pixels as needed. Like the Windows StretchBlt() API.
+
+void BmpCopyBlock(CONST Bitmap *bs, int x1, int y1, int x2, int y2,
+  Bitmap *bd, int x3, int y3, int x4, int y4)
+{
+  int xs = x2-x1+1, ys = y2-y1+1, xd = x4-x3+1, yd = y4-y3+1,
+    x, y, xT, yT, nR, nG, nB;
+  byte *pbDst;
+
+  // Sanity checks of coordinate bounds, which shouldn't ever fail.
+  Assert(FBetween(x1, 0, bs->x-1));
+  Assert(FBetween(y1, 0, bs->y-1));
+  Assert(FBetween(x2, 0, bs->x-1));
+  Assert(FBetween(y2, 0, bs->y-1));
+  Assert(FBetween(x3, 0, bd->x-1));
+  Assert(FBetween(y3, 0, bd->y-1));
+  Assert(FBetween(x4, 0, bd->x-1));
+  Assert(FBetween(y4, 0, bd->y-1));
+
+  for (y = y3; y <= y4; y++) {
+    pbDst = _PbXY(bd, x3, y);
+    yT = y1 + (y-y3) * ys / yd;
+    for (x = x3; x <= x4; x++) {
+      xT = x1 + (x-x3) * xs / xd;
+      _GetRGB(_PbXY(bs, xT, yT), &nR, &nG, &nB);
+      _SetRGB(pbDst, nR, nG, nB);
+      pbDst += cbPixelK;
+    }
+  }
+}
+
+
+// Like BmpCopyBlock() but the source rectangle coordinates are reals instead
+// of integers. Can be used to render only subsections of source pixels.
+
+void BmpCopyBlock2(CONST Bitmap *bs, real x1, real y1, real x2, real y2,
+  Bitmap *bd, int x3, int y3, int x4, int y4)
+{
+  int xd = x4-x3+1, yd = y4-y3+1, x, y, xT, yT, nR, nG, nB;
+  real xs, ys;
+  byte *pbDst;
+
+  // Sanity checks of coordinate bounds, which shouldn't ever fail.
+  Assert(FBetween(x1, 0.0, (real)bs->x - rSmall));
+  Assert(FBetween(y1, 0.0, (real)bs->y - rSmall));
+  Assert(FBetween(x2, 0.0, (real)bs->x - rSmall));
+  Assert(FBetween(y2, 0.0, (real)bs->y - rSmall));
+  Assert(FBetween(x3, 0, bd->x-1));
+  Assert(FBetween(y3, 0, bd->y-1));
+  Assert(FBetween(x4, 0, bd->x-1));
+  Assert(FBetween(y4, 0, bd->y-1));
+
+  xs = (x2-x1) / (real)xd;
+  ys = (y2-y1) / (real)yd;
+  for (y = y3; y <= y4; y++) {
+    pbDst = _PbXY(bd, x3, y);
+    yT = (int)(y1 + (real)(y-y3) * ys);
+    for (x = x3; x <= x4; x++) {
+      xT = (int)(x1 + (real)(x-x3) * xs);
+      _GetRGB(_PbXY(bs, xT, yT), &nR, &nG, &nB);
+      _SetRGB(pbDst, nR, nG, nB);
+      pbDst += cbPixelK;
+    }
+  }
+}
+
+
+#ifdef WINANY
+// Copy a 24 bit bitmap structure to a Windows DC. Since Astrolog's internal
+// bitmap structure is the same as Windows, it can be done all at once.
+
+void BmpCopyWin(CONST Bitmap *b, HDC hdc)
+{
+  BITMAPINFO bi;
+
+  bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  bi.bmiHeader.biPlanes = 1;
+  bi.bmiHeader.biBitCount = cbPixelK << 3;
+  bi.bmiHeader.biCompression = BI_RGB;
+  bi.bmiHeader.biSizeImage = 0;
+  bi.bmiHeader.biXPelsPerMeter = bi.bmiHeader.biYPelsPerMeter = 1000;
+  bi.bmiHeader.biClrUsed = 0;
+  bi.bmiHeader.biClrImportant = 0;
+  bi.bmiColors[0].rgbBlue = bi.bmiColors[0].rgbGreen =
+    bi.bmiColors[0].rgbRed = bi.bmiColors[0].rgbReserved = 0;
+  bi.bmiHeader.biWidth  =  (b->x);
+  bi.bmiHeader.biHeight = -(b->y);
+
+  SetDIBitsToDevice(hdc, 0, 0, b->x, b->y, 0, 0, 0, b->y,
+    b->rgb, (BITMAPINFO *)&bi, DIB_RGB_COLORS);
+}
+#endif
+
+
+// Draw the background bitmap onto the specified 24 bit bitmap. Implements the
+// -XI switch features.
+
+flag FBmpDrawBack(Bitmap *bDest)
+{
+  Bitmap *b = &gi.bmpBack, *b2 = &gi.bmpBack2;
+  int nTrans, x, y, x1, y1, x2, y2, x3, y3, x4, y4, nR, nG, nB, nRT, nGT, nBT;
+  byte *pb, *pb2;
+  KV kv;
+  static KV kvLast = -1;
+  static int nTransLast = 0, xLast = 0, yLast = 0;
+
+  // Don't draw background if user doesn't want to.
+  if (!gi.fBmp)
+    return fFalse;
+
+  // Don't draw background if entire chart will be covered with world map.
+  if (gi.bmpWorld.rgb != NULL &&
+    (gi.nMode == gAstroGraph || (gi.nMode == gWorldMap && !gs.fMollewide)))
+    return fFalse;
+
+  // Don't do anything if bitmap empty or transparent enough to be invisible.
+  nTrans = (int)(gs.rBackPct * 256.0 / 100.0);
+  if (b->rgb == NULL || nTrans <= 0)
+    return fFalse;
+
+  // Cache bitmap with proper percentage blend with current background color.
+  kv = rgbbmp[gi.kiOff];
+  if (b2->x != b->x || b2->y != b->y || kv != kvLast || nTrans != nTransLast) {
+    if (!FAllocateBmp(b2, b->x, b->y))
+      return fFalse;
+    kvLast = kv;
+    nTransLast = nTrans;
+    nR = RgbR(kv); nG = RgbG(kv); nB = RgbB(kv);
+    for (y = 0; y < b->y; y++) {
+      pb = _PbXY(b, 0, y);
+      pb2 = _PbXY(b2, 0, y);
+      for (x = 0; x < b->x; x++) {
+        _GetRGB(pb, &nRT, &nGT, &nBT);
+        nRT = nR + ((nRT - nR) * nTrans >> 8);
+        nGT = nG + ((nGT - nG) * nTrans >> 8);
+        nBT = nB + ((nBT - nB) * nTrans >> 8);
+        _SetRGB(pb2, nRT, nGT, nBT);
+        pb += cbPixelK; pb2 += cbPixelK;
+      }
+    }
+    xLast = yLast = 0;
+  }
+
+  // Determine source (on bitmap) and destination (on chart) rectangles.
+  x1 = y1 = x3 = y3 = 0;
+  x2 = gs.xWin; y2 = gs.yWin;
+  x4 = b2->x; y4 = b2->y;
+  if (gs.nBackOrient < 0) {
+    if ((real)x2 / (real)y2 > (real)x4 / (real)y4) {
+      x2 = y2 * x4 / y4;
+      x1 = (gs.xWin - x2) >> 1;
+    } else {
+      y2 = x2 * y4 / x4;
+      y1 = (gs.yWin - y2) >> 1;
+    }
+  } else if (gs.nBackOrient > 0) {
+    if ((real)x4 / (real)y4 > (real)x2 / (real)y2) {
+      x4 = y4 * x2 / y2;
+      x3 = (b2->x - x4) >> 1;
+    } else {
+      y4 = x4 * y2 / x2;
+      y3 = (b2->y - y4) >> 1;
+    }
+  }
+
+  // For bitmaps, copy background to chart bitmap manually.
+  if (gi.fFile || bDest != NULL) {
+    if ((gs.ft == ftBmp && gi.fBmp) || bDest != NULL)
+      BmpCopyBlock(&gi.bmpBack2, x3, y3, x3+x4-1, y3+y4-1,
+        bDest != NULL ? bDest : &gi.bmp, x1, y1, x1+x2-1, y1+y2-1);
+    return fTrue;
+  }
+
+#ifdef WINANY
+  // For Windows, draw background bitmap on window using Windows API.
+  if (wi.hdcBack == NULL) {
+    wi.hdcBack = CreateCompatibleDC(wi.hdc);
+    SetMapMode(wi.hdcBack, MM_TEXT);
+    SetWindowOrg(wi.hdcBack, 0, 0); SetViewportOrg(wi.hdcBack, 0, 0);
+  }
+
+  if (b2->x != xLast || b2->y != yLast) {
+    // If background has changed size, create a new Windows Bitmap for it.
+    SelectObject(wi.hdcBack, wi.hbmpPrev);
+    if (wi.hbmpBack != NULL)
+      DeleteObject(wi.hbmpBack);
+    wi.hbmpBack = CreateCompatibleBitmap(wi.hdc, b2->x, b2->y);
+    if (wi.hbmpBack == NULL) {
+      PrintError("Failed to create color background bitmap.");
+      return fFalse;
+    }
+    wi.hbmpPrev = (HBITMAP)SelectObject(wi.hdcBack, wi.hbmpBack);
+    xLast = b2->x; yLast = b2->y;
+    BmpCopyWin(b2, wi.hdcBack);
+  }
+  SetStretchBltMode(wi.hdc, COLORONCOLOR);
+  StretchBlt(wi.hdc, x1, y1, x2, y2, wi.hdcBack, x3, y3, x4, y4, SRCCOPY);
+#endif
+  return fTrue;
+}
+
+
+// Draw the world map bitmap upon the specified 24 bit bitmap. This draws the
+// world in the appropriate projection for various Astrolog charts.
+
+flag FBmpDrawMap()
+{
+  Bitmap *bmp = &gi.bmp;
+  int nScl = 1, xc, yc, zc, x1, x2, y1, y2, xi, yi, n, n2;
+  real deg = Mod(rDegMax - gs.rRot), lonMC, latMC, lonS, latS, rxc, ryc, rzc,
+    lon, lat, lat0, rT, rLen, sint, cost, sina, cosa;
+  KV kv;
+
+  // Do nothing if not drawing bitmaps, or if the Earth bitmap fails to load.
+  if (!gi.fBmp || (gi.fFile && gs.ft != ftBmp))
+    return fFalse;
+  if (gi.bmpWorld.rgb == NULL && !FLoadBmp(BITMAP_EARTH, &gi.bmpWorld, fFalse))
+    return fFalse;
+#ifdef WINANY
+  if (!gi.fFile) {
+    if (!FAllocateBmp(&wi.bmpWin, gs.xWin, gs.yWin))
+      return fFalse;
+    bmp = &wi.bmpWin;
+  }
+#endif
+
+  // Compute center coordinates and horizontal map dimensions.
+  xc = (gs.xWin >> 1) - !FOdd(gs.xWin); yc = (gs.yWin >> 1) - !FOdd(gs.yWin);
+  zc = Max(xc, yc);
+  rxc = (real)xc; ryc = (real)yc; rzc = (real)zc;
+  x1 = (int)((real)gi.bmpWorld.x * deg / rDegMax);
+  x2 = (int)((real)gs.xWin       * deg / rDegMax);
+
+  // Draw map on a -XW rectangular world map.
+  if (gi.nMode == gAstroGraph || (gi.nMode == gWorldMap && !gs.fMollewide)) {
+    if (x1 == 0 || x2 == 0)
+      BmpCopyBlock(&gi.bmpWorld, 0, 0, gi.bmpWorld.x-1, gi.bmpWorld.y-1,
+        bmp, 0, 0, gs.xWin-1, gs.yWin-1);
+    else {
+      BmpCopyBlock(&gi.bmpWorld, 0, 0, x1-1, gi.bmpWorld.y-1,
+        bmp, gs.xWin-x2-1, 0, gs.xWin-1, gs.yWin-1);
+      BmpCopyBlock(&gi.bmpWorld, x1, 0, gi.bmpWorld.x-1, gi.bmpWorld.y-1,
+        bmp, 0, 0, gs.xWin-x2, gs.yWin-1);
+    }
+
+  // Draw map on a -XW0 Mollewide projection world map.
+  } else if (gi.nMode == gWorldMap && gs.fMollewide) {
+    if (!FBmpDrawBack(bmp))
+      BmpSetAll(bmp, rgbbmp[gi.kiOff]);
+    for (y2 = 0; y2 < gs.yWin; y2++) {
+      y1 = y2 * gi.bmpWorld.y / gs.yWin;
+      rT = RMollewide((real)y2 * rDegHalf / (real)gs.yWin - rDegQuad);
+      n = (gs.xWin - (int)(rT * (real)gs.xWin / rDegHalf)) >> 1;
+      if (x1 == 0 || x2 == 0)
+        BmpCopyBlock(&gi.bmpWorld, 0, y1, gi.bmpWorld.x-1, y1,
+          bmp, n, y2, gs.xWin-1-n, y2);
+      else {
+        n2 = (int)(rT * (real)(x2 - xc) / rDegHalf);
+        n2 += xc;
+        BmpCopyBlock(&gi.bmpWorld, 0, y1, x1-1, y1,
+          bmp, gs.xWin-n2-1, y2, gs.xWin-1-n, y2);
+        BmpCopyBlock(&gi.bmpWorld, x1, y1, gi.bmpWorld.x-1, y1,
+          bmp, n, y2, gs.xWin-n2, y2);
+      }
+    }
+
+  // Draw map on a -XP polar globe.
+  } else if (gi.nMode == gPolar) {
+    if (!FBmpDrawBack(bmp))
+      BmpSetAll(bmp, rgbbmp[gi.kiOff]);
+    if (gs.fEcliptic) {
+      lonMC = Tropical(is.MC); latMC = 0.0;
+      EclToEqu(&lonMC, &latMC);
+    }
+    lonMC = Tropical(is.MC); latMC = 0.0;
+    EclToEqu(&lonMC, &latMC);
+    lonS = Tropical(planet[oSun]);
+    latS = planetalt[oSun];
+    EclToEqu(&lonS, &latS);
+    lonS = Mod(lonS - lonMC + rDegHalf - Lon);
+    for (y1 = 0; y1 < gs.yWin; y1++) {
+      yi = !FOdd(gs.yWin) && y1 > yc;
+      for (x1 = 0; x1 < gs.xWin; x1++) {
+        xi = !FOdd(gs.xWin) && x1 > xc;
+        n  = xc - x1 + xi;
+        n2 = yc - y1 + yi;
+        if (xc > yc)
+          n2 = n2 * xc / yc;
+        else if (yc > xc)
+          n = n * yc / xc;
+        n = Sq(n) + Sq(n2);
+        if (n > Sq(zc))
+          continue;
+        lat = RAsinD(RSqr((real)n) / rzc) * 2.0;
+        if (gs.fSouth)
+          lat = rDegHalf - lat;
+        lon = RAngleD(x1 - xc, y1 - yc);
+        lon = Mod(270.0 - gs.rRot + (!gs.fSouth ? -lon : lon));
+        if (gs.fEcliptic) {
+          lon = Tropical(lon);
+          lat = rDegQuad - lat;
+          EclToEqu(&lon, &lat);
+          lon = Mod(lon - lonMC + rDegHalf - Lon);
+          lat = rDegQuad - lat;
+        }
+        x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
+        y2 = (int)(lat * ((real)gi.bmpWorld.y - rSmall) / rDegHalf);
+        kv = _GetXY(&gi.bmpWorld, x2, y2);
+        if (gs.fMollewide &&
+          SphDistance(lonS, latS, lon, rDegQuad - lat) > rDegQuad)
+          kv = Rgb(RgbR(kv) / 3, RgbG(kv) / 3, RgbB(kv) / 3);
+        BmpSetXY(bmp, x1, y1, kv);
+      }
+    }
+
+  // Draw map on a -XG globe.
+  } else if (gi.nMode == gGlobe) {
+    if (!FBmpDrawBack(bmp))
+      BmpSetAll(bmp, rgbbmp[gi.kiOff]);
+    if (gs.rTilt != 0.0) {
+      sint = RSinD(-gs.rTilt);
+      cost = RCosD(-gs.rTilt);
+    }
+    lonMC = Tropical(is.MC); latMC = 0.0;
+    EclToEqu(&lonMC, &latMC);
+    lonS = Tropical(planet[oSun]);
+    latS = planetalt[oSun];
+    EclToEqu(&lonS, &latS);
+    lonS = Mod(lonS - lonMC + rDegHalf - Lon);
+    for (y1 = 0; y1 < gs.yWin; y1++) {
+      yi = !FOdd(gs.yWin) && y1 > yc;
+      rT = (ryc - (real)y1) / ryc;
+      if (rT < -1.0)    // Roundoff may put it slightly outside Acos range.
+        rT = -1.0;
+      else if (rT > 1.0)
+        rT = 1.0;
+      lat0 = RAcosD(rT);
+      n = xc; n2 = yc - y1;
+      if (xc > yc)
+        n2 = n2 * xc / yc;
+      else if (yc > xc)
+        n = n * yc / xc;
+      rT = (real)(Sq(n) - Sq(n2));
+      rLen = rT >= 0.0 ? RSqr(rT) : rSmall;
+      if (rLen < rSmall)
+        rLen = 1.0;
+      sina = RSinD(rDegQuad - lat0);
+      cosa = RCosD(rDegQuad - lat0);
+      for (x1 = 0; x1 < gs.xWin; x1++) {
+        xi = !FOdd(gs.xWin) && x1 > xc;
+        n  = xc - x1 + xi;
+        n2 = yc - y1 + yi;
+        if (xc > yc)
+          n2 = n2 * xc / yc;
+        else if (yc > xc)
+          n = n * yc / xc;
+        n = Sq(n) + Sq(n2);
+        if (n > Sq(zc))
+          continue;
+        lon = (rxc - (real)x1) / rxc;
+        rT = lon / rLen * rzc;
+        if (rT < -1.0)    // Roundoff may put it slightly outside Acos range.
+          rT = -1.0;
+        else if (rT > 1.0)
+          rT = 1.0;
+        lon = Mod(RAcosD(rT));
+        lat = lat0;
+        if (gs.rTilt != 0.0) {
+          lat = rDegQuad - lat;
+          CoorXformFast(&lon, &lat, RSinD(lon), RCosD(lon),
+            sina, cosa, sint, cost);
+          lat = rDegQuad - lat;
+        }
+        lon = Mod(lon - gs.rRot);
+        if (gs.fEcliptic) {
+          lon = Tropical(lon);
+          lat = rDegQuad - lat;
+          EclToEqu(&lon, &lat);
+          lon = Mod(lon - lonMC + rDegHalf - Lon);
+          lat = rDegQuad - lat;
+        }
+        x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
+        y2 = (int)(lat * ((real)gi.bmpWorld.y - rSmall) / rDegHalf);
+        kv = _GetXY(&gi.bmpWorld, x2, y2);
+        if (gs.fMollewide &&
+          SphDistance(lonS, latS, lon, rDegQuad - lat) > rDegQuad)
+          kv = Rgb(RgbR(kv) / 3, RgbG(kv) / 3, RgbB(kv) / 3);
+        BmpSetXY(bmp, x1, y1, kv);
+      }
+    }
+  }
+
+#ifdef WINANY
+  if (!gi.fFile)
+    BmpCopyWin(bmp, wi.hdc);
+#endif
+  return fTrue;
+}
+
+
+// Draw a subsection of the world map bitmap upon a section of the specified
+// 24 bit bitmap. Called from the graphic -Nl switch local space chart.
+
+flag FBmpDrawMap2(int x1, int y1, int x2, int y2,
+  real rx1, real ry1, real rx2, real ry2)
+{
+  Bitmap *bmp = &gi.bmp;
+  int x12;
+  real rx, ry, x3, y3, x4, y4, x34;
+
+  if (!gi.fBmp || (gi.fFile && gs.ft != ftBmp))
+    return fFalse;
+  if (gi.bmpWorld.rgb == NULL && !FLoadBmp(BITMAP_EARTH, &gi.bmpWorld, fFalse))
+    return fFalse;
+#ifdef WINANY
+  if (!gi.fFile) {
+    if (!FAllocateBmp(&wi.bmpWin, gs.xWin, gs.yWin))
+      return fFalse;
+    bmp = &wi.bmpWin;
+  }
+#endif
+
+  rx = (real)gi.bmpWorld.x / rDegMax; ry = (real)gi.bmpWorld.y / rDegHalf;
+  BmpSetAll(bmp, rgbbmp[gi.kiOff]);
+  rx1 = Mod(rx1); rx2 = Mod(rx2);
+  x3 = rx1 * rx; y3 = ry1 * ry;
+  x4 = rx2 * rx; y4 = ry2 * ry;
+  if (x3 <= x4) {
+    // In most cases, just copy the entire rectangle all at once.
+    BmpCopyBlock2(&gi.bmpWorld, x3, y3, x4, y4, bmp, x1, y1, x2, y2);
+  } else {
+    // If viewport spans 180W/E, then have to copy twice from Earth bitmap.
+    x34 = (real)gi.bmpWorld.x - rSmall;
+    x12 = x1 + (int)((real)(x2-x1+1) * (x34 - x3) / (x34 - x3 + x4));
+    BmpCopyBlock2(&gi.bmpWorld, x3, y3, x34, y4, bmp, x1,    y1, x12, y2);
+    BmpCopyBlock2(&gi.bmpWorld, 0,  y3, x4,  y4, bmp, x12+1, y1, x2,  y2);
+  }
+
+#ifdef WINANY
+  if (!gi.fFile)
+    BmpCopyWin(bmp, wi.hdc);
+#endif
+  return fTrue;
+}
+
+
+/*
+******************************************************************************
 ** Bitmap File Routines.
 ******************************************************************************
 */
 
-/* Write the bitmap array to a previously opened file in a format that   */
-/* can be read in by the Unix X commands bitmap and xsetroot. The 'mode' */
-/* parameter defines how much white space is put in the file.            */
+// Write the bitmap array to a previously opened file in a format that can be
+// read in by the Unix X11 commands bitmap and xsetroot. The 'mode' parameter
+// defines how much white space is put in the file.
 
 void WriteXBitmap(FILE *file, CONST char *name, char mode)
 {
@@ -99,7 +792,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
           mode == 'N' ? "  " : (mode == 'C' ? " " : ""));
       value = 0;
       for (i = (mode != 'V' ? 7 : 15); i >= 0; i--)
-        value = (value << 1) + (!(FBmGet(gi.bm, x+i, y)^
+        value = (value << 1) + (!(GetXY(x+i, y)^
           (gs.fInverse*15))^gs.fInverse && (x + i < gs.xWin));
       if (mode == 'N')
         putc(' ', file);
@@ -123,10 +816,10 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
 }
 
 
-/* Write the bitmap array to a previously opened file in a simple boolean    */
-/* Ascii rectangle, one char per pixel, where '#' represents an off bit and  */
-/* '-' an on bit. The output format is identical to the format generated by  */
-/* the Unix bmtoa command, and it can be converted into a bitmap with atobm. */
+// Write the bitmap array to a previously opened file in a simple boolean
+// Ascii rectangle, one char per pixel, in which '#' represents an off bit and
+// '-' an on bit. The output format is identical to the format generated by
+// the Unix bmtoa command, and it can be converted into a bitmap with atobm.
 
 void WriteAscii(FILE *file)
 {
@@ -134,7 +827,7 @@ void WriteAscii(FILE *file)
 
   for (y = 0; y < gs.yWin; y++) {
     for (x = 0; x < gs.xWin; x++) {
-      i = FBmGet(gi.bm, x, y);
+      i = GetXY(x, y);
       if (gs.fColor)
         putc(ChHex(i), file);
       else
@@ -145,10 +838,10 @@ void WriteAscii(FILE *file)
 }
 
 
-/* Write the bitmap array to a previously opened file in the bitmap format  */
-/* used in Microsoft Windows for its .bmp extension files. This is a pretty */
-/* efficient format, only requiring a small header, and one bit per pixel   */
-/* for monochrome graphics, or four bits per pixel for full color.          */
+// Write the bitmap array to a previously opened file in the bitmap format
+// used in Microsoft Windows for its .bmp extension files. This is a pretty
+// efficient format, only requiring a small header, and one bit per pixel
+// for monochrome graphics, or four bits per pixel for 16 color bitmaps.
 
 void WriteBmp(FILE *file)
 {
@@ -171,8 +864,8 @@ void WriteBmp(FILE *file)
   // RgbQuad
   if (gs.fColor)
     for (x = 0; x < 16; x++) {
-      PutByte(RGBB(rgbbmp[x])); PutByte(RGBG(rgbbmp[x]));
-      PutByte(RGBR(rgbbmp[x])); PutByte(0);
+      PutByte(RgbB(rgbbmp[x])); PutByte(RgbG(rgbbmp[x]));
+      PutByte(RgbR(rgbbmp[x])); PutByte(0);
     }
   else {
     PutLong(0);
@@ -197,18 +890,18 @@ void WriteBmp(FILE *file)
 }
 
 
-/* Begin the work of creating a graphics file. Prompt for a filename if */
-/* need be, and if valid, create the file and open it for writing.      */
+// Begin the work of creating a graphics file. Prompt for a filename if need
+// be, and if valid, create the file and open it for writing.
 
-void BeginFileX()
+flag BeginFileX()
 {
   char sz[cchSzMax];
 
   if (us.fNoWrite)
-    return;
+    return fFalse;
 #ifdef WIN
   if (gi.szFileOut == NULL)
-    return;
+    return fFalse;
 #endif
 
 #ifndef WIN
@@ -233,7 +926,7 @@ void BeginFileX()
       );
     PrintSzScreen(sz);
   }
-#endif /* WIN */
+#endif // WIN
 
   loop {
 #ifndef WIN
@@ -269,21 +962,27 @@ void BeginFileX()
     break;
 #endif
   }
+  return gi.file != NULL;
 }
 
 
-/* Finish up the work of creating a graphics file. This basically consists */
-/* of just calling the appropriate routine to actually write the data in   */
-/* memory to a file for bitmaps and metafiles, although for PostScript we  */
-/* just close file as we were already writing while creating the chart.    */
+// Finish up the work of creating a graphics file. This basically consists of
+// just calling the appropriate routine to actually write the data in memory
+// to a file for bitmaps and metafiles, although for PostScript just close the
+// file as were already writing while creating the chart.
 
 void EndFileX()
 {
-  if (gs.ft == ftBmp && gi.file != NULL) {
+  if (gi.file == NULL)
+    return;
+  if (gs.ft == ftBmp) {
     PrintProgress("Writing chart bitmap to file.");
-    if (gs.chBmpMode == 'B')
-      WriteBmp(gi.file);
-    else if (gs.chBmpMode == 'A')
+    if (gs.chBmpMode == 'B') {
+      if (!gi.fBmp)
+        WriteBmp(gi.file);
+      else
+        WriteBmp2(&gi.bmp, gi.file);
+    } else if (gs.chBmpMode == 'A')
       WriteAscii(gi.file);
     else
       WriteXBitmap(gi.file, gi.szFileOut, gs.chBmpMode);
@@ -304,8 +1003,7 @@ void EndFileX()
     WriteWire(gi.file);
   }
 #endif
-  if (gi.file != NULL)
-    fclose(gi.file);
+  fclose(gi.file);
 #ifdef WIN
   if (wi.fAutoSave && wi.hMutex != NULL)
     ReleaseMutex(wi.hMutex);
@@ -367,7 +1065,7 @@ CONST char szPsFunctions[] =
 " 0 0 1 0 360 arc fill setmatrix stroke}bind def\n";
 
 
-/* Write a command to flush the PostScript buffer. */
+// Write a command to flush the PostScript buffer.
 
 void PsStrokeForce()
 {
@@ -379,7 +1077,7 @@ void PsStrokeForce()
 }
 
 
-/* Indicate that a certain number of PostScript commands have been done. */
+// Indicate that a certain number of PostScript commands have been done.
 
 void PsStroke(int n)
 {
@@ -389,8 +1087,8 @@ void PsStroke(int n)
 }
 
 
-/* Set the type of line end to be used by PostScript commands. If linecap */
-/* is true, then the line ends are rounded, otherwise they are squared.   */
+// Set the type of line end to be used by PostScript commands. If linecap is
+// true, then the line ends are rounded, otherwise they are squared.
 
 void PsLineCap(flag fLineCap)
 {
@@ -402,7 +1100,7 @@ void PsLineCap(flag fLineCap)
 }
 
 
-/* Set the dash length to be used by PostScript line commands. */
+// Set the dash length to be used by PostScript line commands.
 
 void PsDash(int dashoff)
 {
@@ -418,7 +1116,7 @@ void PsDash(int dashoff)
 }
 
 
-/* Set a linewidth size to be used by PostScript figure primitive commands. */
+// Set a linewidth size to be used by PostScript figure primitive commands.
 
 void PsLineWidth(int linewidth)
 {
@@ -430,7 +1128,7 @@ void PsLineWidth(int linewidth)
 }
 
 
-/* Set a system font and size to be used by PostScript text commands. */
+// Set a system font and size to be used by PostScript text commands.
 
 void PsFont(int psfont)
 {
@@ -452,8 +1150,7 @@ void PsFont(int psfont)
 }
 
 
-/* Prompt the user for the name of a file to write the PostScript file to */
-/* (if not already specified), open it, and write out file header info.   */
+// Write out initial file header information to the PostScript file.
 
 void PsBegin()
 {
@@ -490,7 +1187,7 @@ void PsBegin()
 }
 
 
-/* Write out trailing information to the PostScript file. */
+// Write out trailing information to the PostScript file.
 
 void PsEnd()
 {
@@ -508,7 +1205,7 @@ void PsEnd()
     }
   }
 }
-#endif /* PS */
+#endif // PS
 
 
 #ifdef META
@@ -518,7 +1215,7 @@ void PsEnd()
 ******************************************************************************
 */
 
-/* Output one 16 bit or 32 bit value into the metafile buffer stream. */
+// Output one 16 bit or 32 bit value into the metafile buffer stream.
 
 void MetaWord(word w)
 {
@@ -540,12 +1237,12 @@ void MetaLong(long l)
 }
 
 
-/* Output any necessary metafile records to make the current actual     */
-/* settings of line color, fill color, etc, be those that we know are   */
-/* desired. This is generally called by the primitives routines before  */
-/* any figure record is actually written into a metafile. We wait until */
-/* the last moment before changing any settings to ensure that we don't */
-/* output any unnecessary records, e.g. two select colors in a row.     */
+// Output any necessary metafile records to make the current actual settings
+// of line color, fill color, etc, be those that are desired. This is
+// generally called by the primitives routines before any figure record is
+// actually written into a metafile. Wait until the last moment before
+// changing any settings to ensure that unnecessary records aren't output,
+// e.g. two select colors in a row.
 
 void MetaSelect()
 {
@@ -573,9 +1270,9 @@ void MetaSelect()
 }
 
 
-/* Output initial metafile header information into our metafile buffer. */
-/* We also setup and create all pen, brush, and font objects that may   */
-/* possibly be used in the generation and playing of the picture.       */
+// Output initial metafile header information into the metafile buffer. Also
+// setup and create all pen, brush, and font objects that may possibly be used
+// in the generation and playing of the picture.
 
 void MetaInit()
 {
@@ -652,8 +1349,8 @@ void MetaInit()
 }
 
 
-/* Output trailing records to indicate the end of the metafile and then */
-/* actually write out the entire buffer to the specifed file.           */
+// Output trailing records to indicate the end of the metafile and then
+// actually write out the entire buffer to the specifed file.
 
 void WriteMeta(FILE *file)
 {
@@ -673,7 +1370,7 @@ void WriteMeta(FILE *file)
     PutWord(*w);
   }
 }
-#endif /* META */
+#endif // META
 
 
 #ifdef WIRE
@@ -683,9 +1380,9 @@ void WriteMeta(FILE *file)
 ******************************************************************************
 */
 
-/* Write the wireframe file in memory to a previously opened file in the    */
-/* Daedalus wireframe format. This usually consists of coordinates for each */
-/* line segment, but can also include changes to the default color.         */
+// Write the wireframe file in memory to a previously opened file in the
+// Daedalus wireframe format. This usually consists of coordinates for each
+// line segment, but can also include changes to the default color.
 
 void WriteWire(FILE *file)
 {
@@ -712,7 +1409,7 @@ void WriteWire(FILE *file)
         if (n < cColor) {
           kv = rgbbmp[n];
           if (kv != rgbbmpDef[n])
-            fprintf(file, "Rgb %d %d %d\n", RGBR(kv), RGBG(kv), RGBB(kv));
+            fprintf(file, "Rgb %d %d %d\n", RgbR(kv), RgbG(kv), RgbB(kv));
           else if (n != kOrange)
             fprintf(file, "%s\n", szColor[n]);
           else
@@ -729,7 +1426,7 @@ void WriteWire(FILE *file)
 }
 
 
-/* Add a single 16 bit number to the current wireframe file. */
+// Add a single 16 bit number to the current wireframe file.
 
 void WireNum(int n)
 {
@@ -745,7 +1442,7 @@ void WireNum(int n)
 }
 
 
-/* Add a solid line to current wireframe file, specified by its endpoints. */
+// Add a solid line to current wireframe file, specified by its endpoints.
 
 void WireLine(int x1, int y1, int z1, int x2, int y2, int z2)
 {
@@ -767,8 +1464,18 @@ void WireLine(int x1, int y1, int z1, int x2, int y2, int z2)
 }
 
 
-/* Add an octahedron of a given radius to the current wireframe file. These */
-/* shapes are used to mark the exact locations of planets in the scene.     */
+// Comment me
+
+void WireSpot(int x, int y, int z)
+{
+  WireLine(x-1, y, z, x+1, y, z);
+  WireLine(x, y-1, z, x, y+1, z);
+  WireLine(x, y, z-1, x, y, z+1);
+}
+
+
+// Add an octahedron of a given radius to the current wireframe file. These
+// shapes are used to mark the exact locations of planets in the scene.
 
 void WireOctahedron(int x, int y, int z, int r)
 {
@@ -785,7 +1492,7 @@ void WireOctahedron(int x, int y, int z, int r)
 
 
 #ifdef SWISS
-/* Add a fixed star to the current wireframe file. */
+// Add a fixed star to the current wireframe file.
 
 void WireStar(int x, int y, int z, ES *pes)
 {
@@ -804,11 +1511,9 @@ void WireStar(int x, int y, int z, ES *pes)
   }
 
   // Draw star point.
-  if (!FOdd(gs.nAllStar)) {
-    WireLine(x-1, y, z, x+1, y, z);
-    WireLine(x, y-1, z, x, y+1, z);
-    WireLine(x, y, z-1, x, y, z+1);
-  } else
+  if (!FOdd(gs.nAllStar))
+    WireSpot(x, y, z);
+  else
     WireOctahedron(x, y, z, 3 * gi.nScaleT);
 
   // Draw star's name label.
@@ -820,10 +1525,10 @@ void WireStar(int x, int y, int z, ES *pes)
 #endif
 
 
-/* Given longitude and latitude values on a globe, return the 3D pixel     */
-/* coordinates corresponding to them. In other words, project the globe in */
-/* the 3D environment, and return where our coordinates got projected to.  */
-/* Like FGlobeCalc() except for 3D wireframe format.                       */
+// Given longitude and latitude values on a globe, return the 3D pixel
+// coordinates corresponding to them. In other words, project the globe in
+// the 3D environment, and return where our coordinates got projected to.
+// Like FGlobeCalc() except for 3D wireframe format.
 
 void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 {
@@ -854,8 +1559,8 @@ void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 }
 
 
-/* Given longitude and latitude values, return the 3D pixel coordinates   */
-/* corresponding to them. Like FMapCalc() except for 3D wireframe format. */
+// Given longitude and latitude values, return the 3D pixel coordinates
+// corresponding to them. Like FMapCalc() except for 3D wireframe format.
 
 void WireMapCalc(real x1, real y1, int *xp, int *yp, int *zp, flag fSky,
   real lonMC, real rT, int rz, real deg)
@@ -872,10 +1577,10 @@ void WireMapCalc(real x1, real y1, int *xp, int *yp, int *zp, flag fSky,
 }
 
 
-/* Draw a globe, for either the world or the constellations. We shift the */
-/* chart by specified rotational and tilt values, and may plot on the     */
-/* chart each planet at its zenith position on Earth or location in       */
-/* constellations. Like DrawMap() except for 3D wireframe format.         */
+// Draw a globe, for either the world or the constellations. Shift the chart
+// by specified rotational and tilt values, and may plot on the chart each
+// planet at its zenith position on Earth or location in constellations. Like
+// DrawMap() except for 3D wireframe format.
 
 void WireDrawGlobe(flag fSky, real deg)
 {
@@ -936,7 +1641,8 @@ void WireDrawGlobe(flag fSky, real deg)
   rT = gs.fConstel ? rDegHalf : Lon;
   if (rT < 0.0)
     rT += rDegMax;
-  for (i = 0; i <= cObj; i++) {
+  j = Max(is.nObj, oMC);
+  for (i = 0; i <= j; i++) {
     planet1[i] = Tropical(planet[i]);
     planet2[i] = planetalt[i];
     EclToEqu(&planet1[i], &planet2[i]);    // Calculate zenith long. & lat.
@@ -944,7 +1650,7 @@ void WireDrawGlobe(flag fSky, real deg)
 
   // Compute screen coordinates of each object, if it's even visible.
 
-  for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     WireMapCalc(planet1[i], planet2[i], &u, &v, &w, fSky,
       planet1[oMC], rT, rz, deg);
     X[i] = u;
@@ -974,9 +1680,8 @@ void WireDrawGlobe(flag fSky, real deg)
         x1 = Tropical((real)j);
         y1 = (real)k;
         EclToEqu(&x1, &y1);
-        WireMapCalc(x1, y1, &u, &v, &w, fSky, planet1[oMC],
-          rT, rz, deg);
-        WirePoint(u, v, w);
+        WireMapCalc(x1, y1, &u, &v, &w, fSky, planet1[oMC], rT, rz, deg);
+        WireSpot(u, v, w);
       }
     }
   }
@@ -988,7 +1693,7 @@ void WireDrawGlobe(flag fSky, real deg)
     for (i = 0; i < nDegMax; i++) {
       x1 = (real)i; y1 = 90.0;
       WireGlobeCalc(x1, y1, &j, &k, &l, rz, deg);
-      WirePoint(j, k, l);
+      WireSpot(j, k, l);
     }
   }
 
@@ -999,7 +1704,7 @@ void WireDrawGlobe(flag fSky, real deg)
     for (i = 0; i < nDegMax; i++) {
       x1 = (real)i; y1 = rDegQuad - Lat;
       WireGlobeCalc(x1, y1, &j, &k, &l, rz, deg);
-      WirePoint(j, k, l);
+      WireSpot(j, k, l);
     }
     x1 = Mod(rDegHalf - Lon); y1 = rDegQuad - Lat;
     WireGlobeCalc(x1, y1, &j, &k, &l, rz, deg);
@@ -1049,42 +1754,15 @@ void WireDrawGlobe(flag fSky, real deg)
       WireGlobeCalc(x1, y1, &u, &v, &w, rz, deg);
       if (gs.fLabelAsp)
         DrawColor(KiCity(i));
-      WirePoint(u, v, w);
+      WireSpot(u, v, w);
     }
   }
 #endif
 
-  // Draw ecliptic equator and zodiac sign wedges.
-
-  if (us.fHouse3D) {
-    if (!gs.fColorSign)
-      DrawColor(kDkGreenB);
-    for (l = -2; l < cSign; l++) {
-      if (gs.fColorSign && l >= 0)
-        DrawColor(kSignB(l+1));
-      for (i = -90; i < 90; i++) {
-        if (gs.fColorSign && l < 0 && i % 30 == 0)
-          DrawColor(kSignB((i+90)/30 + (l < -1)*6 + 1));
-        if (l >= 0) {
-          // Coordinates for zodiac sign wedge longitude lines.
-          j = l*30; k = i;
-        } else {
-          // Coordinates for ecliptic equator latitude line.
-          j = i+90 + (l < -1)*180; k = 0;
-        }
-        x1 = Tropical((real)j);
-        y1 = (real)k;
-        EclToEqu(&x1, &y1);
-        WireMapCalc(x1, y1, &u, &v, &w, fSky, planet1[oMC], rT, rz, deg);
-        WireOctahedron(u, v, w, unit/2);
-      }
-    }
-  }
-
   // Draw MC, IC, Asc, and Des lines for each object, as great circles around
   // the globe. The result is a 3D astro-graph chart.
 
-  if (!fSky) for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  if (!fSky) for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     for (k = 0; k < 4; k++) {
       if (ignorez[!k ? arDes : (k == 1 ? arIC : (k == 2 ? arAsc : arMC))])
         continue;
@@ -1132,7 +1810,7 @@ void WireDrawGlobe(flag fSky, real deg)
 
   // Now that we have the coordinates of each object, draw their glyphs.
 
-  for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     gi.zDefault = O[i];
     DrawObject(i, M[i], N[i]);
     DrawColor(kObjB[i]);
@@ -1141,9 +1819,9 @@ void WireDrawGlobe(flag fSky, real deg)
 }
 
 
-/* Generate a chart depicting an aerial view of the solar system in space, */
-/* with all the planets drawn around the Sun, and the specified central    */
-/* in the middle. Like XChartOrbit() except for 3D wireframe format.       */
+// Generate a chart depicting an aerial view of the solar system in space,
+// with all the planets drawn around the Sun, and the specified central body
+// in the middle. Like XChartOrbit() except for 3D wireframe format.
 
 void WireChartOrbit()
 {
@@ -1160,7 +1838,7 @@ void WireChartOrbit()
     (i == 3 ? 6.0 : (gi.nScaleText <= 1 ? 1.0 : 0.006))));
   zWin = Min(gs.xWin, gs.yWin);
   sx = (real)zWin/sz;
-  for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     xp = space[i].x; yp = space[i].y; zp = space[i].z;
     if (us.nStar > 0) {
       xp /= rLYToAU; yp /= rLYToAU; zp /= rLYToAU;
@@ -1206,7 +1884,7 @@ void WireChartOrbit()
   }
 
   // Draw planets.
-  for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     DrawColor(kObjB[i]);
     if (!gs.fAlt || i > oVes)
       j = 3 * gi.nScaleT;
@@ -1294,10 +1972,10 @@ void WireChartOrbit()
 }
 
 
-/* Translate to chart 3D coordinates, that indicate how to compose a 3D   */
-/* chart sphere, for the -XX wireframe chart. Inputs may be local horizon */
-/* altitude and azimuth coordinates, local horizon prime vertical, local  */
-/* horizon meridian, zodiac position and latitude, or Earth coordinates.  */
+// Translate to chart 3D coordinates, that indicate how to compose a 3D chart
+// sphere, for the -XX wireframe chart. Inputs may be local horizon altitude
+// and azimuth coordinates, local horizon prime vertical, local horizon
+// meridian, zodiac position and latitude, or Earth coordinates.
 
 void WireSphereLocal(real azi, real alt, int zr, int *xp, int *yp, int *zp)
 {
@@ -1348,8 +2026,8 @@ void WireSphereEarth(real azi, real alt, int zr, int *xp, int *yp, int *zp)
 }
 
 
-/* Draw a chart sphere (like a chart wheel but in 3D) as done with the -XX */
-/* switch. Like XChartSphere() except for 3D wireframe format.             */
+// Draw a chart sphere (like a chart wheel but in 3D) as done with the -XX
+// switch. Like XChartSphere() except for 3D wireframe format.
 
 void WireChartSphere()
 {
@@ -1601,7 +2279,7 @@ void WireChartSphere()
     cp0 = *pcp;
 
   // Draw planet glyphs, and spots for actual local location.
-  for (i = 0; i <= cObj; i++) if (FProper(i)) {
+  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     WireSphereZodiac(planet[i], planetalt[i], zr, &xp, &yp, &zp);
     rgx[i] = xp; rgy[i] = yp; rgz[i] = zp;
     gi.zDefault = rgz[i] - zGlyph2;
@@ -1613,7 +2291,7 @@ void WireChartSphere()
   // Draw lines connecting planets which have aspects between them.
   if (!FCreateGrid(fFalse))
     return;
-  for (j = cObj; j >= 1; j--)
+  for (j = is.nObj; j >= 1; j--)
     for (i = j-1; i >= 0; i--)
       if (grid->n[i][j] && FProper(i) && FProper(j)) {
         DrawColor(kAspB[grid->n[i][j]]);
@@ -1621,14 +2299,14 @@ void WireChartSphere()
       }
 
     cp0 = cpSav;
-  } /* iChart */
+  } // iChart
   FProcessCommandLine(szWheelX[0]);
 
   // Draw center point.
   DrawColor(gi.kiOn);
   WireOctahedron(0, 0, 0, gi.nScale * 2);
 }
-#endif /* WIRE */
-#endif /* GRAPH */
+#endif // WIRE
+#endif // GRAPH
 
 /* xdevice.cpp */

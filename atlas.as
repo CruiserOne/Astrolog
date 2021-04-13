@@ -1,4 +1,4 @@
-@AC710  ; Astrolog 7.10 city list atlas.
+@AC720  ; Astrolog 7.20 city list atlas.
 
 ; Atlas composed using data from: https://www.geonames.org/
 ; From "Free Gazetteer Data" download Readme:

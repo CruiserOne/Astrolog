@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: xgeneral.cpp
+** Astrolog (Version 7.20) File: xgeneral.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -61,7 +61,7 @@
 ******************************************************************************
 */
 
-/* Set the current color to use in drawing on the screen or bitmap array. */
+// Set the current color to use in drawing on the screen or bitmap array.
 
 void DrawColor(KI col)
 {
@@ -78,8 +78,8 @@ void DrawColor(KI col)
       if (gi.kiCur != col) {
         PsStrokeForce();      // Render existing path with current color
         fprintf(gi.file, "%.2f %.2f %.2f c\n",
-          (real)RGBR(rgbbmp[col])/255.0, (real)RGBG(rgbbmp[col])/255.0,
-          (real)RGBB(rgbbmp[col])/255.0);
+          (real)RgbR(rgbbmp[col])/255.0, (real)RgbG(rgbbmp[col])/255.0,
+          (real)RgbB(rgbbmp[col])/255.0);
       }
     }
 #endif
@@ -109,9 +109,9 @@ void DrawColor(KI col)
 #endif
 #ifdef MACG
   else {
-    kv.red   = RGBR(rgbbmp[col]) << 8;
-    kv.green = RGBG(rgbbmp[col]) << 8;
-    kv.blue  = RGBB(rgbbmp[col]) << 8;
+    kv.red   = RgbR(rgbbmp[col]) << 8;
+    kv.green = RgbG(rgbbmp[col]) << 8;
+    kv.blue  = RgbB(rgbbmp[col]) << 8;
     RGBForeColor(&kv);
     RGBBackColor(&kv);
   }
@@ -120,9 +120,9 @@ void DrawColor(KI col)
 }
 
 
-/* Set a single point on the screen. This is the most basic graphic function */
-/* and is called by all the more complex routines. Based on what mode we are */
-/* in, we either set a cell in the bitmap array or a pixel on the window.    */
+// Set a single point on the chart. This is the most basic graphic function
+// and is called by all the more complex routines. Based on what mode are
+// in, either set a cell in the bitmap array or a pixel on the window.
 
 void DrawPoint(int x, int y)
 {
@@ -137,7 +137,10 @@ void DrawPoint(int x, int y)
         y = 0;
       else if (y >= gs.yWin)
         y = gs.yWin-1;
-      BmSet(gi.bm, x, y, gi.kiCur);
+      if (!gi.fBmp)
+        BmSet(gi.bm, x, y, gi.kiCur);
+      else
+        BmpSetXY(&gi.bmp, x, y, rgbbmp[gi.kiCur]);
     }
 #ifdef PS
     else if (gs.ft == ftPS) {
@@ -186,7 +189,7 @@ void DrawPoint(int x, int y)
 }
 
 
-/* Draw dot a little larger than just a single pixel at specified location. */
+// Draw dot a little larger than just a single pixel at specified location.
 
 void DrawSpot(int x, int y)
 {
@@ -221,7 +224,7 @@ void DrawSpot(int x, int y)
 }
 
 
-/* Draw a filled in block, defined by the corners of its rectangle. */
+// Draw a filled in block, defined by the corners of its rectangle.
 
 void DrawBlock(int x1, int y1, int x2, int y2)
 {
@@ -242,9 +245,15 @@ void DrawBlock(int x1, int y1, int x2, int y2)
       else if (y2 >= gs.yWin)
         y2 = gs.yWin-1;
       // For bitmap, just fill in the array.
-      for (y = y1; y <= y2; y++)
-        for (x = x1; x <= x2; x++)
-          BmSet(gi.bm, x, y, gi.kiCur);
+      if (!gi.fBmp) {
+        for (y = y1; y <= y2; y++)
+          for (x = x1; x <= x2; x++)
+            BmSet(gi.bm, x, y, gi.kiCur);
+      } else {
+        for (y = y1; y <= y2; y++)
+          for (x = x1; x <= x2; x++)
+            BmpSetXY(&gi.bmp, x, y, rgbbmp[gi.kiCur]);
+      }
     }
 #ifdef PS
     else if (gs.ft == ftPS) {
@@ -291,8 +300,8 @@ void DrawBlock(int x1, int y1, int x2, int y2)
 }
 
 
-/* Draw a rectangle on the screen with specified thickness. This is just   */
-/* like DrawBlock() except that we are only drawing the edges of the area. */
+// Draw a rectangle on the screen with specified thickness. This is just like
+// DrawBlock() except that are only drawing the edges of the area.
 
 void DrawBox(int x1, int y1, int x2, int y2, int xsiz, int ysiz)
 {
@@ -324,68 +333,77 @@ void DrawBox(int x1, int y1, int x2, int y2, int xsiz, int ysiz)
 
 
 #ifdef WINANY
-/* Draw a character from the Astro or Wingdings fonts on the screen. Used  */
-/* to draw sign, planet, and aspect glyphs from these fonts within charts. */
+CONST char *rgszFontName[cFont] = {szAppNameCore, "Wingdings", "Astro",
+  "EnigmaAstrology", "Ariel", "HamburgSymbols", "Astronomicon"};
 
-void WinDrawGlyph(char ch, int x, int y, int nFont)
+// Draw an astrology character from a special font on the screen. Used to draw
+// sign, planet, and aspect glyphs from these fonts within charts.
+
+flag WinDrawGlyph(int ch, int x, int y, int nFont, int nScale,
+  int i, char *szExpFont)
 {
   HFONT hfont, hfontPrev;
   SIZE size;
   char sz[2];
-  KV kvSav;
-  int nSav;
-
-  hfont = CreateFont(12*gi.nScale, 0, 0, 0, 400, fFalse, fFalse, fFalse,
-    nFont >= 1 ? ANSI_CHARSET : SYMBOL_CHARSET, OUT_DEFAULT_PRECIS,
-    CLIP_DEFAULT_PRECIS, PROOF_QUALITY, VARIABLE_PITCH | FF_DECORATIVE,
-    nFont == 2 ? "EnigmaAstrology" : (nFont == 1 ? "Astro" : "Wingdings"));
-  if (hfont == NULL)
-    return;
-  hfontPrev = (HFONT)SelectObject(wi.hdc, hfont);
-  sprintf(sz, "%c", ch);
-  GetTextExtentPoint(wi.hdc, sz, 1, &size);
-  kvSav = GetTextColor(wi.hdc);
-  SetTextColor(wi.hdc, rgbbmp[gi.kiCur]);
-  nSav = SetBkMode(wi.hdc, TRANSPARENT);
-  TextOut(wi.hdc, x - (size.cx >> 1), y - (size.cy >> 1), sz, 1);
-  SetBkMode(wi.hdc, nSav);
-  SetTextColor(wi.hdc, kvSav);
-  SelectObject(wi.hdc, hfontPrev);
-  DeleteObject(hfont);
-}
-
-
-/* Draw a character from the Unicode Ariel font on the screen. Used to draw */
-/* sign, planet, and aspect glyphs from this font within charts.            */
-
-void WinDrawGlyphW(WCHAR wch, int x, int y, int nScale)
-{
-  HFONT hfont, hfontPrev;
-  SIZE size;
   WCHAR wz[2];
   KV kvSav;
   int nSav;
 
-  hfont = CreateFont(12*gi.nScale*nScale/100, 0, 0, 0, 400, fFalse, fFalse,
-    fFalse, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-    PROOF_QUALITY, VARIABLE_PITCH | FF_DECORATIVE, "Ariel");
+#ifdef EXPRESS
+  // Adjust character, font, location, or size with AstroExpression if set.
+  if (!us.fExpOff && FSzSet(szExpFont)) {
+    ExpSetN(iLetterU, i);
+    ExpSetN(iLetterV, ch);
+    ExpSetN(iLetterW, nFont);
+    ExpSetN(iLetterX, x);
+    ExpSetN(iLetterY, y);
+    ExpSetN(iLetterZ, nScale);
+    ParseExpression(szExpFont);
+    ch     = NExpGet(iLetterV);
+    nFont  = NExpGet(iLetterW);
+    x      = NExpGet(iLetterX);
+    y      = NExpGet(iLetterY);
+    nScale = NExpGet(iLetterZ);
+  }
+#endif
+  if (ch < 0)
+    return fFalse;
+
+  // Fonts: 1=Wingdings, 2=Astro, 3=EnigmaAstrology, 4=Ariel (Unicode),
+  // 5=HamburgSymbols, 6=Astronomicon
+  if (!FBetween(nFont, 1, 6))
+    nFont = 1;
+  hfont = CreateFont(12*gi.nScale*nScale/100, 0, 0, 0, 400,
+    fFalse, fFalse, fFalse, nFont == 4 ? DEFAULT_CHARSET :
+    (nFont >= 2 ? ANSI_CHARSET : SYMBOL_CHARSET), OUT_DEFAULT_PRECIS,
+    CLIP_DEFAULT_PRECIS, PROOF_QUALITY, VARIABLE_PITCH | FF_DECORATIVE,
+    rgszFontName[nFont]);
   if (hfont == NULL)
-    return;
+    return fFalse;
   hfontPrev = (HFONT)SelectObject(wi.hdc, hfont);
-  wz[0] = wch; wz[1] = chNull;
-  GetTextExtentPointW(wi.hdc, wz, 1, &size);
+  if (nFont == 4) {
+    wz[0] = ch; wz[1] = chNull;
+    GetTextExtentPointW(wi.hdc, wz, 1, &size);
+  } else {
+    sz[0] = ch; sz[1] = chNull;
+    GetTextExtentPoint(wi.hdc, sz, 1, &size);
+  }
   kvSav = GetTextColor(wi.hdc);
   SetTextColor(wi.hdc, rgbbmp[gi.kiCur]);
   nSav = SetBkMode(wi.hdc, TRANSPARENT);
-  TextOutW(wi.hdc, x - (size.cx >> 1), y - (size.cy >> 1), wz, 1);
+  if (nFont == 4)
+    TextOutW(wi.hdc, x - (size.cx >> 1), y - (size.cy >> 1), wz, 1);
+  else
+    TextOut(wi.hdc, x - (size.cx >> 1), y - (size.cy >> 1), sz, 1);
   SetBkMode(wi.hdc, nSav);
   SetTextColor(wi.hdc, kvSav);
   SelectObject(wi.hdc, hfontPrev);
   DeleteObject(hfont);
+  return fTrue;
 }
 
 
-/* Clear and erase the entire graphics screen on Windows. */
+// Clear and erase the entire graphics screen on Windows.
 
 void WinClearScreen(KI ki)
 {
@@ -398,7 +416,7 @@ void WinClearScreen(KI ki)
 #endif
 
 
-/* Clear and erase the graphics screen or bitmap contents. */
+// Clear and erase the graphics screen or bitmap contents.
 
 void DrawClearScreen()
 {
@@ -442,13 +460,13 @@ void DrawClearScreen()
   if (!gi.fFile)
     WinClearScreen(gi.kiCur);
   else
-#endif /* WINANY */
+#endif // WINANY
     DrawBlock(0, 0, gs.xWin - 1, gs.yWin - 1);    // Clear bitmap screen.
 }
 
 
-/* Draw a line on the screen, specified by its endpoints. In addition, we */
-/* have specified a skip factor, which allows us to draw dashed lines.    */
+// Draw a line on the screen, specified by its endpoints. In addition, there
+// is a specified a skip factor, which allows drawing dashed lines.
 
 void DrawDash(int x1, int y1, int x2, int y2, int skip)
 {
@@ -487,7 +505,7 @@ void DrawDash(int x1, int y1, int x2, int y2, int skip)
       skip = (skip + 1)*METAMUL - 1;
 #endif
   }
-#endif /* ISG */
+#endif // ISG
 
 #ifdef PS
   if (gs.ft == ftPS) {
@@ -528,7 +546,7 @@ void DrawDash(int x1, int y1, int x2, int y2, int skip)
     } else {
       *gi.pwPoly += 2;
       (*(gi.pwPoly+3))++;
-      // Note: We should technically update the max record size in the file
+      // Note: Technically should update the max record size in the file
       // header here too, but it doesn't seem necessary.
     }
     MetaWord(x2); MetaWord(y2);
@@ -576,11 +594,11 @@ void DrawDash(int x1, int y1, int x2, int y2, int skip)
 }
 
 
-/* Draw a normal line on the screen; however, if the x coordinates are close */
-/* to either of the two given bounds, then we assume that the line runs off  */
-/* one side and reappears on the other, so draw the appropriate two lines    */
-/* instead. This is used by the Ley line and astro-graph routines, which     */
-/* draw lines running around the world and hence off the edges of the maps.  */
+// Draw a normal line on the screen, however if the x coordinates are close to
+// either of the two given bounds, then assume that the line runs off one side
+// and reappears on the other, so draw the appropriate two lines instead. This
+// is used by the Ley line and astro-graph routines, which draw lines running
+// around the world and hence off the edges of the maps.
 
 void DrawWrap(int x1, int y1, int x2, int y2, int xmin, int xmax)
 {
@@ -615,10 +633,10 @@ void DrawWrap(int x1, int y1, int x2, int y2, int xmin, int xmax)
 }
 
 
-/* This routine, and its companion below, clips a line defined by its  */
-/* endpoints to either above some line y=c, or below some line y=c. By */
-/* passing in parameters in different orders, we can clip to vertical  */
-/* lines, too. These are used by the DrawClip() routine below.         */
+// This routine, and its companion below, clips a line defined by its
+// endpoints to either above some line y=c, or below some line y=c. By
+// passing in parameters in different orders, can clip to vertical lines
+// too. These are used by the FDrawClip() routine below.
 
 void ClipLesser(int *x1, int *y1, int *x2, int *y2, int s)
 {
@@ -635,8 +653,10 @@ void ClipGreater(int *x1, int *y1, int *x2, int *y2, int s)
 }
 
 
-/* Draw a line on the screen. This is just like DrawLine() routine earlier; */
-/* however, first clip the endpoints to the given viewport before drawing.  */
+// Draw a line on the screen. This is just like DrawLine() routine earlier,
+// however first clip the endpoints to the given viewport before drawing.
+// Return true if some clipping was done, or false if entire line fits within
+// viewport or if entire line is outside of viewport and nothing at all drawn.
 
 flag FDrawClip(int x1, int y1, int x2, int y2, int xl, int yl, int xh, int yh,
   int skip, int *x0, int *y0)
@@ -680,23 +700,41 @@ flag FDrawClip(int x1, int y1, int x2, int y2, int xl, int yl, int xh, int yh,
 }
 
 
-/* Draw a circle or ellipse inside the given bounding rectangle. */
+// Fast version of rotating that assumes the slow trigonometry values have
+// already been computed. Useful when rotating many points by the same angle.
 
-void DrawEllipse(int x1, int y1, int x2, int y2)
+#define RotateR2(x1, y1, x2, y2, rS, rC) x2 = (x1)*(rC) - (y1)*(rS); \
+  y2 = (y1)*(rC) + (x1)*(rS)
+#define RotateR2Init(rS, rC, d) rS = RSinD(d); rC = RCosD(d)
+
+// Draw a circle or ellipse inside the given bounding rectangle. Extra
+// parameters allow the ellipse to be rotated, or a subarc to be drawn.
+
+void DrawArc(int x1, int y1, int x2, int y2, real rRotate, real t1, real t2)
 {
   int x, y, rx, ry, m, n, u, v, i;
+  real rS, rC, dx, dy, dx2, dy2, dt, t;
 #ifdef MACG
   Rect rc;
 #endif
 
-  if (gi.fFile) {
+  if (gi.fFile || rRotate != 0.0) {
     x = (x1+x2)/2; y = (y1+y2)/2; rx = (x2-x1)/2; ry = (y2-y1)/2;
-    if (gs.ft == ftBmp || gs.ft == ftWire) {
-      m = x + rx; n = y;
+    if (gs.ft == ftBmp || gs.ft == ftWire || rRotate != 0.0) {
+      RotateR2Init(rS, rC, rRotate);
+      dt = (t2 - t1) / rDegMax;
       for (i = 0; i <= nDegMax; i += DEGINC) {
-        u = x + (int)(((real)rx+rRound)*RCosD((real)i));
-        v = y + (int)(((real)ry+rRound)*RSinD((real)i));
-        DrawLine(m, n, u, v);
+        t = t1 + dt*(real)i;
+        dx = ((real)rx+rRound) * RCosD(t);
+        dy = ((real)ry+rRound) * RSinD(t);
+        if (rRotate != 0.0) {
+          RotateR2(dx, dy, dx2, dy2, rS, rC);
+        } else {
+          dx2 = dx; dy2 = dy;
+        }
+        u = x + (int)dx2; v = y + (int)dy2;
+        if (i > 0)
+          DrawLine(m, n, u, v);
         m = u; n = v;
       }
     }
@@ -734,7 +772,7 @@ void DrawEllipse(int x1, int y1, int x2, int y2)
 }
 
 
-/* Draw a filled in circle or ellipse inside a bounding rectangle. */
+// Draw a filled in circle or ellipse inside a bounding rectangle.
 
 void DrawEllipse2(int x1, int y1, int x2, int y2)
 {
@@ -810,15 +848,9 @@ void DrawEllipse2(int x1, int y1, int x2, int y2)
 }
 
 
-// Fast version of rotating that assumes the slow trigonometry values have
-// already been computed. Useful when rotating many points by the same angle.
-
-#define RotateR2(x1, y1, x2, y2, rS, rC) x2 = (x1)*(rC) - (y1)*(rS); \
-  y2 = (y1)*(rC) + (x1)*(rS)
-#define RotateR2Init(rS, rC, d) rS = RSinD(d); rC = RCosD(d)
-
-/* Draw a filled in circle or ellipse inside a bounding rectangle, which */
-/* has a proportion of it in phase or shadow, like a crescent Moon.      */
+// Draw a filled in circle or ellipse inside a bounding rectangle, which has
+// a proportion of it in phase or shadow, like a crescent Moon. The phased
+// part may be rotated by the specified number of degrees.
 
 void DrawCrescent(int x1, int y1, int x2, int y2, real rProp, real rRotate,
   KI ki0, KI ki1)
@@ -891,9 +923,9 @@ void DrawCrescent(int x1, int y1, int x2, int y2, real rProp, real rRotate,
 }
 
 
-/* Print a string of text on the graphic window at specified location. To  */
-/* do this we either use Astrolog's own "font" (6x10) and draw each letter */
-/* separately, or else specify system fonts for PostScript and metafiles.  */
+// Print a string of text on the graphic window at specified location. To
+// do this, either use Astrolog's own "font" (6x10) and draw each letter
+// separately, or else specify system fonts for PostScript and metafiles.
 
 void DrawSz(CONST char *sz, int x, int y, int dt)
 {
@@ -948,41 +980,54 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
 }
 
 
+#ifdef WINANY
+//                                        ATGCLVLSSCAPc
+CONST uchar szSignFontEnigma[cSign+3]  = "1234567890-=+";
+CONST uchar szSignFontHamburg[cSign+3] = "asdfghjklzxcv";
+#endif
 
-//                                      ATGCLVLSSCAPc
-CONST char szSignFontEnigma[cSign+3] = "1234567890-=+";
-
-/* Draw the glyph of a sign at particular coordinates on the screen.    */
-/* To do this we either use Astrolog's turtle vector representation or  */
-/* we may specify a system font character for PostScript and metafiles. */
+// Draw the glyph of a sign at particular coordinates on the screen. To do
+// this either use Astrolog's turtle vector representation, or else specify
+// a system font character.
 
 void DrawSign(int i, int x, int y)
 {
 #ifdef WINANY
-  int nFont = gs.nFont/1000%10;
+  int nFont, ch;
 
-  if (!gi.fFile && nFont > 0) {
+  if (!gi.fFile) {
+    nFont = gs.nFont/1000%10;
+    ch = -1;
     if (nFont == 1)
-      WinDrawGlyph('^' + i - 1, x, y, 0);
+      ch = '^' + i - 1;
     else if (nFont == 2)
-      WinDrawGlyph('A' + i - 1, x, y, 1);
-    else if (nFont == 3)
-      WinDrawGlyph(szSignFontEnigma[i == sCap && gs.nGlyphs/1000 > 1 ? cSign :
-        i-1], x, y-gi.nScale, 2);
-    else
-      WinDrawGlyphW(0x2648 + i - 1, x, y, 100);
-    return;
+      ch = 'A' + i - 1;
+    else if (nFont == 3) {
+      ch = szSignFontEnigma[i == sCap && gs.nGlyphs/1000 > 1 ? cSign : i-1];
+      y -= gi.nScale;
+    } else if (nFont == 4)
+      ch = 0x2648 + i - 1;
+    else if (nFont == 5) {
+      ch = szSignFontHamburg[i == sCap && gs.nGlyphs/1000 > 1 ? cSign : i-1];
+      y += gi.nScale;
+    } else if (nFont == 6) {
+      ch = (i == sCap && gs.nGlyphs/1000 <= 1) ? '\\' : ('A' + i - 1);
+      if (FBetween(i, sLeo, sSco))
+        y -= gi.nScale;
+    }
+    if (WinDrawGlyph(ch, x, y, nFont, 100, i, us.szExpFontSig))
+      return;
   }
 #endif
 #ifdef PS
-  if (gs.ft == ftPS && gs.nFont > 0) {
+  if (gs.ft == ftPS && gs.nFont/1000%10 > 0) {
     PsFont(1);
     fprintf(gi.file, "%d %d(%c)center\n", x, y, 'A' + i - 1);
     return;
   }
 #endif
 #ifdef META
-  if (gs.ft == ftWmf && gs.nFont > 0) {
+  if (gs.ft == ftWmf && gs.nFont/1000%10 > 0) {
     gi.nFontDes = 1;
     gi.kiTextDes = gi.kiCur;
     gi.nAlignDes = 0x6 | 0x8 /* Center | Bottom */;
@@ -1007,28 +1052,30 @@ void DrawSign(int i, int x, int y)
 }
 
 
-/* Draw the number of a house at particular coordinates on the screen. */
-/* We either use a turtle vector or write a number in a system font.   */
+// Draw the number of a house at particular coordinates on the screen.
+// Either use a turtle vector, or else write a number in a system font.
 
 void DrawHouse(int i, int x, int y)
 {
 #ifdef WINANY
-  int nFont = gs.nFont/100%10;
+  int nFont, ch;
 
-  if (!gi.fFile && nFont > 0) {
-    WinDrawGlyphW(0x2460 + i - 1, x, y, 100);
-    return;
+  if (!gi.fFile) {
+    nFont = gs.nFont/100%10;
+    ch = (nFont == 4 ? 0x2460 + i - 1 : (nFont == 6 ? '0' + i : -1));
+    if (WinDrawGlyph(ch, x, y, nFont, 100, i, us.szExpFontHou))
+      return;
   }
 #endif
 #ifdef PS
-  if (gs.ft == ftPS && gs.nFont > 0) {
+  if (gs.ft == ftPS && gs.nFont/100%10 > 0) {
     PsFont(3);
     fprintf(gi.file, "%d %d(%d)center\n", x, y, i);
     return;
   }
 #endif
 #ifdef META
-  if (gs.ft == ftWmf && gs.nFont > 0) {
+  if (gs.ft == ftWmf && gs.nFont/100%10 > 0) {
     gi.nFontDes = 2;
     gi.kiTextDes = gi.kiCur;
     gi.nAlignDes = 0x6 | 0x8 /* Center | Bottom */;
@@ -1052,20 +1099,29 @@ void DrawHouse(int i, int x, int y)
 
 
 #ifdef VECTOR
-//                                        ESMMVMJSUNPccpjvnslpveA23I56D89M12
-CONST char szObjectFontAstro[cuspHi+2] = ";QRSTUVWXYZ     <> ?  a  c     b  ";
-CONST char szObjectFontEnigma[uranHi+2] =
-// ESMMVMJSUNPcc___p___j___vnslpveA23I56D89M12___vchzkaavp
-  "eabcdfghijkw_\373\374\300{},   A        M  \311yz!@#$%&";
+//                                         ESMMVMJSUNPccpjvnslpveA23I56D89M12
+CONST uchar szObjectFontAstro[cuspHi+2] = ";QRSTUVWXYZ     <> ?  a  c     b  ";
 #endif
 #ifdef WINANY
+CONST uchar szObjectFontEnigma[dwarfHi+2] =
+// ESMMVMJSUNPcc___p___j___vnslpveA23I56D89M12
+  "eabcdfghijkw_\373\374\300{},   A        M  "
+// ___vchzkaavp___hp___e___h___mg___q___so
+  "\311yz!@#$%&\302)\351\355\356 \364\366 ";
+CONST uchar szObjectFontHamburg[uranHi+2] =
+// E___SMMVMJSUNPccpjvn___s___l___pveA23I___56D___89M12vchzkaavp
+  "\211QWERTYUIOPMCVBN\213\214\370<mbZ  \223  \222  X   SDFGHJKL";
+CONST uchar szObjectFontAstronomicon[dwarfHi+2] =
+// ESMMVMJSUNPccpjvnslpveA23I56D89M12vc___h___z___k___a___a___v___p___HPehmgqso
+  ">QRSTUVWXYZqlmnogiz?kjc23e56f89d;<b\241\242\243\244\245\246\247\250prstuvwx"
+  "y";
 CONST WCHAR wzObjectFontUnicode[oCore+1] = {
-  0x2295, 0x2609, 0x263d, 0x263f, 0x2640, 0x2642, 0x2643, 0x2644, 0x2645,
+  0/*0x2295*/, 0x2609, 0x263d, 0x263f, 0x2640, 0x2642, 0x2643, 0x2644, 0x2645,
   0x2646, 0x2647, 0/*26b7*/, 0/*26b3*/, 0/*26b4*/, 0/*26b5*/, 0/*26b6*/,
   0x260a, 0x260b, 0/*26b8*/, 0/*2297*/, 0, 0};
 #endif
 
-/* Draw the glyph of an object at particular coordinates on the screen. */
+// Draw the glyph of an object at particular coordinates on the screen.
 
 void DrawObject(int obj, int x, int y)
 {
@@ -1073,7 +1129,7 @@ void DrawObject(int obj, int x, int y)
   flag fNoText = fFalse;
   int col;
 #ifdef WINANY
-  int nFont = gs.nFont/10%10;
+  int nFont, ch, nScale;
 #endif
 
   if (!gs.fLabel)    // If inhibiting labels, then do nothing.
@@ -1085,6 +1141,7 @@ void DrawObject(int obj, int x, int y)
 
   col = kObjB[obj];
 #ifdef EXPRESS
+  // Adjust color if AstroExpression says to do so.
   if (!us.fExpOff && FSzSet(us.szExpColObj)) {
     ExpSetN(iLetterY, obj);
     ExpSetN(iLetterZ, col);
@@ -1098,30 +1155,52 @@ void DrawObject(int obj, int x, int y)
 
 #ifdef WINANY
   if (!gi.fFile) {
-    if (nFont == 2 && obj <= cuspHi && szObjectFontAstro[obj] != ' ') {
-      WinDrawGlyph(szObjectFontAstro[obj], x, y, 1);
-      return;
-    } else if (nFont == 3 && obj <= uranHi && szObjectFontEnigma[obj] != ' ') {
-      WinDrawGlyph(szObjectFontEnigma[obj], x, y-gi.nScale, 2);
-      return;
-    } else if (nFont == 4 && obj <= oCore && wzObjectFontUnicode[obj] != 0) {
-      WinDrawGlyphW(wzObjectFontUnicode[obj], x, y,
-        FBetween(obj, oMer, oMar) ? 95 : 135);
-      return;
+    nFont = gs.nFont/10%10;
+    ch = -1;
+    nScale = 100;
+    if (nFont == 2 && obj <= cuspHi && szObjectFontAstro[obj] > ' ')
+      ch = szObjectFontAstro[obj];
+    else if (nFont == 3 && obj <= dwarfHi && szObjectFontEnigma[obj] > ' ') {
+      ch = szObjectFontEnigma[obj];
+      y -= gi.nScale;
+    } else if (nFont == 4 && obj <= oCore && wzObjectFontUnicode[obj] > 0) {
+      ch = wzObjectFontUnicode[obj];
+      nScale = FBetween(obj, oMer, oMar) ? 95 : 135;
+    } else if (nFont == 5 && obj <= uranHi && szObjectFontHamburg[obj] > ' ') {
+      ch = szObjectFontHamburg[obj];
+      if (obj == oLil && gs.nGlyphs%10 == 2)
+        ch = '`';
+      y += gi.nScale;
+    } else if (nFont == 6 && obj <= dwarfHi) {
+      ch = szObjectFontAstronomicon[obj];
+      if (obj == oUra && gs.nGlyphs/100%10 == 2)
+        ch = 'a';
+      else if (obj == oPlu && gs.nGlyphs/10%10 == 2)
+        ch = '_';
+      else if (obj == oPlu && gs.nGlyphs/10%10 == 3)
+        ch = '`';
+      else if (us.fHouseAngle && FCusp(obj))
+        ch = '1' + obj - cuspLo;
+      if (FBetween(obj, uranLo+1, uranHi))
+        nScale = 85;
+      if (FBetween(obj, oEri, oSed) && obj != oMak)
+        y -= gi.nScale;
     }
+    if (WinDrawGlyph(ch, x, y, nFont, nScale, obj, us.szExpFontObj))
+      return;
   }
 #endif
 #ifdef PS
-  if (gs.ft == ftPS && gs.nFont == 1 &&
-    obj < uranLo && szObjectFontAstro[obj] != ' ') {
+  if (gs.ft == ftPS && gs.nFont/10%10 > 0 &&
+    obj <= cuspHi && szObjectFontAstro[obj] != ' ') {
     PsFont(2);
     fprintf(gi.file, "%d %d(%c)center\n", x, y, szObjectFontAstro[obj]);
     return;
   }
 #endif
 #ifdef META
-  if (gs.ft == ftWmf && gs.nFont/10%10 == 2 &&
-    obj < uranLo && szObjectFontAstro[obj] != ' ') {
+  if (gs.ft == ftWmf && gs.nFont/10%10 > 0 &&
+    obj <= cuspHi && szObjectFontAstro[obj] != ' ') {
     gi.nFontDes = 4;
     gi.kiTextDes = gi.kiCur;
     gi.nAlignDes = 0x6 | 0x8 /* Center | Bottom */;
@@ -1184,13 +1263,12 @@ void DrawObject(int obj, int x, int y)
 
 
 #ifdef SWISS
-/* Set a single point on the screen, whose color is a grayscale based on */
-/* the passed in star magnitude. This is one of the few areas in the     */
-/* program that works with more than a 16 color palette.                 */
+// Set a single point on the screen, whose color is a grayscale based on the
+// passed in star magnitude. This is one of the few areas in the program that
+// works with more than a 16 color palette.
 
 void DrawStar(int x, int y, ES *pes)
 {
-#ifdef WINANY
   KV kv;
   int n;
 
@@ -1208,6 +1286,7 @@ void DrawStar(int x, int y, ES *pes)
   }
 
   // Draw star point.
+#ifdef WINANY
   if (!gi.fFile
 #ifdef WIN
     && wi.hdcPrint == hdcNil
@@ -1222,7 +1301,17 @@ void DrawStar(int x, int y, ES *pes)
     }
     goto LAfter;
   }
-#endif /* WINANY */
+#endif // WINANY
+  if (gi.fFile && gs.ft == ftBmp && gi.fBmp) {
+    BmpSetXY(&gi.bmp, x, y, kv);
+    if (FOdd(gs.nAllStar)) {
+      BmpSetXY(&gi.bmp, x, y-1, kv);
+      BmpSetXY(&gi.bmp, x-1, y, kv);
+      BmpSetXY(&gi.bmp, x+1, y, kv);
+      BmpSetXY(&gi.bmp, x, y+1, kv);
+    }
+    goto LAfter;
+  }
   if (pes->ki != kDefault)
     DrawColor(pes->ki);
   else
@@ -1233,9 +1322,7 @@ void DrawStar(int x, int y, ES *pes)
     DrawSpot(x, y);
 
   // Draw star's name label.
-#ifdef WINANY
 LAfter:
-#endif
   if (!gs.fLabel || gs.nAllStar < 2)
     return;
   if (pes->ki != kDefault)
@@ -1248,45 +1335,61 @@ LAfter:
 
 
 #ifdef VECTOR
-//                                          C_OSTSisssqbssnbbtqPC
-CONST char szAspectFontAstro[cAspect2+1] = "!\"#$'&%()+*         ";
-CONST char szAspectFontEnigma[cAspect2+1] =
-// COSTSisssq___b___ss___n___b___b___tqPC
-  "BCEDFHGIJK\316\325N\334\321\332\333|OP";
+//                                           C_OSTSisssqbssnbbtqPC
+CONST uchar szAspectFontAstro[cAspect2+1] = "!\"#$'&%()+*         ";
 #endif
 #ifdef WINANY
+CONST uchar szAspectFontEnigma[cAspect2+1] =
+// COSTSisssq___b___ss___n___b___b___tqPC
+  "BCEDFHGIJK\316\325N\334\321\332\333|OP";
+CONST uchar szAspectFontHamburg[cAspect2+1] =
+// COSTSisssq___b___ssnbbtqP___C___
+  "qwretoiyu\230\232       \233\234";
+CONST uchar szAspectFontAstronomicon[cAspect2+1] =
+// C_OSTSisssqbss___n___b___b___t___q___PC
+  "!\"#$%&'()*+,\252\256\257\253\254\260/-";
 CONST WCHAR wzAspectFontUnicode[cAspect2] = {
   0x260c, 0x260d, 0x25a1, 0x25b3, 0x04ff, 0, 0, 0, 0,
   'Q', 0x00b1, 0, 0, 0, 0, 0, 0, 0};
 #endif
 
-/* Draw the glyph of an aspect at particular coordinates on the screen. */
-/* Again we either use Astrolog's turtle vector or a system Astro font. */
+// Draw the glyph of an aspect at particular coordinates on the screen.
+// Again either use Astrolog's turtle vector or a system font.
 
 void DrawAspect(int asp, int x, int y)
 {
 #ifdef WINANY
-  int nFont = gs.nFont%10;
+  int nFont, ch, nScale;
 #endif
 
   if (us.fParallel && asp <= aOpp)
     asp += cAspect;
 #ifdef WINANY
   if (!gi.fFile) {
-    if (nFont == 2 && szAspectFontAstro[asp-1] != ' ') {
-      WinDrawGlyph(szAspectFontAstro[asp-1], x, y, 1);
-      return;
-    } else if (nFont == 3 && szAspectFontEnigma[asp-1] != ' ') {
-      WinDrawGlyph(szAspectFontEnigma[asp-1], x, y-gi.nScale, 2);
-      return;
-    } else if (nFont == 4 && wzAspectFontUnicode[asp-1] != 0) {
-      WinDrawGlyphW(wzAspectFontUnicode[asp-1], x, y, 100);
-      return;
+    nFont = gs.nFont%10;
+    ch = -1;
+    nScale = 100;
+    if (nFont == 2 && szAspectFontAstro[asp-1] != ' ')
+      ch = szAspectFontAstro[asp-1];
+    else if (nFont == 3 && szAspectFontEnigma[asp-1] != ' ') {
+      ch = szAspectFontEnigma[asp-1];
+      y -= gi.nScale;
+    } else if (nFont == 4 && wzAspectFontUnicode[asp-1] != 0)
+      ch = wzAspectFontUnicode[asp-1];
+    else if (nFont == 5 && szAspectFontHamburg[asp-1] != ' ') {
+      ch = szAspectFontHamburg[asp-1];
+      y += gi.nScale;
+    } else if (nFont == 6) {
+      ch = szAspectFontAstronomicon[asp-1];
+      y -= gi.nScale;
+      nScale = FBetween(asp, aSep, aQNv) ? 130 : 120;
     }
+    if (WinDrawGlyph(ch, x, y, nFont, nScale, asp, us.szExpFontAsp))
+      return;
   }
 #endif
 #ifdef PS
-  if (gs.ft == ftPS && gs.nFont == 1 && szAspectFontAstro[asp-1] != ' ') {
+  if (gs.ft == ftPS && gs.nFont%10 > 0 && szAspectFontAstro[asp-1] != ' ') {
     PsFont(2);
     fprintf(gi.file, "%d %d(%s%c)center\n", x, y,
       asp == aSSq || asp == aSes ? "\\" : "", szAspectFontAstro[asp-1]);
@@ -1294,7 +1397,7 @@ void DrawAspect(int asp, int x, int y)
   }
 #endif
 #ifdef META
-  if (gs.ft == ftWmf && gs.nFont/10%10 == 2 &&
+  if (gs.ft == ftWmf && gs.nFont%10 > 0 &&
     szAspectFontAstro[asp-1] != ' ') {
     gi.nFontDes = 4;
     gi.kiTextDes = gi.kiCur;
@@ -1315,10 +1418,10 @@ void DrawAspect(int asp, int x, int y)
 }
 
 
-/* Convert a string segment to a positive number, updating the string to  */
-/* point beyond the number chars. Return 1 if the string doesn't point to */
-/* a numeric value. This is used by the DrawTurtle() routine to extract   */
-/* motion vector quantities from draw strings, e.g. the "12" in "U12".    */
+// Convert a string segment to a positive number, updating the string to
+// point beyond the number chars. Return 1 if the string doesn't point to
+// a numeric value. This is used by the DrawTurtle() routine to extract
+// motion vector quantities from draw strings, e.g. the "12" in "U12".
 
 int NFromPch(CONST char **str)
 {
@@ -1334,12 +1437,12 @@ int NFromPch(CONST char **str)
 }
 
 
-/* This routine is used to draw complicated objects composed of lots of line */
-/* segments on the screen, such as all the glyphs and coastline pieces. It   */
-/* is passed in a string of commands defining what to draw in relative       */
-/* coordinates. This is a copy of the format of the BASIC draw command found */
-/* in PC's. For example, "U5R10D5L10" means go up 5 dots, right 10, down 5,  */
-/* and left 10 - draw a box twice as wide as it is high.                     */
+// This routine is used to draw complicated objects composed of lots of line
+// segments on the screen, such as all the glyphs and coastline pieces. It
+// is passed in a string of commands defining what to draw in relative
+// coordinates. This is a copy of the format of the BASIC draw command found
+// in PC's. For example, "U5R10D5L10" means go up 5 dots, right 10, down 5,
+// and left 10, which draws a box twice as wide as it is high.
 
 void DrawTurtle(CONST char *sz, int x0, int y0)
 {
@@ -1464,6 +1567,6 @@ int KiCity(int iae)
   return ki;
 }
 #endif
-#endif /* GRAPH */
+#endif // GRAPH
 
 /* xgeneral.cpp */

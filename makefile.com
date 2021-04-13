@@ -1,4 +1,4 @@
-$ ! Astrolog (Version 7.10) File: makefile.com (VMS version)
+$ ! Astrolog (Version 7.20) File: makefile.com (VMS version)
 $ !
 $ ! IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 $ ! not enumerated elsewhere in this program are Copyright (C) 1991-2020 by

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: atlas.cpp
+** Astrolog (Version 7.20) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -830,8 +830,8 @@ CONST char *rgszzn[iznMax] = {
 ******************************************************************************
 */
 
-/* Compose a string to display a city. Include the country/region it lies */
-/* in, along with the US state or Canada province, if in those countries. */
+// Compose a string to display a city. Include the country/region it lies in,
+// along with the US state or Canada province, if in those countries.
 
 char *SzCity(int iae)
 {
@@ -850,8 +850,8 @@ char *SzCity(int iae)
 }
 
 
-/* Lookup an abbreviation for a country/region or state/province in a list */
-/* of abbreviations. Used when parsing city names which include them.      */
+// Lookup an abbreviation for a country/region or state/province in a list of
+// abbreviations. Used when parsing city names which include them.
 
 int ILookupCN(CONST char *szAbb, CONST CN *rgcn, int ccn)
 {
@@ -869,8 +869,8 @@ int ILookupCN(CONST char *szAbb, CONST CN *rgcn, int ccn)
 }
 
 
-/* Load the atlas information file if it hasn't been loaded yet. Return */
-/* whether loading has succeeded, i.e. whether city list is allocated.  */
+// Load the atlas information file if it hasn't been loaded yet. Return
+// whether loading has succeeded, i.e. whether city list is allocated.
 
 flag FEnsureAtlas()
 {
@@ -882,9 +882,9 @@ flag FEnsureAtlas()
 }
 
 
-/* Load the time zone change information file if it hasn't been loaded yet. */
-/* Return whether loading has succeeded, i.e. whether the necessary zone    */
-/* change and zone Daylight Saving rules arrays have been allocated.        */
+// Load the time zone change information file if it hasn't been loaded yet.
+// Return whether loading has succeeded, i.e. whether the necessary zone
+// change and zone Daylight Saving rules arrays have been allocated.
 
 flag FEnsureTimezoneChanges()
 {
@@ -896,8 +896,8 @@ flag FEnsureTimezoneChanges()
 }
 
 
-/* Load atlas information from an open file, consisting of the specified */
-/* number of city entries. Implements the -YY command switch.            */
+// Load atlas information from an open file, consisting of the specified
+// number of city entries. Implements the -YY command switch.
 
 flag FLoadAtlas(FILE *file, int cae)
 {
@@ -1006,9 +1006,9 @@ flag FLoadAtlas(FILE *file, int cae)
 }
 
 
-/* Parse an Hours:Minutes:Seconds (HMS) time value, returning the total  */
-/* number of seconds. For example, -12hr 30min 15sec or "-12:30:15" maps */
-/* to -(12 hr*60*60 + 30 min*60 + 15 sec) = 45015 seconds total.         */
+// Parse an Hours:Minutes:Seconds (HMS) time value, returning the total
+// number of seconds. For example, -12hr 30min 15sec or "-12:30:15" maps to
+// -(12 hr*60*60 + 30 min*60 + 15 sec) = 45015 seconds total.
 
 int NParseHMS(CONST char *sz)
 {
@@ -1037,8 +1037,8 @@ int NParseHMS(CONST char *sz)
 }
 
 
-/* Compose an Hours:Minutes:Seconds (HMS) time value, given a total number */
-/* of seconds. For example, 45015 (12*60*60+30*60+15) maps to "+12:30:15"  */
+// Compose an Hours:Minutes:Seconds (HMS) time value, given a total number of
+// seconds. For example, 45015 (12*60*60+30*60+15) maps to "+12:30:15"
 
 char *SzHMS(int sec)
 {
@@ -1062,9 +1062,9 @@ char *SzHMS(int sec)
 }
 
 
-/* Load zone change rules from an open file, consisting of the specified */
-/* number of rules, each consisting of a sublist of rule entries (total  */
-/* rule entries also specified). Implements the -YY1 command switch.     */
+// Load zone change rules from an open file, consisting of the specified
+// number of rules, each consisting of a sublist of rule entries (total rule
+// entries also specified). Implements the -YY1 command switch.
 
 flag FLoadZoneRules(FILE *file, int irunMax, int irueMax)
 {
@@ -1234,9 +1234,9 @@ flag FLoadZoneRules(FILE *file, int irunMax, int irueMax)
 }
 
 
-/* Load time zone changes from an open file, consisting of the specified */
-/* number of zones, each consisting of a sublist of zone change entries  */
-/* (total entries also specified). Implements the -YY2 command switch.   */
+// Load time zone changes from an open file, consisting of the specified
+// number of zones, each consisting of a sublist of zone change entries
+// (total entries also specified). Implements the -YY2 command switch.
 
 int rgznChange[iznMax], rgizcChange[iznMax+1];
 
@@ -1401,9 +1401,9 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
 }
 
 
-/* Load time zone links from an open file, consisting of the specified    */
-/* number of time zones from atlas.as, and how each maps to a zone change */
-/* area specified above with -YY2. Implements the -YY3 command switch.    */
+// Load time zone links from an open file, consisting of the specified number
+// of time zones from atlas.as, and how each maps to a zone change area
+// specified above with -YY2. Implements the -YY3 command switch.
 
 int mpznzc[iznMax];
 
@@ -1494,8 +1494,8 @@ flag FLoadZoneLinks(FILE *file, int czl)
 }
 
 
-/* Lookup a city in the atlas. Display a list of matches in text or in a */
-/* Windows dialog. Implements the -N switch and "Lookup City" button.    */
+// Lookup a city in the atlas. Display a list of matches in text or in a
+// Windows dialog. Implements the -N switch and "Lookup City" button.
 
 flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
 {
@@ -1674,8 +1674,8 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
 }
 
 
-/* Given a location, display a list of cities from the atlas nearest to it. */
-/* Display it in text or in a Windows dialog. Implements the -Nl switch.    */
+// Given a location, display a list of cities from the atlas nearest to it.
+// Display it in text or in a Windows dialog. Implements the -Nl switch.
 
 flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae)
 {
@@ -1767,8 +1767,8 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae)
 }
 
 
-/* Sanitize a time, in which the individual parameters may be out of range. */
-/* For example, 25:00 on 32 Dec 2020 gets converted to 1:00 on 2 Jan 2021.  */
+// Sanitize a time, in which the individual parameters may be out of range.
+// For example, 25:00 on 32 Dec 2020 gets converted to 1:00 on 2 Jan 2021.
 
 void AdjustTime(int *mon, int *day, int *yea, int *tim)
 {
@@ -1808,9 +1808,9 @@ void AdjustTime(int *mon, int *day, int *yea, int *tim)
 #define ichngMax 4
 #define RTim(tim) ((real)(tim) / 3600.0)
 
-/* Set the Daylight Time and time zone values in a chart, since the period  */
-/* they apply to has been determined. However, if near the endpoints of the */
-/* period, make sure the time isn't actually ambiguous or invalid.          */
+// Set the Daylight Time and time zone values in a chart, since the period
+// they apply to has been determined. However, if near the endpoints of the
+// period, make sure the time isn't actually ambiguous or invalid.
 
 flag FSetDstZon(CI *ci, int izn,
   int mon, int day, int yea, int tim, int zon, int doff,
@@ -1856,10 +1856,10 @@ flag FSetDstZon(CI *ci, int izn,
 }
 
 
-/* Given a time zone area, display a list of time zone and Daylight Saving  */
-/* time changes within it. Display it in text or within a Windows dialog.   */
-/* Implements the -Nz switch. Can also do the important task of determining */
-/* the time zone and Daylight Time setting for a particular time.           */
+// Given a time zone area, display a list of time zone and Daylight Saving
+// time changes within it. Display it in text or within a Windows dialog.
+// Implements the -Nz switch. Can also do the important task of determining
+// the time zone and Daylight Time setting for a particular time.
 
 flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
 {
@@ -2118,8 +2118,8 @@ LSkip:
 }
 
 
-/* Return the default time zone for a time zone area. That means the latest */
-/* offset in the zone change list corresponding to this time zone area.     */
+// Return the default time zone for a time zone area. That means the latest
+// offset in the zone change list corresponding to this time zone area.
 
 real ZondefFromIzn(int izn)
 {
@@ -2129,6 +2129,6 @@ real ZondefFromIzn(int izn)
   zon = is.rgzc[izc].zon;
   return RTim(zon);
 }
-#endif /* ATLAS */
+#endif // ATLAS
 
 /* atlas.cpp */

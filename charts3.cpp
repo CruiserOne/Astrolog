@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: charts3.cpp
+** Astrolog (Version 7.20) File: charts3.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,12 +60,12 @@
 ******************************************************************************
 */
 
-/* Display a list of transit events. Called from ChartInDaySearch. */
+// Display a list of transit events. Called from ChartInDaySearch().
 
 void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
 {
   char sz[cchSzDef];
-  int nVoid, i, j, k, s1, s2, s3;
+  int fVoid, nVoid, i, j, k, s1, s2, s3;
 #ifdef EXPRESS
   int nEclipse;
   real rEclipse;
@@ -77,12 +77,50 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     // if so how long the Moon is v/c before entering next sign. This requires
     // the sign change event to be in the same list as the Moon aspect.
     nVoid = -1;
-    if (pid[i].aspect > 0 && (pid[i].source == oMoo || pid[i].dest == oMoo)) {
+    fVoid = FAspectVoid(pid[i].source, pid[i].dest, pid[i].aspect);
+#ifdef EXPRESS
+    // Adjust whether this aspect can be going v/c if AstroExpression says so.
+    if (!us.fExpOff && FSzSet(us.szExpVoid)) {
+      ExpSetN(iLetterV, 0);
+      ExpSetN(iLetterW, pid[i].source);
+      ExpSetN(iLetterX, pid[i].aspect);
+      ExpSetN(iLetterY, pid[i].dest);
+      ExpSetN(iLetterZ, fVoid);
+      ParseExpression(us.szExpVoid);
+      fVoid = NExpGet(iLetterZ);
+    }
+#endif
+    if (fVoid) {
       for (j = i+1; j < counttotal; j++) {
-        if (pid[j].aspect > 0 &&
-          (pid[j].source == oMoo || pid[j].dest == oMoo))
+        fVoid = FAspectVoid(pid[j].source, pid[j].dest, pid[j].aspect);
+#ifdef EXPRESS
+        // Adjust whether aspect can be going v/c if AstroExpression says so.
+        if (!us.fExpOff && FSzSet(us.szExpVoid)) {
+          ExpSetN(iLetterV, 0);
+          ExpSetN(iLetterW, pid[j].source);
+          ExpSetN(iLetterX, pid[j].aspect);
+          ExpSetN(iLetterY, pid[j].dest);
+          ExpSetN(iLetterZ, fVoid);
+          ParseExpression(us.szExpVoid);
+          fVoid = NExpGet(iLetterZ);
+        }
+#endif
+        if (fVoid)
           break;
-        if (pid[j].aspect == aSig && pid[j].source == oMoo) {
+        fVoid = (pid[j].aspect == aSig && pid[j].source == oMoo);
+#ifdef EXPRESS
+        // Adjust whether event can be ending v/c if AstroExpression says so.
+        if (!us.fExpOff && FSzSet(us.szExpVoid)) {
+          ExpSetN(iLetterV, 1);
+          ExpSetN(iLetterW, pid[j].source);
+          ExpSetN(iLetterX, pid[j].aspect);
+          ExpSetN(iLetterY, pid[j].dest);
+          ExpSetN(iLetterZ, fVoid);
+          ParseExpression(us.szExpVoid);
+          fVoid = NExpGet(iLetterZ);
+        }
+#endif
+        if (fVoid) {
           nVoid = pid[j].day - pid[i].day;
           if (nVoid < 0)
             nVoid += DayInMonth(pid[i].mon, pid[i].yea);
@@ -111,9 +149,9 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
       if (us.fEclipse && !us.fParallel) {
         if (pid[i].aspect == aCon)
           nEclipse = NCheckEclipse(pid[i].source, pid[i].dest, &rEclipse);
-        else if (pid[i].source == oSun && pid[i].dest == oMoo &&
-          pid[i].aspect == aOpp && us.objCenter == oEar)
-          nEclipse = NCheckEclipseLunar(&rEclipse);
+        else if (pid[i].aspect == aOpp && pid[i].source == oSun &&
+          ObjOrbit(pid[i].dest) == us.objCenter)
+          nEclipse = NCheckEclipseLunar(us.objCenter, pid[i].dest, &rEclipse);
       }
       ExpSetN(iLetterU, pid[i].source);
       ExpSetN(iLetterV, pid[i].aspect);
@@ -150,11 +188,11 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
 }
 
 
-/* Search through a day or longer period, and print out the times of exact   */
-/* aspects among planets during that day, as specified with the -d switch,   */
-/* as well as times when planets changes sign or direction. To do this, cast */
-/* charts for the beginning and end of the day (or a part of a day) and do a */
-/* linear equation check to see if anything happens during the interval.     */
+// Search through a day or longer period, and print out the times of exact
+// aspects among planets during that day, as specified with the -d switch,
+// as well as times when planets changes sign or direction. To do this, cast
+// charts for the beginning and end of the day (or a part of a day) and do a
+// linear equation check to see if anything happens during the interval.
 
 void ChartInDaySearch(flag fProg)
 {
@@ -238,7 +276,7 @@ void ChartInDaySearch(flag fProg)
 
       // Now search through the present segment for anything exciting.
 
-      for (i = 0; i <= cObj; i++)
+      for (i = 0; i <= is.nObj; i++)
         if (!FIgnore(i) && (fProg || us.fGraphAll || FThing(i))) {
         s1 = SFromZ(cp1.obj[i])-1;
         s2 = SFromZ(cp2.obj[i])-1;
@@ -297,9 +335,50 @@ void ChartInDaySearch(flag fProg)
           pid[occurcount].dest = cp2.dir[i] < 0.0;
           pid[occurcount].time = RAbs(cp1.dir[i])/(RAbs(cp1.dir[i])+
             RAbs(cp2.dir[i]))*divsiz + (real)(div-1)*divsiz;
-          pid[occurcount].pos1 = pid[occurcount].pos2 = (cp2.dir[i] < 0.0 ?
-            Max(cp1.obj[i], cp2.obj[i]) : Min(cp1.obj[i], cp2.obj[i]));
+          pid[occurcount].pos1 = pid[occurcount].pos2 =
+            RAbs(cp1.dir[i])/(RAbs(cp1.dir[i])+RAbs(cp2.dir[i])) *
+            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
           pid[occurcount].ret1 = pid[occurcount].ret2 = 0;
+          pid[occurcount].mon = mon0;
+          pid[occurcount].day = day0;
+          pid[occurcount].yea = yea0;
+          occurcount++;
+        }
+
+        // Does the current planet reach maximum or minimum latitude?
+
+        if (!us.fIgnoreDiralt && (cp1.diralt[i] < 0.0) != (cp2.diralt[i] < 0.0)
+          && FAllow(i) && occurcount < maxinday) {
+          pid[occurcount].source = i;
+          pid[occurcount].aspect = aAlt;
+          pid[occurcount].dest = cp2.diralt[i] < 0.0;
+          pid[occurcount].time = RAbs(cp1.diralt[i])/(RAbs(cp1.diralt[i])+
+            RAbs(cp2.diralt[i]))*divsiz + (real)(div-1)*divsiz;
+          pid[occurcount].pos1 = pid[occurcount].pos2 =
+            RAbs(cp1.diralt[i])/(RAbs(cp1.diralt[i])+RAbs(cp2.diralt[i])) *
+            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
+          pid[occurcount].ret1 = pid[occurcount].ret2 =
+            (int)RSgn(cp1.dir[i]) + (int)RSgn(cp2.dir[i]);
+          pid[occurcount].mon = mon0;
+          pid[occurcount].day = day0;
+          pid[occurcount].yea = yea0;
+          occurcount++;
+        }
+
+        // Does the current planet reach maximum or minimum distance?
+
+        if (!us.fIgnoreDirlen && (cp1.dirlen[i] < 0.0) != (cp2.dirlen[i] < 0.0)
+          && FAllow(i) && occurcount < maxinday) {
+          pid[occurcount].source = i;
+          pid[occurcount].aspect = aLen;
+          pid[occurcount].dest = cp2.dirlen[i] < 0.0;
+          pid[occurcount].time = RAbs(cp1.dirlen[i])/(RAbs(cp1.dirlen[i])+
+            RAbs(cp2.dirlen[i]))*divsiz + (real)(div-1)*divsiz;
+          pid[occurcount].pos1 = pid[occurcount].pos2 =
+            RAbs(cp1.dirlen[i])/(RAbs(cp1.dirlen[i])+RAbs(cp2.dirlen[i])) *
+            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
+          pid[occurcount].ret1 = pid[occurcount].ret2 =
+            (int)RSgn(cp1.dir[i]) + (int)RSgn(cp2.dir[i]);
           pid[occurcount].mon = mon0;
           pid[occurcount].day = day0;
           pid[occurcount].yea = yea0;
@@ -308,7 +387,7 @@ void ChartInDaySearch(flag fProg)
 
         // Now search for anything making an aspect to the current planet.
 
-        for (j = i+1; j <= cObj; j++)
+        for (j = i+1; j <= is.nObj; j++)
           if (!FIgnore(j) && (fProg || us.fGraphAll || FThing(j)))
           if (!us.fParallel) {
 
@@ -455,12 +534,14 @@ void ChartInDaySearch(flag fProg)
     // Finally, loop through and display each aspect and when it occurs.
 
     if (!fVoid || (day0 >= day2 && mon0 >= mon2 && yea0 >= yea2)) {
+      // If no v/c aspects, or reached end of period, output all at once.
       if (fVoid) {
         occurcount += (int)(pid - id);
         pid = id;
       }
       PrintInDays(id, occurcount, occurcount, fProg);
     } else {
+      // Output a chunk of events, knowing there's more to come.
       pid += occurcount;
       j = MAXINDAY >> 2;
       if (pid - id > j << 1) {
@@ -493,11 +574,11 @@ void ChartInDaySearch(flag fProg)
 }
 
 
-/* Search through a month, year, or years, and print out the times of exact */
-/* transits where planets in the time frame make aspect to the planets in   */
-/* some other chart, as specified with the -t switch. To do this, we cast   */
-/* charts for the start and end of each month, or within a month, and do an */
-/* equation check for aspects to the other base chart during the interval.  */
+// Search through a month, year, or years, and print out the times of exact
+// transits where planets in the time frame make aspect to the planets in
+// some other chart, as specified with the -t switch. To do this, cast charts
+// for the start and end of each month, or within a month, and do an equation
+// check for aspects to the other base chart during the interval.
 
 void ChartTransitSearch(flag fProg)
 {
@@ -591,7 +672,7 @@ void ChartTransitSearch(flag fProg)
       // Now search through the present segment for any transits. Note that
       // stars can be transited, but they can't make transits themselves.
 
-      for (i = 0; i <= cObj; i++) {
+      for (i = 0; i <= is.nObj; i++) {
 
         // Check if 3D house change occurs during time segment.
 
@@ -601,7 +682,7 @@ void ChartTransitSearch(flag fProg)
           e2 = cp2.obj[i]; f2 = RHousePlaceIn3D(e2, cp2.alt[i]);
           s1 = SFromZ(f1)-1; s2 = SFromZ(f2)-1;
           k = NAbs(s1-s2);
-          if (s1 != s2 && (k == 1 || k == cSign-1) && !FIgnore(cuspLo-1+k) &&
+          if (s1 != s2 && (k == 1 || k == cSign-1) && !FIgnore(cuspLo+s2) &&
             occurcount < MAXINDAY) {
             source[occurcount] = i;
             aspect[occurcount] = aHou;
@@ -786,20 +867,20 @@ void ChartTransitSearch(flag fProg)
 }
 
 
-/* Print a chart graphing transits over time. This covers both transit to   */
-/* transit (-B switch) and transit to natal (-V switch). Each aspect        */
-/* present during the period has its own row, showing its strength from 0-9 */
-/* (blank=aspect out of orb, "0"=0-9% of max strength, "9"=90-100% exact).  */
+// Print a chart graphing transits over time. This covers both transit
+// to transit (-B switch) and transit to natal (-V switch). Each aspect 
+// present during the period has its own row, showing its strength from 0-9
+// (blank=aspect out of orb, "0"=0-9% of max strength, "9"=90-100% exact).
 
 void ChartTransitGraph(flag fTrans, flag fProg)
 {
   TransGraInfo *rgEph;
   word **ppw, *pw, *pw2;
   char sz[cchSzDef];
-  int cAsp, cSlice, occurcount = 0, ymin, x, y, asp, iw, iwFocus, nMax,
-    n, ch, obj, et;
+  int cAsp, cSlice, cYea, dYea, occurcount = 0, ymin, x0, y0, x, y, asp,
+    iw, iwFocus, nMax, n, ch, obj, et;
   flag fMonth = us.fInDayMonth, fYear = us.fInDayYear, fMark, fEclipse =
-    us.fEclipse && !fTrans && us.objCenter == oEar && !us.fParallel;
+    us.fEclipse && !fTrans && !us.fParallel;
   CI ciT;
   real rT, rPct;
 
@@ -828,8 +909,10 @@ void ChartTransitGraph(flag fTrans, flag fProg)
     cSlice = 12*5;
     iwFocus = (ciT.mon-1)*5 + (Min(ciT.day, 30)-1)/6;
   } else {
-    cSlice = 5*12;
-    iwFocus = 12*2 + (ciT.mon-1);
+    cYea = Max(us.nEphemYears, 2); cYea = Min(cYea, 21);
+    dYea = (cYea - 1) >> 1;
+    cSlice = cYea*12;
+    iwFocus = dYea*12 + (ciT.mon-1);
   }
   if (iwFocus == 0 && ciT.tim <= 0.0)
     iwFocus = -1;
@@ -857,7 +940,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
     } else {
       MM = (iw % 12) + 1;
       DD = 1;
-      YY = YY - 2 + (iw / 12);
+      YY = YY - dYea + (iw / 12);
       TT = 0.0;
     }
 
@@ -884,10 +967,10 @@ void ChartTransitGraph(flag fTrans, flag fProg)
     }
 
     // For each aspect present in slice, add its strength to array.
-    for (y = ymin; y <= cObj; y++) {
+    for (y = ymin; y <= is.nObj; y++) {
       if (FIgnore(y) || (!fTrans && !FProperGraph(y)))
         continue;
-      for (x = 0; x < (fTrans ? cObj+1 : y); x++) {
+      for (x = 0; x < (fTrans ? is.nObj+1 : y); x++) {
         if (!fTrans ? FIgnore(x) || !FProperGraph(x) :
           FIgnore2(x) || !FProperGraph(x) || (is.fReturn && x != y))
           continue;
@@ -914,8 +997,8 @@ void ChartTransitGraph(flag fTrans, flag fProg)
           et = etNone;
           if (asp == aCon)
             et = NCheckEclipse(x, y, &rPct);
-          else if (asp == aOpp && x == oSun && y == oMoo)
-            et = NCheckEclipseLunar(&rPct);
+          else if (asp == aOpp && x == oSun && ObjOrbit(y) == us.objCenter)
+            et = NCheckEclipseLunar(us.objCenter, y, &rPct);
           if (et > etNone) {
             ppw = &(*rgEph)[y][x][asp];
             if (*ppw == NULL) {
@@ -978,9 +1061,9 @@ void ChartTransitGraph(flag fTrans, flag fProg)
         PrintSz("  ");
     }
   } else {
-    for (iw = 0; iw < 5; iw++) {
+    for (iw = 0; iw < cYea; iw++) {
       AnsiColor(!FOdd(iw) ? kLtGrayA : kDkGrayA);
-      sprintf(sz, "%-12d", (fTrans || fProg ? YeaT : Yea) - 2 + iw);
+      sprintf(sz, "%-12d", (fTrans || fProg ? YeaT : Yea) - dYea + iw);
       PrintSz(sz);
     }
     PrintL();
@@ -994,8 +1077,10 @@ void ChartTransitGraph(flag fTrans, flag fProg)
   PrintL();
 
   // Print the individual aspects present in order.
-  for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+  for (y0 = ymin; y0 <= is.nObj; y0++) {
+    y = rgobjList[y0];
+    for (x0 = 0; x0 < (fTrans ? is.nObj+1 : y); x0++) {
+      x = rgobjList[x0];
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw == NULL)
@@ -1063,14 +1148,16 @@ void ChartTransitGraph(flag fTrans, flag fProg)
         }
         PrintL();
       }
+    }
+  }
   if (occurcount == 0)
     PrintSz("No transits found.\n");
 
   // Free temporarily allocated data, and restore original chart.
 LDone:
   AnsiColor(kDefault);
-  for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+  for (y = ymin; y <= is.nObj; y++)
+    for (x = 0; x < (fTrans ? is.nObj+1 : y); x++)
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw != NULL)
@@ -1089,12 +1176,12 @@ LDone:
 }
 
 
-/* Display a list of planetary rising times relative to the local horizon */
-/* for the day indicated in the chart information, as specified with the  */
-/* -Zd switch. For the day, the time each planet rises (transits horizon  */
-/* in East half of sky), sets (transits horizon in West), reaches its     */
-/* zenith point (transits meridian in South half of sky), and nadirs      */
-/* transits meridian in North), is displayed.                             */
+// Display a list of planetary rising times relative to the local horizon for
+// the day indicated in the chart information, as specified with the -Zd
+// switch. For the day, the time each planet rises (transits horizon in East
+// half of sky), sets (transits horizon in West), reaches its zenith point
+// (transits meridian in South half of sky), and nadirs (transits meridian in
+// North), is displayed.
 
 void ChartInDayHorizon(void)
 {
@@ -1146,7 +1233,7 @@ void ChartInDayHorizon(void)
   mc2 = planet[oMC]; k = planetalt[oMC];
   EclToEqu(&mc2, &k);
   cp2 = cp0;
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     rgalt2[i] = planetalt[i];
 
   // Loop through the day, dividing it into a certain number of segments.
@@ -1160,14 +1247,14 @@ void ChartInDayHorizon(void)
     mc2 = planet[oMC]; k = planetalt[oMC];
     EclToEqu(&mc2, &k);
     cp1 = cp2; cp2 = cp0;
-    for (i = 1; i <= cObj; i++) {
+    for (i = 0; i <= is.nObj; i++) {
       rgalt1[i] = rgalt2[i]; rgalt2[i] = planetalt[i];
     }
 
     // For our segment, check to see if each planet during it rises, sets,
     // reaches its zenith, or reaches its nadir.
 
-    for (i = 0; i <= cObj; i++) if (!ignore[i] && FThing(i)) {
+    for (i = 0; i <= is.nObj; i++) if (!ignore[i] && FThing(i)) {
       EclToHorizon(&azi1, &alt1, cp1.obj[i], rgalt1[i], mc1, Lat);
       EclToHorizon(&azi2, &alt2, cp2.obj[i], rgalt2[i], mc2, Lat);
       j = 0;
@@ -1296,9 +1383,9 @@ void ChartInDayHorizon(void)
 }
 
 
-/* Print out an ephemeris - the positions of the planets (at the time in the */
-/* current chart) each day during a specified month, as done with the -E     */
-/* switch. Display the ephemeris for the whole year if -Ey is in effect.     */
+// Print out an ephemeris - the positions of the planets (at the time in the
+// current chart) each day during a specified month, as done with the -E
+// switch. Display the ephemeris for the whole year if -Ey is in effect.
 
 void ChartEphemeris(void)
 {
@@ -1339,7 +1426,7 @@ void ChartEphemeris(void)
         PrintSz(us.fEuroDate ? "Dy/Mo/Year" : "Mo/Dy/Year");
       else
         PrintSz(us.fEuroDate ? "Dy/Mo/Yr" : "Mo/Dy/Yr");
-      for (k = 0; k <= cObj; k++) {
+      for (k = 0; k <= is.nObj; k++) {
         j = rgobjList[k];
         if (FIgnore(j))
           continue;
@@ -1366,7 +1453,7 @@ void ChartEphemeris(void)
       fWantHeader = fTrue;
       PrintSz(SzDate(mon, i, yea, is.fSeconds-1));
       PrintCh(' ');
-      for (k = 0; k <= cObj; k++) {
+      for (k = 0; k <= is.nObj; k++) {
         j = rgobjList[k];
         if (FIgnore(j))
           continue;
@@ -1405,7 +1492,7 @@ void ChartEphemeris(void)
           AnsiColor(kDefault);
           PrintCh(chRet2);
         }
-        if (k < cObj)
+        if (k < is.nObj)
           PrintTab(' ', 1 - (ret[j] < 0.0) + is.fSeconds);
       }
       PrintL();

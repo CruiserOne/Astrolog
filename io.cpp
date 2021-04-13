@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: io.cpp
+** Astrolog (Version 7.20) File: io.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,10 +60,10 @@
 ******************************************************************************
 */
 
-/* Open the file indicated by the given string and return the file's stream */
-/* pointer, or NULL if the file couldn't be found or opened. All parts of   */
-/* the program which open files to read call this routine. We look in       */
-/* several various locations and directories for the file before giving up. */
+// Open the file indicated by the given string and return the file's stream
+// pointer, or NULL if the file couldn't be found or opened. All parts of the
+// program which open files to read call this routine. We look in several
+// various locations and directories for the file before giving up.
 
 FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
 {
@@ -75,7 +75,7 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
   int i, j;
 
   // Some file types we want to open as binary instead of Ascii.
-  sprintf(szMode, "r%s", nFileMode == 2 ? "b" : "");
+  sprintf(szMode, "r%s", nFileMode >= 2 ? "b" : "");
 
   for (i = 0; i <= 1; i++) {
     if (i <= 0)
@@ -173,17 +173,48 @@ LDone:
 }
 
 
-/* This is Astrolog's generic file processing routine, which handles chart */
-/* info files, position files, and config files. Given a file name or a    */
-/* file handle, run through each line as a series of command switches.     */
+// Read an 8 bit byte from a file.
+
+byte BRead(FILE *file)
+{
+  return getc(file);
+}
+
+
+// Read a 16 bit word from a file.
+
+word WRead(FILE *file)
+{
+  byte b1, b2;
+
+  b1 = getbyte(); b2 = getbyte();
+  return WFromBB(b1, b2);
+}
+
+
+// Read a 32 bit long from a file.
+
+dword LRead(FILE *file)
+{
+  byte b1, b2, b3, b4;
+
+  b1 = getbyte(); b2 = getbyte(); b3 = getbyte(); b4 = getbyte();
+  return LFromWW(WFromBB(b1, b2), WFromBB(b3, b4));
+}
+
+
+// This is Astrolog's generic file processing routine, which handles chart
+// info files, position files, and config files. Given a file name or a file
+// handle, run through each line as a series of command switches.
 
 flag FProcessSwitchFile(CONST char *szFile, FILE *file)
 {
   char szLine[cchSzLine], *argv[MAXSWITCHES], ch;
   int argc, i;
-  flag fRet = fFalse;
+  flag fHaveFile, fRet = fFalse;
 
-  if (file == NULL) {
+  fHaveFile = (file != NULL);
+  if (!fHaveFile) {
     file = FileOpen(szFile, 0, NULL);
     if (file == NULL)
       goto LDone;
@@ -217,23 +248,28 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
 
 LDone:
   is.fileIn = NULL;
+  if (!fHaveFile)
+    fclose(file);
   return fRet;
 }
 
 
-/* Take the current chart information, and write it out to the file   */
-/* as indicated by the -o switch. This is only executed at the end of */
-/* program execution if the -o switch is in effect.                   */
+// Take the current chart information, and write it out to the file as
+// indicated by the -o switch. This is only executed at the end of program
+// execution if the -o switch is in effect.
 
 flag FOutputData(void)
 {
-  char sz[cchSzDef], *pch;
+  char sz[cchSzMax], *pch;
   FILE *file;
-  int i, j;
+  int i, j, iMax;
   real dst, rT;
 
-  if (us.fWriteDef)              // If -od switch in effect then write
-    return FOutputSettings();    // current program settings to file.
+  if (us.fWriteDef)                 // If -od switch in effect then write
+    return FOutputSettings();       // current program settings to file.
+  else if (us.fWriteAAF)            // If -oa switch in effect then write
+    return FOutputAAFFile();        // chart info to AAF format.
+
   if (us.fNoWrite)
     return fFalse;
   file = fopen(is.szFileOut, "w");  // Create and open the file for output.
@@ -309,7 +345,8 @@ flag FOutputData(void)
     } else {
       fprintf(file, "@AP%s  ; %s chart positions.\n", szVerCore, szAppName);
       fprintf(file, "%czi \"%s\" \"%s\"\n", chSwitch, ciMain.nam, ciMain.loc);
-      for (i = 0; i <= cObj; i++) if (!ignore[i] || FCusp(i)) {
+      iMax = Max(is.nObj, cuspHi);
+      for (i = 0; i <= iMax; i++) if (!ignore[i] || FCusp(i)) {
         fprintf(file, "%cYF ", chSwitch);
         if (i <= oNorm)
           fprintf(file, "%-4.4s", szObjName[i]);
@@ -342,10 +379,183 @@ flag FOutputData(void)
 }
 
 
-/* Take many of the user visible settings, and write them out to a new   */
-/* command switch file, which may be read in to restore those settings.  */
-/* Most often this would be used to create a new astrolog.as default     */
-/* settings file. This is called from File / Save Settings menu command. */
+#define AdvancePast(ch) while (*pch && *pch != (ch)) pch++; \
+  if (*pch == (ch)) pch++;
+
+// Load an Astrological Exchange Format (AAF) file into the default set of
+// chart information, given a file name or a file handle.
+
+flag FProcessAAFFile(CONST char *szFile, FILE *file)
+{
+  char szLine[cchSzLine], sz[cchSzMax], *pch, *sz1, *sz2, ch;
+  int i;
+  flag fHaveFile, fRet = fFalse;
+
+  fHaveFile = (file != NULL);
+  if (!fHaveFile) {
+    file = FileOpen(szFile, 0, NULL);
+    if (file == NULL)
+      goto LDone;
+  }
+  is.fileIn = file;
+
+  loop {
+    while (!feof(file) && (ch = getc(file)) < ' ')
+      ;
+    if (feof(file))
+      break;
+    for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file) &&
+      (uchar)(szLine[i] = getc(file)) >= ' '; i++)
+      ;
+    szLine[i] = chNull;
+    if (szLine[0] != '#') {
+      sprintf(szLine,
+        "The AAF file '%s' has a line not starting with '#' (character %d).",
+        szFile, (int)ch);
+      PrintWarning(szLine);
+      goto LDone;
+    }
+    if (szLine[1] == ':')  // Skip over comment lines
+      continue;
+
+    // Input row #1.
+    if (FEqRgch(szLine, "#A93:", 5, fFalse)) {
+      sz1 = pch = szLine + 5;
+      AdvancePast(',');
+      pch[-1] = chNull;
+      sz2 = pch;
+      AdvancePast(',');
+      pch[-1] = chNull;
+      if (*sz1 && NCompareSz(sz1, "*") != 0)
+        sprintf(sz, "%s %s", sz2, sz1);
+      else
+        sprintf(sz, "%s", sz2);
+      ciCore.nam = SzPersist(sz);
+      AdvancePast(',');
+      DD = NFromSz(pch);
+      AdvancePast('.');
+      MM = NParseSz(pch, pmMon);
+      AdvancePast('.');
+      YY = NParseSz(pch, pmYea);
+      AdvancePast(',');
+      TT = RParseSz(pch, pmTim);
+      AdvancePast(',');
+      sz1 = pch;
+      AdvancePast(',');
+      pch[-1] = chNull;
+      sz2 = pch;
+      // Convert something like "Seattle, WA (USA)" to "Seattle, WA, USA".
+      AdvancePast('(');
+      if (pch[-1] == '(') {
+        pch[-2] = ','; pch[-1] = ' ';
+        for (; *pch; pch++)
+          if (*pch == ')')
+            *pch = chNull;
+      }
+      if (*sz1)
+        sprintf(sz, "%s, %s", sz1, sz2);
+      else
+        sprintf(sz, "%s", sz2);
+      ciCore.loc = SzPersist(sz);
+
+    // Input row #2.
+    } else if (FEqRgch(szLine, "#B93:", 5, fFalse)) {
+      pch = szLine + 5;
+      AdvancePast(',');
+      AA = RParseSz(pch, pmLon);
+      AdvancePast(',');
+      OO = RParseSz(pch, pmLat);
+      AdvancePast(',');
+      ZZ = RParseSz(pch, pmZon);
+      AdvancePast(',');
+      if (*pch == 'D')
+        SS = 2.0;      // Double Daylight Saving time
+      else
+        SS = RParseSz(pch, pmDst);
+    } else {
+      sprintf(szLine,
+        "The AAF file '%s' has a line that can't be parsed.", szFile);
+      PrintWarning(szLine);
+      goto LDone;
+    }
+  }
+  fRet = fTrue;
+
+LDone:
+  is.fileIn = NULL;
+  if (!fHaveFile)
+    fclose(file);
+  return fRet;
+}
+
+
+// Write the current chart information to an Astrological Exchange Format
+// (AAF) file, as indicated by the -oa switch.
+
+flag FOutputAAFFile(void)
+{
+  char sz[cchSzMax], *pch;
+  FILE *file;
+  int nSav;
+  flag fSav;
+
+  if (us.fNoWrite)
+    return fFalse;
+  file = fopen(is.szFileOut, "w");  // Create and open the file for output.
+  if (file == NULL) {
+    sprintf(sz, "AAF file '%s' can not be created.", is.szFileOut);
+    PrintError(sz);
+    return fFalse;
+  }
+
+  fprintf(file, "#: %s %s\n", szAppName, szVersionCore);
+
+  // Output row #1.
+  fprintf(file, "#A93:*,");
+  for (pch = ciMain.nam; *pch; pch++)
+    putc(*pch == ',' ? ';' : *pch, file);
+  fSav = us.fEuroTime; us.fEuroTime = fTrue;
+  fprintf(file, ",*,%d.%d.%d,%s,", Day, Mon, Yea, SzTim(Tim));
+  us.fEuroTime = fSav;
+  for (pch = ciMain.loc; *pch && *pch != ','; pch++)
+    putc(*pch, file);
+  putc(',', file);
+  if (!*pch)
+    putc('*', file);
+  else {
+    // Convert commas to other characters, since they delimit fields.
+    for (pch++; *pch == ' '; pch++)
+      ;
+    for (; *pch && *pch != ','; pch++)
+      putc(*pch, file);
+    if (*pch == ',') {
+      // Convert something like "Seattle, WA, USA" to "Seattle, WA (USA)".
+      fprintf(file, " (");
+      for (pch++; *pch == ' '; pch++)
+        ;
+      for (; *pch; pch++)
+        putc(*pch == ',' ? ';' : *pch, file);
+      putc(')', file);
+    }
+  }
+
+  // Output row #2.
+  nSav = us.fAnsiChar; us.fAnsiChar = 4;
+  fprintf(file, "\n#B93:%f,%s,%s,", JulianDayFromTime(is.T),
+    SzLocation(Lon, Lat), Zon != zonLMT ? SzZone(Zon) : "*");
+  us.fAnsiChar = nSav;
+  fprintf(file, "%c\n", Zon == zonLMT ? 'L' : (Dst != 0.0 ? '1' : '0'));
+
+  fprintf(file, "#: AAF end\n");
+  fclose(file);
+  return fTrue;
+}
+
+
+// Take many of the user visible settings, and write them out to a new command
+// switch file, which may be read in to restore those settings. Most often
+// this would be used to create a new astrolog.as default settings file. This
+// is called from the -od switch and the File / Save Settings menu command.
 
 flag FOutputSettings()
 {
@@ -451,9 +661,9 @@ flag FOutputSettings()
   sprintf(sz, "%cY8     ", ChDashF(us.fClip80)); PrintFSz();
   PrintF(
     "; Clip text to end of line  [\"=Y8\" clips, \"_Y8\" doesn't clip   ]\n");
-  sprintf(sz, "%cYu     ", ChDashF(us.fEclipse)); PrintFSz();
+  sprintf(sz, "%cYu0    ", ChDashF(us.fEclipse)); PrintFSz();
   PrintF(
-    "; Show eclipse information  [\"=Yu\" shows, \"_Yu\" doesn't show   ]\n");
+    "; Show eclipse information  [\"=Yu0\" shows, \"_Yu0\" doesn't show ]\n");
 
   PrintF("\n\n; FILE PATHS (-Yi1 through -Yi9):\n; For example, "
     "point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.\n\n");
@@ -466,7 +676,11 @@ flag FOutputSettings()
     ";  0-10: Ear Sun Moo Mer Ven Mar Jup Sat Ura Nep Plu\n"
     "; 11-21: Chi Cer Pal Jun Ves Nor Sou Lil For Ver EP\n"
     "; 22-33: Asc 2nd 3rd Nad 5th 6th Des 8th 9th MC 11th 12th\n"
-    "; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos\n\n-YR 0 10     ");
+    "; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos\n"
+    "; 43-51: Hyg Pho Eri Hau Mak Gon Qua Sed Orc\n"
+    "; 52-83: Planetary moons\n"
+    "; 84-130: Fixed stars\n"
+    "\n-YR 0 10     ");
   for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore[i]));
   PrintF("   ; Planets\n-YR 11 21    ");
   for (i = 11; i <= 21; i++) PrintF(SzNumF(ignore[i]));
@@ -474,7 +688,9 @@ flag FOutputSettings()
   for (i = 22; i <= 33; i++) PrintF(SzNumF(ignore[i]));
   PrintF(" ; House cusps\n-YR 34 42    ");
   for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("       ; Uranians\n\n");
+  PrintF("       ; Uranians\n-YR 43 51    ");
+  for (i = 43; i <= 51; i++) PrintF(SzNumF(ignore[i]));
+  PrintF("       ; Dwarfs\n\n");
 
   PrintF("; DEFAULT TRANSIT RESTRICTIONS:\n\n-YRT 0 10    ");
   for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore2[i]));
@@ -484,10 +700,14 @@ flag FOutputSettings()
   for (i = 22; i <= 33; i++) PrintF(SzNumF(ignore2[i]));
   PrintF(" ; House cusps\n-YRT 34 42   ");
   for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF("       ; Uranians\n\n");
+  PrintF("       ; Uranians\n-YRT 43 51   ");
+  for (i = 43; i <= 51; i++) PrintF(SzNumF(ignore2[i]));
+  PrintF("       ; Dwarfs\n\n");
 
-  sprintf(sz, "-YR0 %s%s ; Restrict sign, direction changes\n\n",
+  sprintf(sz, "-YR0 %s%s ; Restrict sign, direction changes\n",
     SzNumF(us.fIgnoreSign), SzNumF(us.fIgnoreDir)); PrintFSz();
+  sprintf(sz, "-YR1 %s%s ; Restrict latitude, distance events\n\n",
+    SzNumF(us.fIgnoreDiralt), SzNumF(us.fIgnoreDirlen)); PrintFSz();
   PrintF("-YR7 ");
   for (i = 0; i < 5; i++) PrintF(SzNumF(ignore7[i]));
   PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n\n\n");
@@ -511,8 +731,10 @@ flag FOutputSettings()
   for (i = 22; i <= 33; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
   PrintF("  ; Cusp objects\n-YAm 34 42  ");
   for (i = 34; i <= 42; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
-  PrintF("              ; Uranians\n-YAm 43 43  ");
-  sprintf(sz, "%4.0f", rObjOrb[43]); PrintFSz();
+  PrintF("              ; Uranians\n-YAm 43 51  ");
+  for (i = 43; i <= 51; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  PrintF("              ; Dwarfs\n-YAm 84 84  ");
+  sprintf(sz, "%4.0f", rObjOrb[52]); PrintFSz();
   PrintF("                                              ; Fixed stars\n");
 
   PrintF("\n; DEFAULT PLANET ASPECT ORB ADDITIONS:\n\n-YAd 0 10   ");
@@ -523,21 +745,30 @@ flag FOutputSettings()
   for (i = 22; i <= 33; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
   PrintF("  ; Cusp objects\n-YAd 34 42  ");
   for (i = 34; i <= 42; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
-  PrintF("        ; Uranians\n-YAd 43 43  ");
-  sprintf(sz, " %.0f", rObjAdd[43]); PrintFSz();
+  PrintF("        ; Uranians\n-YAd 43 51  ");
+  for (i = 43; i <= 51; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  PrintF("        ; Dwarfs\n-YAd 84 84  ");
+  sprintf(sz, " %.0f", rObjAdd[52]); PrintFSz();
   PrintF("                        ; Fixed stars\n\n\n");
 
   PrintF("; DEFAULT INFLUENCES:\n\n-Yj 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("        ; Planets\n-Yj 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("                ; Minor planets\n-Yj 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
+  for (i = 0; i <= 10; i++)
+    { sprintf(sz, " %2.0f", rObjInf[i]); PrintFSz(); }
+  PrintF("     ; Planets\n-Yj 11 21  ");
+  for (i = 11; i <= 21; i++)
+    { sprintf(sz, " %2.0f", rObjInf[i]); PrintFSz(); }
+  PrintF("     ; Minor planets\n-Yj 22 33  ");
+  for (i = 22; i <= 33; i++)
+    { sprintf(sz, " %2.0f", rObjInf[i]); PrintFSz(); }
   PrintF("  ; Cusp objects\n-Yj 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, " %.0f", rObjInf[i]); PrintFSz(); }
-  PrintF("                    ; Uranians\n-Yj 43 43   ");
-  sprintf(sz, "%.0f", rObjInf[43]); PrintFSz();
-  PrintF("                                    ; Fixed stars\n\n");
+  for (i = 34; i <= 42; i++)
+    { sprintf(sz, " %2.0f", rObjInf[i]); PrintFSz(); }
+  PrintF("           ; Uranians\n-Yj 43 51  ");
+  for (i = 43; i <= 51; i++)
+    { sprintf(sz, " %2.0f", rObjInf[i]); PrintFSz(); }
+  PrintF("           ; Dwarfs\n-Yj 84 84   ");
+  sprintf(sz, "%2.0f", rObjInf[84]); PrintFSz();
+  PrintF("                                   ; Fixed stars\n\n");
 
   PrintF("-YjC 1 12  ");
   for (i = 1; i <= cSign; i++)
@@ -553,16 +784,19 @@ flag FOutputSettings()
 
   PrintF("; DEFAULT TRANSIT INFLUENCES:\n\n-YjT 0 10  ");
   for (i = 0; i <= 10; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
+    { sprintf(sz, " %2.0f", rTransitInf[i]); PrintFSz(); }
   PrintF("  ; Planets\n-YjT 11 21 ");
   for (i = 11; i <= 21; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
-  PrintF("    ; Minor planets\n-YjT 34 42 ");
+    { sprintf(sz, " %2.0f", rTransitInf[i]); PrintFSz(); }
+  PrintF("  ; Minor planets\n-YjT 34 42 ");
   for (i = 34; i <= 42; i++)
-    { sprintf(sz, " %.0f", rTransitInf[i]); PrintFSz(); }
-  PrintF("      ; Uranians\n-YjT 43 43  ");
-  sprintf(sz, "%.0f", rTransitInf[43]); PrintFSz();
-  PrintF("                             ; Fixed stars\n\n");
+    { sprintf(sz, " %2.0f", rTransitInf[i]); PrintFSz(); }
+  PrintF("        ; Uranians\n-YjT 43 51 ");
+  for (i = 43; i <= 51; i++)
+    { sprintf(sz, " %2.0f", rTransitInf[i]); PrintFSz(); }
+  PrintF("        ; Dwarfs\n-YjT 84 84  ");
+  sprintf(sz, "%2.0f", rTransitInf[84]); PrintFSz();
+  PrintF("                                ; Fixed stars\n\n");
 
   sprintf(sz, "-Yj0 %.0f %.0f %.0f %.0f ",
     rObjInf[oNorm1 + 1], rObjInf[oNorm1 + 2], rHouseInf[cSign + 1],
@@ -582,9 +816,16 @@ flag FOutputSettings()
   PrintF("             ; Planets\n-Y7O 34 42 ");
   for (i = 34; i <= 42; i++)
     { sprintf(sz, " %d", rgObjRay[i]); PrintFSz(); }
-  PrintF("                 ; Uranians\n\n\n");
+  PrintF("                 ; Uranians\n-Y7O 43 51 ");
+  for (i = 43; i <= 51; i++)
+    { sprintf(sz, " %d", rgObjRay[i]); PrintFSz(); }
+  PrintF("                 ; Dwarfs\n\n\n");
 
-  PrintF("; DEFAULT COLORS:\n\n-YkO 0 10  ");
+  PrintF("; DEFAULT COLORS:\n; Black, White, Gray, LtGray, "
+    "Red, Orange, Yellow, Green, Cyan, Blue, Purple,\n"
+    "; Magenta, Maroon, DkGreen, DkCyan, DkBlue; "
+    "Element, Ray, Star, Planet\n"
+    "\n-YkO 0 10  ");
   for (i = 0; i <= 10; i++)
     { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
   PrintF("      ; Planet colors\n-YkO 11 21 ");
@@ -596,7 +837,21 @@ flag FOutputSettings()
   PrintF("  ; Cusp colors\n-YkO 34 42 ");
   for (i = 34; i <= 42; i++)
     { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
-  PrintF("              ; Uranian colors\n\n-YkA 1 5   ");
+  PrintF("              ; Uranian colors\n-YkO 43 51 ");
+  for (i = 43; i <= 51; i++)
+    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
+  PrintF("              ; Dwarf colors\n-YkO 52 63 ");
+  for (i = 52; i <= 63; i++)
+    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
+  PrintF("  ; Moons\n-YkO 64 75 ");
+  for (i = 64; i <= 75; i++)
+    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
+  PrintF("  ; Moons\n-YkO 76 83 ");
+  for (i = 76; i <= 83; i++)
+    { sprintf(sz, " %.3s", szColor[kObjU[i]]); PrintFSz(); }
+  PrintF("                  ; Moons\n-YkO 84 84 ");
+  sprintf(sz, " %.3s", szColor[kObjU[84]]); PrintFSz();
+  PrintTab(' ', 45); PrintF("; Fixed stars\n\n-YkA 1 5   ");
 
   for (i = 1; i <= 5; i++)
     { sprintf(sz, " %.3s", szColor[kAspA[i]]); PrintFSz(); }
@@ -621,6 +876,7 @@ flag FOutputSettings()
     { sprintf(sz, " %.3s", szColor[kMainA[i]]); PrintFSz(); }
   PrintF("  ; Main colors\n\n\n");
 
+#ifdef GRAPH
   PrintF("; GRAPHICS DEFAULTS:\n\n");
   sprintf(sz, "%cXm              ", ChDashF(gs.fColor)); PrintFSz();
   PrintF("; Color charts       [\"=Xm\" is color, \"_Xm\" is monochrome]\n");
@@ -639,9 +895,10 @@ flag FOutputSettings()
   sprintf(sz, "%cXu              ", ChDashF(gs.fBorder)); PrintFSz();
   PrintF(
     "; Chart border  [\"=Xu\" shows border, \"_Xu\" doesn't show     ]\n");
-  sprintf(sz, ":Xb%c             ", ChUncap(gs.chBmpMode)); PrintFSz();
+  sprintf(sz, ":Xb%c             ", gi.fBmp ? 'w' : ChUncap(gs.chBmpMode));
+  PrintFSz();
   PrintF(
-    "; Bitmap file type   [\"Xbb\" is Windows .bmp, \"Xbn\" is X11   ]\n");
+    "; Bitmap file type   [\"Xbw\" is Windows .bmp, \"Xbn\" is X11   ]\n");
   sprintf(sz, ":YXG %04d        ", gs.nGlyphs); PrintFSz();
   PrintF("; Glyph selections   [Capricorn, Uranus, Pluto, Lilith]\n");
   sprintf(sz, ":YXg %d           ", gs.nGridCell); PrintFSz();
@@ -662,6 +919,7 @@ flag FOutputSettings()
   PrintF("; PostScript paper X and Y sizes\n\n");
   sprintf(sz, "%cX               ", ChDashF(us.fGraphics)); PrintFSz();
   PrintF("; Graphics chart display [\"_X\" is text, \"=X\" is graphics]\n");
+#endif
 
   sprintf(sz, "\n; %s\n", DEFAULT_INFOFILE); PrintFSz();
   fclose(file);
@@ -675,7 +933,7 @@ flag FOutputSettings()
 ******************************************************************************
 */
 
-/* Convert a string to an integer. */
+// Convert a string to an integer.
 
 int NFromSz(CONST char *sz)
 {
@@ -688,7 +946,7 @@ int NFromSz(CONST char *sz)
 }
 
 
-/* Convert a string to a real number. */
+// Convert a string to a real number.
 
 real RFromSz(CONST char *sz)
 {
@@ -701,9 +959,9 @@ real RFromSz(CONST char *sz)
 }
 
 
-/* Given a string, return an index number corresponding to what the string */
-/* indicates, based on a given parsing mode. In most cases this is mainly  */
-/* looking up a string in the appropriate array and returning the index.   */
+// Given a string, return an index number corresponding to what the string
+// indicates, based on a given parsing mode. In most cases this is mainly
+// looking up a string in the appropriate array and returning the index.
 
 int NParseSz(CONST char *szEntry, int pm)
 {
@@ -723,7 +981,7 @@ int NParseSz(CONST char *szEntry, int pm)
     return NParseExpression(sz+1);
 #endif
 
-  if (cch >= 3) {
+  if (cch >= 3 - (pm == pmObject)) {
     ch0 = ChCap(sz[0]); ch1 = ChUncap(sz[1]); ch2 = ChUncap(sz[2]);
     switch (pm) {
     // Parse months, e.g. "February" or "Feb" -> 2 for February.
@@ -776,12 +1034,12 @@ int NParseSz(CONST char *szEntry, int pm)
       break;
     // Parse color indexes, e.g. "White" or "Whi" -> 15 for White.
     case pmColor:
-      if (FMatchSz(sz, "Ray")) {
+      if (FMatchSz("Ray", sz)) {
         i = atoi(sz + 3);
         if (FBetween(i, 1, cRay))
           return kRayA[i];
       }
-      for (i = 0; i < cColor+2; i++)
+      for (i = 0; i < cColor+4; i++)
         if (FMatchSz(sz, szColor[i]))
           return i;
       for (i = 0; i < cElem; i++)
@@ -811,7 +1069,7 @@ int NParseSz(CONST char *szEntry, int pm)
             break;
         }
       }
-      i = Rgb(RGBB(i), RGBG(i), RGBR(i));
+      i = Rgb(RgbB(i), RgbG(i), RgbR(i));
       return i;
     // Parse day of week, e.g. "Monday" or "Mon" -> 1 for Monday.
     case pmWeek:
@@ -847,8 +1105,8 @@ int NParseSz(CONST char *szEntry, int pm)
 }
 
 
-/* Given a string, return a floating point number corresponding to what the  */
-/* string indicates, based on a given parsing mode, like above for integers. */
+// Given a string, return a floating point number corresponding to what the
+// string indicates, based on a given parsing mode, like above for integers.
 
 real RParseSz(CONST char *szEntry, int pm)
 {
@@ -904,6 +1162,10 @@ real RParseSz(CONST char *szEntry, int pm)
     for (i = 0; i < cch; i++) {
       chT = sz[i];
       if (FCapCh(chT)) {
+        if (chT == 'H') {  // So zones like "5HW30" work.
+          sz[i] = ' ';
+          continue;
+        }
         if (chT == 'E')
           fNeg = fTrue;
         sz[i] = ':';
@@ -973,6 +1235,11 @@ real RParseSz(CONST char *szEntry, int pm)
     i = Max(cch-1, 0);
     if (sz[i] == 'E' || (cch >= 9 && sz[cch-4] == ' ' && sz[cch-5] == 'E'))
       neg(r);
+  } else if (pm == pmDist) {
+    // Check for "mile" or "mi" suffix for miles instead of kilometers.
+    i = Max(cch-1, 0);
+    if (sz[i] == 'I' || sz[i] == 'E')
+      r *= rMiToKm;
   } else if (pm == pmElv) {
     // Check for "feet" or "ft" suffix for feet instead of meters.
     i = Max(cch-1, 0);
@@ -989,8 +1256,8 @@ real RParseSz(CONST char *szEntry, int pm)
 
 
 #ifndef WIN
-/* Stop and wait for the user to enter a line of text given a prompt to */
-/* display and a string buffer to fill with it.                         */
+// Stop and wait for the user to enter a line of text given a prompt to
+// display and a string buffer to fill with it.
 
 void InputString(CONST char *szPrompt, char *sz)
 {
@@ -1013,8 +1280,8 @@ void InputString(CONST char *szPrompt, char *sz)
 }
 
 
-/* Prompt the user for a floating point value, parsing as appropriate, and */
-/* make sure it conforms to the specified bounds before returning it.      */
+// Prompt the user for a floating point value, parsing as appropriate, and
+// make sure it conforms to the specified bounds before returning it.
 
 int NInputRange(CONST char *szPrompt, int low, int high, int pm)
 {
@@ -1032,7 +1299,7 @@ int NInputRange(CONST char *szPrompt, int low, int high, int pm)
 }
 
 
-/* This is identical to above except it takes/returns floating point values. */
+// This is identical to above except it takes/returns floating point values.
 
 real RInputRange(CONST char *szPrompt, real low, real high, int pm)
 {
@@ -1049,16 +1316,16 @@ real RInputRange(CONST char *szPrompt, real low, real high, int pm)
     PrintWarning(szLine);
   }
 }
-#endif /* WIN */
+#endif // WIN
 
 
-/* This important procedure gets all the parameters defining the chart that  */
-/* will be worked with later. Given a "filename", it gets from it all the    */
-/* pertinent chart information. This is more than just reading from a file - */
-/* the procedure also takes care of the cases of prompting the user for the  */
-/* information and using the time functions to determine the date now - the  */
-/* program considers these cases "virtual" files. Furthermore, when reading  */
-/* from a real file, we have to check if it was written in the -o0 format.   */
+// This important procedure gets all the parameters defining the chart that
+// will be worked with later. Given a "filename", it gets from it all the
+// pertinent chart information. This is more than just reading from a file.
+// The procedure also takes care of the cases of prompting the user for the
+// information and using the time functions to determine the date now. (The
+// program considers these cases "virtual" files.) Furthermore, when reading
+// from a real file, we have to check if it was written in the -o0 format.
 
 flag FInputData(CONST char *szFile)
 {
@@ -1198,7 +1465,7 @@ flag FInputData(CONST char *szFile)
     is.S = file;
     return fTrue;
   }
-#endif /* WIN */
+#endif // WIN
 
   // Now that the special cases are taken care of, we can assume we are to
   // read from a real file.
@@ -1214,6 +1481,14 @@ flag FInputData(CONST char *szFile)
   if (ch == '@') {
     fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessSwitchFile(szFile, file))
+      return fFalse;
+    is.fSzPersist = fT;
+
+  // Read the chart parameters from an Astrological Exchange (AAF) file.
+
+  } else if (ch == '#') {
+    fT = is.fSzPersist; is.fSzPersist = fFalse;
+    if (!FProcessAAFFile(szFile, file))
       return fFalse;
     is.fSzPersist = fT;
 

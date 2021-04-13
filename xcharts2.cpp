@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: xcharts2.cpp
+** Astrolog (Version 7.20) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -61,10 +61,10 @@
 ******************************************************************************
 */
 
-/* Return whether the specified object should be displayed in the current  */
-/* graphics chart type. For example, don't include the Moon in the solar   */
-/* system charts when ephemeris files are off, don't include house cusps   */
-/* in astro-graph charts, and so on, in addition to checking restrictions. */
+// Return whether the specified object should be displayed in the current
+// graphics chart type. For example, don't include the Moon in the solar
+// system charts when ephemeris files are off, don't include house cusps
+// in astro-graph charts, and so on, in addition to checking restrictions.
 
 flag FProper(int i)
 {
@@ -80,16 +80,14 @@ flag FProper(int i)
     f &= !(gs.fAlt && (i == oMoo || i == oFor));
   else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
     f &= FProperGraph(i);
-  else if (gi.nMode == gTelescope)
-    f &= (i != us.objCenter || us.objCenter == oEar);
   return f;
 }
 
 
-/* Adjust an array of zodiac positions so that no two positions are within   */
-/* a certain orb of each other. This is used by the wheel drawing chart      */
-/* routines in order to make sure that we don't draw any planet glyphs on    */
-/* top of each other. We'll later draw the glyphs at the adjusted positions. */
+// Adjust an array of zodiac positions so that no two positions are within a
+// certain orb of each other. This is used by the wheel drawing chart routines
+// in order to make sure that planet glyphs aren't drawn on top of each other.
+// Later draw the glyphs at the adjusted positions.
 
 void FillSymbolRing(real *symbol, real factor)
 {
@@ -101,12 +99,12 @@ void FillSymbolRing(real *symbol, real factor)
 
   for (l = 0; k && l < us.nDivision*2; l++) {
     k = 0;
-    for (i = 0; i <= cObj; i++) if (FProper(i)) {
+    for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
 
       // For each object, determine who is closest on either side.
 
       k1 = rLarge; k2 = -rLarge;
-      for (j = 0; j <= cObj; j++)
+      for (j = 0; j <= is.nObj; j++)
         if (FProper(j) && i != j) {
           temp = symbol[j]-symbol[i];
           if (RAbs(temp) > rDegHalf)
@@ -135,18 +133,18 @@ void FillSymbolRing(real *symbol, real factor)
 }
 
 
-/* Adjust an array of longitude positions so that no two are within a    */
-/* certain orb of each other. This is used by the astro-graph routine to */
-/* make sure we don't draw any planet glyphs marking the lines on top of */
-/* each other. This is almost identical to the FillSymbolRing() routine  */
-/* used by the wheel charts; however, there the glyphs are placed in a   */
-/* continuous ring, while here we have the left and right screen edges.  */
-/* Also, here we are placing two sets of planets at the same time.       */
+// Adjust an array of longitude positions so that no two are within a certain
+// orb of each other. This is used by the astro-graph routine to make sure no
+// planet glyphs marking the lines are drawn on top of each other. This is
+// almost identical to the FillSymbolRing() routine used by the wheel charts,
+// however there the glyphs are placed in a continuous ring, while here the
+// left and right screen edges are present. Also, here are placing two sets of
+// planets at the same time.
 
 void FillSymbolLine(real *symbol)
 {
   real orb = DEFORB*1.35*(real)gi.nScale, max = rDegMax, k1, k2, temp;
-  int i, j, k = 1, l;
+  int i, j, k = 1, l, tot = is.nObj*2+1;
 
   if (gi.nMode != gEphemeris)
     max *= (real)gi.nScale;
@@ -157,13 +155,13 @@ void FillSymbolLine(real *symbol)
 
   for (l = 0; k && l < us.nDivision*2; l++) {
     k = 0;
-    for (i = 0; i <= cObj*2+1; i++)
+    for (i = 0; i <= tot; i++)
       if (FProper(i >> 1) && symbol[i] >= 0.0) {
 
         // For each object, determine who is closest to the left and right.
 
         k1 = max-symbol[i]; k2 = -symbol[i];
-        for (j = 0; j <= cObj*2+1; j++) {
+        for (j = 0; j <= tot; j++) {
           if (FProper(j >> 1) && i != j) {
             temp = symbol[j]-symbol[i];
             if (temp < k1 && temp > 0.0)
@@ -187,9 +185,9 @@ void FillSymbolLine(real *symbol)
 }
 
 
-/* Given a zodiac position, return the degree on the current wheel chart */
-/* circle where that position falls, rotating based on the Ascendant and */
-/* adding in the opposite direction for Vedic mode wheels.               */
+// Given a zodiac position, return the degree on the current wheel chart
+// circle where that position falls, rotating based on the Ascendant and
+// adding in the opposite direction for Vedic mode wheels.
 
 real PlaceInX(real deg)
 {
@@ -199,9 +197,9 @@ real PlaceInX(real deg)
 }
 
 
-/* Given a zodiac degree, adjust it if need be to account for the expanding */
-/* and compacting of parts the zodiac that happen when we display a graphic */
-/* wheel chart such that all the houses appear the same size.               */
+// Given a zodiac degree, adjust it if need be to account for the expanding
+// and compacting of parts the zodiac that happen when displaying a graphic
+// wheel chart such that all the houses appear the same size.
 
 real HousePlaceInX(real deg, real degalt)
 {
@@ -222,8 +220,8 @@ real HousePlaceInX(real deg, real degalt)
 }
 
 
-/* Draw lines connecting planets between two charts that have aspects. Used */
-/* when creating bi-wheels and beyond.                                      */
+// Draw lines connecting planets between two charts that have aspects. Used
+// when creating bi-wheels and beyond.
 
 void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
   int cx, int cy, real rx, real ry, real rz)
@@ -250,8 +248,8 @@ void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
   // Compute and draw the aspect lines.
   if (!FCreateGridRelation(fFalse))
     goto LExit;
-  for (j = cObj; j >= 0; j--)
-    for (i = cObj; i >= 0; i--)
+  for (j = is.nObj; j >= 0; j--)
+    for (i = is.nObj; i >= 0; i--)
       if (grid->n[i][j] && FProper2(i) && FProper(j) &&
         obj1[j] >= 0.0 && obj2[i] >= 0.0)
         DrawAspectLine(i, j, cx, cy, obj1[j], obj2[i], rx, ry, rz);
@@ -270,9 +268,9 @@ LExit:
 ******************************************************************************
 */
 
-/* Draw another wheel chart; however, this time we have two rings of planets */
-/* because we are doing a bi-wheel relationship chart between two sets of    */
-/* data. This chart is obtained when the -r0 is combined with the -X switch. */
+// Draw another wheel chart, however this time there are two rings of planets
+// because this is a bi-wheel relationship chart between two sets of data.
+// This chart is obtained when the -r0 is combined with the -X switch.
 
 void XChartWheelRelation()
 {
@@ -306,37 +304,41 @@ void XChartWheelRelation()
   }
   for (i = 1; i <= cSign; i++)
     xsign[i] = PZ(HousePlaceInX(ZFromS(i), 0.0));
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     xplanet1[i] = PZ(HousePlaceInX(cp1.obj[i], cp1.alt[i]));
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     xplanet2[i] = PZ(HousePlaceInX(cp2.obj[i], cp2.alt[i]));
 
   // Go draw the outer sign and house rings. We are drawing only the houses
   // of one of the two charts in the relationship, however.
 
+  if (gs.fColor) {
+    DrawColor(kDkGreenB);
+    DrawCircle(cx, cy, (int)(unitx*0.55+rRound), (int)(unity*0.55+rRound));
+  }
   DrawWheel(xsign, xhouse1, cx, cy, unitx, unity,
     0.70, 0.74, 0.78, 0.82, 0.885);
 
-  /* Draw the outer ring of planets (based on the planets in the chart     */
-  /* which the houses do not reflect - the houses belong to the inner ring */
-  /* below). Draw each glyph, a line from it to its actual position point  */
-  /* in the outer ring, and then draw another line from this point to a    */
-  /* another dot at the same position in the inner ring as well.           */
+  // Draw the outer ring of planets (based on the planets in the chart which
+  // the houses do not reflect - the houses belong to the inner ring below).
+  // Draw each glyph, a line from it to its actual position point in the outer
+  // ring, and then draw another line from this point to a another dot at the
+  // same position in the inner ring as well.
 
   FProcessCommandLine(szWheelX[2]);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     symbol[i] = xplanet2[i];
   if (us.nRel == rcTransit)
-    for (i = 0; i <= cObj; i++) {
+    for (i = 0; i <= is.nObj; i++) {
       ignoreT[i] = ignore[i];
       ignore[i] = ignore2[i];
     }
   FillSymbolRing(symbol, 1.0);
   if (us.nRel == rcTransit)
-    for (i = 0; i <= cObj; i++)
+    for (i = 0; i <= is.nObj; i++)
       ignore[i] = ignoreT[i];
 
-  for (i = cObj; i >= 0; i--) if (FProper2(i)) {
+  for (i = is.nObj; i >= 0; i--) if (FProper2(i)) {
     if (gs.fLabel) {
       temp = symbol[i];
       DrawColor(cp2.dir[i] < 0.0 ? gi.kiGray : gi.kiOn);
@@ -351,31 +353,31 @@ void XChartWheelRelation()
     DrawColor(kObjB[i]);
     DrawPoint(cx+POINT1(unitx, 0.56, PX(xplanet2[i])),
       cy+POINT1(unity, 0.56, PY(xplanet2[i])));
-    DrawPoint(cx+POINT1(unitx, 0.43, PX(xplanet2[i])),
-      cy+POINT1(unity, 0.43, PY(xplanet2[i])));
+    DrawPoint(cx+POINT1(unitx, 0.41, PX(xplanet2[i])),
+      cy+POINT1(unity, 0.41, PY(xplanet2[i])));
     if (!gs.fHouseExtra) {
       DrawColor(cp2.dir[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, 0.45, PX(xplanet2[i])),
-        cy+POINT1(unity, 0.45, PY(xplanet2[i])),
+      DrawDash(cx+POINT1(unitx, 0.43, PX(xplanet2[i])),
+        cy+POINT1(unity, 0.43, PY(xplanet2[i])),
         cx+POINT2(unitx, 0.54, PX(xplanet2[i])),
         cy+POINT2(unity, 0.54, PY(xplanet2[i])), 2-gs.fColor);
     }
   }
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     if (!FProper2(i))
       xplanet2[i] = -1.0;
 
-  /* Now draw the inner ring of planets. If it weren't for the outer ring,  */
-  /* this would be just like the standard non-relationship wheel chart with */
-  /* only one set of planets. Again, draw glyph, and a line to true point.  */
+  // Now draw the inner ring of planets. If it weren't for the outer ring,
+  // this would be just like the standard non-relationship wheel chart with
+  // only one set of planets. Again, draw glyph, and a line to the true point.
 
   FProcessCommandLine(szWheelX[1]);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     symbol[i] = xplanet1[i];
   FillSymbolRing(symbol, 1.1);
   DrawSymbolRing(symbol, xplanet1, cp1.dir, cx, cy, unitx, unity,
-    0.43, 0.45, 0.48, 0.52);
-  for (i = 0; i <= cObj; i++)
+    0.41, 0.43, 0.46, 0.50);
+  for (i = 0; i <= is.nObj; i++)
     if (!FProper(i))
       xplanet1[i] = -1.0;
   FProcessCommandLine(szWheelX[0]);
@@ -383,7 +385,7 @@ void XChartWheelRelation()
   // Draw lines connecting planets between the two charts that have aspects.
 
   if (!gs.fEquator)
-    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, unitx, unity, 0.41);
+    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, unitx, unity, 0.40);
 
   // Draw sidebar with chart information and positions if need be.
 
@@ -391,9 +393,9 @@ void XChartWheelRelation()
 }
 
 
-/* Draw a tri-wheel chart or quad-wheel chart, where we have three or four */
-/* rings, among three or four sets of data we're comparing. This chart is  */
-/* obtained when the -r3 or -r4 switch is combined with the -X switch.     */
+// Draw a tri-wheel chart or quad-wheel chart, in which there are three or
+// four rings, among three or four sets of chart data being compared. This
+// chart is obtained when the -r3 or -r4 switch is combined with -X switch.
 
 void XChartWheelThreeFour()
 {
@@ -429,7 +431,7 @@ void XChartWheelThreeFour()
   }
   for (i = 1; i <= cSign; i++)
     xsign[i] = PZ(HousePlaceInX(ZFromS(i), 0.0));
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     xplanet1[i] = PZ(HousePlaceInX(cp1.obj[i], cp1.alt[i]));
     xplanet2[i] = PZ(HousePlaceInX(cp2.obj[i], cp2.alt[i]));
     xplanet3[i] = PZ(HousePlaceInX(cp3.obj[i], cp3.alt[i]));
@@ -450,18 +452,18 @@ void XChartWheelThreeFour()
   DrawWheel(xsign, xhouse1, cx, cy, unitx, unity,
     0.745, 0.78, 0.815, 0.84, 0.895);
 
-  /* Draw the outer ring of planets (i.e. the one the house cusps reflect). */
-  /* Draw each glyph, a line from it to its actual position point in the    */
-  /* outer ring, and then draw another line from this point to a another    */
-  /* dot at the same position on the innermost ring as well.                */
+  // Draw the outer ring of planets (i.e. the one the house cusps reflect).
+  // Draw each glyph, a line from it to its actual position point in the outer
+  // ring, and then draw another line from this point to a another dot at the
+  // same position on the innermost ring as well.
 
   FProcessCommandLine(szWheelX[1]);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     symbol[i] = xplanet1[i];
   FillSymbolRing(symbol, 0.9);
   DrawSymbolRing(symbol, xplanet1, ret, cx, cy, unitx, unity,
     0.62, 0.63, 0.66, 0.70);
-  for (i = cObj; i >= 0; i--) if (FProper(i)) {
+  for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
     DrawColor(kObjB[i]);
     DrawPoint(cx+POINT1(unitx, base, PX(xplanet1[i])),
       cy+POINT1(unity, base, PY(xplanet1[i])));
@@ -473,7 +475,7 @@ void XChartWheelThreeFour()
         cy+POINT2(unity, 0.59, PY(xplanet1[i])), 3+fQuad-gs.fColor);
     }
   }
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     if (!FProper(i))
       xplanet1[i] = -1.0;
 
@@ -481,12 +483,12 @@ void XChartWheelThreeFour()
   // a line to its true point, and a line to the innermost ring.
 
   FProcessCommandLine(szWheelX[2]);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     symbol[i] = xplanet2[i];
   FillSymbolRing(symbol, 1.1);
   DrawSymbolRing(symbol, xplanet2, cp2.dir, cx, cy, unitx, unity,
     0.49, 0.50, 0.53, 0.57);
-  for (i = cObj; i >= 0; i--) if (FProper(i)) {
+  for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
     DrawColor(kObjB[i]);
     DrawPoint(cx+POINT1(unitx, base, PX(xplanet2[i])),
       cy+POINT1(unity, base, PY(xplanet2[i])));
@@ -498,7 +500,7 @@ void XChartWheelThreeFour()
         cy+POINT2(unity, 0.46, PY(xplanet2[i])), 2+fQuad-gs.fColor);
     }
   }
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     if (!FProper(i))
       xplanet2[i] = -1.0;
 
@@ -506,12 +508,12 @@ void XChartWheelThreeFour()
   // Chart was cast earlier, and draw the glyphs and lines to true point.
 
   FProcessCommandLine(szWheelX[3]);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     symbol[i] = xplanet3[i];
   FillSymbolRing(symbol, 1.4);
   DrawSymbolRing(symbol, xplanet3, ret, cx, cy, unitx, unity,
     0.36, 0.37, 0.40, 0.44);
-  for (i = 0; i <= cObj; i++)
+  for (i = 0; i <= is.nObj; i++)
     if (!FProper(i))
       xplanet3[i] = -1.0;
 
@@ -520,7 +522,7 @@ void XChartWheelThreeFour()
     // If a fourth ring is being done, first finish the third one by drawing
     // lines from the true positions to the inner ring.
 
-    for (i = cObj; i >= 0; i--) if (FProper(i)) {
+    for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
       DrawColor(kObjB[i]);
       DrawPoint(cx+POINT1(unitx, base, PX(xplanet3[i])),
         cy+POINT1(unity, base, PY(xplanet3[i])));
@@ -537,14 +539,14 @@ void XChartWheelThreeFour()
     // cast earlier, and draw glyphs and lines to the true positions.
 
     FProcessCommandLine(szWheelX[4]);
-    for (i = 0; i <= cObj; i++)
+    for (i = 0; i <= is.nObj; i++)
       xplanet4[i] = PZ(HousePlaceInX(cp4.obj[i], cp4.alt[i]));
-    for (i = 0; i <= cObj; i++)
+    for (i = 0; i <= is.nObj; i++)
       symbol[i] = xplanet4[i];
     FillSymbolRing(symbol, 1.8);
     DrawSymbolRing(symbol, xplanet4, ret, cx, cy, unitx, unity,
       0.23, 0.24, 0.27, 0.31);
-    for (i = 0; i <= cObj; i++)
+    for (i = 0; i <= is.nObj; i++)
       if (!FProper(i))
         xplanet4[i] = -1.0;
   }
@@ -571,10 +573,10 @@ void XChartWheelThreeFour()
 }
 
 
-/* Draw an aspect (or midpoint) grid in the window, between the planets in  */
-/* two different charts, with the planets labeled at the top and side. This */
-/* chart is done when the -g switch is combined with the -r0 and -X switch. */
-/* Like above, the chart always has a (definable) fixed number of cells.    */
+// Draw an aspect (or midpoint) grid in the window, between the planets in two
+// different charts, with the planets labeled at the top and side. This chart
+// is done when the -g switch is combined with the -r0 and -X switches. Like
+// the text version, the chart has a (definable) fixed number of cells.
 
 void XChartGridRelation()
 {
@@ -596,7 +598,7 @@ void XChartGridRelation()
     do {
       j0++;
       j = rgobjList[j0];
-    } while (j0 >= 0 && ignore[j] && j0 <= cObj);
+    } while (j0 >= 0 && ignore[j] && j0 <= is.nObj);
     DrawColor(gi.kiGray);
     DrawDash(0, (y+1)*unit, siz, (y+1)*unit, !gs.fColor);
     DrawDash((y+1)*unit, 0, (y+1)*unit, siz, !gs.fColor);
@@ -604,15 +606,15 @@ void XChartGridRelation()
     DrawEdge(0, y*unit, unit, (y+1)*unit);
     DrawEdge(y*unit, 0, (y+1)*unit, unit);
     DrawEdge(y*unit, y*unit, (y+1)*unit, (y+1)*unit);
-    if (j0 <= cObj) for (x = 0, i0 = -2; x <= gi.nGridCell; x++) {
+    if (j0 <= is.nObj) for (x = 0, i0 = -2; x <= gi.nGridCell; x++) {
       do {
         i0++;
         i = rgobjList[i0];
-      } while (i0 >= 0 && ignore[i] && i0 <= cObj);
+      } while (i0 >= 0 && ignore[i] && i0 <= is.nObj);
 
       // Again, are looping through each cell in each row and column.
 
-      if (i0 <= cObj) {
+      if (i0 <= is.nObj) {
         gi.xTurtle = x*unit+unit/2;
         gi.yTurtle = y*unit+unit/2 - (nScale > 2 ? 5*gi.nScaleT : 0);
         k = i >= 0 && j >= 0 ? grid->n[i][j] : 0;
@@ -644,11 +646,9 @@ void XChartGridRelation()
         }
 
         // When scale size is 300+, print some text in current cell.
-
         if (nScale > 2 && gs.fLabel) {
 
           // For top and left edges, print sign and degree of the planet.
-
           if (y == 0 || x == 0) {
             if (x+y > 0) {
               k = SFromZ(y == 0 ? cp2.obj[i] : cp1.obj[j]);
@@ -661,7 +661,6 @@ void XChartGridRelation()
 
               // For extreme upper left corner, print some little arrows
               // pointing out chart1's planets and chart2's planets.
-
             } else {
               c = gi.kiLite;
               sprintf(sz, "1v 2->");
@@ -672,7 +671,6 @@ void XChartGridRelation()
               sprintf(szT, "%02d", l);
 
             // For aspect cells, print the orb in degrees and minutes.
-
             if (gs.fAlt == us.fGridMidpoint) {
               if (grid->n[i][j]) {
                 sprintf(sz, "%c%d%c%02d'%s", grid->v[i][j] < 0 ?
@@ -684,7 +682,6 @@ void XChartGridRelation()
                 sprintf(sz, "");
 
             // For midpoint cells, print degree and minute.
-
             } else
               sprintf(sz, "%2d%c%02d'%s", k/60, chDeg2, k%60, szT);
           }
@@ -697,9 +694,9 @@ void XChartGridRelation()
 }
 
 
-/* Draw a chart showing a graphical ephemeris for the given month, year,  */
-/* or range of years, with the date on the vertical axis and the zodiac   */
-/* on the horizontal, as done when the -E is combined with the -X switch. */
+// Draw a chart showing a graphical ephemeris for the given month, year, or
+// range of years, with the date on the vertical axis and the zodiac on the
+// horizontal, as done when the -E is combined with the -X switch.
 
 void XChartEphemeris()
 {
@@ -772,7 +769,7 @@ void XChartEphemeris()
       DrawDash(x1, v, x2, v, cYea <= 1 || mon == 1 ? 1 : 3);
     }
     if (d > 1)
-      for (i = 0; i <= cObj; i++)
+      for (i = 0; i <= is.nObj; i++)
         objSav[i] = planet[i];
     ciCore = ciMain;
     if (cYea) {
@@ -781,7 +778,7 @@ void XChartEphemeris()
       DD = d;
     CastChart(-1);
     if (us.fParallel)
-      for (i = 0; i <= cObj; i++) {
+      for (i = 0; i <= is.nObj; i++) {
         rT = (planetalt[i] * rDegHalf / (real)dx) + rDegHalf;
         rT = Min(rT, rDegMax);
         rT = Max(rT, 0.0);
@@ -790,21 +787,21 @@ void XChartEphemeris()
 
     // Draw planet glyphs along top of chart.
     if (d <= 1) {
-      for (i = 0; i <= cObj; i++) {
+      for (i = 0; i <= is.nObj; i++) {
         j = !FProper(i);
         symbol[i*2] = (j || us.nRel > rcDual) ? -rLarge : cp2.obj[i];
         symbol[i*2+1] = (j ? -rLarge : planet[i]);
       }
       FillSymbolLine(symbol);
       fSav = gs.fLabel; gs.fLabel = fTrue;
-      for (i = cObj*2+1; i >= 0; i--) {
+      for (i = is.nObj*2+1; i >= 0; i--) {
         j = i >> 1;
         if (symbol[i] >= 0.0)
           DrawObject(j, x1 + (int)((real)xs * symbol[i] / rDegMax), unit);
       }
       gs.fLabel = fSav;
       if (us.nRel <= rcDual) {
-        for (i = cObj; i >= 0; i--) {
+        for (i = is.nObj; i >= 0; i--) {
           if (!FProper(i))
             continue;
           j = x1 + (int)((real)xs * cp2.obj[i] / rDegMax);
@@ -815,7 +812,7 @@ void XChartEphemeris()
 
     // Draw a line segment for each object during this time section.
     } else
-      for (i = cObj; i >= 0; i--) {
+      for (i = is.nObj; i >= 0; i--) {
         if (!FProper(i))
           continue;
         m = x1 + (int)((real)xs * objSav[i] / rDegMax);
@@ -872,9 +869,9 @@ void XChartEphemeris()
 }
 
 
-/* Draw a chart showing a graphical ephemeris of Ray influences for the   */
-/* given month or year, with the date on the vertical axis and each Ray   */
-/* on the horizontal, as done when the -7 is combined with the -X switch. */
+// Draw a chart showing a graphical ephemeris of Ray influences for the given
+// month or year, with the date on the vertical axis and each Ray on the
+// horizontal, as done when the -7 is combined with the -X switch.
 
 void XChartEsoteric()
 {
@@ -1008,20 +1005,21 @@ void XChartEsoteric()
 }
 
 
-/* Draw a chart graphing transits over time. This covers both transit to  */
-/* transit (-B switch) and transit to natal (-V switch), when they're     */
-/* combined with the -X switch. Each aspect present during the period has */
-/* a row, showing its strength from 0 (outside of orb) to 100% (exact).   */
+// Draw a chart graphing transits over time. This covers both transit to
+// transit (-B switch) and transit to natal (-V switch), when they're combined
+// with the -X switch. Each aspect present during the period has a row,
+// showing its strength from 0 (outside of orb) to 100% (exact).
 
 void XChartTransit(flag fTrans, flag fProg)
 {
   TransGraInfo *rgEph;
   word **ppw, *pw, *pw2;
   char sz[cchSzDef];
-  int cAsp, cSect, cTot, ymin, x, y, asp, iw, iwFocus = -1, nMax, n, obj,
-    iy, yRow, cRow = 0, xWid, xo, yo, iSect, iFrac, xp, yp, yp2, dyp, et;
+  int cYea, dYea, cAsp, cSect, cTot, ymin, x0, y0, x, y, asp, iw, iwFocus = -1,
+    nMax, n, obj, iy, yRow, cRow = 0, xWid, xo, yo, iSect, iFrac, xp, yp, yp2,
+    dyp, et;
   flag fMonth = us.fInDayMonth, fYear = us.fInDayYear, fEclipse =
-    us.fEclipse && !fTrans && us.objCenter == oEar && !us.fParallel;
+    us.fEclipse && !fTrans && !us.fParallel;
   CI ciT;
   real rT, rPct;
 
@@ -1048,8 +1046,11 @@ void XChartTransit(flag fTrans, flag fProg)
     cSect = DayInMonth(ciT.mon, ciT.yea);
   else if (us.nEphemYears <= 1)
     cSect = 12;
-  else
-    cSect = 5*12;
+  else {
+    cYea = Max(us.nEphemYears, 2); cYea = Min(cYea, 21);
+    dYea = (cYea - 1) >> 1;
+    cSect = cYea*12;
+  }
   xWid = (gs.xWin - xo - 2) / cSect; xWid = Max(xWid, 1);
   cTot = cSect * xWid + 1;
 
@@ -1069,8 +1070,9 @@ void XChartTransit(flag fTrans, flag fProg)
       iwFocus = (int)(((real)(ciT.mon-1) + ((real)(ciT.day-1) +
         ciT.tim/24.0) / (real)DayInMonth(ciT.mon, ciT.yea)) * (real)xWid);
     else
-      iwFocus = (int)((24.0 + ((real)(ciT.mon-1) + ((real)(ciT.day-1) +
-        ciT.tim/24.0) / (real)DayInMonth(ciT.mon, ciT.yea))) * (real)xWid);
+      iwFocus = (int)(((real)(dYea*12) + ((real)(ciT.mon-1) +
+        ((real)(ciT.day-1) + ciT.tim/24.0) /
+        (real)DayInMonth(ciT.mon, ciT.yea))) * (real)xWid);
     if (iwFocus == 0 && ciT.tim <= 0.0)
       iwFocus = -1;
   }
@@ -1091,7 +1093,7 @@ void XChartTransit(flag fTrans, flag fProg)
       DD = (int)rT;
       TT = RFract(rT) * 24.0;
     } else {
-      YY = YY - 2 + iSect/12;
+      YY = YY - dYea + iSect/12;
       MM = (iSect % 12) + 1;
       rT *= (real)DayInMonth(MM, YY);
       DD = (int)rT;
@@ -1121,10 +1123,10 @@ void XChartTransit(flag fTrans, flag fProg)
     }
 
     // For each aspect present in slice, add its strength to array.
-    for (y = ymin; y <= cObj; y++) {
+    for (y = ymin; y <= is.nObj; y++) {
       if (FIgnore(y) || (!fTrans && !FProperGraph(y)))
         continue;
-      for (x = 0; x < (fTrans ? cObj+1 : y); x++) {
+      for (x = 0; x < (fTrans ? is.nObj+1 : y); x++) {
         if (!fTrans ? !FProper(x) :
           FIgnore2(x) || !FProperGraph(x) || (is.fReturn && x != y))
           continue;
@@ -1152,8 +1154,8 @@ void XChartTransit(flag fTrans, flag fProg)
           et = etNone;
           if (asp == aCon)
             et = NCheckEclipse(x, y, &rPct);
-          else if (asp == aOpp && x == oSun && y == oMoo)
-            et = NCheckEclipseLunar(&rPct);
+          else if (asp == aOpp && x == oSun && ObjOrbit(y) == us.objCenter)
+            et = NCheckEclipseLunar(us.objCenter, y, &rPct);
           if (et > etNone) {
             ppw = &(*rgEph)[y][x][asp];
             if (*ppw == NULL) {
@@ -1216,8 +1218,8 @@ void XChartTransit(flag fTrans, flag fProg)
       DrawSz(sz, xo + x*xWid, yp, dtLeft | dtTop | dtScale2);
     }
   } else {
-    for (x = 0; x < 5; x++) {
-      sprintf(sz, "%d", (fTrans || fProg ? YeaT : Yea) - 2 + x);
+    for (x = 0; x < cYea; x++) {
+      sprintf(sz, "%d", (fTrans || fProg ? YeaT : Yea) - dYea + x);
       DrawSz(sz, xo + x*12*xWid, yp, dtLeft | dtTop | dtScale2);
     }
   }
@@ -1231,8 +1233,10 @@ void XChartTransit(flag fTrans, flag fProg)
 
   // Draw the individual aspects present in order.
   iy = 0;
-  for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+  for (y0 = ymin; y0 <= is.nObj; y0++) {
+    y = rgobjList[y0];
+    for (x0 = 0; x0 < (fTrans ? is.nObj+1 : y); x0++) {
+      x = rgobjList[x0];
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw == NULL)
@@ -1294,8 +1298,12 @@ void XChartTransit(flag fTrans, flag fProg)
           n = pw[iw];
           if (n > 0) {
             dyp = (n-1) * (yRow-1) / 65535;
-            DrawColor(n >= nMax || ((iw <= 0 || n > pw[iw-1]) &&
-              (iw >= cTot-1 || n > pw[iw+1])) ? gi.kiOn : kAspB[asp]);
+            DrawColor(n >= nMax ||
+              ((iw <= 0 || n > pw[iw-1] ||
+                (iw > 1 && n == pw[iw-1] && n > pw[iw-2])) &&
+              (iw >= cTot-1 || n > pw[iw+1] ||
+                (iw < cTot-2 && n == pw[iw+1] && n > pw[iw+2]))) ?
+              (dyp >= yRow-2 ? gi.kiOn : gi.kiLite) : kAspB[asp]);
             DrawBlock(xo + iw, yp-1 - dyp, xo + iw, yp-1);
 
             // Draw eclipse strength overlaying aspect strength, if present.
@@ -1303,14 +1311,17 @@ void XChartTransit(flag fTrans, flag fProg)
               pw2 = (*rgEph)[y][x][asp];
               if (pw2 != NULL && pw2[iw] > 0) {
                 n = pw2[iw];
-                dyp = (n-1) * (yRow-1) / 65535;
+                n = (n-1) * (yRow-1) / 65535;
+                dyp = Min(dyp, n);
                 DrawColor(kDkBlueB);
                 DrawBlock(xo + iw, yp-1 - dyp, xo + iw, yp-1);
               }
             }
-          }
-        }
-      }
+          } // if
+        } // iw
+      } // asp
+    } // x0
+  } // y0
 
 LDone:
   if (gs.fBorder) {
@@ -1319,8 +1330,8 @@ LDone:
   }
 
   // Free temporarily allocated data, and restore original chart.
-  for (y = ymin; y <= cObj; y++)
-    for (x = 0; x < (fTrans ? cObj+1 : y); x++)
+  for (y = ymin; y <= is.nObj; y++)
+    for (x = 0; x < (fTrans ? is.nObj+1 : y); x++)
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
         if (pw != NULL)
@@ -1340,11 +1351,11 @@ LDone:
 
 
 #ifdef BIORHYTHM
-/* Draw a graphic biorhythm chart on the screen, as is done when the -rb    */
-/* switch is combined with -X. This is technically a relationship chart in  */
-/* that biorhythm status is determined by a natal chart time at another     */
-/* later time. For the day in question, and for two weeks before and after, */
-/* the Physical, Emotional, and Mental percentages are plotted.             */
+// Draw a graphic biorhythm chart on the screen, as is done when the -rb
+// switch is combined with -X. This is technically a relationship chart in
+// that biorhythm status is determined by a natal chart time at another later
+// time. For the day in question, and for two weeks before and after, the
+// Physical, Emotional, and Mental percentages are plotted.
 
 void XChartBiorhythm()
 {
@@ -1371,17 +1382,22 @@ void XChartBiorhythm()
   }
 
   // Now actually draw the three biorhythm curves.
-  for (i = 1; i <= 3; i++) {
+  for (i = 1; i <= 3 + gs.fAlt; i++) {
     jd = RFloor(is.JD + rRound);
     switch (i) {
     case 1: r = brPhy; c = "PHYS"; j = eFir; break;
     case 2: r = brEmo; c = "EMOT"; j = eWat; break;
     case 3: r = brInt; c = "INTE"; j = eEar; break;
+    case 4:            c = "AVER"; j = eAir; break;
     }
     DrawColor(kElemB[j]);
     for (jd -= (real)us.nBioday, j = -us.nBioday; j <= us.nBioday;
       j++, jd += 1.0) {
-      a = RBiorhythm(jd, r);
+      if (i <= 3)
+        a = RBiorhythm(jd, r);
+      else
+        a = (RBiorhythm(jd, brPhy) + RBiorhythm(jd, brEmo) +
+          RBiorhythm(jd, brInt)) / 3.0;
       x = x1 + NMultDiv(xs, j+us.nBioday, us.nBioday*2);
       y = y1 + (int)((real)ys * (100.0-a) / 200.0);
       if (j > -us.nBioday)
@@ -1408,7 +1424,7 @@ void XChartBiorhythm()
   }
   DrawEdge(x1, y1, x2, y2);
 }
-#endif /* BIORHYTHM */
-#endif /* GRAPH */
+#endif // BIORHYTHM
+#endif // GRAPH
 
 /* xcharts2.cpp */

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: placalc2.cpp
+** Astrolog (Version 7.20) File: placalc2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "placalc.h"
@@ -71,21 +71,28 @@
 */
 
 #ifdef ASTROLOG
-/* Given an object index and a Julian Day time, get its zodiac and        */
-/* declination position (planetary longitude and latitude) of the object  */
-/* and its velocity and distance from the Earth or Sun. This basically    */
-/* just calls the Placalc calculation function to actually do it, but as  */
-/* this is the one routine called from Astrolog, this is the one routine  */
-/* which has knowledge of and uses both Astrolog and Placalc definitions, */
-/* and does things such as translation to Placalc indices and formats.    */
+// Given an object index and a Julian Day time, get its zodiac and latitude
+// position (planetary longitude and latitude) of the object and its velocity
+// and distance from the Earth or Sun. This basically just calls the Placalc
+// calculation function to actually do it, but as this is the one routine
+// called from Astrolog, this is the one routine which has knowledge of and
+// uses both Astrolog and Placalc definitions, and does things such as
+// translation to Placalc indices and formats.
 
 flag FPlacalcPlanet(int ind, real jd, flag fHelio,
-  real *obj, real *objalt, real *dir, real *space, real *diry)
+  real *obj, real *objalt, real *dir, real *space, real *diry, real *dirz)
 {
   int iobj, flag;
   REAL8 jd_ad, rlng, rrad, rlat, rspeed;
 
-  if (ind <= oPlu)      /* Convert Astrolog object index to Placalc index. */
+  // Don't compute object if it's the same as the central object.
+  if (ind <= oSun && (ind == oSun) == fHelio)
+    return fFalse;
+
+  // Convert Astrolog object index to Placalc index.
+  if (ind <= oSun)
+    iobj = SUN;
+  else if (ind <= oPlu)
     iobj = ind-1;
   else if (ind == oChi)
     iobj = CHIRON;
@@ -98,6 +105,7 @@ flag FPlacalcPlanet(int ind, real jd, flag fHelio,
   else
     return fFalse;
 
+  // Actually compute object position here.
   jd_ad = jd - JUL_OFFSET;
   flag = fHelio ? CALC_BIT_SPEED | CALC_BIT_HELIO : CALC_BIT_SPEED;
   jd_ad += deltat(jd_ad);
@@ -107,11 +115,12 @@ flag FPlacalcPlanet(int ind, real jd, flag fHelio,
     *dir    = rspeed;
     *space  = rrad;
     *diry   = 0.0;
+    *dirz   = 0.0;
     return fTrue;
   }
   return fFalse;
 }
-#endif /* ASTROLOG */
+#endif // ASTROLOG
 
 
 /***********************************************************

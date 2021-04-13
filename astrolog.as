@@ -1,4 +1,4 @@
-@AD710  ; Astrolog 7.10 default settings file astrolog.as
+@AD720  ; Astrolog 7.20 default settings file astrolog.as
 
 -z 8:00W                ; Default time zone     [hours W or E of UTC   ]
 -z0 Autodetect          ; Default Daylight time [0 standard, 1 daylight]
@@ -28,7 +28,7 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 =YC     ; Smart cusp displays       ["=YC" is smart, "_YC" is normal   ]
 =YO     ; Smart copy and printing   ["=YO" does it smart, "_YO" doesn't]
 =Y8     ; Clip text to end of line  ["=Y8" clips, "_Y8" doesn't clip   ]
-=Yu     ; Show eclipse information  ["=Yu" shows, "_Yu" doesn't show   ]
+=Yu0    ; Show eclipse information  ["=Yu0" shows, "_Yu0" doesn't show ]
 
 
 ; FILE PATHS (-Yi1 through -Yi9):
@@ -43,11 +43,15 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 ; 11-21: Chi Cer Pal Jun Ves Nor Sou Lil For Ver EP
 ; 22-33: Asc 2nd 3rd Nad 5th 6th Des 8th 9th MC 11th 12th
 ; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos
+; 43-51: Hyg Pho Eri Hau Mak Gon Qua Sed Orc
+; 52-83: Planetary moons
+; 84-130: Fixed stars
 
 -YR 0 10     1 0 0 0 0 0 0 0 0 0 0    ; Planets
 -YR 11 21    1 1 1 1 1 0 1 1 1 1 1    ; Minor planets
 -YR 22 33    0 1 1 1 1 1 1 1 1 0 1 1  ; House cusps
 -YR 34 42    1 1 1 1 1 1 1 1 1        ; Uranians
+-YR 43 51    1 1 1 1 1 1 1 1 1        ; Dwarfs
 
 ; DEFAULT TRANSIT RESTRICTIONS:
 
@@ -55,8 +59,10 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -YRT 11 21   1 1 1 1 1 0 1 1 1 1 1    ; Minor planets
 -YRT 22 33   1 1 1 1 1 1 1 1 1 1 1 1  ; House cusps
 -YRT 34 42   1 1 1 1 1 1 1 1 1        ; Uranians
+-YRT 43 51   1 1 1 1 1 1 1 1 1        ; Dwarfs
 
 -YR0 0 0  ; Restrict sign, direction changes
+-YR1 1 1  ; Restrict latitude, distance events
 
 -YR7 0 1 1 0 1  ; Restrict rulerships: std, esoteric, hierarch, exalt, ray
 
@@ -76,7 +82,8 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -YAm 11 21   360 360 360 360 360   2   2   2 360 360   2      ; Minor planets
 -YAm 22 33   360 360 360 360 360 360 360 360 360 360 360 360  ; Cusp objects
 -YAm 34 42   360 360 360 360 360 360 360 360 360              ; Uranians
--YAm 43 43     2                                              ; Fixed stars
+-YAm 43 51   360 360 360 360 360 360 360 360 360              ; Dwarfs
+-YAm 84 84     2                                              ; Fixed stars
 
 ; DEFAULT PLANET ASPECT ORB ADDITIONS:
 
@@ -84,16 +91,18 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -YAd 11 21   0 0 0 0 0 0 0 0 0 0 0    ; Minor planets
 -YAd 22 33   0 0 0 0 0 0 0 0 0 0 0 0  ; Cusp objects
 -YAd 34 42   0 0 0 0 0 0 0 0 0        ; Uranians
--YAd 43 43   0                        ; Fixed stars
+-YAd 43 51   0 0 0 0 0 0 0 0 0        ; Dwarfs
+-YAd 84 84   0                        ; Fixed stars
 
 
 ; DEFAULT INFLUENCES:
 
--Yj 0 10    30 30 25 10 10 10 10 10 8 8 8        ; Planets
--Yj 11 21   6 5 5 5 5 5 5 4 4 4 4                ; Minor planets
+-Yj 0 10    30 30 25 10 10 10 10 10  8  8  8     ; Planets
+-Yj 11 21    6  5  5  5  5  5  5  4  4  4  4     ; Minor planets
 -Yj 22 33   20 10 10 10 10 10 10 10 10 15 10 10  ; Cusp objects
--Yj 34 42   4 3 3 3 3 3 3 3 3                    ; Uranians
--Yj 43 43   2                                    ; Fixed stars
+-Yj 34 42    4  3  3  3  3  3  3  3  3           ; Uranians
+-Yj 43 51    3  3  3  3  3  3  3  3  3           ; Dwarfs
+-Yj 84 84    2                                   ; Fixed stars
 
 -YjC 1 12   20 0 0 10 0 0 5 0 0 15 0 0  ; Houses
 
@@ -103,10 +112,11 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 
 ; DEFAULT TRANSIT INFLUENCES:
 
--YjT 0 10   10 10 4 8 9 20 30 35 40 45 50  ; Planets
--YjT 11 21  30 15 15 15 15 30 1 1 1 1 1    ; Minor planets
--YjT 34 42  2 50 50 50 50 50 50 50 50      ; Uranians
--YjT 43 43  60                             ; Fixed stars
+-YjT 0 10   10 10  4  8  9 20 30 35 40 45 50  ; Planets
+-YjT 11 21  30 15 15 15 15 30 30  1  1  1  1  ; Minor planets
+-YjT 34 42   2 50 50 50 50 50 50 50 50        ; Uranians
+-YjT 43 51  15 30 50 50 50 50 50 50 50        ; Dwarfs
+-YjT 84 84  60                                ; Fixed stars
 
 -Yj0 20 10 15 5  ; In ruling sign, exalted sign, ruling house, exalted house
 -Yj7 10 10 10 5 5 5  ; In Esoteric, Hierarchical, Ray ruling (signs, houses)
@@ -117,14 +127,22 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -Y7C 1 12   17 4 2 37 15 26 3 4 456 137 5 26  ; Signs
 -Y7O 0 10   3 2 4 4 5 6 2 3 7 6 1             ; Planets
 -Y7O 34 42  1 0 0 0 0 0 0 0 0                 ; Uranians
+-Y7O 43 51  0 0 3 2 1 4 7 6 5                 ; Dwarfs
 
 
 ; DEFAULT COLORS:
+; Black, White, Gray, LtGray, Red, Orange, Yellow, Green, Cyan, Blue, Purple,
+; Magenta, Maroon, DkGreen, DkCyan, DkBlue; Element, Ray, Star, Planet
 
 -YkO 0 10   Yel Ele Ele Ele Ele Ele Ele Ele Ele Ele Ele      ; Planet colors
 -YkO 11 21  Mag Mag Mag Mag Mag DkC DkC DkC DkC DkC DkC      ; Minor colors
 -YkO 22 33  Ele Ele Ele Ele Ele Ele Ele Ele Ele Ele Ele Ele  ; Cusp colors
 -YkO 34 42  Pur Pur Pur Pur Pur Pur Pur Pur Pur              ; Uranian colors
+-YkO 43 51  Mag Mag Pur Pur Pur Pur Pur Pur Pur              ; Dwarf colors
+-YkO 52 63  Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla  ; Moons
+-YkO 64 75  Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla Pla  ; Moons
+-YkO 76 83  Pla Pla Pla Pla Pla Pla Pla Pla                  ; Moons
+-YkO 84 84  Sta                                              ; Fixed stars
 
 -YkA 1 5    Yel Blu Red Gre Cya          ; Major aspect colors
 -YkA 6 11   Mag Mag Ora Ora DkC DkC      ; Minor aspect colors
@@ -145,7 +163,7 @@ _Xr              ; Reverse background ["_Xr" is black, "=Xr" is white     ]
 :XS 100          ; Graphics text scale [100-400]
 =XQ              ; Square charts ["=XQ" forces square, "_XQ" allows rectangle]
 =Xu              ; Chart border  ["=Xu" shows border, "_Xu" doesn't show     ]
-:Xbb             ; Bitmap file type   ["Xbb" is Windows .bmp, "Xbn" is X11   ]
+:Xbw             ; Bitmap file type   ["Xbw" is Windows .bmp, "Xbn" is X11   ]
 :YXG 1111        ; Glyph selections   [Capricorn, Uranus, Pluto, Lilith]
 :YXg 0           ; Aspect grid cells  ["0" for autodetect  ]
 :YXS 0.0         ; Orbit radius in AU ["0.0" for autodetect]

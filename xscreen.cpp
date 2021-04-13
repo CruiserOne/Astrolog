@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: xscreen.cpp
+** Astrolog (Version 7.20) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -98,9 +98,28 @@ CONST uchar icon_bits[] = {
 ******************************************************************************
 */
 
-/* Set up all the colors used by the program, i.e. the foreground and   */
-/* background colors, and all the colors in the object arrays, based on */
-/* whether or not we are in monochrome and/or reverse video mode.       */
+// Set up the color palette of RGB values used by the program for its 16 main
+// color indexes. There's a default palette of bright colors used with black
+// backgrounds, and an optional set of adjusted colors that looks better with
+// white backgrounds. Also, if the user customizes a palette slot with the
+// -YXK switch, then leave it alone and don't change it.
+
+void InitColorPalette(int n)
+{
+  CONST KV *rgbbmpNew, *rgbbmpOld;
+  int i;
+
+  rgbbmpNew = (n < 1 || !gs.fAltPalette ? rgbbmpDef : rgbbmpDef2);
+  rgbbmpOld = (n < 1 || !gs.fAltPalette ? rgbbmpDef2 : rgbbmpDef);
+  for (i = 0; i < cColor; i++)
+    if (n < 0 || rgbbmp[i] == rgbbmpOld[i])
+      rgbbmp[i] = rgbbmpNew[i];
+}
+
+
+// Set up all the colors used by the program, i.e. the foreground and
+// background colors, and all the colors in the object arrays, based on
+// whether or not are in monochrome and/or reverse video mode.
 
 void InitColorsX()
 {
@@ -120,7 +139,7 @@ void InitColorsX()
 
     for (i = 0; i < cColor; i++) {
       kv = rgbbmp[i];
-      sprintf(sz, "#%02x%02x%02x", RGBR(kv), RGBG(kv), RGBB(kv));
+      sprintf(sz, "#%02x%02x%02x", RgbR(kv), RgbG(kv), RgbB(kv));
       XParseColor(gi.disp, cmap, sz, &xcol);
       XAllocColor(gi.disp, cmap, &xcol);
       rgbind[i] = xcol.pixel;
@@ -158,8 +177,8 @@ void InitColorsX()
 
 
 #ifdef WCLI
-/* Window event processor for the Windows CLI version. Most event */
-/* processing happens inside the InteractX() message loop.        */
+// Window event processor for the Windows CLI version. Most event processing
+// happens inside the InteractX() message loop.
 
 LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -194,9 +213,11 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
         gi.nMode == gLocal || gi.nMode == gSphere || gi.nMode == gGlobe ||
         gi.nMode == gPolar || gi.nMode == gTelescope)) {
         gs.rRot += (real)(x-WLo(wi.lParamRC)) * rDegHalf / (real)gs.xWin *
-          (gi.nMode == gLocal || gi.nMode == gTelescope ? -1 : 1);
+          (gi.nMode == gLocal || gi.nMode == gTelescope ? -gi.zViewRatio :
+          1.0);
         gs.rTilt += (real)(y-WHi(wi.lParamRC)) * rDegHalf / (real)gs.yWin *
-          (gi.nMode == gGlobe ? -1 : 1);
+          (gi.nMode == gLocal || gi.nMode == gTelescope ? gi.zViewRatio :
+          (gi.nMode == gGlobe ? -1.0 : 1.0));
         while (gs.rRot >= rDegMax)
           gs.rRot -= rDegMax;
         while (gs.rRot < 0.0)
@@ -289,8 +310,8 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
 
 #ifdef ISG
-/* This routine opens up and initializes a window and prepares it to be */
-/* drawn upon, and gets various information about the display, too.     */
+// This routine opens up and initializes a window and prepares it to be drawn
+// upon, and gets various information about the display, too.
 
 void BeginX()
 {
@@ -326,9 +347,9 @@ void BeginX()
     XSetStandardProperties(gi.disp, gi.wind, szAppName, szAppName, gi.icon,
       (char **)xkey, 0, &hint);
 
-  /* We have two graphics workareas. One is what the user currently sees in */
-  /* the window, and the other is what we are currently drawing on. When    */
-  /* done, we can quickly copy this to the viewport for a smooth look.      */
+  // There are two graphics workareas. One is what the user currently sees in
+  // the window, and the other is what is currently being drawn on. When done,
+  // can quickly copy it to the viewport for a smooth look.
 
   gi.gc = XCreateGC(gi.disp, gi.wind, 0, 0);
   XSetGraphicsExposures(gi.disp, gi.gc, 0);
@@ -340,7 +361,7 @@ void BeginX()
   XMapRaised(gi.disp, gi.wind);
   XSync(gi.disp, 0);
   XFillRectangle(gi.disp, gi.pmap, gi.pmgc, 0, 0, gs.xWin, gs.yWin);
-#endif /* X11 */
+#endif // X11
 
 #ifdef WIN
   if (wi.fChartWindow && (wi.xClient != gs.xWin ||
@@ -357,7 +378,7 @@ void BeginX()
     PatBlt(wi.hdc, -gi.xOffset, -gi.yOffset, wi.xClient, wi.yClient,
       gs.fInverse ? WHITENESS : BLACKNESS);
   InitColorsX();
-#endif /* WIN */
+#endif // WIN
 
 #ifdef MACG
   MaxApplZone();
@@ -379,7 +400,7 @@ void BeginX()
     szVersionCore, true, noGrowDocProc, (WindowPtr)-1L, true, 0);
   SetPort(gi.wpAst);
   InitColorsX();
-#endif /* MACG */
+#endif // MACG
 
 #ifdef WCLI
   WNDCLASS wndclass;
@@ -426,16 +447,16 @@ void BeginX()
   ShowScrollBar(wi.hwnd, SB_BOTH, fFalse);
   gi.xOffset = gi.yOffset = 0;
   InitColorsX();
-#endif /* WCLI */
+#endif // WCLI
 }
 
 
-/* Add a certain amount of time to the hour/day/month/year quantity that    */
-/* defines a particular chart. This is used by the chart animation feature. */
-/* We can add or subtract anywhere from 1 to 9 seconds, minutes, hours,     */
-/* days, months, years, decades, centuries, or millenia in any one call.    */
-/* This is mainly just addition to the appropriate quantity, but we have    */
-/* to check for overflows, e.g. Dec 30 + 3 days = Jan 2 of Current year + 1 */
+// Add a certain amount of time to the hour/day/month/year quantity that
+// defines a particular chart. This is used by the chart animation feature.
+// This can add or subtract anywhere from 1 to 9 seconds, minutes, hours,
+// days, months, years, decades, centuries, or millenia in any one call.
+// This is mainly just addition to the appropriate quantity, but have to
+// check for overflows, e.g. Dec 30 + 3 days = Jan 2 of Current year + 1.
 
 void AddTime(CI *pci, int mode, int toadd)
 {
@@ -509,9 +530,9 @@ void AddTime(CI *pci, int mode, int toadd)
 }
 
 
-/* Animate the current chart based on the given values indicating how much  */
-/* to update by. We update and recast the current chart info appropriately. */
-/* Note animation mode for comparison charts will update the second chart.  */
+// Animate the current chart based on the given values indicating how much
+// to update by. Update and recast the current chart info appropriately.
+// Note animation mode for comparison charts will update the second chart.
 
 void Animate(int mode, int toadd)
 {
@@ -566,10 +587,10 @@ LNotNow:
 
 
 #ifndef WIN
-/* This routine exits graphics mode, prompts the user for a set of command */
-/* switches, processes them, and returns to the previous graphics with the */
-/* new settings in effect, allowing one to change most any setting without */
-/* having to lose their graphics state or fall way back to a -Q loop.      */
+// This routine exits graphics mode, prompts the user for a set of command
+// switches, processes them, and returns to the previous graphics with the
+// new settings in effect, allowing one to change most any setting without
+// having to lose their graphics state or fall way back to a -Q loop.
 
 void CommandLineX()
 {
@@ -602,11 +623,11 @@ void CommandLineX()
   InitColorsX();
 #endif
 }
-#endif /* WIN */
+#endif // WIN
 
 
-/* Given two chart size values, adjust them such that the chart will look */
-/* "square". We round the higher value down and check certain conditions. */
+// Given two chart size values, adjust them such that the chart will look
+// "square". This rounds the higher value down and checks certain conditions.
 
 void SquareX(int *x, int *y, flag fForce)
 {
@@ -622,9 +643,9 @@ void SquareX(int *x, int *y, flag fForce)
 
 
 #ifdef WINANY
-/* Change the pixel size of the window so its internal drawable area is the */
-/* dimensions of the current graphics chart. Both the upper left and lower  */
-/* right corners of the window may change depending on the scroll position. */
+// Change the pixel size of the window so its internal drawable area is the
+// dimensions of the current graphics chart. Both the upper left and lower
+// right corners of the window may change depending on the scroll position.
 
 void ResizeWindowToChart()
 {
@@ -668,9 +689,9 @@ void ResizeWindowToChart()
 
 
 #ifndef WIN
-/* This routine gets called after graphics are brought up and displayed     */
-/* on the screen. It loops, processing key presses, mouse clicks, etc, that */
-/* the window receives, until the user specifies they want to exit program. */
+// This routine gets called after graphics are brought up and displayed on
+// the screen. It loops, processing key presses, mouse clicks, etc, that the
+// window receives, until the user specifies they want to exit the program.
 
 void InteractX()
 {
@@ -868,7 +889,7 @@ void InteractX()
       DeleteDC(wi.hdc);
       EndPaint(wi.hwnd, &ps);
 #endif
-    }  /* if */
+    } // if
 
     // Now process what's on the event queue, i.e. any keys pressed, etc.
 
@@ -933,7 +954,7 @@ void InteractX()
         length = XLookupString((XKeyEvent *)&xevent, xkey, 10, &keysym, 0);
         if (length == 1) {
           key = xkey[0];
-#endif /* X11 */
+#endif // X11
 
 #ifdef MACG
       HiliteMenu(0);
@@ -970,7 +991,7 @@ void InteractX()
         case keyDown:
         case autoKey:
           key = (char)(erCur.message & charCodeMask);
-#endif /* MACG */
+#endif // MACG
 
 #ifdef WCLI
       if (PeekMessage(&msg, (HWND)NULL, 0, 0, PM_REMOVE)) {
@@ -991,7 +1012,7 @@ void InteractX()
           }
         } else {
           key = (int)msg.wParam;
-#endif /* WCLI */
+#endif // WCLI
 
           switch (key) {
           case ' ':
@@ -1005,6 +1026,7 @@ void InteractX()
             break;
           case 'x':
             inv(gs.fInverse);
+            InitColorPalette(gs.fInverse);
             InitColorsX();
             fRedraw = fTrue;
             break;
@@ -1091,24 +1113,49 @@ void InteractX()
               inv(ignore[i]);
             for (i = oSou; i <= oEP; i++)
               inv(ignore[i]);
+            AdjustRestrictions();
             fCast = fTrue;
             break;
           case 'C':
             inv(us.fCusp);
             for (i = cuspLo; i <= cuspHi; i++)
               ignore[i] = !us.fCusp || !ignore[i];
+            AdjustRestrictions();
             fCast = fTrue;
             break;
           case 'u':
             inv(us.fUranian);
             for (i = uranLo; i <= uranHi; i++)
               ignore[i] = !us.fUranian || !ignore[i];
+            AdjustRestrictions();
+            fCast = fTrue;
+            break;
+          case 'y':
+            inv(us.fDwarf);
+            for (i = dwarfLo; i <= dwarfHi; i++)
+              ignore[i] = !us.fDwarf || !ignore[i];
+            AdjustRestrictions();
+            fCast = fTrue;
+            break;
+          case '`':
+            inv(us.fMoons);
+            for (i = moonsLo; i <= moonsHi; i++)
+              ignore[i] = !us.fMoons || !ignore[i];
+            AdjustRestrictions();
+            fCast = fTrue;
+            break;
+          case '~':
+            inv(us.fCOB);
+            for (i = cobLo; i <= cobHi; i++)
+              ignore[i] = !us.fCOB || !ignore[i];
+            AdjustRestrictions();
             fCast = fTrue;
             break;
           case 'U':
             us.nStar = !us.nStar;
             for (i = starLo; i <= starHi; i++)
               ignore[i] = !us.nStar || !ignore[i];
+            AdjustRestrictions();
             fCast = fTrue;
             break;
           case 'c':
@@ -1138,10 +1185,6 @@ void InteractX()
           case 'z':
             inv(us.fVedic);
             fRedraw = fTrue;
-            break;
-          case 'y':
-            inv(us.fNavamsa);
-            fCast = fTrue;
             break;
           case '+':
             Animate(gs.nAnim, NAbs(dir));
@@ -1185,7 +1228,7 @@ void InteractX()
           case 'A': gi.nMode = gGrid;       fRedraw = fTrue; break;
           case 'Z': gi.nMode = gHorizon;    fRedraw = fTrue; break;
           case 'S': gi.nMode = gOrbit;      fRedraw = fTrue; break;
-          case 'M': gi.nMode = gSector;     fRedraw = fTrue; break;
+          case 'H': gi.nMode = gSector;     fRedraw = fTrue; break;
           case 'K': gi.nMode = gCalendar;   fRedraw = fTrue; break;
           case 'J': gi.nMode = gDisposit;   fRedraw = fTrue; break;
           case 'L': gi.nMode = gAstroGraph; fRedraw = fTrue; break;
@@ -1211,12 +1254,16 @@ void InteractX()
             fRedraw = fTrue;
             break;
 #endif
+          case 'd':
+            inv(gs.fHouseExtra);
+            fRedraw = fTrue;
+            break;
           case 'e':
             inv(gs.fEquator);
             fRedraw = fTrue;
             break;
-          case 'd':
-            inv(gs.fHouseExtra);
+          case 'w':
+            inv(gi.fBmp);
             fRedraw = fTrue;
             break;
           case '0':
@@ -1228,7 +1275,7 @@ void InteractX()
               (gi.nMode == gHouse ? gWheel : gi.nMode));
             fRedraw = fTrue;
             break;
-          case 'v': case 'H': case '?':
+          case 'v': case '?':
             length = us.nScrollRow;
             us.nScrollRow = 0;
             if (key == 'v')
@@ -1257,10 +1304,10 @@ void InteractX()
           case 'g'-'`': coldrw = kGreen;   break;
           case 'y'-'`': coldrw = kYellow;  break;
           case 'b'-'`': coldrw = kBlue;    break;
-          case 'v'-'`': coldrw = kMagenta; break;
+          case 'v'-'`': coldrw = kMagenta; break;  // Ctrl+m is Enter
           case 'j'-'`': coldrw = kCyan;    break;
           case 'a'-'`': coldrw = kWhite;   break;
-          case 'q': case chEscape: case chBreak:
+          case chEscape: case chBreak:
             fBreak = fTrue;
             break;
           default:
@@ -1278,25 +1325,25 @@ void InteractX()
               break;
             }
             putchar(chBell);    // Any key not bound will sound a beep.
-          }  /* switch */
-        }  /* if */
+          } // switch
+        } // if
 #ifdef X11
       default:
         ;
-      }  /* switch */
-    }  /* if */
+      } // switch
+    } // if
 #endif
 #ifdef MACG
-    }  /* if */
+    } // if
 #endif
 #ifdef WCLI
-    }  /* if */
+    } // if
 #endif
-  }  /* while */
+  } // while
 }
 
 
-/* This is called right before program termination to get rid of the window. */
+// This is called right before program termination to get rid of the window.
 
 void EndX()
 {
@@ -1314,8 +1361,8 @@ void EndX()
   UnregisterClass(szAppName, wi.hinst);
 #endif
 }
-#endif /* ISG */
-#endif /* WIN */
+#endif // ISG
+#endif // WIN
 
 
 /*
@@ -1324,9 +1371,9 @@ void EndX()
 ******************************************************************************
 */
 
-/* Process one command line switch passed to the program dealing with the    */
-/* graphics features. This is just like the processing of each switch in the */
-/* main program, however here each switch has been prefixed with an 'X'.     */
+// Process one command line switch passed to the program dealing with the
+// graphics features. This is just like the processing of each switch in the
+// main program, however here each switch has been prefixed with an 'X'.
 
 int NProcessSwitchesX(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
@@ -1347,6 +1394,12 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       return tcError;
     }
     ch1 = ChCap(ch1);
+    if (ch1 == 'B')
+      gi.fBmp = fFalse;
+    else if (ch1 == 'W') {
+      ch1 = 'B';
+      gi.fBmp = fTrue;
+    }
     if (FValidBmpmode(ch1))
       gs.chBmpMode = ch1;
     gs.ft = FSwitchF2(gs.ft == ftBmp) * ftBmp;
@@ -1363,7 +1416,6 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     break;
 #endif
 
-#ifdef META
   case 'M':
     if (FBetween(ch1, '1', '4')) {
       i = (ch1 - '0') + (ch2 == '0');
@@ -1374,6 +1426,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       darg += i;
       break;
     }
+#ifdef META
     if (us.fNoWrite || is.fSzInteract) {
       ErrorArgv("XM");
       return tcError;
@@ -1381,8 +1434,8 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     if (ch1 == '0')
       gs.nFont = FSwitchF(gs.nFont > 0) * gi.nFontPrev;
     gs.ft = FSwitchF2(gs.ft == ftWmf) * ftWmf;
-    break;
 #endif
+    break;
 
 #ifdef WIRE
   case '3':
@@ -1417,12 +1470,40 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     break;
 #endif
 
+  case 'I':
+    if (ch1 == '0') {
+      if (FErrorArgc("XI0", argc, 2))
+        return tcError;
+      rT = RFromSz(argv[1]);
+      i = NFromSz(argv[2]);
+      if (FErrorValR("XI0", !FValidBackPct(rT), rT, 1))
+        return tcError;
+      if (FErrorValN("XI0", !FValidBackOrient(i), i, 2))
+        return tcError;
+      gs.rBackPct = rT;
+      gs.nBackOrient = i;
+      darg += 2;
+      break;
+    } else if (ch1 == 'W') {
+      if (FErrorArgc("XIW", argc, 1))
+        return tcError;
+      FLoadBmp(argv[1], &gi.bmpWorld, fFalse);
+      darg++;
+      break;
+    }
+    if (FErrorArgc("XI", argc, 1))
+      return tcError;
+    FLoadBmp(argv[1], &gi.bmpBack, fFalse);
+    darg++;
+    break;
+
   case 'm':
     SwitchF(gs.fColor);
     break;
 
   case 'r':
     SwitchF(gs.fInverse);
+    InitColorPalette(gs.fInverse);
     break;
 
   case 'w':
@@ -1680,15 +1761,18 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 }
 
 
-/* Process one command line switch passed to the program dealing with more  */
-/* obscure graphics options. This is structured very much like the function */
-/* NProcessSwitchesX(), except here each switch begins with 'YX'.           */
+// Process one command line switch passed to the program dealing with more
+// obscure graphics options. This is structured very much like the function
+// NProcessSwitchesX(), except here each switch begins with 'YX'.
 
 int NProcessSwitchesRareX(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
 {
   int darg = 0, i;
   char ch1, *pch = NULL;
+#ifdef SWISS
+  flag fAdd;
+#endif
 
   ch1 = argv[0][pos+1];
   switch (argv[0][pos]) {
@@ -1707,7 +1791,10 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     i = NFromSz(argv[1]);
     if (FErrorValN("YXG", !FValidGlyphs(i), i, 0))
       return tcError;
-    gs.nGlyphs = i;
+    gs.nGlyphs = (FBetween(i/1000, 1, 2) ? i/1000 : gs.nGlyphs/1000)*1000 +
+      (FBetween(i/100%10, 1, 2) ? i/100%10 : gs.nGlyphs/100%10)*100 +
+      (FBetween(i/10%10, 1, 3) ? i/10%10 : gs.nGlyphs/10%10)*10 +
+      (FBetween(i%10, 1, 2) ? i%10 : gs.nGlyphs%10);
     darg++;
     break;
 
@@ -1809,6 +1896,11 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     break;
 
   case 'K':
+    if (ch1 == '0') {
+      SwitchF(gs.fAltPalette);
+      InitColorPalette(gs.fInverse);
+      break;
+    }
     if (FErrorArgc("YXK", argc, 2))
       return tcError;
     i = NParseSz(argv[1], pmColor);
@@ -1829,12 +1921,38 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     darg++;
     break;
 
+  case 'W':
+    gs.nTriangles = NFromSz(argv[1]);
+    darg++;
+    break;
+
 #ifdef SWISS
   case 'U':
     if (FErrorArgc("YXU", argc, 2))
       return tcError;
-    gs.szStarsLin = SzPersist(argv[1]);
-    gs.szStarsLnk = SzPersist(argv[2]);
+    fAdd = (ch1 == '0' && FSzSet(gs.szStarsLin) && FSzSet(gs.szStarsLnk));
+    pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLin) + 1 : 0) +
+      CchSz(argv[1]) + 1, "star name list");
+    if (pch == NULL)
+      return tcError;
+    if (fAdd)
+      sprintf(pch, "%s;%s", gs.szStarsLin, argv[1]);
+    else
+      sprintf(pch, "%s", argv[1]);
+    if (gs.szStarsLin)
+      DeallocateP(gs.szStarsLin);
+    gs.szStarsLin = pch;
+    pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLnk) + 1 : 0) +
+      CchSz(argv[2]) + 2, "star link list");
+    if (pch == NULL)
+      return tcError;
+    if (fAdd)
+      sprintf(pch, "%s;%s", gs.szStarsLnk, argv[2]);
+    else
+      sprintf(pch, "%s", argv[2]);
+    if (gs.szStarsLnk)
+      DeallocateP(gs.szStarsLnk);
+    gs.szStarsLnk = pch;
     gi.cStarsLin = *gs.szStarsLin != chNull;
     for (pch = gs.szStarsLin; *pch; pch++)
       if (*pch == chSep || *pch == chSep2)
@@ -1846,14 +1964,18 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     gi.rges = (ES *)PAllocate(gi.cStarsLin * sizeof(ES), "extra stars");
     if (gi.rges == NULL)
       gi.cStarsLin = 0;
-    darg++;
+    darg += 2;
     break;
 #endif
 
   case 'f':
     if (FErrorArgc("YXf", argc, 1))
       return tcError;
-    gs.nFont = NFromSz(argv[1]);
+    i = NFromSz(argv[1]);
+    gs.nFont = (FBetween(i/1000, 0, 6) ? i/1000 : gs.nFont/1000)*1000 +
+      (FBetween(i/100%10, 0, 6) ? i/100%10 : gs.nFont/100%10)*100 +
+      (FBetween(i/10%10, 0, 6) ? i/10%10 : gs.nFont/10%10)*10 +
+      (FBetween(i%10, 0, 6) ? i%10 : gs.nFont%10);
     if (gs.nFont != 0)
       gi.nFontPrev = gs.nFont;
     darg++;
@@ -1885,9 +2007,9 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
 }
 
 
-/* Figure out what graphics mode a graphics chart should be generated in, */
-/* based on various command switches in effect, e.g. -L combined with -X, */
-/* -g combined with -X, and so on.                                        */
+// Figure out what graphics mode a graphics chart should be generated in,
+// based on various command switches in effect, e.g. -L combined with -X,
+// -g combined with -X, and so on.
 
 int DetectGraphicsChartMode()
 {
@@ -1913,10 +2035,10 @@ int DetectGraphicsChartMode()
 }
 
 
-/* This is the main interface to all the graphics features. This routine     */
-/* is called from the main program if any of the -X switches were specified, */
-/* and it sets up for and goes and generates the appropriate graphics chart. */
-/* Return fTrue if successfull, or fFalse if some non-fatal error occurred.  */
+// This is the main interface to all the graphics features. This routine is
+// called from the main program if any of the -X switches were specified,
+// and it sets up for and goes and generates the appropriate graphics chart.
+// Return fTrue if successfull, or fFalse if some error occurred.
 
 flag FActionX()
 {
@@ -1938,7 +2060,7 @@ flag FActionX()
     if (gs.nGridCell > 0)
       gi.nGridCell = gs.nGridCell;
     else
-      for (gi.nGridCell = i = 0; i <= cObj; i++)
+      for (gi.nGridCell = i = 0; i <= is.nObj; i++)
         gi.nGridCell += FProper(i);
     gs.xWin = gs.yWin =
       (gi.nGridCell + (us.nRel <= rcDual))*CELLSIZE*gi.nScale + 1;
@@ -1972,6 +2094,11 @@ flag FActionX()
   gi.nScaleTextT = gi.nScaleText * gi.nScaleT;
 
   if (gi.fFile) {
+    if (!BeginFileX())
+      if (gs.ft == ftPS) {
+        gs.ft = ftNone; gi.fFile = fFalse;
+        return fFalse;
+      }
     if (gs.xWin == 0)
       gs.xWin = DEFAULTX;
     if (gs.yWin == 0)
@@ -1982,11 +2109,15 @@ flag FActionX()
       gs.xWin = BITMAPX;
     if (gs.yWin > BITMAPY)
       gs.yWin = BITMAPY;
-    BeginFileX();
     if (gs.ft == ftBmp) {
-      gi.cbBmpRow = (gs.xWin + 1) >> 1;
-      if ((gi.bm = PAllocate(gi.cbBmpRow * gs.yWin, NULL)) == NULL)
-        return fFalse;
+      if (!gi.fBmp) {
+        gi.cbBmpRow = (gs.xWin + 1) >> 1;
+        if ((gi.bm = PAllocate(gi.cbBmpRow * gs.yWin, "bitmap")) == NULL)
+          return fFalse;
+      } else {
+        if (!FAllocateBmp(&gi.bmp, gs.xWin, gs.yWin))
+          return fFalse;
+      }
     }
 #ifdef PS
     else if (gs.ft == ftPS)
@@ -1995,7 +2126,7 @@ flag FActionX()
 #ifdef META
     else if (gs.ft == ftWmf) {
       for (gi.cbMeta = MAXMETA; gi.cbMeta > 0 &&
-        (gi.bm = PAllocate(gi.cbMeta, NULL)) == NULL;
+        (gi.bm = PAllocate(gi.cbMeta, "metafile")) == NULL;
         gi.cbMeta -= MAXMETA/8)
         PrintWarning("Attempting to get maximum memory for metafile.");
       if (gi.cbMeta <= 0)
@@ -2011,7 +2142,7 @@ flag FActionX()
       gs.yWin   *= WIREMUL;  // scenes to make graphics look smoother.
       gs.nScale *= WIREMUL;
       for (gi.cbWire = MAXMETA; gi.cbWire > 0 &&
-        (gi.bm = PAllocate(gi.cbWire, NULL)) == NULL;
+        (gi.bm = PAllocate(gi.cbWire, "wireframe")) == NULL;
         gi.cbWire -= MAXMETA/8)
         PrintWarning("Attempting to get maximum memory for wireframe.");
       if (gi.cbWire <= 0)
@@ -2035,13 +2166,13 @@ flag FActionX()
       gs.xWin += SIDESIZE;
     BeginX();
   }
-#endif /* ISG */
+#endif // ISG
 
   if (gi.fFile || gs.fRoot)    // Go draw the graphic chart.
     DrawChartX();
   if (gi.fFile) {    // Write bitmap to file if in that mode.
     EndFileX();
-    if (gs.ft == ftBmp || gs.ft == ftWmf || gs.ft == ftWire) {
+    if ((gs.ft == ftBmp && !gi.fBmp) || gs.ft == ftWmf || gs.ft == ftWire) {
       DeallocateP(gi.bm);
       gi.bm = NULL;
     }
@@ -2072,9 +2203,9 @@ flag FActionX()
     DrawChartX();
 #endif
   }
-#endif /* ISG */
+#endif // ISG
   return fTrue;
 }
-#endif /* GRAPH */
+#endif // GRAPH
 
 /* xscreen.cpp */

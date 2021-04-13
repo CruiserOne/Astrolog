@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: charts2.cpp
+** Astrolog (Version 7.20) File: charts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,12 +60,12 @@
 ******************************************************************************
 */
 
-/* Print a listing of planets for two (or more) charts, as specified by the */
-/* -v -r0 switch combination, along with the maximum delta between planets. */
+// Print a listing of planets for two (or more) charts, as specified by the
+// -v -r0 switch combination, along with the maximum delta between planets.
 
 void ChartListingRelation(void)
 {
-  char sz[cchSzDef], szT[cchSzDef];
+  char sz[cchSzDef], szFormat[cchSzDef];
   int cChart, i, j, k, l, n;
   real r, rT;
 
@@ -76,20 +76,19 @@ void ChartListingRelation(void)
   AnsiColor(kWhiteA);
   PrintTab(' ', 5);
   n = us.fSeconds ? 23 : 16;
-  sprintf(szT, " %%-%d.%ds", n, n);
+  sprintf(szFormat, " %%-%d.%ds", n, n);
   for (i = 1; i <= cChart; i++) {
     AnsiColor(kMainA[FOdd(i) ? 1 : 3]);
-    sprintf(sz, szT, rgpci[i]->nam); PrintSz(sz);
+    sprintf(sz, szFormat, rgpci[i]->nam); PrintSz(sz);
   }
   PrintSz("\n      ");
   for (i = 1; i <= cChart; i++) {
     AnsiColor(kMainA[FOdd(i) ? 1 : 3]);
     if (!FNoTimeOrSpace(*rgpci[i])) {
-      PrintSz(SzDate(rgpci[i]->mon, rgpci[i]->day, rgpci[i]->yea,
-        us.fSeconds-1));
-      PrintCh(' ');
-      PrintSz(SzTim(rgpci[i]->tim));
-      PrintTab(' ', us.fSeconds ? 3 : 1);
+      sprintf(sz, "%s %s", SzDate(rgpci[i]->mon, rgpci[i]->day,
+        rgpci[i]->yea, us.fSeconds-1), SzTim(rgpci[i]->tim));
+      PrintSz(sz);
+      PrintTab(' ', (us.fSeconds ? 23 : 16) - CchSz(sz));
     } else
       PrintSz(us.fSeconds ? "(No time or space)      " : "(No time/space)  ");
   }
@@ -109,7 +108,7 @@ void ChartListingRelation(void)
   PrintSz("Delta\n");
 
   // Print object positions.
-  for (l = 0; l <= cObj; l++) {
+  for (l = 0; l <= is.nObj; l++) {
     i = rgobjList[l];
     if (FIgnore(i))
       continue;
@@ -141,15 +140,15 @@ void ChartListingRelation(void)
 }
 
 
-/* Print out an aspect (or midpoint if -g0 switch in effect) grid of a      */
-/* relationship chart. This is similar to the ChartGrid() routine; however, */
-/* here we have both axes labeled with the planets for the two charts in    */
-/* question, instead of just a diagonal down the center for only one chart. */
+// Print out an aspect (or midpoint if -gm switch in effect) grid of a
+// relationship chart. This is similar to the ChartGrid() routine, however
+// here both axes are labeled with the planets for the two charts in question,
+// instead of just a diagonal down the center for only one chart.
 
 void ChartGridRelation(void)
 {
   char sz[cchSzDef];
-  int i0, j0, i, j, k, tot = cObj, temp;
+  int i0, j0, i, j, k, temp;
 
 #ifdef INTERPRET
   if (us.fInterpret && !us.fGridMidpoint) {
@@ -158,7 +157,7 @@ void ChartGridRelation(void)
   }
 #endif
   PrintSz(" 2>");
-  for (i0 = 0; i0 <= tot; i0++) {
+  for (i0 = 0; i0 <= is.nObj; i0++) {
     i = rgobjList[i0];
     if (ignore[i])
       continue;
@@ -168,7 +167,7 @@ void ChartGridRelation(void)
     AnsiColor(kDefault);
   }
   PrintSz("\n1  ");
-  for (i0 = 0; i0 <= tot; i0++) {
+  for (i0 = 0; i0 <= is.nObj; i0++) {
     i = rgobjList[i0];
     if (ignore[i])
       continue;
@@ -178,7 +177,7 @@ void ChartGridRelation(void)
     AnsiColor(kDefault);
   }
   PrintSz("\nV  ");
-  for (i0 = 0; i0 <= tot; i0++) {
+  for (i0 = 0; i0 <= is.nObj; i0++) {
     i = rgobjList[i0];
     if (ignore[i])
       continue;
@@ -190,7 +189,7 @@ void ChartGridRelation(void)
   }
   if (us.fSeconds) {
     PrintSz("\n   ");
-    for (i0 = 0; i0 <= tot; i0++) {
+    for (i0 = 0; i0 <= is.nObj; i0++) {
       i = rgobjList[i0];
       if (ignore[i])
         continue;
@@ -202,7 +201,7 @@ void ChartGridRelation(void)
     }
   }
   PrintL();
-  for (j0 = 0; j0 <= tot; j0++) {
+  for (j0 = 0; j0 <= is.nObj; j0++) {
     j = rgobjList[j0];
     if (ignore[j])
       continue;
@@ -225,7 +224,7 @@ void ChartGridRelation(void)
       }
       if (k > 1)
         AnsiColor(kDefault);
-      for (i0 = 0; i0 <= tot; i0++) {
+      for (i0 = 0; i0 <= is.nObj; i0++) {
         i = rgobjList[i0];
         if (ignore[i])
           continue;
@@ -276,16 +275,16 @@ void ChartGridRelation(void)
 }
 
 
-/* Display all aspects between objects in the relationship comparison chart, */
-/* one per line, in sorted order based on the total "power" of the aspects,  */
-/* as specified with the -r0 -a switch combination.                          */
+// Display all aspects between objects in the relationship comparison chart,
+// one per line, in sorted order based on the total "power" of the aspects,
+// as specified with the -r0 -a switch combination.
 
 void ChartAspectRelation(void)
 {
   int ca[cAspect + 1], co[objMax];
   char sz[cchSzDef];
-  int vcut = nLarge, icut, jcut, vhi, ihi, jhi, ahi, phi, v, i, j, k, p,
-    count = 0;
+  int vcut = nLarge, icut, jcut, vhi, ihi, jhi, ahi, phi, v, i0, j0, i, j, k,
+    p, count = 0;
   real ip, jp, rPowSum = 0.0;
 
   ClearB((pbyte)ca, sizeof(ca));
@@ -295,8 +294,14 @@ void ChartAspectRelation(void)
 
     // Search for the next most powerful aspect in the aspect grid.
 
-    for (i = 0; i <= cObj; i++) if (!FIgnore(i))
-      for (j = 0; j <= cObj; j++) if (!FIgnore(j))
+    for (i0 = 0; i0 <= is.nObj; i0++) {
+      i = rgobjList[i0];
+      if (FIgnore(i))
+        continue;
+      for (j0 = 0; j0 <= is.nObj; j0++) {
+        j = rgobjList[j0];
+        if (FIgnore(j))
+          continue;
         if (k = grid->n[i][j]) {
           ip = RObjInf(i);
           jp = RObjInf(j);
@@ -317,8 +322,8 @@ void ChartAspectRelation(void)
           default:  v = p;                           break;
           case aso: v = -NAbs(grid->v[i][j]);        break;
           case asn: v = -grid->v[i][j];              break;
-          case asO: v = -(j*cObj + i);               break;
-          case asP: v = -(i*cObj + j);               break;
+          case asO: v = -(j0*cObj + i0);             break;
+          case asP: v = -(i0*cObj + j0);             break;
           case asA: v = -(k*cObj*cObj + j*cObj + i); break;
           case asC: v = -(int)(cp1.obj[j]*3600.0);   break;
           case asD: v = -(int)(cp2.obj[i]*3600.0);   break;
@@ -329,6 +334,8 @@ void ChartAspectRelation(void)
             vhi = v; ihi = i; jhi = j; ahi = k; phi = p;
           }
         }
+      }
+    }
     if (vhi <= -nLarge)    // Exit when no less powerful aspect found.
       break;
     vcut = vhi; icut = ihi; jcut = jhi;
@@ -355,7 +362,7 @@ void ChartAspectRelation(void)
       sprintf(sz, "%02d\"", NAbs(k)%60); PrintSz(sz);
     }
     AnsiColor(kDkGreenA);
-    sprintf(sz, " - power:%6.2f\n", (real)phi/1000.0); PrintSz(sz);
+    sprintf(sz, " - power: %5.2f\n", (real)phi/1000.0); PrintSz(sz);
     AnsiColor(kDefault);
   }
 
@@ -371,9 +378,9 @@ void ChartAspectRelation(void)
 }
 
 
-/* Display locations of all midpoints between objects in the relationship */
-/* comparison chart, one per line, in sorted zodiac order from zero Aries */
-/* onward, as specified with the -r0 -m switch combination.               */
+// Display locations of all midpoints between objects in the relationship
+// comparison chart, one per line, in sorted zodiac order from zero Aries
+// onward, as specified with the -r0 -m switch combination.
 
 void ChartMidpointRelation(void)
 {
@@ -381,7 +388,7 @@ void ChartMidpointRelation(void)
   char sz[cchSzDef];
   int mcut = -1, icut, jcut, mlo, ilo, jlo, m, i, j, count = 0;
   long lSpanSum = 0;
-  real mid, dist;
+  real mid, dist, midalt;
 
   ClearB((pbyte)cs, sizeof(cs));
   loop {
@@ -389,8 +396,8 @@ void ChartMidpointRelation(void)
 
     // Search for the next closest midpoint farther down in the zodiac.
 
-    for (i = 0; i <= cObj; i++) if (!FIgnore(i))
-      for (j = 0; j <= cObj; j++) if (!FIgnore(j)) {
+    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i))
+      for (j = 0; j <= is.nObj; j++) if (!FIgnore(j)) {
         m = (grid->n[j][i]-1)*(30*60*60) + grid->v[j][i];
         if ((m > mcut || (m == mcut && (i > icut ||
           (i == icut && j > jcut)))) && m < mlo) {
@@ -402,8 +409,16 @@ void ChartMidpointRelation(void)
     mcut = mlo; icut = ilo; jcut = jlo;
     if (us.objRequire >= 0 && ilo != us.objRequire && jlo != us.objRequire)
       continue;
-    mid  = Midpoint   (cp1.obj[ilo], cp2.obj[jlo]);
-    dist = MinDistance(cp1.obj[ilo], cp2.obj[jlo]);
+    if (!us.fHouse3D) {
+      mid = Midpoint(cp1.obj[ilo], cp2.obj[jlo]);
+      midalt = (cp1.alt[ilo] + cp2.alt[jlo]) / 2.0;
+      dist = MinDistance(cp1.obj[ilo], cp2.obj[jlo]);
+    } else {
+      SphRatio(cp1.obj[ilo], cp1.alt[ilo], cp2.obj[jlo], cp2.alt[jlo], 0.5,
+        &mid, &midalt);
+      dist = SphDistance(cp1.obj[ilo], cp1.alt[ilo],
+        cp2.obj[jlo], cp2.alt[jlo]);
+    }
 #ifdef EXPRESS
     // Skip current midpoint if AstroExpression says to do so.
     if (!us.fExpOff && FSzSet(us.szExpMid)) {
@@ -429,12 +444,19 @@ void ChartMidpointRelation(void)
     sprintf(sz, "%4d: ", count); PrintSz(sz);
     PrintZodiac(mid);
     PrintCh(' ');
+    if (us.fParallel) {
+      AnsiColor(kDefault);
+      PrintAltitude(midalt);
+      PrintCh(' ');
+    }
     PrintAspect(ilo, cp1.obj[ilo], (int)RSgn(cp1.dir[ilo]), 0,
       jlo, cp2.obj[jlo], (int)RSgn(cp2.dir[jlo]), 'M');
     AnsiColor(kDefault);
-    sprintf(sz, "-%4d%c%02d'", m/3600, chDeg1, m%3600/60); PrintSz(sz);
-    if (is.fSeconds) {
-      sprintf(sz, "%02d\"", m%60); PrintSz(sz);
+    PrintSz("- ");
+    PrintSz(SzDegree(dist));
+    if (us.fParallel && !us.fHouse3D) {
+      PrintCh(' ');
+      PrintSz(SzDegree(RAbs(cp1.alt[ilo] - cp2.alt[jlo])));
     }
     PrintSz(" degree span.\n");
   }
@@ -443,10 +465,10 @@ void ChartMidpointRelation(void)
 }
 
 
-/* Calculate any of the various kinds of relationship charts. This involves */
-/* computing and storing the planet and house positions for the "core" and  */
-/* "second" charts, and then combining them in the main single chart in the */
-/* proper manner, e.g. for synastry, composite, time space midpoint charts. */
+// Calculate any of the various kinds of relationship charts. This involves
+// computing and storing the planet and house positions for the "core" and
+// "second" charts, and then combining them in the main single chart in the
+// proper manner, e.g. for synastry, composite, time space midpoint charts.
 
 void CastRelation(void)
 {
@@ -477,7 +499,7 @@ void CastRelation(void)
 
   ciCore = ciTwin;
   if (us.nRel == rcTransit) {
-    for (i = 0; i <= cObj; i++) {
+    for (i = 0; i <= is.nObj; i++) {
       ignoreT[i] = ignore[i];
       ignore[i] = ignore[i] && ignore2[i];
     }
@@ -491,7 +513,7 @@ void CastRelation(void)
     cp0 = cp2;
   t2 = CastChart(2);
   if (us.nRel == rcTransit) {
-    for (i = 0; i <= cObj; i++)
+    for (i = 0; i <= is.nObj; i++)
       ignore[i] = ignoreT[i];
   } else if (us.nRel == rcProgress)
     us.fProgress = fSav;
@@ -531,7 +553,8 @@ void CastRelation(void)
   // For the -rc composite chart, take the midpoints of the planets/houses.
 
   } else if (us.nRel == rcComposite) {
-    for (i = 0; i <= cObj; i++) {
+    j = Max(is.nObj, cuspHi);
+    for (i = 0; i <= j; i++) {
       planet[i] = Ratio(cp1.obj[i], cp2.obj[i], ratio);
       if (RAbs(cp2.obj[i] - cp1.obj[i]) > rDegHalf)
         planet[i] = Mod(planet[i] + rDegMax*ratio);
@@ -569,10 +592,16 @@ void CastRelation(void)
       TT += 24.0; is.JD -= 1.0;
     }
     JulianToMdy(is.JD, &MM, &DD, &YY);
-    OO = Ratio(Lon, ciTwin.lon, ratio);
-    if (RAbs(ciTwin.lon-Lon) > rDegHalf)
-      OO = Mod(OO+rDegMax*ratio);
-    AA = Ratio(Lat, ciTwin.lat, ratio);
+    if (!us.fHouse3D) {
+      // Take midpoint of longitude and latitude separately.
+      OO = Ratio(Lon, ciTwin.lon, ratio);
+      if (RAbs(ciTwin.lon-Lon) > rDegHalf)
+        OO = Mod(OO+rDegMax*ratio);
+      AA = Ratio(Lat, ciTwin.lat, ratio);
+    } else {
+      // Take true midpoint along great circle between the two locations.
+      SphRatio(Lon, Lat, ciTwin.lon, ciTwin.lat, ratio, &OO, &AA);
+    }
     ciMain = ciCore;
     CastChart(0);
 #ifndef WIN
@@ -597,16 +626,17 @@ void CastRelation(void)
 ******************************************************************************
 */
 
-/* Given two objects and an aspect between them, or an object and a sign  */
-/* that it's entering, print if this is a "major" event, such as a season */
-/* change or major lunar phase. This is called from the ChartInDay()      */
-/* searching and influence routines. Do an interpretation if need be too. */
+// Given two objects and an aspect between them, or an object and a sign that
+// it's entering, print if this is a "major" event, such as a season change or
+// major lunar phase. This is called from the ChartInDay() searching and
+// influence routines. Do an interpretation if need be too.
 
 void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
 {
   char sz[cchSzDef];
   int nEclipse;
   real rPct;
+  flag fSwap;
 
   // If the Sun changes sign, then print out if this is a season change.
   if (aspect == aSig) {
@@ -625,9 +655,14 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
       }
     }
 
-  // Print if the present aspect is a New, Full, or Half Moon.
-  } else if (aspect > 0) {
-    if (source == oSun && dest == oMoo && !us.fParallel) {
+  } else if (aspect > 0 && !us.fParallel) {
+    fSwap = (dest == oSun);
+    if (fSwap)
+      SwapN(source, dest);
+
+    // Print if the present aspect is a New, Full, or Half Moon.
+    if (source == oSun && (dest == oMoo || FMoons(dest)) &&
+      (us.fMoonMove || ObjOrbit(dest) == us.objCenter)) {
       if (aspect <= aSqu)
         AnsiColor(kWhiteA);
       if (aspect == aCon)
@@ -635,8 +670,8 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
       else if (aspect == aOpp) {
         PrintSz(" (Full Moon)");
         // Full Moons may be a lunar eclipse.
-        if (us.fEclipse && us.objCenter == oEar) {
-          nEclipse = NCheckEclipseLunar(&rPct);
+        if (us.fEclipse) {
+          nEclipse = NCheckEclipseLunar(us.objCenter, dest, &rPct);
           if (nEclipse > etNone) {
             AnsiColor(kWhiteA);
             sprintf(sz, " (%s Lunar Eclipse", szEclipse[nEclipse]);
@@ -650,13 +685,14 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
       } else if (aspect == aSqu)
         PrintSz(" (Half Moon)");
     }
+
     // Conjunctions may be a solar eclipse or other occultation.
-    if (us.fEclipse && aspect == aCon && !us.fParallel) {
+    if (us.fEclipse && aspect == aCon) {
       nEclipse = NCheckEclipse(source, dest, &rPct);
       if (nEclipse > etNone) {
         AnsiColor(kWhiteA);
-        sprintf(sz, " (%s %s%s", szEclipse[nEclipse],
-          source == oSun ? "Solar " : "", source == oSun && dest == oMoo ?
+        sprintf(sz, " (%s %s%s", szEclipse[nEclipse], source == oSun ?
+          "Solar " : "", source == oSun && (dest == oMoo || FMoons(dest)) ?
           "Eclipse" : "Occultation"); PrintSz(sz);
         if (us.fSeconds) {
           sprintf(sz, " %.0f%%", rPct); PrintSz(sz);
@@ -664,6 +700,8 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
         PrintSz(")");
       }
     }
+    if (fSwap)
+      SwapN(source, dest);
   }
 
   // Print if the present aspect is the Moon going void of course.
@@ -685,11 +723,11 @@ void PrintInDayEvent(int source, int aspect, int dest, int nVoid)
 }
 
 
-/* Given two objects and an aspect (or one object, and an event such as a */
-/* sign or direction change) display the configuration in question. This  */
-/* is called by the many charts which list aspects among items, such as   */
-/* the -a aspect lists, -m midpoint lists, -d aspect in day search and    */
-/* -D influence charts, and -t transit search and -T influence charts.    */
+// Given two objects and an aspect (or one object, and an event such as a sign
+// or direction change) display the configuration in question. This is called
+// by the many charts which list aspects among items, such as the -a aspect
+// lists, -m midpoint lists, -d aspect in day search and -D influence charts,
+// and -t transit search and -T influence charts.
 
 void PrintAspect(int obj1, real pos1, int ret1, int asp,
   int obj2, real pos2, int ret2, char chart)
@@ -711,7 +749,7 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
   if (!us.fSeconds) {
     sprintf(sz, "%.3s", szSignName[SFromZ(pos1)]); PrintSz(sz);
   } else {
-    if ((asp == aSig || asp == aHou) && ret1 > 0)
+    if (asp == aSig && ret1 > 0)
       pos1 += 29.999;
     else if (asp == aDeg)
       pos1 = (real)obj2 * (rDegMax / (real)(cSign * us.nSignDiv));
@@ -726,6 +764,10 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
     sprintf(sz, "-->");                        // Print a sign change.
   else if (asp == aDir)
     sprintf(sz, "S/%c", obj2 ? chRet : 'D');   // Print a direction change.
+  else if (asp == aAlt)
+    sprintf(sz, "LA%c", obj2 ? '+' : '-');     // Print a latitude extreme.
+  else if (asp == aLen)
+    sprintf(sz, "%s", obj2 ? "Apo" : "Per");   // Print a distance extreme.
   else if (asp == aDeg)
     sprintf(sz, "At:");                        // Print a degree change.
   else if (asp == 0)
@@ -733,7 +775,7 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
   else
     sprintf(sz, "%s", SzAspectAbbrev(asp));    // Print an aspect.
   PrintSz(sz);
-  if (asp != aDir)
+  if (asp != aDir && asp != aAlt)
     PrintCh(' ');
 
   if (chart == 'A')
@@ -772,12 +814,12 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
 }
 
 
-/* Based on the given chart information, display all the aspects taking   */
-/* place in the chart, as specified with the -D switch. The aspects are   */
-/* printed in order of influence determined by treating them as happening */
-/* outside among transiting planets, such that rare outer planet aspects  */
-/* are given more power than common ones among inner planets. (This is    */
-/* almost identical to the -a list, except the influences are different.) */
+// Based on the given chart information, display all the aspects taking place
+// in the chart, as specified with the -D switch. The aspects are printed in
+// order of influence determined by treating them as happening outside among
+// transiting planets, such that rare outer planet aspects are given more
+// power than common ones among inner planets. (This is almost identical to
+// the -a list, except the influences are different.)
 
 void ChartInDayInfluence(void)
 {
@@ -800,7 +842,7 @@ void ChartInDayInfluence(void)
 
   // Search through the grid and build up the list of aspects.
 
-  for (j = 1; j <= cObj; j++) {
+  for (j = 1; j <= is.nObj; j++) {
     if (FIgnore(j))
       continue;
     for (i = 0; i < j; i++) {
@@ -874,9 +916,9 @@ void ChartInDayInfluence(void)
 }
 
 
-/* Given an arbitrary day, determine what aspects are made between this */
-/* transiting chart and the given natal chart, as specified with the -T */
-/* switch, and display the transits in order sorted by influence.       */
+// Given an arbitrary day, determine what aspects are made between this
+// transiting chart and the given natal chart, as specified with the -T
+// switch, and display the transits in order sorted by influence.
 
 void ChartTransitInfluence(flag fProg)
 {
@@ -894,7 +936,7 @@ void ChartTransitInfluence(flag fProg)
   // Cast the natal and transiting charts as with a relationship chart.
 
   cp1 = cp0;
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     ignore3[i] = ignore[i]; ignore[i] = ignore2[i];
   }
   SetCI(ciCore, ciTran.mon, ciTran.day, ciTran.yea, ciTran.tim,
@@ -905,7 +947,7 @@ void ChartTransitInfluence(flag fProg)
   }
   CastChart(0);
   cp2 = cp0;
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     ignore[i] = ignore3[i];
   }
 
@@ -916,7 +958,7 @@ void ChartTransitInfluence(flag fProg)
   // -ga or -ma is in effect or not. (3) Finally tweak the main restrictions
   // to allow for transiting objects not restricted.
 
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     ret[i] = cp1.dir[i];
     cp1.dir[i] = 0.0;
     ignore3[i] = ignore[i];
@@ -925,7 +967,7 @@ void ChartTransitInfluence(flag fProg)
   fSav = us.fAppSep; us.fAppSep = fTrue;
   f = FCreateGridRelation(fFalse);
   us.fAppSep = fSav;
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     cp1.dir[i] = ret[i];
     ignore[i] = ignore3[i];
   }
@@ -934,10 +976,10 @@ void ChartTransitInfluence(flag fProg)
 
   // Loop through the grid, and build up a list of the valid transits.
 
-  for (i = 0; i <= cObj; i++) {
+  for (i = 0; i <= is.nObj; i++) {
     if (FIgnore2(i))
       continue;
-    for (j = 0; j <= cObj; j++) {
+    for (j = 0; j <= is.nObj; j++) {
       if (FIgnore(j) || (is.fReturn && i != j) || (k = grid->n[i][j]) == 0 ||
         occurcount >= MAXINDAY)
         continue;
@@ -1002,7 +1044,7 @@ void ChartTransitInfluence(flag fProg)
       sprintf(sz, "%02d\"", NAbs(m)%60); PrintSz(sz);
     }
     AnsiColor(kDkGreenA);
-    sprintf(sz, " - power:%6.2f", power[i]); PrintSz(sz);
+    sprintf(sz, " - power: %5.2f", power[i]); PrintSz(sz);
     if (k == aCon && l == dest[i]) {    // Print a "R" to mark returns.
       AnsiColor(kWhiteA);
       PrintSz(" R");
@@ -1026,10 +1068,10 @@ void ChartTransitInfluence(flag fProg)
 }
 
 
-/* Given the zodiac location of a planet in the sky and its declination,   */
-/* and a location on the Earth, compute the azimuth and altitude of where  */
-/* on the local horizon sky the planet would appear to one at the given    */
-/* location. A reference MC position at Greenwich is also needed for this. */
+// Given the zodiac location of a planet in the sky and its declination, and
+// a location on the Earth, compute the azimuth and altitude of where on the
+// local horizon sky the planet would appear to one at the given location. A
+// reference MC position at Greenwich is also needed for this.
 
 void EclToHorizon(real *azi, real *alt, real obj, real objalt,
   real mc, real lat)
@@ -1044,9 +1086,9 @@ void EclToHorizon(real *azi, real *alt, real obj, real objalt,
 }
 
 
-/* Display a calendar for the given month in the chart, as specified with  */
-/* with the -K switch. When color is on, the title is white, weekends are  */
-/* highlighted in red, and the specific day in the chart is colored green. */
+// Display a calendar for the given month in the chart, as specified with the
+// -K switch. When color is on, the title is white, weekends are highlighted
+// in red, and the specific day in the chart is colored green.
 
 void ChartCalendarMonth(void)
 {
@@ -1096,9 +1138,9 @@ void ChartCalendarMonth(void)
 }
 
 
-/* Display a calendar for the entire year given in the chart, as specified */
-/* with the -Ky switch. This is just like twelve of the individual month   */
-/* calendars above displayed together, with same color highlights and all. */
+// Display a calendar for the entire year given in the chart, as specified
+// with the -Ky switch. This is just like twelve of the individual month
+// calendars above displayed together, with same color highlights and all.
 
 void ChartCalendarYear(void)
 {
@@ -1175,10 +1217,10 @@ void ChartCalendarYear(void)
 }
 
 
-/* Display either a biorhythm chart or the time difference in various units */
-/* between two charts, i.e. two types of relationship "charts" that aren't  */
-/* related in any way to planetary positions, as specified by either the    */
-/* -rb or -rd switches, respectively.                                       */
+// Display either a biorhythm chart or the time difference in various units
+// between two charts, i.e. two types of relationship "charts" that aren't
+// related in any way to planetary positions, as specified by either the
+// -rb or -rd switches, respectively.
 
 void DisplayRelation(void)
 {

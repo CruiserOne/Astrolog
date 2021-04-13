@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: xdata.cpp
+** Astrolog (Version 7.20) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -75,14 +75,16 @@ GS gs = {
 #else
   0,
 #endif
-  200, 100, 0, 0, 0, 3, 0, 0, 0.0, 0.0, oMoo, BITMAPMODE, 0, 8.5, 11.0, NULL,
-  0, 25, 11, oCore, 0.0, 1000, 0, 600, 1111, fFalse, fFalse, 7, "", ""};
+  200, 100, 0, 0, 0, 3, 0, 0, 0.0, 0.0, oMoo, BITMAPMODE, 25.0, 1, 0,
+  8.5, 11.0, NULL, 0, 25, 11, oCore, 0.0, 1000, 0, 600, 1111,
+  fFalse, fFalse, fTrue, 7, 0, NULL, NULL};
 
 GI gi = {
   0, fFalse, -1,
-  NULL, 0, NULL, NULL, 0.0, fFalse, fFalse,
+  NULL, 0, NULL, NULL, 0.0, fFalse, fFalse, 1.0,
   2, 1, 1, 1, 20, 10, 1022, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
   -1, -1, NULL, 0, 0, NULL,
+  fTrue, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL},
 #ifdef SWISS
   NULL, 0,
 #endif
@@ -103,10 +105,11 @@ GI gi = {
 #ifdef WIN
 WI wi = {
   (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, (HMENU)NULL, (HACCEL)NULL, hdcNil,
-  hdcNil, (HWND)NULL, (HPEN)NULL, (HBRUSH)NULL, (HFONT)NULL, (HANDLE)NULL,
+  hdcNil, hdcNil, (HWND)NULL, (HPEN)NULL, (HBRUSH)NULL, (HFONT)NULL,
+  (HBITMAP)NULL, (HBITMAP)NULL, (HANDLE)NULL,
   0, 0, 0, 0, 0, 0, 0, -1, -1,
   0, 0, 0, -1, fFalse, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse,
-  1, fFalse, {0, 0, 0, 0}, fFalse, fFalse,
+  1, fFalse, {0, 0, 0, 0}, fFalse, fFalse, {0, 0, 0, NULL},
 
   // Window user settings.
   fFalse, fTrue, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse,
@@ -131,17 +134,23 @@ char *szFileTemp = szFileTempCore;
 
 #ifdef WCLI
 WI wi = {
-  (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, hdcNil, (HPEN)NULL, (HBRUSH)NULL,
-  0, 0, fFalse, fFalse, fFalse, fFalse, 0, 0, 0, kLtGray};
+  (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, hdcNil, hdcNil, (HPEN)NULL,
+  (HBRUSH)NULL, (HBITMAP)NULL, (HBITMAP)NULL,
+  0, 0, fFalse, fFalse, fFalse, fFalse, 0, 0, 0, {0, 0, 0, NULL}, kLtGray};
 #endif
 
-/* Color tables for Astrolog's graphics palette. */
+// Color tables for Astrolog's graphics palette.
 
 CONST KV rgbbmpDef[cColor] = {
   0x000000, 0x00007F, 0x007F00, 0x007F7F,
   0x7F0000, 0x7F007F, 0x7F7F00, 0xBFBFBF,
   0x7F7F7F, 0x0000FF, 0x00FF00, 0x00FFFF,
   0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF};
+CONST KV rgbbmpDef2[cColor] = {
+  0x000000, 0x00009F, 0x007F00, 0x007F7F,
+  0x7F0000, 0x9F009F, 0x7F7F00, 0xBFBFBF,
+  0x7F7F7F, 0x0000FF, 0x009F00, 0x009F9F,
+  0xFF0000, 0xFF00FF, 0x9F9F00, 0xFFFFFF};
 KV rgbbmp[cColor];
 #ifdef X11
 KV rgbind[cColor], fg, bg;
@@ -155,16 +164,16 @@ CONST int rgcmdMode[gMax] = {0,
   cmdChartAstroGraph, cmdChartEphemeris, cmdChartLocal, cmdTransit, cmdTransit,
   cmdChartSphere, cmdChartMap, cmdChartGlobe, cmdChartPolar, cmdChartTelescope,
   0/*cmdRelBiorhythm*/, cmdChartAspect, cmdChartMidpoint, cmdChartArabic,
-  cmdChartRising, cmdTransit, cmdTransit, cmdTransit, cmdTransit,
-  cmdHelpSign, cmdHelpObject, cmdHelpAspect, cmdHelpConstellation,
+  cmdChartRising, cmdChartMoons, cmdTransit, cmdTransit, cmdTransit,
+  cmdTransit, cmdHelpSign, cmdHelpObject, cmdHelpAspect, cmdHelpConstellation,
   cmdHelpPlanetInfo, cmdHelpRay, cmdHelpMeaning, cmdHelpSwitch,
   cmdHelpObscure, cmdHelpKeystroke, cmdHelpCredit};
 #endif
 char *szWheelX[4+1] = {NULL, NULL, NULL, NULL, NULL};
 
-/* These are the actual color arrays and variables used by the program.      */
-/* Technically, Astrolog always assumes we are drawning on a color terminal. */
-/* For B/W graphics, all the values below are filled with black or white.    */
+// These are the actual color arrays and variables used by the program.
+// Technically, Astrolog always assumes charts are being drawn in color.
+// For B/W graphics, all the values below are filled with black or white.
 
 KI kMainB[9], kRainbowB[cRainbow+1], kElemB[cElem], kAspB[cAspect+1],
   kObjB[objMax], kRayB[cRay+2];
@@ -274,8 +283,21 @@ CONST char *szDrawObjectDef[objMax+9] = {
   "BU2D3ND3NR2L2BH2UE2R4F2D",                // Kronos
   "U3NLR2NRD3NL2NR2D4NRL2NLU4L4UEUH",        // Apollon
   "BUNU2NL2NR2D2ND3LHU2ENHR2NEFD2GL",        // Admetos
-  "G2DGR6HUH2U4NG2F2",                       // Vulcanus
+  "G2DGR6HUH2U4NG2F2",                       // Vulkanus
   "ND4U4BL3DF2R2E2UBD8UH2L2G2D",             // Poseidon
+  "NU3D4EUNL2EUHNL2REUHBL4GDFRGDFDF",        // Hygiea
+  "BG2LDFEULU6R3FDGL3",                      // Pholus
+  "ND4NU4BUH2LBR6LG2BD2G2LBR6LH2",           // Eris
+  "BDLDR2ULBU4LUR2DLBD2NR4L2NL2D3G2BR8H2U3", // Haumea
+  "ND4U4L3GD2FBUURDLBR6LURDBDEU2HL3",        // Makemake
+  "NR4L2NL2U2NL2NU2R4NU2NR2D5FEHL2GLGLHE",   // Gonggong
+  "DFDRFRUHULHLBD4NEH4E4F4G",                // Quaoar
+  "R2F2D2BH4U2NU2NRL3HEFG",                  // Sedna
+  "BD2BREU2HL2GD2FNF2R5U4H2L4G2D4F2R4E2",    // Orcus
+  "T", "T", "T", "T", "T", "T", "T", "T",    // Moons
+  "T", "T", "T", "T", "T", "T", "T", "T",
+  "T", "T", "T", "T", "T", "T", "T", "T",
+  "T", "T", "T", "T", "T", "T", "T", "T",
   "T", "T", "T", "T", "T", "T", "T", "T",    // Stars
   "T", "T", "T", "T", "T", "T", "T", "T",
   "T", "T", "T", "T", "T", "T", "T", "T",
@@ -334,9 +356,21 @@ CONST char *szDrawObjectDef2[objMax+9] = {
   "",  // Kronos
   "U6NL2R4NR2D6NL4NR4D8NR2L4NL2U8L8UE2U3H2",           // Apollon
   "",  // Admetos
-  "G2DG2DG2R12H2UH2UH2U8NG4F4",                        // Vulcanus
+  "G2DG2DG2R12H2UH2UH2U8NG4F4",                        // Vulkanus
   "",  // Poseidon
-  "", "", "", "", "", "", "", "", "", "",  // Stars
+  "NU6D8REU2HNL2RE2U2H2NL4R2E2U2H2BL8G2D2F2R2G2D2F2RGD2FR",     // Hygiea
+  "BG4LGD2FR2EU2HLU12R6F2D2G2L6",                               // Pholus
+  "ND8NU8BU2HUHLHL2BR12L2GLGDGBD4GDGLGL2BR12L2HLHUH",           // Eris
+  "BDLGDFR2EUHLBU6LHUER2FDGLBD3NR8L4NL4D5GDG3BR16H3UHU5",       // Haumea
+  "ND8U8L6G2D4F2BU3BRU2R2D2L2BR10L2U2R2D2BRBD3E2U4H2L6",        // Makemake
+  "NR8L3NL5U4NL5NU4R6NU4NR5D10F2RE2UH2L3GLG3LGL2H2UE2R",        // Gonggong
+  "DFDFD2R2FRFRUHUHU2L2HLHLBD8NE2H8E8F8G2",                     // Quaoar
+  "R4F4D4BH8U4NU4NR2L7HU2ER2FD2G",                              // Sedna
+  "BD4BR2E2U4H2L4G2D4F2NF4R9EU6HUH2LHL6GLG2DGD6FDF2RFR6ERE2U",  // Orcus
+  "", "", "", "", "", "", "", "", "", "", "", "",  // Moons
+  "", "", "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "",          // Stars
   "", "", "", "", "", "", "", "", "", "", 
   "", "", "", "", "", "", "", "", "", "", 
   "", "", "", "", "", "", "", "", "", "", 
@@ -598,8 +632,8 @@ UHLHLHLLLLHLHLGEHLGEUHUUHLHLLLHHLHULEDLLELLGHLLHLGDDHUELLGLGDGHHL",
 "+092+00", "FUL", "3GALAPAGOS I.",
 "-032+32",
 "LLGLHLLLLHLGDGHLLHHLLHLEUULLLLLLLLLGLGLLLLHDGLGDGDGGLDGGGDGDFDDDDGDDFFFFDFRF\
-FRRRRRRRRERERRFFRRFFDDDGDFFFDFDDDFDGDGDDDFDFDFDDDFDFDFDDFFERRRRREEEEEEEUUEREU\
-UHUEEEREEUUUUHUUUHUEUEEEEEREEUEUEEUUULLLLGLLHUHHLHUHHUUHHUUHUHHUU",
+FRRRRRRRRERERRFFRRFFDDDGDFFFDFDDDFDGDGDDDFDFDFDDDFDFDFDDFFERRRRRREEEEEEUUEREU\
+UHUEEEREEUUUUHUUUHUEUEEEEEREEUEUEEUUULLGLLLLHUHHLHUUHHUUHHUUHUHHUU",
 "1AFRICA",
 "-049-12", "DGGGLGDDDDGDDFFREUEUEUUUEUUUUH", "1MADAGASCAR",
 "-032+00", "DDDREUELLL", "0LAKE VICTORIA",
@@ -736,7 +770,7 @@ r6Uu3LLLl7", // Ursa Major
 "551309+14Dd2LLl3DdRr3d7r6DDd3RRrUu8RrUu3r5UULu3l14uLl9", // Virgo
 "560900-64Dd5RRr7Uu6LLL", // Volans
 "462100+29dl8d4r3DRr5ur5uRrDr9u2Rru3Ll5u2l6u2LL"}; // Vulpecula
-#endif /* CONSTEL */
-#endif /* GRAPH */
+#endif // CONSTEL
+#endif // GRAPH
 
 /* xdata.cpp */

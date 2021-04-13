@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: general.cpp
+** Astrolog (Version 7.20) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,7 +60,7 @@
 ******************************************************************************
 */
 
-/* Swap two floating point values. */
+// Swap two floating point values.
 
 void SwapR(real *d1, real *d2)
 {
@@ -70,7 +70,7 @@ void SwapR(real *d1, real *d2)
 }
 
 
-/* Return the length of a string (not counting the null terminator). */
+// Return the length of a string (not counting the null terminator).
 
 int CchSz(CONST char *sz)
 {
@@ -104,8 +104,30 @@ int NCompareSzI(CONST char *sz1, CONST char *sz2)
 }
 
 
-/* Return whether the first string matches the second, case insensitively.  */
-/* The first string may be truncated, but the first three chars must match. */
+// Return whether two ranges of characters are equal. Either string ending
+// prematurely with a zero terminator makes the strings not equal.
+
+flag FEqRgch(CONST char *rgch1, CONST char *rgch2, int cch, flag fInsensitive)
+{
+  int ich;
+
+  if (!fInsensitive) {
+    for (ich = 0; ich < cch; ich++) {
+      if (rgch1[ich] == '\0' || rgch1[ich] != rgch2[ich])
+        return fFalse;
+    }
+  } else {
+    for (ich = 0; ich < cch; ich++) {
+      if (rgch1[ich] == '\0' || ChCap(rgch1[ich]) != ChCap(rgch2[ich]))
+        return fFalse;
+    }
+  }
+  return fTrue;
+}
+
+
+// Return whether the first string matches the second, case insensitively.
+// The first string may be truncated, but the first three chars must match.
 
 flag FMatchSz(CONST char *sz1, CONST char *sz2)
 {
@@ -113,13 +135,13 @@ flag FMatchSz(CONST char *sz1, CONST char *sz2)
 
   while (*sz1 && ChCap(*sz1) == ChCap(*sz2))
     sz1++, sz2++;
-  return *sz2 == chNull || (*sz1 == chNull && sz1 - szStart >= 3);
+  return *sz1 == chNull && (*sz2 == chNull || sz1 - szStart >= 3);
 }
 
 
-/* Return whether the first string matches any string in the second, case */
-/* sensitively. The second string is subdivided by comma or semicolon     */
-/* characters. Return offset into string, and optionally index into list. */
+// Return whether the first string matches any string in the second, case
+// sensitively. The second string is subdivided by comma or semicolon
+// characters. Return offset into string, and optionally the index into list.
 
 CONST char *SzInList(CONST char *sz1, CONST char *sz2, int *pisz)
 {
@@ -127,22 +149,25 @@ CONST char *SzInList(CONST char *sz1, CONST char *sz2, int *pisz)
   int isz = 0;
 
   loop {
+    // Compate string to current string in string list.
     for (sz1 = szStart; *sz1 && *sz1 == *sz2; sz1++, sz2++)
       ;
     if (*sz2 == chNull || (*sz2 == chSep || *sz2 == chSep2)) {
       if (*sz1 == chNull) {
+        // Match if reached end of string and of current string in list.
         if (pisz != NULL)
           *pisz = isz;
         return sz2 + (*sz2 == chSep || *sz2 == chSep2);
       }
     } else {
+      // Skip ahead to start of next string in string list.
       while (*sz2 && !(*sz2 == chSep || *sz2 == chSep2))
         sz2++;
     }
     if (*sz2 == chSep || *sz2 == chSep2)
       sz2++;
     else
-      break;
+      break;    // If no separator, then end of string list reached.
     isz++;
   }
   if (pisz != NULL)
@@ -151,7 +176,7 @@ CONST char *SzInList(CONST char *sz1, CONST char *sz2, int *pisz)
 }
 
 
-/* Set a given number of bytes to zero given a starting pointer. */
+// Set a given number of bytes to zero given a starting pointer.
 
 void ClearB(pbyte pb, int cb)
 {
@@ -160,7 +185,7 @@ void ClearB(pbyte pb, int cb)
 }
 
 
-/* Copy a given number of bytes from one location to another. */
+// Copy a given number of bytes from one location to another.
 
 void CopyRgb(byte *pbSrc, byte *pbDst, int cb)
 {
@@ -169,8 +194,8 @@ void CopyRgb(byte *pbSrc, byte *pbDst, int cb)
 }
 
 
-/* Determine the sign of a number: -1 if value negative, +1 if value */
-/* positive, and 0 if it's zero.                                     */
+// Determine the sign of a number: -1 if value negative, +1 if value positive,
+// and 0 if it's zero.
 
 real RSgn(real r)
 {
@@ -178,9 +203,9 @@ real RSgn(real r)
 }
 
 
-/* Given an x and y coordinate, return the angle formed by a line from the */
-/* origin to this coordinate. This is just converting from rectangular to  */
-/* polar coordinates, however this doesn't involve the radius here.        */
+// Given an x and y coordinate, return the angle formed by a line from the
+// origin to this coordinate. This is just converting from rectangular to
+// polar coordinates, however this doesn't involve the radius here.
 
 real RAngle(real x, real y)
 {
@@ -201,8 +226,32 @@ real RAngle(real x, real y)
 }
 
 
-/* Modulus function for floating point values, where we bring the given */
-/* parameter to within the range of 0 to 360.                           */
+// Like RAngle() but return the angle between two 3D vectors instead.
+
+real VAngle(CONST PT3R *v1, CONST PT3R *v2)
+{
+  real angle, len1, len2;
+
+  len1 = PtLen((*v1));
+  len2 = PtLen((*v2));
+  if (len1 != 0.0 && len2 != 0.0) {
+    angle = PtDot((*v1), (*v2))/len1/len2;
+    if (angle == 0.0)
+      return rPiHalf;
+    else if (angle <= -1.0)
+      return rPi;
+    angle = RAtn(RSqr(1.0 - Sq(angle)) / angle);
+    if (angle >= 0.0)
+      return angle;
+    else
+      return angle + rPi;
+  } else
+    return rPiHalf;
+}
+
+
+// Modulus function for floating point values, in which we bring the given
+// parameter to within the range of 0 to 360.
 
 real Mod(real d)
 {
@@ -231,8 +280,8 @@ long Dvd(long x, long y)
 }
 
 
-/* Lookup a string within a table (case insensitively) returning the index */
-/* that goes with the matched string, or -1 if the string is not found.    */
+// Lookup a string within a table (case insensitively) returning the index
+// that goes with the matched string, or -1 if the string is not found.
 
 int SzLookup(CONST StrLook *rgStrLook, CONST char *sz)
 {
@@ -261,8 +310,8 @@ flag FCompareSzSubI(CONST char *sz1, CONST char *sz2)
 }
 
 
-/* Set a string to a floating point value, with at most 'n' significant */
-/* fractional digits, and dropping trailing '0' characters.             */
+// Set a string to a floating point value, with at most 'n' significant
+// fractional digits, and dropping trailing '0' characters.
 
 void FormatR(char *sz, real r, int n)
 {
@@ -297,10 +346,10 @@ int Mod12(int i)
 }
 
 
-/* Convert an inputed fractional degrees/minutes value to a true decimal   */
-/* degree quantity. For example, the user enters the decimal value "10.30" */
-/* to mean 10 degrees and 30 minutes; this will return 10.5, i.e. 10       */
-/* degrees and 30 minutes expressed as a floating point degree value.      */
+// Convert an inputed fractional degrees/minutes value to a true decimal
+// degree quantity. For example, the user enters the decimal value "10.30"
+// to mean 10 degrees and 30 minutes; this will return 10.5, i.e. 10 degrees
+// and 30 minutes expressed as a floating point degree value.
 
 real DecToDeg(real d)
 {
@@ -308,9 +357,9 @@ real DecToDeg(real d)
 }
 
 
-/* This is the inverse of the above function. Given a true decimal value */
-/* for a zodiac degree, adjust it so the degrees are in the integer part */
-/* and the minute expressed as hundredths, e.g. 10.5 degrees -> 10.30    */
+// This is the inverse of the above function. Given a true decimal value for
+// a zodiac degree, adjust it so the degrees are in the integer part and the
+// minute expressed as hundredths, e.g. 10.5 degrees -> 10.30
 
 real DegToDec(real d)
 {
@@ -318,8 +367,8 @@ real DegToDec(real d)
 }
 
 
-/* Return the shortest distance between two degrees in the zodiac. This is  */
-/* normally their difference, but we have to check if near the Aries point. */
+// Return the shortest distance between two degrees in the zodiac. This is
+// normally their difference, but we have to check if near the Aries point.
 
 real MinDistance(real deg1, real deg2)
 {
@@ -330,9 +379,9 @@ real MinDistance(real deg1, real deg2)
 }
 
 
-/* This is just like the above routine, except the min distance value  */
-/* returned will either be positive or negative based on whether the   */
-/* second value is ahead or behind the first one in a circular zodiac. */
+// This is just like the above routine, except the min distance value returned
+// will either be positive or negative based on whether the second value is
+// ahead or behind the first one in a circular zodiac.
 
 real MinDifference(real deg1, real deg2)
 {
@@ -345,8 +394,8 @@ real MinDifference(real deg1, real deg2)
 }
 
 
-/* Return the degree of the midpoint between two zodiac positions, making */
-/* sure we return the true midpoint closest to the positions in question. */
+// Return the degree of the midpoint between two zodiac positions, making sure
+// we return the true midpoint closest to the positions in question.
 
 real Midpoint(real deg1, real deg2)
 {
@@ -357,29 +406,39 @@ real Midpoint(real deg1, real deg2)
 }
 
 
-/* Return the minimum great circle distance between two sets of spherical   */
-/* coordinates. This is like MinDistance() but takes latitude into account. */
+// Return the minimum great circle distance between two sets of spherical
+// coordinates. This is like MinDistance() but takes latitude into account.
 
 real SphDistance(real lon1, real lat1, real lon2, real lat2)
 {
-  real dLat, r;
+  real dLon, r;
 
-  dLat = RAbs(lon1 - lon2);
-  r = RAcosD(RSinD(lat1)*RSinD(lat2) + RCosD(lat1)*RCosD(lat2)*RCosD(dLat));
+  dLon = RAbs(lon1 - lon2);
+  r = RAcosD(RSinD(lat1)*RSinD(lat2) + RCosD(lat1)*RCosD(lat2)*RCosD(dLon));
   return r;
 }
 
 
-/* Given two pairs of coordinates on a sphere, return coordinates at some */
-/* proportion (0.0-1.0) along the great circle path between them.         */
+// Given two pairs of coordinates on a sphere, return coordinates at some
+// proportion (0.0-1.0) along the great circle path between them.
 
 void SphRatio(real lon1, real lat1, real lon2, real lat2, real rRatio,
   real *lon, real *lat)
 {
-  real x1, y1, z1, x2, y2, z2, x, y, z;
+  real x1, y1, z1, x2, y2, z2, x, y, z, len, ang, adj, ang2;
 
   SphToRec(1.0, lon1, lat1, &x1, &y1, &z1);
   SphToRec(1.0, lon2, lat2, &x2, &y2, &z2);
+  if (rRatio != 0.5) {
+    // Bisecting an arc is easy, however other proportions require extra math.
+    len = RLength3(x2 - x1, y2 - y1, z2 - z1) / 2.0;
+    ang = RAsinD(len);
+    adj = 1.0 / RTanD(ang);
+    rRatio = (rRatio - 0.5) / 0.5;
+    ang2 = rRatio * ang;
+    rRatio = adj * RTanD(ang2);
+    rRatio = (rRatio / 2.0) + 0.5;
+  }
   x = x1 + (x2 - x1) * rRatio;
   y = y1 + (y2 - y1) * rRatio;
   z = z1 + (z2 - z1) * rRatio;
@@ -387,10 +446,10 @@ void SphRatio(real lon1, real lat1, real lon2, real lat2, real rRatio,
 }
 
 
-/* Given a planet and sign, determine whether: The planet rules the sign or */
-/* is in detriment in the sign, the planet exalts in sign or is in fall /   */
-/* debilitated in sign, the planet esoterically and hierarchically and ray  */
-/* rules or is in detriment in the sign, and return an appropriate string.  */
+// Given a planet and sign, determine whether: The planet rules the sign or
+// is in detriment in the sign, the planet exalts in sign or is in fall /
+// debilitated in sign, the planet esoterically and hierarchically and ray
+// rules or is in detriment in the sign, and return an appropriate string.
 
 char *Dignify(int obj, int sign)
 {
@@ -451,8 +510,8 @@ LExit:
 }
 
 
-/* Process the list of each sign's rays, creating a grid based on it  */
-/* indicating whether each ray applies to a sign, and its proportion. */
+// Process the list of each sign's rays, creating a grid based on it
+// indicating whether each ray applies to a sign, and its proportion.
 
 void EnsureRay()
 {
@@ -477,8 +536,8 @@ void EnsureRay()
 }
 
 
-/* Initialize table of star brightnesses. Usually only called once before */
-/* first star accessed, but may be redone if computation method changes.  */
+// Initialize table of star brightnesses. Usually only called once before
+// first star accessed, but may be redone if computation method changes.
 
 void EnsureStarBright()
 {
@@ -510,8 +569,8 @@ void EnsureStarBright()
 }
 
 
-/* Determine the number of days in a particular month. The year is needed, */
-/* too, because we have to check for leap years in the case of February.   */
+// Determine the number of days in a particular month. The year is needed too,
+// because have to check for leap years in the case of February.
 
 int DayInMonth(int month, int year)
 {
@@ -531,10 +590,10 @@ int DayInMonth(int month, int year)
 }
 
 
-/* Return the actual number of days in a particular month. Normally, this  */
-/* is the same as the above routine which determines the index of the last */
-/* day of the month, but the values can differ when changing between       */
-/* calendar systems (Julian to Gregorian) in which one can jump over days. */
+// Return the actual number of days in a particular month. Normally, this is
+// the same as the above routine which determines the index of the last day of
+// the month, but the values can differ when changing between calendar systems
+// (Julian to Gregorian) in which a month can skip over days.
 
 int DaysInMonth(int month, int year)
 {
@@ -548,21 +607,21 @@ int DaysInMonth(int month, int year)
 }
 
 
-/* Return the day of the week (Sunday is 0) of the specified given date. */
+// Return the day of the week (Sunday is 0) of the specified given date.
 
 int DayOfWeek(int month, int day, int year)
 {
   int d;
 
-  d = (int)((MdyToJulian(month, day, year) + 1) % 7);
+  d = (MdyToJulian(month, day, year) + 1) % 7;
   return d < 0 ? d+7 : d;
 }
 
 
-/* Given a day, and the month and year it falls in, add a number of days    */
-/* to it and return the new day index. As month changes are not checked for */
-/* here, this is mostly just adding the offset to the day; however we need  */
-/* to check for calendar changes for when days in a month may be skipped.   */
+// Given a day, and the month and year it falls in, add a number of days to
+// it and return the new day index. As month changes are not checked for here,
+// this is mostly just adding the offset to the day, however need to check for
+// calendar changes for when days in a month may be skipped.
 
 int AddDay(int month, int day, int year, int delta)
 {
@@ -578,10 +637,10 @@ int AddDay(int month, int day, int year, int delta)
 }
 
 
-/* Given an aspect and two objects making that aspect with each other,   */
-/* return the maximum orb allowed for such an aspect. Normally this only */
-/* depends on the aspect itself, but some objects require narrow orbs,   */
-/* and some allow wider orbs, so check for these cases.                  */
+// Given an aspect and two objects making that aspect with each other, return
+// the maximum orb allowed for such an aspect. Normally this only depends on
+// the aspect itself, but some objects require narrow orbs, and some allow
+// wider orbs, so check for these cases.
 
 real GetOrb(int obj1, int obj2, int asp)
 {
@@ -598,7 +657,7 @@ real GetOrb(int obj1, int obj2, int asp)
 }
 
 
-/* Return an aspect's name, checking whether parallel aspects are on. */
+// Return an aspect's name, checking whether parallel aspects are on.
 
 CONST char *SzAspect(int asp)
 {
@@ -608,7 +667,7 @@ CONST char *SzAspect(int asp)
 }
 
 
-/* Return the three letter abbreviation for an aspect. */
+// Return the three letter abbreviation for an aspect.
 
 CONST char *SzAspectAbbrev(int asp)
 {
@@ -618,7 +677,7 @@ CONST char *SzAspectAbbrev(int asp)
 }
 
 
-/* Set the central planet (e.g. geocentric or heliocentric). */
+// Set the central planet (e.g. geocentric or heliocentric).
 
 void SetCentric(int obj)
 {
@@ -631,26 +690,70 @@ void SetCentric(int obj)
 }
 
 
-/* Return the planet this object orbits, if any. */
+// Return the planet that an object orbits, if any.
 
 int ObjOrbit(int obj)
 {
   if (FGeo(obj))
     return oEar;
-  if (FUranian(obj)) {
+  if (FCust(obj)) {
 #ifdef SWISS
-    // Check if this Uranian has been redefined to be related to Earth's Moon.
-    if (rgTypSwiss[obj - uranLo] == 2 && FGeo(rgObjSwiss[obj - uranLo]))
+    // Check if this object has been redefined to be related to Earth's Moon.
+    if (rgTypSwiss[obj - custLo] == 2 && FGeo(rgObjSwiss[obj - custLo]))
       return oEar;
-    // Check if this Uranian has been redefined to be a planetary moon.
-    if (rgTypSwiss[obj - uranLo] == 3)
-      return rgObjSwiss[obj - uranLo] / 100 + 1;
+    // Check if this object has been redefined to be a planetary moon.
+    if (rgTypSwiss[obj - custLo] == 3 && rgObjSwiss[obj - custLo] % 100 < 99)
+      return rgObjSwiss[obj - custLo] / 100 + 1;
 #endif
     return oSun;
   }
-  if (FBetween(obj, oMer, cPlanet))
+  if (FBetween(obj, oMer, cPlanet) || obj == oEar)
     return oSun;
   return -1;
+}
+
+
+// Map a planetary moon ephemeris number to an Astrolog object index.
+
+int ObjMoons(int i)
+{
+  int pla, moo, obj;
+
+  pla = i/100; moo = i - pla*100;
+  if (FBetween(pla, 4, 9) && FBetween(moo, 1, 8))
+    obj = moonsLo + nMooMap[pla-4][moo-1];
+  else if (FBetween(pla, 5, 9) && moo == 99)
+    obj = cobLo + (pla-5);
+  else
+    obj = -1;
+  return obj;
+}
+
+
+// Return the diameter of an object, in km.
+
+real RObjDiam(int obj)
+{
+#ifdef SWISS
+  int i;
+
+  // Check if this object has been redefined to be a planetary moon.
+  if (FCust(obj) && rgTypSwiss[obj - custLo] == 3) {
+    i = rgObjSwiss[obj - custLo];
+    obj = ObjMoons(i);
+  }
+#endif
+  if (!FNorm(obj))
+    return 0.0;
+  // If planet Center of Body (COB) is present, barycenter size should be 0.
+  if (FBetween(obj, oJup, oPlu) && (!ignore[obj - oJup + cobLo]
+#ifdef SWISS
+    || (!ignore[oVul] && rgTypSwiss[oVul - custLo] == 3 &&
+    rgObjSwiss[oVul - custLo] == (obj - oJup + 5)*100 + 99)
+#endif
+    ))
+    return 0.0;
+  return rObjDiam[obj];
 }
 
 
@@ -660,9 +763,9 @@ int ObjOrbit(int obj)
 ******************************************************************************
 */
 
-/* Exit the program, and do any cleanup necessary. Note that if we had     */
-/* a non-fatal error, and we are in the -Q loop mode, then we won't        */
-/* actually terminate the program, but drop back to the command line loop. */
+// Exit the program, and do any cleanup necessary. Note that if there was
+// a non-fatal error, and were in the -Q loop mode, then won't actually
+// terminate the program, but rather drop back to the command line loop.
 
 void Terminate(int tc)
 {
@@ -687,10 +790,10 @@ void Terminate(int tc)
 }
 
 
-/* Print a string on the screen. A seemingly simple operation, however we */
-/* keep track of what column we are printing at after each newline so we  */
-/* can automatically clip at the appropriate point, and we keep track of  */
-/* the row we are printing at, so we may prompt before screen scrolling.  */
+// Print a string on the screen. A seemingly simple operation, however
+// keep track of what column are printing at after each newline so can
+// automatically clip at the appropriate point, and keep track of the row
+// printing at too, so can prompt before screen scrolling.
 
 void PrintSz(CONST char *sz)
 {
@@ -707,6 +810,8 @@ void PrintSz(CONST char *sz)
           continue;
       }
     } else {
+      if (is.cchCol > is.cchColMax)
+        is.cchColMax = is.cchCol;
       is.cchRow++;
       is.cchCol = 0;
     }
@@ -786,7 +891,7 @@ void PrintSz(CONST char *sz)
 }
 
 
-/* Print a single character on the screen. */
+// Print a single character on the screen.
 
 void PrintCh(char ch)
 {
@@ -797,8 +902,8 @@ void PrintCh(char ch)
 }
 
 
-/* Print a string on the screen. Unlike the normal PrintSz(), here we still */
-/* go to the standard output even if text is being sent to a file with -os. */
+// Print a string on the screen. Unlike the normal PrintSz(), here still
+// go to the standard output even if text is being sent to a file with -os.
 
 void PrintSzScreen(CONST char *sz)
 {
@@ -811,8 +916,8 @@ void PrintSzScreen(CONST char *sz)
 }
 
 
-/* Print a partial progress message given a string. This is meant to be     */
-/* used in the middle of long operations such as creating and saving files. */
+// Print a partial progress message given a string. This is meant to be used
+// in the middle of long operations such as creating and saving files.
 
 void PrintProgress(CONST char *sz)
 {
@@ -825,8 +930,8 @@ void PrintProgress(CONST char *sz)
 }
 
 
-/* Print a general user message given a string. This is just like the */
-/* warning displayer below just that we print in a different color.   */
+// Print a general user message given a string. This is just like the warning
+// displayer below, except print in a different color.
 
 void PrintNotice(CONST char *sz)
 {
@@ -845,8 +950,8 @@ void PrintNotice(CONST char *sz)
 }
 
 
-/* Print a warning message given a string. This is called in non-fatal  */
-/* cases where we return to normal execution after printing the string. */
+// Print a warning message given a string. This is called in non-fatal cases
+// in which normal execution is resumed after printing the string.
 
 void PrintWarning(CONST char *sz)
 {
@@ -865,9 +970,9 @@ void PrintWarning(CONST char *sz)
 }
 
 
-/* Print an error message. This is called in more serious cases which halt */
-/* running of the current chart sequence, which can terminate the program  */
-/* but isn't a fatal error in that we can still fall back to the -Q loop.  */
+// Print an error message. This is called in more serious cases which halt
+// running of the current chart sequence, which may terminate the program,
+// but isn't a fatal error in that can still fall back to the -Q loop.
 
 void PrintError(CONST char *sz)
 {
@@ -969,7 +1074,7 @@ void ErrorSwitch(CONST char *szOpt)
 
 
 #ifdef PLACALC
-/* Print error messages dealing with ephemeris file access. */
+// Print error messages dealing with ephemeris file access.
 
 void ErrorEphem(CONST char *sz, long l)
 {
@@ -987,8 +1092,8 @@ void ErrorEphem(CONST char *sz, long l)
 #endif
 
 
-/* A simple procedure used throughout Astrolog: Print a particular */
-/* character on the screen 'n' times.                              */
+// A simple procedure used throughout Astrolog: Print a particular
+// character on the screen 'n' times.
 
 void PrintTab(char ch, int cch)
 {
@@ -997,12 +1102,15 @@ void PrintTab(char ch, int cch)
 }
 
 
-/* Set an Ansi or MS Windows text color. */
+// Set an Ansi or MS Windows text color.
 
 void AnsiColor(int k)
 {
   char sz[cchSzDef];
   int cchSav;
+#ifdef GRAPH
+  KV kv;
+#endif
 
 #ifdef WIN
   if (is.S == stdout) {
@@ -1040,16 +1148,27 @@ void AnsiColor(int k)
       is.nHTML = 2;
     if (k < 0)
       k = kLtGrayA;
-    sprintf(sz, "<font color=\"%s\">", szColorHTML[k]);
-    PrintSz(sz);
+    PrintSz("<font color=\"");
+#ifdef GRAPH
+    if (rgbbmp[k] == rgbbmpDef[k])
+      PrintSz(szColorHTML[k]);
+    else {
+      kv = rgbbmp[k];
+      sprintf(sz, "#%06x", Rgb(RgbB(kv), RgbG(kv), RgbR(kv)));
+      PrintSz(sz);
+    }
+#else
+    PrintSz(szColorHTML[k]);
+#endif
+    PrintSz("\">");
     is.nHTML = 1;
   }
   is.cchCol = cchSav;
 }
 
 
-/* Print a zodiac position on the screen. This basically just prints the */
-/* string returned from SzZodiac() below, except we take care of color.  */
+// Print a zodiac position on the screen. This basically just prints the
+// string returned from SzZodiac() below, except also take care of color.
 
 void PrintZodiac(real deg)
 {
@@ -1065,8 +1184,13 @@ void PrintZodiac(real deg)
 }
 
 
-/* Given a zodiac position, return a string containing it as it's */
-/* formatted for display to the user.                             */
+CONST char *szNakshatra[27+1] = {"",
+  "Ashv", "Bhar", "Krit", "Rohi", "Mrig", "Ardr", "Puna", "Push", "Ashl",
+  "Magh", "PPha", "UPha", "Hast", "Chit", "Swat", "Vish", "Anur", "Jyes",
+  "Mula", "PAsh", "UAsh", "Srav", "Dhan", "Shat", "PBha", "UBha", "Reva"};
+
+// Given a zodiac position, return a string containing it as it's formatted
+// for display to the user.
 
 char *SzZodiac(real deg)
 {
@@ -1089,7 +1213,7 @@ char *SzZodiac(real deg)
     break;
 
   case 1:
-    // However, if -sh switch in effect, get position in hours/minutes.
+    // However, if -sh switch in effect, format position as hours/minutes.
 
     d = (int)deg / 15;
     m = (int)((deg - (real)d*15.0)*4.0);
@@ -1100,18 +1224,30 @@ char *SzZodiac(real deg)
     }
     break;
 
-  default:
-    // Otherwise, if -sd in effect, format position as a simple degree.
+  case 2:
+    // Or, if -sd in effect, format position as a simple degree.
 
     sprintf(szZod, is.fSeconds ? "%11.7f" : "%7.3f", deg);
+    break;
+
+  default:
+    // Otherwise, if -sn in effect, format position as a Nakshatra.
+
+    deg = Mod(deg + rSmall);
+    sign = (int)(deg / (rDegMax/27.0));
+    d = (int)((deg - (real)sign*(rDegMax/27.0)) * 40.0 / (rDegMax/27.0));
+    sprintf(szZod, "%2d%s%d", sign+1, szNakshatra[sign + 1], d/10 + 1);
+    if (is.fSeconds)
+      sprintf(&szZod[7], ".%d%s", d%10,
+        szSignAbbrev[Mod12((int)(deg/(rDegMax/27.0/4.0))+1)]);
     break;
   }
   return szZod;
 }
 
 
-/* This is similar to formatting a zodiac degree, but here we return a */
-/* string of a (signed) declination value in degrees and minutes.      */
+// This is similar to formatting a zodiac degree, but here return a string of
+// a signed latitude value in degrees and minutes.
 
 char *SzAltitude(real deg)
 {
@@ -1144,8 +1280,8 @@ char *SzAltitude(real deg)
 }
 
 
-/* Here we return a string simply expressing the given value as degrees */
-/* and minutes (and sometimes seconds) in the 0 to 360 degree circle.   */
+// Here return a string simply expressing the given value as degrees and
+// minutes (and sometimes seconds) in the 0 to 360 degree circle.
 
 char *SzDegree(real deg)
 {
@@ -1174,10 +1310,10 @@ char *SzDegree(real deg)
 }
 
 
-/* Another string formatter, here we return a date string given a month,    */
-/* day, and year. We format with the day or month first based on whether    */
-/* the "European" date variable is set or not. The routine also takes a     */
-/* parameter to indicate how much the string should be abbreviated, if any. */
+// Another string formatter, here return a date string given a month, day, and
+// year. Format with the day or month first based on whether the "European"
+// date variable is set or not. The routine also takes a parameter to indicate
+// how much the string should be abbreviated, if any.
 
 char *SzDate(int mon, int day, int yea, int nFormat)
 {
@@ -1203,9 +1339,9 @@ char *SzDate(int mon, int day, int yea, int nFormat)
 }
 
 
-/* Return a string containing the given time expressed as an hour and   */
-/* minute (and second) quantity. This is formatted in 24 hour or am/pm  */
-/* time based on whether the "European" time format flag is set or not. */
+// Return a string containing the given time expressed as an hour and minute
+// (and second) quantity. This is formatted in 24 hour or am/pm time based on
+// whether the "European" time format flag is set or not.
 
 char *SzTime(int hr, int min, int sec)
 {
@@ -1235,7 +1371,7 @@ char *SzTime(int hr, int min, int sec)
 }
 
 
-/* This just determines the correct hour and minute and calls the above. */
+// This just determines the correct hour and minute and calls the above.
 
 char *SzTim(real tim)
 {
@@ -1245,8 +1381,8 @@ char *SzTim(real tim)
 }
 
 
-/* Return a string containing the given time zone, given as a real value     */
-/* having the hours before UTC in the integer part and minutes fractionally. */
+// Return a string containing the given time zone, given as a real value
+// having the hours before UTC in the integer part and minutes fractionally.
 
 char *SzZone(real zon)
 {
@@ -1263,9 +1399,9 @@ char *SzZone(real zon)
 }
 
 
-/* Nicely format the given longitude and latitude locations and return    */
-/* them in a string. Various parts of the program display a chart header, */
-/* and this allows the similar computations to be coded only once.        */
+// Nicely format the given longitude and latitude locations and return them
+// in a string. Various parts of the program display a chart header, and this
+// allows the similar computations to be coded only once.
 
 char *SzLocation(real lon, real lat)
 {
@@ -1290,6 +1426,16 @@ char *SzLocation(real lon, real lat)
   }
   chLon = (lon < 0.0 ? 'E' : 'W');
   chLat = (lat < 0.0 ? 'S' : 'N');
+  if (us.fAnsiChar == 4) {
+    // Format like "47N36,122W19", as seen in AAF files.
+    if (!is.fSeconds)
+      sprintf(szLoc, "%.0f%c%02d,%.0f%c%02d",
+        RFloor(RAbs(lat)), chLat, j, RFloor(RAbs(lon)), chLon, i);
+    else
+      sprintf(szLoc, "%.0f%c%02d:%02d,%.0f%c%02d:%02d",
+        RFloor(RAbs(lat)), chLat, j, j2, RFloor(RAbs(lon)), chLon, i, i2);
+    return szLoc;
+  }
   if (us.fAnsiChar != 3) {
     chDeg = us.fAnsiChar > 1 ? 176 : chDeg1;
     if (us.nDegForm != 2) {
@@ -1332,8 +1478,8 @@ char *SzLocation(real lon, real lat)
 }
 
 
-/* Format and return a string containing an elevation above sea level,  */
-/* displayed in either meters or feet, as used with topocentric charts. */
+// Format and return a string containing an elevation above sea level,
+// displayed in either meters or feet, as used with topocentric charts.
 
 char *SzElevation(real elv)
 {
@@ -1348,8 +1494,8 @@ char *SzElevation(real elv)
 }
 
 
-/* Format and return a string containing a relatively short length,     */
-/* displayed in either inches or centimeters, as used with paper sizes. */
+// Format and return a string containing a relatively short length, displayed
+// in either inches or centimeters, as used with paper sizes.
 
 char *SzLength(real len)
 {
@@ -1365,10 +1511,10 @@ char *SzLength(real len)
 
 
 #ifdef TIME
-/* Compute the date and time it is right now as the program is running      */
-/* using the computer's internal clock. We do this by getting the number    */
-/* of seconds which have passed since January 1, 1970 and going from there. */
-/* The time return value filled is expressed in the given zone parameter.   */
+// Compute the date and time it is right now as the program is running using
+// the computer's internal clock. Do this by getting the number of seconds
+// which have passed since January 1, 1970 and going from there. The time
+// return value filled is expressed in the given zone parameter.
 
 void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
 {
@@ -1441,14 +1587,14 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
     }
   }
   is.fDst = (dst > 0.0);
-#endif /* PC */
+#endif // PC
 }
-#endif /* TIME */
+#endif // TIME
 
 
-/* Given a string representing the complete pathname to a file, strip off    */
-/* all the path information leaving just the filename itself. This is called */
-/* by the main program to determine the name of the Astrolog executable.     */
+// Given a string representing the complete pathname to a file, strip off all
+// the path information leaving just the filename itself. This is called by
+// the main program to determine the name of the Astrolog executable.
 
 char *SzProcessProgname(char *szPath)
 {
@@ -1457,7 +1603,7 @@ char *SzProcessProgname(char *szPath)
   pchStart = pch = szPath;
   while (*pch) {
 #ifdef PC
-    *pch = ChUncap(*pch);    /* Because PC filenames are case insensitive. */
+    *pch = ChUncap(*pch);    // Because PC filenames are case insensitive.
 #endif
     pch++;
   }
@@ -1476,10 +1622,10 @@ char *SzProcessProgname(char *szPath)
 }
 
 
-/* Given a string, return a pointer to a persistent version of it, where  */
-/* 'persistent' means its contents won't be invalidated when the stack    */
-/* frame changes. Strings such as macros, et al, need to be in their own  */
-/* space and can't just be local variables in a function reading them in. */
+// Given a string, return a pointer to a persistent version of it, in which
+// "persistent" means its contents won't be invalidated when the stack frame
+// changes. Strings such as macros and such need to be in their own space and
+// can't just be local variables in a function reading them in.
 
 char *SzPersist(char *szSrc)
 {
@@ -1501,8 +1647,8 @@ char *SzPersist(char *szSrc)
 }
 
 
-/* This is Astrolog's memory allocation routine, returning a pointer given  */
-/* a size, and a string to use when printing error if the allocation fails. */
+// This is Astrolog's memory allocation routine, returning a pointer given
+// a size, and a string to use when printing error if the allocation fails.
 
 pbyte PAllocate(long cb, CONST char *szType)
 {
@@ -1538,7 +1684,7 @@ pbyte PAllocate(long cb, CONST char *szType)
 }
 
 
-/* Free a memory buffer allocated with PAllocate. */
+// Free a memory buffer allocated with PAllocate().
 
 void DeallocateP(void *pv)
 {
@@ -1564,7 +1710,7 @@ void DeallocateP(void *pv)
 
 
 #ifdef DEBUG
-/* Assert a condition. If not, display an error message. */
+// Assert a condition. If not, display an error message.
 
 void Assert(flag f)
 {

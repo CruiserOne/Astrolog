@@ -1,6 +1,6 @@
-@AZ710  ; Astrolog 7.10 time zone changes.
+@AZ720  ; Astrolog 7.20 time zone changes.
 
-; Time zone changes composed using data from TZ database version "2020a": https://data.iana.org/time-zones/tz-link.html
+; Time zone changes composed using data from TZ database version "2021a": https://data.iana.org/time-zones/tz-link.html
 ; From TZ database file LICENSE:
 ;   all files in the tz code and data are in the public domain.
 ; (Astrolog's processing and use of this data is still under Astrolog's GPL license.)
@@ -14,7 +14,7 @@
 ; Column 5: Hour a particular time zone change takes place (default = local time, s = standard time, u = UTC)
 ; Column 6: Hour offset of time zone change (0 = Daylight off, 1 = Daylight on)
 
--YY1 140 2128
+-YY1 141 2167
 Albania	25
 1940	only	Jun	16	0	1
 1942	only	Nov	2	3	0
@@ -135,9 +135,13 @@ AS	15
 2007	only	Mar	lastSun	2s	0
 2008	max	Apr	Sun>=1	2s	0
 2008	max	Oct	Sun>=1	2s	1
-AT	19
+AT	23
+1916	only	Oct	Sun>=1	2s	1
+1917	only	Mar	lastSun	2s	0
+1917	1918	Oct	Sun>=22	2s	1
+1918	1919	Mar	Sun>=1	2s	0
 1967	only	Oct	Sun>=1	2s	1
-1968	only	Mar	lastSun	2s	0
+1968	only	Mar	Sun>=29	2s	0
 1968	1985	Oct	lastSun	2s	1
 1969	1971	Mar	Sun>=8	2s	0
 1972	only	Feb	lastSun	2s	0
@@ -156,13 +160,13 @@ AT	19
 2007	only	Mar	lastSun	2s	0
 2008	max	Apr	Sun>=1	2s	0
 Aus	7
-1917	only	Jan	1	0:01	1
-1917	only	Mar	25	2	0
-1942	only	Jan	1	2	1
-1942	only	Mar	29	2	0
-1942	only	Sep	27	2	1
-1943	1944	Mar	lastSun	2	0
-1943	only	Oct	3	2	1
+1917	only	Jan	1	2s	1
+1917	only	Mar	lastSun	2s	0
+1942	only	Jan	1	2s	1
+1942	only	Mar	lastSun	2s	0
+1942	only	Sep	27	2s	1
+1943	1944	Mar	lastSun	2s	0
+1943	only	Oct	3	2s	1
 Austria	9
 1920	only	Apr	5	2s	1
 1920	only	Sep	13	2s	0
@@ -201,7 +205,12 @@ AW	9
 Azer	2
 1997	2015	Mar	lastSun	4	1
 1997	2015	Oct	lastSun	5	0
-Bahamas	2
+Bahamas	7
+1942	only	May	1	24	1
+1944	only	Dec	31	24	0
+1945	only	Feb	1	0	1
+1945	only	Aug	14	23u	1
+1945	only	Oct	17	24	0
 1964	1975	Apr	lastSun	2	1
 1964	1975	Oct	lastSun	2	0
 Barb	5
@@ -245,13 +254,35 @@ Belgium	34
 1945	only	Sep	16	2s	0
 1946	only	May	19	2s	1
 1946	only	Oct	7	2s	0
-Belize	6
-1918	1942	Oct	Sun>=2	0	0:30
-1919	1943	Feb	Sun>=9	0	0
+Belize	11
+1918	1941	Oct	Sat>=1	24	0:30
+1919	1942	Feb	Sat>=8	24	0
+1942	only	Jun	27	24	1
+1945	only	Aug	14	23u	1
+1945	only	Dec	15	24	0
+1947	1967	Oct	Sat>=1	24	0:30
+1948	1968	Feb	Sat>=8	24	0
 1973	only	Dec	5	0	1
 1974	only	Feb	9	0	0
 1982	only	Dec	18	0	1
 1983	only	Feb	12	0	0
+Bermuda	16
+1917	only	Apr	5	24	1
+1917	only	Sep	30	24	0
+1918	only	Apr	13	24	1
+1918	only	Sep	15	24	0
+1942	only	Jan	11	2	1
+1942	only	Oct	18	2	0
+1943	only	Mar	21	2	1
+1943	only	Oct	31	2	0
+1944	1945	Mar	Sun>=8	2	1
+1944	1945	Nov	Sun>=1	2	0
+1947	only	May	Sun>=15	2	1
+1947	only	Sep	Sun>=8	2	0
+1948	1952	May	Sun>=22	2	1
+1948	1952	Sep	Sun>=1	2	0
+1956	only	May	Sun>=22	2	1
+1956	only	Oct	lastSun	2	0
 Brazil	57
 1931	only	Oct	3	11	1
 1932	1933	Apr	1	0	0
@@ -604,7 +635,7 @@ Falk	12
 1986	2000	Apr	Sun>=16	0	0
 2001	2010	Apr	Sun>=15	2	0
 2001	2010	Sep	Sun>=1	2	1
-Fiji	11
+Fiji	13
 1998	1999	Nov	Sun>=1	2	1
 1999	2000	Feb	lastSun	3	0
 2009	only	Nov	29	2	1
@@ -615,7 +646,9 @@ Fiji	11
 2014	only	Jan	Sun>=18	2	0
 2014	2018	Nov	Sun>=1	2	1
 2015	max	Jan	Sun>=12	3	0
-2019	max	Nov	Sun>=8	2	1
+2019	only	Nov	Sun>=8	2	1
+2020	only	Dec	20	2	1
+2021	max	Nov	Sun>=8	2	1
 Finland	4
 1942	only	Apr	2	24	1
 1942	only	Oct	4	1	0
@@ -739,9 +772,13 @@ Germany	8
 1947	1949	Oct	Sun>=1	2s	0
 1948	only	Apr	18	2s	1
 1949	only	Apr	10	2s	1
-Ghana	2
-1920	1942	Sep	1	0	0:20
-1920	1942	Dec	31	0	0
+Ghana	6
+1919	only	Nov	24	0	0:20
+1920	1942	Jan	1	2	0
+1920	1939	Sep	1	2	0:20
+1940	1941	May	1	2	0:20
+1950	1955	Sep	1	2	0:30
+1951	1956	Jan	1	2	0
 Greece	19
 1932	only	Jul	7	0	1
 1932	only	Sep	1	0	0
@@ -863,25 +900,26 @@ Hond	4
 1987	1988	Sep	lastSun	0	0
 2006	only	May	Sun>=1	0	1
 2006	only	Aug	Mon>=1	0	0
-Hungary	18
-1918	only	Apr	1	3	1
-1918	only	Sep	16	3	0
-1919	only	Apr	15	3	1
-1919	only	Nov	24	3	0
+Hungary	19
+1918	1919	Apr	15	2	1
+1918	1920	Sep	Mon>=15	3	0
+1920	only	Apr	5	2	1
 1945	only	May	1	23	1
-1945	only	Nov	1	0	0
+1945	only	Nov	1	1	0
 1946	only	Mar	31	2s	1
-1946	1949	Oct	Sun>=1	2s	0
+1946	only	Oct	7	2	0
 1947	1949	Apr	Sun>=4	2s	1
-1950	only	Apr	17	2s	1
-1950	only	Oct	23	2s	0
-1954	1955	May	23	0	1
-1954	1955	Oct	3	0	0
-1956	only	Jun	Sun>=1	0	1
-1956	only	Sep	lastSun	0	0
-1957	only	Jun	Sun>=1	1	1
-1957	only	Sep	lastSun	3	0
-1980	only	Apr	6	1	1
+1947	1949	Oct	Sun>=1	2s	0
+1954	only	May	23	0	1
+1954	only	Oct	3	0	0
+1955	only	May	22	2	1
+1955	only	Oct	2	3	0
+1956	1957	Jun	Sun>=1	2	1
+1956	1957	Sep	lastSun	3	0
+1980	only	Apr	6	0	1
+1980	only	Sep	28	1	0
+1981	1983	Mar	lastSun	0	1
+1981	1983	Sep	lastSun	1	0
 Iceland	16
 1917	1919	Feb	19	23	1
 1917	only	Oct	21	1	0
@@ -1337,7 +1375,7 @@ Morocco	183
 2022	only	Mar	27	3	-1
 2022	only	May	8	2	0
 2023	only	Mar	19	3	-1
-2023	only	Apr	23	2	0
+2023	only	Apr	30	2	0
 2024	only	Mar	10	3	-1
 2024	only	Apr	14	2	0
 2025	only	Feb	23	3	-1
@@ -1353,7 +1391,7 @@ Morocco	183
 2029	only	Dec	30	3	-1
 2030	only	Feb	10	2	0
 2030	only	Dec	22	3	-1
-2031	only	Jan	26	2	0
+2031	only	Feb	2	2	0
 2031	only	Dec	14	3	-1
 2032	only	Jan	18	2	0
 2032	only	Nov	28	3	-1
@@ -1369,7 +1407,7 @@ Morocco	183
 2037	only	Oct	4	3	-1
 2037	only	Nov	15	2	0
 2038	only	Sep	26	3	-1
-2038	only	Oct	31	2	0
+2038	only	Nov	7	2	0
 2039	only	Sep	18	3	-1
 2039	only	Oct	23	2	0
 2040	only	Sep	2	3	-1
@@ -1385,7 +1423,7 @@ Morocco	183
 2045	only	Jul	9	3	-1
 2045	only	Aug	20	2	0
 2046	only	Jul	1	3	-1
-2046	only	Aug	5	2	0
+2046	only	Aug	12	2	0
 2047	only	Jun	23	3	-1
 2047	only	Jul	28	2	0
 2048	only	Jun	7	3	-1
@@ -1401,7 +1439,7 @@ Morocco	183
 2053	only	Apr	13	3	-1
 2053	only	May	25	2	0
 2054	only	Apr	5	3	-1
-2054	only	May	10	2	0
+2054	only	May	17	2	0
 2055	only	Mar	28	3	-1
 2055	only	May	2	2	0
 2056	only	Mar	12	3	-1
@@ -1417,7 +1455,7 @@ Morocco	183
 2061	only	Jan	16	3	-1
 2061	only	Feb	27	2	0
 2062	only	Jan	8	3	-1
-2062	only	Feb	12	2	0
+2062	only	Feb	19	2	0
 2062	only	Dec	31	3	-1
 2063	only	Feb	4	2	0
 2063	only	Dec	16	3	-1
@@ -1433,7 +1471,7 @@ Morocco	183
 2068	only	Oct	21	3	-1
 2068	only	Dec	2	2	0
 2069	only	Oct	13	3	-1
-2069	only	Nov	17	2	0
+2069	only	Nov	24	2	0
 2070	only	Oct	5	3	-1
 2070	only	Nov	9	2	0
 2071	only	Sep	20	3	-1
@@ -1449,7 +1487,7 @@ Morocco	183
 2076	only	Jul	26	3	-1
 2076	only	Sep	6	2	0
 2077	only	Jul	18	3	-1
-2077	only	Aug	22	2	0
+2077	only	Aug	29	2	0
 2078	only	Jul	10	3	-1
 2078	only	Aug	14	2	0
 2079	only	Jun	25	3	-1
@@ -1459,13 +1497,13 @@ Morocco	183
 2081	only	Jun	1	3	-1
 2081	only	Jul	13	2	0
 2082	only	May	24	3	-1
-2082	only	Jun	28	2	0
+2082	only	Jul	5	2	0
 2083	only	May	16	3	-1
 2083	only	Jun	20	2	0
 2084	only	Apr	30	3	-1
 2084	only	Jun	11	2	0
 2085	only	Apr	22	3	-1
-2085	only	May	27	2	0
+2085	only	Jun	3	2	0
 2086	only	Apr	14	3	-1
 2086	only	May	19	2	0
 2087	only	Mar	30	3	-1
@@ -1560,17 +1598,17 @@ Pakistan	5
 2008	only	Jun	1	0	1
 2008	2009	Nov	1	0	0
 2009	only	Apr	15	0	1
-Palestine	24
+Palestine	28
 1999	2005	Apr	Fri>=15	0	1
 1999	2003	Oct	Fri>=15	0	0
 2004	only	Oct	1	1	0
 2005	only	Oct	4	2	0
 2006	2007	Apr	1	0	1
 2006	only	Sep	22	0	0
-2007	only	Sep	Thu>=8	2	0
+2007	only	Sep	13	2	0
 2008	2009	Mar	lastFri	0	1
 2008	only	Sep	1	0	0
-2009	only	Sep	Fri>=1	1	0
+2009	only	Sep	4	1	0
 2010	only	Mar	26	0	1
 2010	only	Aug	11	0	0
 2011	only	Apr	1	0:01	1
@@ -1579,12 +1617,16 @@ Palestine	24
 2011	only	Sep	30	0	0
 2012	2014	Mar	lastThu	24	1
 2012	only	Sep	21	1	0
-2013	only	Sep	Fri>=21	0	0
-2014	2015	Oct	Fri>=21	0	0
-2015	only	Mar	lastFri	24	1
+2013	only	Sep	27	0	0
+2014	only	Oct	24	0	0
+2015	only	Mar	28	0	1
+2015	only	Oct	23	1	0
 2016	2018	Mar	Sat>=24	1	1
-2016	max	Oct	lastSat	1	0
-2019	max	Mar	lastFri	0	1
+2016	2018	Oct	Sat>=24	1	0
+2019	only	Mar	29	0	1
+2019	only	Oct	Sat>=24	0	0
+2020	max	Mar	Sat>=24	0	1
+2020	max	Oct	Sat>=24	1	0
 Para	22
 1975	1978	Mar	1	0	0
 1975	1988	Oct	1	0	1
@@ -2141,12 +2183,12 @@ Vanc	9
 1947	1961	Sep	lastSun	2	0
 1962	2006	Oct	lastSun	2	0
 Vanuatu	6
-1983	only	Sep	25	0	1
-1984	1991	Mar	Sun>=23	0	0
-1984	only	Oct	23	0	1
-1985	1991	Sep	Sun>=23	0	1
-1992	1993	Jan	Sun>=23	0	0
-1992	only	Oct	Sun>=23	0	1
+1973	only	Dec	22	12u	1
+1974	only	Mar	30	12u	0
+1983	1991	Sep	Sat>=22	24	1
+1984	1991	Mar	Sat>=22	24	0
+1992	1993	Jan	Sat>=22	24	0
+1992	only	Oct	Sat>=22	24	1
 Vincennes	9
 1946	only	Apr	lastSun	2	1
 1946	only	Sep	lastSun	2	0
@@ -2195,69 +2237,67 @@ WS	5
 2011	only	Sep	lastSat	3	1
 2012	max	Apr	Sun>=1	4	0
 2012	max	Sep	lastSun	3	1
-Zion	87
-1940	only	Jun	1	0	1
-1942	1944	Nov	1	0	0
-1943	only	Apr	1	2	1
-1944	only	Apr	1	0	1
-1945	only	Apr	16	0	1
-1945	only	Nov	1	2	0
-1946	only	Apr	16	2	1
-1946	only	Nov	1	0	0
-1948	only	May	23	0	2
-1948	only	Sep	1	0	1
-1948	1949	Nov	1	2	0
-1949	only	May	1	0	1
-1950	only	Apr	16	0	1
-1950	only	Sep	15	3	0
-1951	only	Apr	1	0	1
-1951	only	Nov	11	3	0
-1952	only	Apr	20	2	1
-1952	only	Oct	19	3	0
-1953	only	Apr	12	2	1
-1953	only	Sep	13	3	0
-1954	only	Jun	13	0	1
-1954	only	Sep	12	0	0
-1955	only	Jun	11	2	1
-1955	only	Sep	11	0	0
-1956	only	Jun	3	0	1
-1956	only	Sep	30	3	0
-1957	only	Apr	29	2	1
-1957	only	Sep	22	0	0
-1974	only	Jul	7	0	1
-1974	only	Oct	13	0	0
-1975	only	Apr	20	0	1
-1975	only	Aug	31	0	0
-1980	only	Aug	2	0	1
-1980	only	Sep	13	1	0
-1984	only	May	5	0	1
-1984	only	Aug	25	1	0
-1985	only	Apr	14	0	1
-1985	only	Sep	15	0	0
-1986	only	May	18	0	1
-1986	only	Sep	7	0	0
-1987	only	Apr	15	0	1
-1987	only	Sep	13	0	0
-1988	only	Apr	10	0	1
-1988	only	Sep	4	0	0
-1989	only	Apr	30	0	1
-1989	only	Sep	3	0	0
-1990	only	Mar	25	0	1
-1990	only	Aug	26	0	0
-1991	only	Mar	24	0	1
-1991	only	Sep	1	0	0
-1992	only	Mar	29	0	1
-1992	only	Sep	6	0	0
+Zion	85
+1940	only	May	31	24u	1
+1940	only	Sep	30	24u	0
+1940	only	Nov	16	24u	1
+1942	1946	Oct	31	24u	0
+1943	1944	Mar	31	24u	1
+1945	1946	Apr	15	24u	1
+1948	only	May	22	24u	2
+1948	only	Aug	31	24u	1
+1948	1949	Oct	31	24u	0
+1949	only	Apr	30	24u	1
+1950	only	Apr	15	24u	1
+1950	only	Sep	14	24u	0
+1951	only	Mar	31	24u	1
+1951	only	Nov	10	24u	0
+1952	only	Apr	19	24u	1
+1952	only	Oct	18	24u	0
+1953	only	Apr	11	24u	1
+1953	only	Sep	12	24u	0
+1954	only	Jun	12	24u	1
+1954	only	Sep	11	24u	0
+1955	only	Jun	11	24u	1
+1955	only	Sep	10	24u	0
+1956	only	Jun	2	24u	1
+1956	only	Sep	29	24u	0
+1957	only	Apr	27	24u	1
+1957	only	Sep	21	24u	0
+1974	only	Jul	6	24	1
+1974	only	Oct	12	24	0
+1975	only	Apr	19	24	1
+1975	only	Aug	30	24	0
+1980	only	Aug	2	24s	1
+1980	only	Sep	13	24s	0
+1984	only	May	5	24s	1
+1984	only	Aug	25	24s	0
+1985	only	Apr	13	24	1
+1985	only	Aug	31	24	0
+1986	only	May	17	24	1
+1986	only	Sep	6	24	0
+1987	only	Apr	14	24	1
+1987	only	Sep	12	24	0
+1988	only	Apr	9	24	1
+1988	only	Sep	3	24	0
+1989	only	Apr	29	24	1
+1989	only	Sep	2	24	0
+1990	only	Mar	24	24	1
+1990	only	Aug	25	24	0
+1991	only	Mar	23	24	1
+1991	only	Aug	31	24	0
+1992	only	Mar	28	24	1
+1992	only	Sep	5	24	0
 1993	only	Apr	2	0	1
 1993	only	Sep	5	0	0
 1994	only	Apr	1	0	1
 1994	only	Aug	28	0	0
 1995	only	Mar	31	0	1
 1995	only	Sep	3	0	0
-1996	only	Mar	15	0	1
-1996	only	Sep	16	0	0
-1997	only	Mar	21	0	1
-1997	only	Sep	14	0	0
+1996	only	Mar	14	24	1
+1996	only	Sep	15	24	0
+1997	only	Mar	20	24	1
+1997	only	Sep	13	24	0
 1998	only	Mar	20	0	1
 1998	only	Sep	6	0	0
 1999	only	Apr	2	2	1
@@ -2292,19 +2332,21 @@ Zion	87
 ; Column 5: Day this time zone offset changes (absent = 1st of month)
 ; Column 6: Hour this time zone offset changes (absent = 0:00, default = local time, s = standard time, u = UTC)
 
--YY2 414 2272
+-YY2 414 2286
 Africa/Abidjan	2
 0:16:08	-	1912
 0	-
-Africa/Accra	2
-0:00:52	-	1918
+Africa/Accra	4
+0:00:52	-	1915	Nov	2
+0	Ghana	1942	Feb	8
+-0:30	-	1946	Jan	6
 0	Ghana
 Africa/Addis_Ababa	3
 -2:34:48	-	1870
 -2:35:20	-	1936	May	5
 -3	-
 Africa/Algiers	10
--0:12:12	-	1891	Mar	15	0:01
+-0:12:12	-	1891	Mar	16
 -0:09:21	-	1911	Mar	11
 0	Algeria	1940	Feb	25	2
 -1	Algeria	1946	Oct	7
@@ -2407,10 +2449,11 @@ Africa/Johannesburg	3
 -1:52	-	1892	Feb	8
 -1:30	-	1903	Mar
 -2	SA
-Africa/Juba	3
+Africa/Juba	4
 -2:06:28	-	1931
 -2	Sudan	2000	Jan	15	12
--3	-
+-3	-	2021	Feb
+-2	-
 Africa/Kampala	5
 -2:09:40	-	1928	Jul
 -3	-	1930
@@ -2428,8 +2471,11 @@ Africa/Kigali	2
 Africa/Kinshasa	2
 -1:01:12	-	1897	Nov	9
 -1	-
-Africa/Lagos	2
--0:13:36	-	1919	Sep
+Africa/Lagos	5
+-0:13:35	-	1905	Jul
+0	-	1908	Jul
+-0:13:35	-	1914
+-0:30	-	1919	Sep
 -1	-
 Africa/Libreville	2
 -0:37:48	-	1912
@@ -2472,11 +2518,12 @@ Africa/Monrovia	4
 0:43:08	-	1919	Mar
 0:44:30	-	1972	Jan	7
 0	-
-Africa/Nairobi	5
--2:27:16	-	1928	Jul
--3	-	1930
--2:30	-	1940
--2:45	-	1960
+Africa/Nairobi	6
+-2:27:16	-	1908	May
+-2:30	-	1928	Jun	30	24
+-3	-	1930	Jan	4	24
+-2:30	-	1936	Dec	31	24
+-2:45	-	1942	Jul	31	24
 -3	-
 Africa/Ndjamena	4
 -1:00:12	-	1912
@@ -2854,7 +2901,7 @@ America/Dawson	5
 9:17:40	-	1900	Aug	20
 9	NT_YK	1973	Oct	28
 8	NT_YK	1980
-8	Canada	2020	Mar	8	2
+8	Canada	2020	Nov
 7	-
 America/Dawson_Creek	4
 8:00:56	-	1884
@@ -2938,7 +2985,7 @@ America/Grand_Turk	6
 4:44:32	-	1890
 5:07:10	-	1912	Feb
 5	-	1979
-5	US	2015	Nov	0	2
+5	US	2015	Mar	8	2
 4	-	2018	Mar	11	3
 5	US
 America/Grenada	2
@@ -3503,7 +3550,7 @@ America/Whitehorse	5
 9:00:12	-	1900	Aug	20
 9	NT_YK	1967	May	28
 8	NT_YK	1980
-8	Canada	2020	Mar	8	2
+8	Canada	2020	Nov
 7	-
 America/Winnipeg	3
 6:28:36	-	1887	Jul	16
@@ -3521,7 +3568,7 @@ America/Yellowknife	3
 0	-	1935
 7	NT_YK	1980
 7	Canada
-Antarctica/Casey	8
+Antarctica/Casey	13
 0	-	1969
 -8	-	2009	Oct	18	2
 -11	-	2010	Mar	5	2
@@ -3529,7 +3576,12 @@ Antarctica/Casey	8
 -11	-	2012	Feb	21	17u
 -8	-	2016	Oct	22
 -11	-	2018	Mar	11	4
--8	-
+-8	-	2018	Oct	7	4
+-11	-	2019	Mar	17	3
+-8	-	2019	Oct	4	3
+-11	-	2020	Mar	8	3
+-8	-	2020	Oct	4	0:01
+-11	-
 Antarctica/Davis	8
 0	-	1957	Jan	13
 -7	-	1964	Nov
@@ -3544,15 +3596,16 @@ Antarctica/DumontDUrville	4
 -10	-	1952	Jan	14
 0	-	1956	Nov
 -10	-
-Antarctica/Macquarie	8
+Antarctica/Macquarie	9
 0	-	1899	Nov
 -10	-	1916	Oct	1	2
 -10	1	1917	Feb
 -10	Aus	1919	Apr	1	0s
 0	-	1948	Mar	25
 -10	Aus	1967
--10	AT	2010	Apr	4	3
--11	-
+-10	AT	2010
+-10	1	2011
+-10	AT
 Antarctica/Mawson	3
 0	-	1954	Feb	13
 -6	-	2009	Oct	18	2
@@ -3641,8 +3694,9 @@ Asia/Baghdad	4
 -2:57:36	-	1918
 -3	-	1982	May
 -3	Iraq
-Asia/Bahrain	3
--3:22:20	-	1920
+Asia/Bahrain	4
+-3:22:20	-	1941	Jul	20
+-3:30	-	1944
 -4	-	1972	Jun
 -3	-
 Asia/Baku	7
@@ -4175,9 +4229,10 @@ Atlantic/Azores	15
 1	W-Eur	1992	Sep	27	1s
 0	EU	1993	Mar	28	1u
 1	EU
-Atlantic/Bermuda	4
-4:19:18	-	1930	Jan	1	2
-4	-	1974	Apr	28	2
+Atlantic/Bermuda	5
+4:19:18	-	1890
+4:19:18	Bermuda	1930	Jan	1	2
+4	Bermuda	1974	Apr	28	2
 4	Canada	1976
 4	US
 Atlantic/Canary	5
@@ -4244,11 +4299,10 @@ Australia/Broken_Hill	6
 -9:30	Aus	1971
 -9:30	AN	2000
 -9:30	AS
-Australia/Currie	5
+Australia/Currie	4
 -9:35:28	-	1895	Sep
--10	-	1916	Oct	1	2
--10	1	1917	Feb
--10	Aus	1971	Jul
+-10	AT	1919	Oct	24
+-10	Aus	1968	Oct	15
 -10	AT
 Australia/Darwin	3
 -8:43:20	-	1895	Feb
@@ -4258,10 +4312,9 @@ Australia/Eucla	3
 -8:35:28	-	1895	Dec
 -8:45	Aus	1943	Jul
 -8:45	AW
-Australia/Hobart	5
+Australia/Hobart	4
 -9:49:16	-	1895	Sep
--10	-	1916	Oct	1	2
--10	1	1917	Feb
+-10	AT	1919	Oct	24
 -10	Aus	1967
 -10	AT
 Australia/Lindeman	4
@@ -4348,11 +4401,11 @@ Europe/Bucharest	7
 -2	E-Eur	1997
 -2	EU
 Europe/Budapest	6
--1:16:20	-	1890	Oct
+-1:16:20	-	1890	Nov
 -1	C-Eur	1918
--1	Hungary	1941	Apr	8
+-1	Hungary	1941	Apr	7	23
 -1	C-Eur	1945
--1	Hungary	1980	Sep	28	2s
+-1	Hungary	1984
 -1	EU
 Europe/Chisinau	10
 -1:55:20	-	1880
@@ -4508,8 +4561,8 @@ Europe/Minsk	9
 -2	Russia	2011	Mar	27	2s
 -3	-
 Europe/Monaco	5
--0:29:32	-	1891	Mar	15
--0:09:21	-	1911	Mar	11
+-0:29:32	-	1892	Jun
+-0:09:21	-	1911	Mar	29
 0	France	1945	Sep	16	3
 -1	France	1977
 -1	EU
@@ -4532,8 +4585,8 @@ Europe/Oslo	5
 -1	Norway	1980
 -1	EU
 Europe/Paris	7
--0:09:21	-	1891	Mar	15	0:01
--0:09:21	-	1911	Mar	11	0:01
+-0:09:21	-	1891	Mar	16
+-0:09:21	-	1911	Mar	11
 0	France	1940	Jun	14	23
 -1	C-Eur	1944	Aug	25
 0	France	1945	Sep	16	3
@@ -4710,7 +4763,7 @@ Europe/Vilnius	15
 -1	EU	1999	Oct	31	1u
 -2	-	2003
 -2	EU
-Europe/Volgograd	10
+Europe/Volgograd	11
 -2:57:40	-	1920	Jan	3
 -3	-	1930	Jun	21
 -4	-	1961	Nov	11
@@ -4720,7 +4773,8 @@ Europe/Volgograd	10
 -3	Russia	2011	Mar	27	2s
 -4	-	2014	Oct	26	2s
 -3	-	2018	Oct	28	2s
--4	-
+-4	-	2020	Dec	27	2s
+-3	-
 Europe/Warsaw	9
 -1:24	-	1880
 -1:24	-	1915	Aug	5
@@ -4774,7 +4828,7 @@ Indian/Kerguelen	2
 0	-	1950
 -5	-
 Indian/Mahe	2
--3:41:48	-	1906	Jun
+-3:41:48	-	1907
 -4	-
 Indian/Maldives	3
 -4:54	-	1880

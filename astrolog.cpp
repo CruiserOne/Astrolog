@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: astrolog.cpp
+** Astrolog (Version 7.20) File: astrolog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -60,7 +60,7 @@
 ******************************************************************************
 */
 
-/* Initialize the Ansi color arrays with the color to print each object in. */
+// Initialize the Ansi color arrays with the color to print each object in.
 
 void InitColors(void)
 {
@@ -81,24 +81,28 @@ void InitColors(void)
       k = kRayA[rgObjRay[i]];
     else if (k == kElement)
       k = kElemA[(rgObjRuler[i]-1) & 3];
+    else if (k == kPlanet)
+      k = kObjA[!FBetween(i, cobLo, cobHi) ? ObjOrbit(i) :
+        oJup + (i - cobLo)] ^ 8;
     kObjA[i] = k;
   }
 
   // Determine and assign the color of each star.
   EnsureStarBright();
+  k = kObjU[starLo];
   for (i = starLo; i <= starHi; i++)
-    kObjA[i] = KStarA(rStarBright[i-starLo+1]);
+    kObjA[i] = (k >= kNull ? KStarA(rStarBright[i-starLo+1]) : k);
 }
 
 
-/* This is the dispatch procedure for the entire program. After all the   */
-/* command switches have been processed, this routine is called to        */
-/* actually call the various routines to generate and display the charts. */
+// This is the dispatch procedure for the entire program. After all the
+// command switches have been processed, this routine is called to actually
+// call the various routines to generate and display the charts.
 
 void Action(void)
 {
   char sz[cchSzDef];
-  int iChart = 0, i;
+  int cSequenceLine = us.cSequenceLine, iChart = 0, i;
   flag fHTML, fHTMLClip;
 
   // If the -os switch is in effect, open a file and set a global to
@@ -113,7 +117,7 @@ void Action(void)
     }
   } else
     is.S = stdout;
-  is.cchRow = 0;
+  is.cchRow = is.cchCol = is.cchColMax = 0;
 
   // If the -kh switch is in effect, start outputting a new HTML file.
 
@@ -136,7 +140,7 @@ void Action(void)
     is.nHTML = 0;
 
 LNext:
-  if (iChart < us.cSequenceLine && is.rgszLine[iChart] != NULL)
+  if (iChart < cSequenceLine && is.rgszLine[iChart] != NULL)
     FProcessCommandLine(is.rgszLine[iChart]);
 #ifdef WIN
   is.fMult = fFalse;    // Cleared here because no InitVariables routine.
@@ -153,6 +157,15 @@ LNext:
       ignore[i] = ignore2[i] = fTrue;
   if (!us.fUranian)
     for (i = uranLo; i <= uranHi; i++)
+      ignore[i] = ignore2[i] = fTrue;
+  if (!us.fDwarf)
+    for (i = dwarfLo; i <= dwarfHi; i++)
+      ignore[i] = ignore2[i] = fTrue;
+  if (!us.fMoons)
+    for (i = moonsLo; i <= moonsHi; i++)
+      ignore[i] = ignore2[i] = fTrue;
+  if (!us.fCOB)
+    for (i = cobLo; i <= cobHi; i++)
       ignore[i] = ignore2[i] = fTrue;
   if (!us.nStar)
     for (i = starLo; i <= starHi; i++)
@@ -190,7 +203,7 @@ LNext:
     CastChart(1);
 #else
     ciMain = ciCore;
-    if (wi.fCast || us.cSequenceLine > 0) {
+    if (wi.fCast || cSequenceLine > 0) {
       wi.fCast = fFalse;
       CastChart(1);
     }
@@ -232,8 +245,9 @@ LNext:
 
 LDone:
   iChart++;
-  if (iChart < us.cSequenceLine && !us.fGraphics) {
-    PrintL2();
+  if (iChart < cSequenceLine) {
+    if (!us.fGraphics)
+      PrintL2();
     goto LNext;
   }
 
@@ -255,10 +269,10 @@ LDone:
 
 
 #ifndef WIN
-/* Reset a few variables to their default values they have upon startup of */
-/* the program. We don't reset all variables, just the most volatile ones. */
-/* This is called when in the -Q loop to reset things like which charts to */
-/* display, but leave setups such as object restrictions and orbs alone.   */
+// Reset a few variables to their default values they have upon startup of the
+// program. We don't reset all variables, just the most volatile ones. This is
+// called when in the -Q loop to reset things like which charts to display,
+// but leave setups such as object restrictions and orbs alone.
 
 void InitVariables(void)
 {
@@ -276,9 +290,9 @@ void InitVariables(void)
 ******************************************************************************
 */
 
-/* Given a string representing a command line (e.g. a macro string), go    */
-/* parse it into its various switches and parameters, then go process them */
-/* and change program settings. Basically a wrapper for other functions.   */
+// Given a string representing a command line (e.g. a macro string), go parse
+// it into its various switches and parameters, then go process them and
+// change program settings. Basically a wrapper for other functions.
 
 flag FProcessCommandLine(char *szLine)
 {
@@ -301,6 +315,7 @@ flag FProcessCommandLine(char *szLine)
     }
   }
 
+  // Parse and process the command line.
   if (!fT)
     CopyRgb((byte *)szLine, (byte *)szCommandLine, cb);
   argc = NParseCommandLine(szCommandLine, rgsz);
@@ -311,9 +326,9 @@ flag FProcessCommandLine(char *szLine)
 }
 
 
-/* Given string representing a command line, convert it to an "argv" format */
-/* of an array of strings, one for each switch or parameter, i.e. exactly   */
-/* like the format of the command line as given when the program starts.    */
+// Given a string representing a command line, convert it to an "argv" format
+// of an array of strings, one for each switch or parameter, i.e. exactly like
+// the format of the command line as given when the program starts.
 
 int NParseCommandLine(char *szLine, char **argv)
 {
@@ -360,19 +375,19 @@ int NParseCommandLine(char *szLine, char **argv)
 
 
 #ifndef WIN
-/* This routine is called by the main program to interactively prompt the  */
-/* user for command switches and parameters, entered in the same format as */
-/* they would be on a command line. This needs to be called with certain   */
-/* systems which don't allow passing of a command line to the program,     */
-/* or when -Q is in effect. The result of this routine is returned to the  */
-/* main program which then processes it as done with a real command line.  */
+// This routine is called by the main program to interactively prompt the user
+// for command switches and parameters, entered in the same format as they
+// would be on a command line. This needs to be called with certain systems
+// which don't allow passing of a command line to the program, or when -Q is
+// in effect. The result of this routine is returned to the main program which
+// then processes it as done with a real command line.
 
 int NPromptSwitches(char *line, char *argv[MAXSWITCHES])
 {
-  FILE *data;
+  FILE *fileSav;
   char sz[cchSzDef];
 
-  data = is.S; is.S = stdout;
+  fileSav = is.S; is.S = stdout;
   is.cchRow = 0;
   AnsiColor(kWhiteA);
   sprintf(sz, "** %s version %s ", szAppName, szVersionCore); PrintSz(sz);
@@ -382,7 +397,7 @@ int NPromptSwitches(char *line, char *argv[MAXSWITCHES])
   PrintSz("Enter all parameter options below. ");
   sprintf(sz, "(Enter '%cH' for help. Enter '.' to exit.)\n", chSwitch);
   PrintSz(sz);
-  is.S = data;
+  is.S = fileSav;
   InputString("Input command line", line);
   PrintL();
   return NParseCommandLine(line, argv);
@@ -390,8 +405,8 @@ int NPromptSwitches(char *line, char *argv[MAXSWITCHES])
 #endif
 
 
-/* This subprocedure is like FProcessSwitches() below, except that we only */
-/* process one switch, which we know to be one of the obscure -Y types.    */
+// This subprocedure is like FProcessSwitches() below, except that it only
+// processes one switch, namely one of the obscure -Y types.
 
 int NProcessSwitchesRare(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
@@ -404,6 +419,9 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
   real *lpr;
 #ifdef MATRIX
   OE oe;
+#endif
+#ifdef SWISS
+  char szName[cchSzDef], *pch;
 #endif
 #ifdef INTERPRET
   char *sz;
@@ -446,6 +464,8 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     break;
 
   case 'u':
+    if (ch1 == '0')
+      SwitchF(us.fEclipseAny);
     SwitchF(us.fEclipse);
     break;
 
@@ -526,9 +546,16 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     break;
 
   case 'z':
+    if (ch1 == '0' && fAnd) {
+      us.rDeltaT = rSmall;
+      break;
+    }
     if (FErrorArgc("Yz", argc, 1))
       return tcError;
-    us.lTimeAddition = NFromSz(argv[1]);
+    if (ch1 != '0')
+      us.lTimeAddition = NFromSz(argv[1]);
+    else
+      us.rDeltaT = RFromSz(argv[1]);
     darg++;
     break;
 
@@ -584,17 +611,38 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     if (FErrorArgc("Ye", argc, 2))
       return tcError;
     i = NParseSz(argv[1], pmObject);
-    if (FErrorValN("Ye", !FUranian(i), i, 1))
+    if (FErrorValN("Ye", !FCust(i), i, 1))
       return tcError;
-    i -= uranLo;
+    i -= custLo;
     j = (ch1 == 'b') + (ch1 == 'O')*2 + (ch1 == 'm')*3;
     if (j > 0)
       ch1 = ch2;
-    rgObjSwiss[i] = j == 2 ? NParseSz(argv[2], pmObject) : NFromSz(argv[2]);
+    k = (j == 2 ? NParseSz(argv[2], pmObject) : NFromSz(argv[2]));
+    if (FErrorValN("Ye", k < 0, k, 2))
+      return tcError;
+    rgObjSwiss[i] = k;
     rgTypSwiss[i] = j;
     rgPntSwiss[i] =
       (ch1 == 'n') + (ch1 == 's')*2 + (ch1 == 'p')*3 + (ch1 == 'a')*4;
     rgFlgSwiss[i] = 0;
+    if (j <= 1)
+      SwissGetObjName(szName, j <= 0 ? -k : k);
+    else {
+      if (j == 3)
+        k = ObjMoons(k);
+      sprintf(szName, FItem(k) ? szObjName[k] : szObjUnknown);
+    }
+    k = rgPntSwiss[i];
+    for (pch = szName; *pch; pch++)
+      ;
+    if (k > 0) {
+      sprintf(szName + Min(3, pch-szName), "%s",
+        k == 1 ? "Nor" : (k == 2 ? "Sou" : (k == 3 ? "Per" : "Api")));
+    }
+    szObjDisp[i + custLo] = SzPersist(szName);
+#ifdef GRAPH
+    szDrawObject[i + custLo] = "t"; szDrawObject2[i + custLo] = "";
+#endif
     k = pos + 1;
     do {
       ch2 = argv[0][k++];
@@ -665,6 +713,11 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       us.fIgnoreDir  = j != 0;
       darg += 2;
       break;
+    } else if (ch1 == '1') {
+      us.fIgnoreDiralt = i != 0;
+      us.fIgnoreDirlen = j != 0;
+      darg += 2;
+      break;
     } else if (ch1 == 'Z') {
       ignorez[0] = i != 0;
       ignorez[1] = j != 0;
@@ -678,6 +731,8 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       ignore7[2] = NFromSz(argv[3]) != 0;
       ignore7[3] = NFromSz(argv[4]) != 0;
       ignore7[4] = NFromSz(argv[5]) != 0;
+      if (!ignore7[rrRay])
+        EnsureRay();
       darg += 5;
       break;
     }
@@ -710,6 +765,7 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       }
     if (!(us.nStar && j))
       us.nStar = j;
+    AdjustRestrictions();
     break;
 
   case 'A':
@@ -910,7 +966,7 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     }
     k = ch1 == 'O' ? pmObject : (ch1 == 'A' ? pmAspect : 0);
     i = NParseSz(argv[1], k); j = NParseSz(argv[2], k);
-    k = ch1 == 'O' ? oNorm : (ch1 == 'A' ? cAspect :
+    k = ch1 == 'O' ? starLo : (ch1 == 'A' ? cAspect :
       (ch1 == '0' || ch1 == '7' ? cRainbow : 8));
     if (FErrorValN("Yk",
       !FBetween(i, (int)(ch1 != chNull && ch1 != 'O'), k), i, 1))
@@ -937,6 +993,19 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       szObjDisp[i] = SzPersist(argv[2]);
     else
       szObjDisp[i] = szObjName[i];
+    darg += 2;
+    break;
+
+  case 'S':
+    if (FErrorArgc("YS", argc, 2))
+      return tcError;
+    i = NParseSz(argv[1], pmObject);
+    if (FErrorValN("YS", !FNorm(i), i, 1))
+      return tcError;
+    r = RParseSz(argv[2], pmDist);
+    if (FErrorValR("YS", r < 0.0, r, 2))
+      return tcError;
+    rObjDiam[i] = r;
     darg += 2;
     break;
 
@@ -1017,8 +1086,8 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
 }
 
 
-/* Process a command switch line passed to the program. Read each entry in */
-/* the argument list and set all the program modes and charts to display.  */
+// Process a command switch line passed to the program. Read each entry in
+// the argument list and set all the program modes and charts to display.
 
 flag FProcessSwitches(int argc, char **argv)
 {
@@ -1043,7 +1112,7 @@ flag FProcessSwitches(int argc, char **argv)
     }
     ich = 1 + FChSwitch(ch1);    // Leading dash?
     ch1 = argv[0][ich];
-    ch2 = ch1 == chNull ? chNull : argv[0][ich+1];
+    ch2 = (ch1 == chNull ? chNull : argv[0][ich+1]);
     switch (argv[0][ich-1]) {
 
     case 'H':
@@ -1301,6 +1370,7 @@ flag FProcessSwitches(int argc, char **argv)
           argc -= i; argv += i;
         }
       } else if (ch1 == 'm' || ch1 == 'y' || ch1 == 'Y') {
+        is.fProgress = fFalse;
         if (ch1 == 'y')
           us.nEphemYears = 1;
         else if (ch1 == 'Y') {
@@ -1362,6 +1432,10 @@ flag FProcessSwitches(int argc, char **argv)
       }
       break;
 
+    case '8':
+      SwitchF(us.fMoonChart);
+      break;
+
     case 'e':
       SwitchF(us.fListing); SwitchF(us.fWheel);
       SwitchF(us.fGrid); SwitchF(us.fAspList); SwitchF(us.fMidpoint);
@@ -1369,7 +1443,7 @@ flag FProcessSwitches(int argc, char **argv)
       SwitchF(us.fInfluence); SwitchF(us.fEsoteric); SwitchF(us.fAstroGraph);
       SwitchF(us.fCalendar); SwitchF(us.fHorizonSearch);
       SwitchF(us.fInDay); SwitchF(us.fInDayInf); SwitchF(us.fInDayGra);
-      SwitchF(us.fEphemeris);
+      SwitchF(us.fEphemeris); SwitchF(us.fMoonChart);
       break;
 
     case 't':
@@ -1381,7 +1455,8 @@ flag FProcessSwitches(int argc, char **argv)
           ich++;
         is.fProgress = fTrue;
         ch1 = argv[0][++ich];
-      }
+      } else
+        is.fProgress = fFalse;
       if (ch1 == 'r') {
         is.fReturn = fTrue;
         ch1 = argv[0][++ich];
@@ -1433,7 +1508,8 @@ flag FProcessSwitches(int argc, char **argv)
       if (ch1 == 'p') {
         is.fProgress = fTrue;
         ch1 = argv[0][++ich];
-      }
+      } else
+        is.fProgress = fFalse;
       if (ch1 == 'r') {
         is.fReturn = fTrue;
         ch1 = argv[0][++ich];
@@ -1466,7 +1542,8 @@ flag FProcessSwitches(int argc, char **argv)
       if (ch1 == 'p') {
         is.fProgress = fTrue;
         ch1 = argv[0][++ich];
-      }
+      } else
+        is.fProgress = fFalse;
       if (ch1 == 'm' || ch1 == 'y' || ch1 == 'Y') {
         if (ch1 == 'y')
           us.nEphemYears = 1;
@@ -1485,7 +1562,8 @@ flag FProcessSwitches(int argc, char **argv)
       if (ch1 == 'p') {
         is.fProgress = fTrue;
         ch1 = argv[0][++ich];
-      }
+      } else
+        is.fProgress = fFalse;
       if (ch1 == 'r') {
         is.fReturn = fTrue;
         ch1 = argv[0][++ich];
@@ -1677,7 +1755,17 @@ flag FProcessSwitches(int argc, char **argv)
         break;
       }
 #ifdef ATLAS
-      else if (ch1 == 'N') {
+      else if (ch1 == 'L') {
+        if (FErrorArgc("zL", argc, 1))
+          return fFalse;
+        if (!DisplayAtlasLookup(argv[1], 0, &i))
+          PrintWarning("City doesn't match anything in atlas.");
+        else {
+          us.lonDef = OO; us.latDef = AA;
+        }
+        argc--; argv++;
+        break;
+      } else if (ch1 == 'N') {
         if (FErrorArgc("zN", argc, 1))
           return fFalse;
         if (!DisplayAtlasLookup(argv[1], 0, &i))
@@ -1710,6 +1798,7 @@ flag FProcessSwitches(int argc, char **argv)
       if (FErrorArgc("q", argc, i))
         return fFalse;
       is.fHaveInfo = fTrue;
+      ci = ciCore;
       if (ch1 == 'j') {
         is.JD = RFromSz(argv[1]) + rRound;
         TT = RFract(is.JD);
@@ -1741,6 +1830,28 @@ flag FProcessSwitches(int argc, char **argv)
           return fFalse;
         else if (FErrorValR("q", !FValidLat(AA), AA, 7 + (i > 7)))
           return fFalse;
+      }
+      if (ch2 == '1') {
+        ciMain = ciCore;
+        ciCore = ci;
+      } else if (ch2 == '2') {
+        ciTwin = ciCore;
+        ciCore = ci;
+      } else if (ch2 == '3') {
+        ciThre = ciCore;
+        ciCore = ci;
+      } else if (ch2 == '4') {
+        ciFour = ciCore;
+        ciCore = ci;
+      } else if (ch2 == 's') {
+        ciSave = ciCore;
+        ciCore = ci;
+      } else if (ch2 == 't') {
+        ciTran = ciCore;
+        ciCore = ci;
+      } else if (ch2 == 'g') {
+        ciGreg = ciCore;
+        ciCore = ci;
       }
       argc -= i; argv += i;
       break;
@@ -1799,6 +1910,8 @@ flag FProcessSwitches(int argc, char **argv)
         SwitchF(us.fWritePos);
       else if (ch1 == 'd')
         SwitchF(us.fWriteDef);
+      else if (ch1 == 'a')
+        SwitchF(us.fWriteAAF);
       SwitchF(us.fWriteFile);
       is.szFileOut = SzPersist(argv[1]);
       if (is.fSzPersist) {
@@ -1855,8 +1968,17 @@ flag FProcessSwitches(int argc, char **argv)
       else if (ch1 == 'C')
         for (i = cuspLo; i <= cuspHi; i++)
           SwitchF(pch[i]);
+      else if (ch1 == 'u' && ch2 == '0')
+        for (i = dwarfLo; i <= dwarfHi; i++)
+          SwitchF(pch[i]);
       else if (ch1 == 'u')
         for (i = uranLo; i <= uranHi; i++)
+          SwitchF(pch[i]);
+      else if (ch1 == '8')
+        for (i = moonsLo; i <= moonsHi; i++)
+          SwitchF(pch[i]);
+      else if (ch1 == 'b')
+        for (i = cobLo; i <= cobHi; i++)
           SwitchF(pch[i]);
       else if (ch1 == 'U')
         for (i = starLo; i <= starHi; i++)
@@ -1887,6 +2009,24 @@ flag FProcessSwitches(int argc, char **argv)
           break;
         }
       us.fUranian = j;
+      for (j = fFalse, i = dwarfLo; i <= dwarfHi; i++)
+        if (!ignore[i] || !ignore2[i]) {
+          j = fTrue;
+          break;
+        }
+      us.fDwarf = j;
+      for (j = fFalse, i = moonsLo; i <= moonsHi; i++)
+        if (!ignore[i] || !ignore2[i]) {
+          j = fTrue;
+          break;
+        }
+      us.fMoons = j;
+      for (j = fFalse, i = cobLo; i <= cobHi; i++)
+        if (!ignore[i] || !ignore2[i]) {
+          j = fTrue;
+          break;
+        }
+      us.fCOB = j;
       for (j = fFalse, i = starLo; i <= starHi; i++)
         if (!ignore[i] || !ignore2[i]) {
           j = fTrue;
@@ -1894,6 +2034,7 @@ flag FProcessSwitches(int argc, char **argv)
         }
       if (!(us.nStar && j))
         us.nStar = j;
+      AdjustRestrictions();
       break;
 
     case 'C':
@@ -1902,14 +2043,36 @@ flag FProcessSwitches(int argc, char **argv)
       if (j != us.fCusp)
         for (i = cuspLo; i <= cuspHi; i++)
           ignore[i] = j;
+      AdjustRestrictions();
       break;
 
     case 'u':
-      j = us.fUranian;
-      SwitchF(us.fUranian);
-      if (j != us.fUranian)
-        for (i = uranLo; i <= uranHi; i++)
-          ignore[i] = j;
+      if (ch1 == '0') {
+        j = us.fDwarf;
+        SwitchF(us.fDwarf);
+        if (j != us.fDwarf)
+          for (i = dwarfLo; i <= dwarfHi; i++)
+            ignore[i] = j;
+      } else if (ch1 == '8') {
+        j = us.fMoons;
+        SwitchF(us.fMoons);
+        if (j != us.fMoons)
+          for (i = moonsLo; i <= moonsHi; i++)
+            ignore[i] = j;
+      } else if (ch1 == 'b') {
+        j = us.fCOB;
+        SwitchF(us.fCOB);
+        if (j != us.fCOB)
+          for (i = cobLo; i <= cobHi; i++)
+            ignore[i] = j;
+      } else {
+        j = us.fUranian;
+        SwitchF(us.fUranian);
+        if (j != us.fUranian)
+          for (i = uranLo; i <= uranHi; i++)
+            ignore[i] = j;
+      }
+      AdjustRestrictions();
       break;
 
     case 'U':
@@ -1922,6 +2085,7 @@ flag FProcessSwitches(int argc, char **argv)
       if ((j != 0) != (us.nStar != 0))
         for (i = starLo; i <= starHi; i++)
           ignore[i] = (j != 0);
+      AdjustRestrictions();
       break;
 
     case 'A':
@@ -1972,8 +2136,10 @@ flag FProcessSwitches(int argc, char **argv)
         SwitchF(us.fSeconds);
         is.fSeconds = us.fSeconds;
         break;
-      } else if (ch1 == 's')
-        SwitchF(us.fSwissMosh);
+      } else if (ch1 == 'j')
+        us.nSwissEph = 2 * FSwitchF(us.nSwissEph == 2);
+      else if (ch1 == 's')
+        us.nSwissEph = FSwitchF(us.nSwissEph == 1);
       else if (ch1 == 'p')
         SwitchF(us.fPlacalcPla);
       else if (ch1 == 'm')
@@ -2004,7 +2170,8 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case 's':
-      if (argc > 1 && ((rT = RFromSz(argv[1])) != 0.0 || FNumCh(argv[1][0]))) {
+      if (argc > 1 && ((rT = RFromSz(argv[1])) != 0.0 || FNumCh(argv[1][0]) ||
+        argv[1][0] == '~')) {
         if (FErrorValR("s", !FValidOffset(rT), rT, 0))
           return fFalse;
         argc--; argv++;
@@ -2014,14 +2181,16 @@ flag FProcessSwitches(int argc, char **argv)
         if (ch2 != '0')
           SwitchF(us.fEquator);
         SwitchF(us.fEquator2);
-      } else if (ch1 == 'h')
+      } else if (ch1 == 'z')
+        us.nDegForm = 0;
+      else if (ch1 == 'h')
         us.nDegForm = 1;
       else if (ch1 == 'd')
         us.nDegForm = 2;
-      else if (ch1 == 'z')
-        us.nDegForm = 0;
+      else if (ch1 == 'n')
+        us.nDegForm = 3;
 #ifdef WIN
-      else if (ch1 == 'e')    /* -setup switch for Windows */
+      else if (ch1 == 'e')    // -setup switch for Windows
         i = FCreateProgramGroup(fFalse) && FCreateDesktopIcon() &&
           FRegisterExtensions();
 #endif
@@ -2311,7 +2480,7 @@ flag FProcessSwitches(int argc, char **argv)
       argc -= i; argv += i;
       break;
 #endif
-#endif /* GRAPH */
+#endif // GRAPH
 
     case '0':
       while (ch1 != chNull) {
@@ -2355,16 +2524,16 @@ flag FProcessSwitches(int argc, char **argv)
         ppch = (ch2 != '0' ? &us.szExpAspList : &us.szExpAspSumm);
       else if (ch1 == 'm')
         ppch = (ch2 != 'a' ? &us.szExpMid : &us.szExpMidAsp);
+      else if (ch1 == 'j')
+        ppch = (ch2 != '0' ? &us.szExpInf : &us.szExpInf0);
       else if (ch1 == 'L')
         ppch = &us.szExpCross;
       else if (ch1 == 'E')
         ppch = &us.szExpEph;
       else if (ch1 == 'd')
-        ppch = &us.szExpDay;
+        ppch = (ch2 != 'v' ? &us.szExpDay : &us.szExpVoid);
       else if (ch1 == 't')
         ppch = &us.szExpTra;
-      else if (ch1 == 'j')
-        ppch = &us.szExpInf;
       else if (ch1 == 'P')
         ppch = &us.szExpPart;
       else if (ch1 == 'O')
@@ -2373,14 +2542,24 @@ flag FProcessSwitches(int argc, char **argv)
         ppch = &us.szExpHou;
       else if (ch1 == 'A')
         ppch = &us.szExpAsp;
+      else if (ch1 == 'p')
+        ppch = (ch2 != '0' ? &us.szExpProg : &us.szExpProg0);
       else if (ch1 == 'k' && ch2 == 'O')
         ppch = &us.szExpColObj;
       else if (ch1 == 'k' && ch2 == 'A')
         ppch = &us.szExpColAsp;
+      else if (ch1 == 'F' && ch2 == chNull)
+        ppch = &us.szExpFontSig;
+      else if (ch1 == 'F' && ch2 == 'C')
+        ppch = &us.szExpFontHou;
+      else if (ch1 == 'F' && ch2 == 'O')
+        ppch = &us.szExpFontObj;
+      else if (ch1 == 'F' && ch2 == 'A')
+        ppch = &us.szExpFontAsp;
       else if (ch1 == 'v')
         ppch = &us.szExpSort;
-      else if (ch1 == 'p')
-        ppch = (ch2 != '0' ? &us.szExpProg : &us.szExpProg0);
+      else if (ch1 == 'U')
+        ppch = (ch2 != '0' ? &us.szExpStar : &us.szExpAst);
       else if (ch1 == 'q' && ch2 == '1')
         ppch = &us.szExpCast1;
       else if (ch1 == 'q' && ch2 == '2')
@@ -2420,8 +2599,8 @@ flag FProcessSwitches(int argc, char **argv)
 ******************************************************************************
 */
 
-/* Initialize program variables and tables that aren't done so at compile */
-/* time. Called once when the program starts from main() or WinMain().    */
+// Initialize program variables and tables that aren't done so at compile
+// time. Called once when the program starts from main() or WinMain().
 
 void InitProgram()
 {
@@ -2443,7 +2622,6 @@ void InitProgram()
     szAspectGlyphDisp[i]  = szAspectGlyph[i];
   }
 #ifdef SWISS
-  ClearB((pbyte)rgTypSwiss, sizeof(rgTypSwiss));
   ClearB((pbyte)rgPntSwiss, sizeof(rgPntSwiss));
   ClearB((pbyte)rgFlgSwiss, sizeof(rgFlgSwiss));
 #endif
@@ -2451,8 +2629,7 @@ void InitProgram()
   ExpInit();
 #endif
 #ifdef GRAPH
-  for (i = 0; i < cColor; i++)
-    rgbbmp[i] = rgbbmpDef[i];
+  InitColorPalette(-1);
   for (i = 0; i < objMax+9; i++) {
     szDrawObject[i]  = szDrawObjectDef[i];
     szDrawObject2[i] = szDrawObjectDef2[i];
@@ -2472,7 +2649,7 @@ void InitProgram()
 }
 
 
-/* Program is about to exit, so free memory that was allocated. */
+// Program is about to exit, so free memory that was allocated.
 
 void FinalizeProgram()
 {
@@ -2499,13 +2676,33 @@ void FinalizeProgram()
 #ifdef GRAPH
   if (gi.bm != NULL)
     DeallocateP(gi.bm);
+  if (gi.bmp.rgb != NULL)
+    DeallocateP(gi.bmp.rgb);
+  if (gi.bmpBack.rgb != NULL)
+    DeallocateP(gi.bmpBack.rgb);
+  if (gi.bmpBack2.rgb != NULL)
+    DeallocateP(gi.bmpBack2.rgb);
+  if (gi.bmpWorld.rgb != NULL)
+    DeallocateP(gi.bmpWorld.rgb);
   if (gi.rgspace != NULL)
     DeallocateP(gi.rgspace);
 #ifdef SWISS
   if (gi.rges != NULL)
     DeallocateP(gi.rges);
+  if (gs.szStarsLin != NULL)
+    DeallocateP(gs.szStarsLin);
+  if (gs.szStarsLnk != NULL)
+    DeallocateP(gs.szStarsLnk);
 #endif
 #endif // GRAPH
+#ifdef WINANY
+  if (wi.bmpWin.rgb != NULL)
+    DeallocateP(wi.bmpWin.rgb);
+#endif
+#ifdef WIN
+  if (ofn.lpstrFile != NULL && ofn.lpstrFile != szFileName)
+    DeallocateP(ofn.lpstrFile);
+#endif
   if (is.cAlloc != 0) {
     sprintf(sz, "Number of memory allocations not freed before exiting: %d",
       is.cAlloc);
@@ -2515,9 +2712,9 @@ void FinalizeProgram()
 
 
 #ifndef WIN
-/* The main program, the starting point for Astrolog, follows. This routine */
-/* basically consists of a loop, inside which we read a command line, and   */
-/* go process it, before actually calling a routine to display astrology.   */
+// The main program, the starting point for Astrolog, follows. This routine
+// basically consists of a loop, inside which we read a command line, and go
+// process it, before actually calling a routine to display astrology.
 
 #ifdef SWITCHES
 int main(int argc, char **argv)
@@ -2572,6 +2769,6 @@ LBegin:
   Terminate(tcOK);    // The only standard place to exit Astrolog is here.
   return 0;
 }
-#endif /* WIN */
+#endif // WIN
 
 /* astrolog.cpp */

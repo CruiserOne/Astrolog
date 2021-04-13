@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: express.cpp
+** Astrolog (Version 7.20) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -61,7 +61,13 @@
 ******************************************************************************
 */
 
-#define cfun 250
+#define cfunA 263
+#ifdef GRAPH
+#define cfunX 33
+#else
+#define cfunX 0
+#endif
+#define cfun (cfunA + cfunX)
 
 #define P2(n1, n2)             (((n2) << 2) | (n1))
 #define P3(n1, n2, n3)         (((n3) << 4) | P2(n1, n2))
@@ -81,6 +87,7 @@
 #define I_R    P2(I_, R_)
 #define I_E    P2(I_, E_)
 #define I_EE   P3(I_, E_, E_)
+#define I_EEE  P4(I_, E_, E_, E_)
 #define R_I    P2(R_, I_)
 #define R_R    P2(R_, R_)
 #define R_RR   P3(R_, R_, R_)
@@ -98,6 +105,8 @@
 
 #define EIR(I, R) if (!fRetReal) {n = (I);} else {r = (R);}
 #define IIR(I, R) n = !fOptReal ? (I) : (R)
+#define SetReal(I, R) if (FBetween(I, 0, cLetter)) \
+  { rgparVar[I].r = (R); rgparVar[I].fReal = fTrue; }
 
 typedef struct _function {
   int ifun;     // Index of function
@@ -121,6 +130,7 @@ extern void GetParameter P((CONST char *, PAR *));
 // Functions
 
 enum _functionindex {
+  // General functions (independent of Astrolog and astrology)
   funFalse = 0,
   funTrue,
   funInt,
@@ -154,6 +164,7 @@ enum _functionindex {
   funSgn2,
   funMin,
   funMax,
+  funTween,
   funIfOp,
   funSqu,
   funSqr,
@@ -178,6 +189,7 @@ enum _functionindex {
   funFract,
   funRnd,
 
+  // Specific functions (related to Astrolog and astrology)
   funSigns,
   funObjs,
   funAsps,
@@ -205,6 +217,7 @@ enum _functionindex {
   funObjDist,
   funObjYear,
   funObjDiam,
+  funObjDay,
   funAspAng,
   funAspOrb,
   funAspInf,
@@ -223,15 +236,25 @@ enum _functionindex {
   funLonDiff,
   funLonMid,
   funDayWeek,
+  funJulianT,
   funSphDist,
   funOblique,
+  funRAMC,
+  funDeltaT,
   funSidDiff,
   funSystem,
+  funAspect,
+  funAspect2,
+  funParall,
+  funParall2,
   funGridNam,
   funGridVal,
+  funGridDo,
+  funGridDo2,
   funContext,
   funVersion,
 
+  // Astrolog command switch settings (general)
   fun_A3,
   fun_Ap,
   fun_AP,
@@ -263,13 +286,53 @@ enum _functionindex {
   fun_Ys,
   fun_Yn,
   fun_Yn0,
+  fun_Yz0,
   fun_Yu,
+  fun_Yu0,
   fun_Yr,
   fun_YC,
   fun_YO,
   fun_Yc,
   fun_Yp,
 
+#ifdef GRAPH
+  // Astrolog command switch settings (graphics)
+  fun_XI1,
+  fun_XI2,
+  fun_Xr,
+  fun_Xm,
+  fun_XT,
+  fun_Xi,
+  fun_Xu,
+  fun_Xl,
+  fun_XA,
+  fun_XL,
+  fun_Xj,
+  fun_XF,
+  fun_XW0,
+  fun_Xe,
+  fun_XU,
+  fun_XC,
+  fun_XQ,
+  fun_XN,
+  fun_YXe,
+  fun_Xwx,
+  fun_Xwy,
+  fun_Xn,
+  fun_Xs,
+  fun_XS,
+  fun_XU0,
+  fun_XE1,
+  fun_XE2,
+  fun_XE,
+  fun_XL0,
+  fun_X1,
+  fun_XGx,
+  fun_XGy,
+  fun_XZ,
+#endif
+
+  // Programming functions (related to variables and control flow)
   funVar,
   funDo,
   funDo2,
@@ -284,6 +347,7 @@ enum _functionindex {
   funSwitch,
   funRndSeed,
 
+  // Variable assignment functions
   funAssign,  funAssign2,
   funAssignA, funAssignB, funAssignC, funAssignD, funAssignE,
   funAssignF, funAssignG, funAssignH, funAssignI, funAssignJ,
@@ -294,6 +358,7 @@ enum _functionindex {
 };
 
 CONST FUN rgfun[cfun] = {
+// General functions (independent of Astrolog and astrology)
 {funFalse, "False", 0, I_},
 {funTrue,  "True",  0, I_},
 {funInt,   "Int",   1, I_I},
@@ -327,6 +392,7 @@ CONST FUN rgfun[cfun] = {
 {funSgn2,  "Sgn2",  1, E_E},
 {funMin,   "Min",   2, E_EE},
 {funMax,   "Max",   2, E_EE},
+{funTween, "Tween", 3, I_EEE},
 {funIfOp,  "?:",    3, E_IEE},
 {funSqu,   "Squ",   1, E_E},
 {funSqr,   "Sqr",   1, R_R},
@@ -351,6 +417,7 @@ CONST FUN rgfun[cfun] = {
 {funFract, "Fract", 1, R_R},
 {funRnd,   "Rnd",   2, I_II},
 
+// Specific functions (related to Astrolog and astrology)
 {funSigns,   "Signs",    0, I_},
 {funObjs,    "Objs",     0, I_},
 {funAsps,    "Asps",     0, I_},
@@ -436,6 +503,7 @@ CONST FUN rgfun[cfun] = {
 {funObjDist, "ObjDist",  1, R_I},
 {funObjYear, "ObjYear",  1, R_I},
 {funObjDiam, "ObjDiam",  1, R_I},
+{funObjDay,  "ObjDay",   1, R_I},
 {funAspAng,  "AspAngle", 1, R_I},
 {funAspOrb,  "AspOrb",   1, R_I},
 {funAspInf,  "AspInf",   1, R_I},
@@ -459,18 +527,28 @@ CONST FUN rgfun[cfun] = {
 {funLonDiff, "LonDiff",  2, R_RR},
 {funLonMid,  "LonMid",   2, R_RR},
 {funDayWeek, "DayWeek",  3, I_III},
+{funJulianT, "JulianT",  0, R_},
 {funSphDist, "PolDist",  4, R_RRRR},
 {funOblique, "Oblique",  0, R_},
+{funRAMC,    "RAMC",     0, R_},
+{funDeltaT,  "DeltaT",   0, R_},
 {funSidDiff, "SidDiff",  0, R_},
 {funSystem,  "HouseSys", 0, I_}, // Same as _c
+{funAspect,  "AspLon",   3, I_III},
+{funAspect2, "AspLon2",  3, I_III},
+{funParall,  "AspLat",   3, I_III},
+{funParall2, "AspLat2",  3, I_III},
 {funGridNam, "GridNam",  2, I_II},
 {funGridVal, "GridVal",  2, I_II},
+{funGridDo,  "DoGrid",   0, I_},
+{funGridDo2, "DoGrid2",  1, I_I},
 {funContext, "Context",  0, I_},
 {funVersion, "Version",  0, R_},
 
+// Astrolog command switch settings (general)
 {fun_A3,  "_A3",  0, I_},
 {fun_Ap,  "_Ap",  0, I_},
-{fun_AP,  "_AP0", 0, I_},
+{fun_AP,  "_APP", 0, I_},
 {fun_b,   "_b",   0, I_},
 {fun_b0,  "_b0",  0, I_},
 {fun_c,   "_c",   0, I_},
@@ -499,13 +577,53 @@ CONST FUN rgfun[cfun] = {
 {fun_Ys,  "_Ys",  0, I_},
 {fun_Yn,  "_Yn",  0, I_},
 {fun_Yn0, "_Yn0", 0, I_},
+{fun_Yz0, "_Yz0", 0, R_},
 {fun_Yu,  "_Yu",  0, I_},
+{fun_Yu0, "_Yu0",  0, I_},
 {fun_Yr,  "_Yr",  0, I_},
 {fun_YC,  "_YC",  0, I_},
 {fun_YO,  "_YO",  0, I_},
-{fun_Yc,  "_Yc0", 0, I_},
+{fun_Yc,  "_Ycc", 0, I_},
 {fun_Yp,  "_Yp",  0, I_},
 
+#ifdef GRAPH
+// Astrolog command switch settings (graphics)
+{fun_XI1, "_XI1", 0, R_},
+{fun_XI2, "_XI2", 0, I_},
+{fun_Xr,  "_Xr",  0, I_},
+{fun_Xm,  "_Xm",  0, I_},
+{fun_XT,  "_XT",  0, I_},
+{fun_Xi,  "_Xi",  0, I_},
+{fun_Xu,  "_Xuu", 0, I_},
+{fun_Xl,  "_Xll", 0, I_},
+{fun_XA,  "_XA",  0, I_},
+{fun_XL,  "_XL",  0, I_},
+{fun_Xj,  "_Xj",  0, I_},
+{fun_XF,  "_XF",  0, I_},
+{fun_XW0, "_XW0", 0, I_},
+{fun_Xe,  "_Xee", 0, I_},
+{fun_XU,  "_XU",  0, I_},
+{fun_XC,  "_XC",  0, I_},
+{fun_XQ,  "_XQ",  0, I_},
+{fun_XN,  "_XN",  0, I_},
+{fun_YXe, "_YXe", 0, I_},
+{fun_Xwx, "_Xwx", 0, I_},
+{fun_Xwy, "_Xwy", 0, I_},
+{fun_Xn,  "_Xnn", 0, I_},
+{fun_Xs,  "_Xs",  0, I_},
+{fun_XS,  "_XSS", 0, I_},
+{fun_XU0, "_XU0", 0, I_},
+{fun_XE1, "_XE1", 0, I_},
+{fun_XE2, "_XE2", 0, I_},
+{fun_XE,  "_XE",  0, I_},
+{fun_XL0, "_XL0", 0, I_},
+{fun_X1,  "_X1",  0, I_},
+{fun_XGx, "_XGx", 0, R_},
+{fun_XGy, "_XGy", 0, R_},
+{fun_XZ,  "_XZ",  0, I_},
+#endif
+
+// Programming functions (related to variables and control flow)
 {funVar,     "Var",     1, E_I},
 {funDo,      "Do",      2, E_XE},
 {funDo2,     "Do2",     3, E_XXE},
@@ -520,6 +638,7 @@ CONST FUN rgfun[cfun] = {
 {funSwitch,  "Switch",  1, I_I},
 {funRndSeed, "RndSeed", 1, I_I},
 
+// Variable assignment functions
 {funAssign,  "Assign", 2, E_IE},
 {funAssign2, "=",      2, E_IE},
 {funAssignA, "=A",     1, E_E},
@@ -657,6 +776,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   r1 = rgpar[1].r; r2 = rgpar[2].r; r3 = rgpar[3].r; r4 = rgpar[4].r;
 
   switch (ifun) {
+  // General functions (independent of Astrolog and astrology)
   case funFalse: n = fFalse; break;
   case funTrue:  n = fTrue;  break;
   case funInt:   n = n1;     break;
@@ -690,6 +810,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funSgn2:  EIR(NSgn2(n1), RSgn2(r1)); break;
   case funMin:   EIR(Min(n1, n2), Min(r1, r2)); break;
   case funMax:   EIR(Max(n1, n2), Max(r1, r2)); break;
+  case funTween: IIR(FBetween(n1, n2, n3), FBetween(r1, r2, r3)); break;
   case funIfOp:  EIR(n1 ? n2 : n3, n1 ? r2 : r3); break;
   case funSqu:   EIR(Sq(n1), Sq(r1)); break;
   case funSqr:   r = RSqr(r1); break;
@@ -714,8 +835,9 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funFract: r = r1 - RFloor(r1); break;
   case funRnd:   n = (rand() & 16383) * (n2 - n1 + 1) / 16384 + n1; break;
 
+  // Specific functions (related to Astrolog and astrology)
   case funSigns:   n = cSign;   break;
-  case funObjs:    n = cObj;    break;
+  case funObjs:    n = is.nObj; break;
   case funAsps:    n = us.nAsp; break;
   case funMon:     n = MM; break;
   case funDay:     n = DD; break;
@@ -795,14 +917,15 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funObjAdd:  r = FValidObj(n1)    ? rObjAdd[n1]   : 0.0; break;
   case funObjInf:  r = FBetween(n1, 0, oNorm1+5) ? rObjInf[n1]   : 0.0; break;
   case funObjInfT: r = FBetween(n1, 0, oNorm1) ? rTransitInf[n1] : 0.0; break;
-  case funObjCol:  n = FValidObj(n1)    ? kObjB[n1]     : 0;   break;
+  case funObjCol:  n = FValidObj(n1)    ? kObjA[n1]     : 0;   break;
   case funObjDist: r = FNorm(n1)        ? rObjDist[n1]  : 0.0; break;
   case funObjYear: r = FNorm(n1)        ? rObjYear[n1]  : 0.0; break;
-  case funObjDiam: r = FBetween(n1, 0, oVes) ? rObjDiam[n1] : 0.0; break;
+  case funObjDiam: r = RObjDiam(n1); break;
+  case funObjDay:  r = FNorm(n1)        ? rObjDay[n1]   : 0.0; break;
   case funAspAng:  r = FValidAspect(n1) ? rAspAngle[n1] : 0.0; break;
   case funAspOrb:  r = FValidAspect(n1) ? rAspOrb[n1]   : 0.0; break;
   case funAspInf:  r = FValidAspect(n1) ? rAspInf[n1]   : 0.0; break;
-  case funAspCol:  n = FValidAspect(n1) ? kAspB[n1]     : 0;   break;
+  case funAspCol:  n = FValidAspect(n1) ? kAspA[n1]     : 0;   break;
   case funCusp:    r = FValidSign(n1)   ? chouse[n1]    : 0.0; break;
   case funCusp3D:  r = FValidSign(n1)   ? chouse3[n1]   : 0.0; break;
   case funCusp1:   r = FValidSign(n1)   ? cp1.cusp[n1]  : 0.0; break;
@@ -822,17 +945,31 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funLonDiff: r = MinDifference(r1, r2); break;
   case funLonMid:  r = Midpoint(r1, r2); break;
   case funDayWeek: n = DayOfWeek(n1, n2, n3); break;
+  case funJulianT: r = JulianDayFromTime(is.T); break;
   case funSphDist: r = SphDistance(r1, r2, r3, r4); break;
   case funOblique: r = is.OB; break;
+  case funRAMC:    r = is.RA; break;
+  case funDeltaT:  r = is.rDeltaT * 86400.0; break;
   case funSidDiff: r = is.rOff; break;
   case funSystem:  n = us.nHouseSystem; break;
+  case funAspect:  n = GetAspect(planet, planet, planetalt, planetalt, ret,
+    ret, n1, n2, &r); SetReal(n3, r); break;
+  case funAspect2: n = GetAspect(cp1.obj, cp2.obj, cp1.alt, cp2.alt, cp1.dir,
+    cp2.dir, n1, n2, &r); SetReal(n3, r); break;
+  case funParall:  n = GetParallel(planet, planet, planetalt, planetalt,
+    retalt, retalt, n1, n2, &r); SetReal(n3, r); break;
+  case funParall2: n = GetParallel(cp1.obj, cp2.obj, cp1.alt, cp2.alt,
+    cp1.diralt, cp2.diralt, n1, n2, &r); SetReal(n3, r); break;
   case funGridNam: n = grid != NULL && FValidObj(n1) && FValidObj(n2) ?
     grid->n[n1][n2] : 0; break;
   case funGridVal: n = grid != NULL && FValidObj(n1) && FValidObj(n2) ?
     grid->v[n1][n2] : 0; break;
+  case funGridDo:  n = FCreateGrid(fFalse); break;
+  case funGridDo2: n = FCreateGridRelation(n1 != 0); break;
   case funContext: n = is.nContext; break;
   case funVersion: r = atof(szVersionCore); break;
 
+  // Astrolog command switch settings (general)
   case fun_A3:  n = us.fAspect3D;     break;
   case fun_Ap:  n = us.fAspectLat;    break;
   case fun_AP:  n = us.fParallel2;    break;
@@ -864,13 +1001,53 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Ys:  n = us.fSidereal2;  break;
   case fun_Yn:  n = us.fTrueNode;   break;
   case fun_Yn0: n = us.fNoNutation; break;
+  case fun_Yz0: r = us.rDeltaT;     break;
   case fun_Yu:  n = us.fEclipse;    break;
+  case fun_Yu0: n = us.fEclipseAny; break;
   case fun_Yr:  n = us.fRound;      break;
   case fun_YC:  n = us.fSmartCusp;  break;
   case fun_YO:  n = us.fSmartSave;  break;
   case fun_Yc:  n = us.fHouseAngle; break;
   case fun_Yp:  n = us.fPolarAsc;   break;
 
+#ifdef GRAPH
+  // Astrolog command switch settings (graphics)
+  case fun_XI1: r = gs.rBackPct;    break;
+  case fun_XI2: n = gs.nBackOrient; break;
+  case fun_Xr:  n = gs.fInverse;    break;
+  case fun_Xm:  n = !gs.fColor;     break;
+  case fun_XT:  n = gs.fText;       break;
+  case fun_Xi:  n = gs.fAlt;        break;
+  case fun_Xu:  n = gs.fBorder;     break;
+  case fun_Xl:  n = gs.fLabel;      break;
+  case fun_XA:  n = gs.fLabelAsp;   break;
+  case fun_XL:  n = gs.fLabelCity;  break;
+  case fun_Xj:  n = gs.fJetTrail;   break;
+  case fun_XF:  n = gs.fConstel;    break;
+  case fun_XW0: n = gs.fMollewide;  break;
+  case fun_Xe:  n = gs.fEquator;    break;
+  case fun_XU:  n = gs.fAllStar;    break;
+  case fun_XC:  n = gs.fHouseExtra; break;
+  case fun_XQ:  n = gs.fKeepSquare; break;
+  case fun_XN:  n = gs.fAnimMap;    break;
+  case fun_YXe: n = gs.fEcliptic;   break;
+  case fun_Xwx: n = gs.xWin;        break;
+  case fun_Xwy: n = gs.yWin;        break;
+  case fun_Xn:  n = gs.nAnim;       break;
+  case fun_Xs:  n = gs.nScale;      break;
+  case fun_XS:  n = gs.nScaleText;  break;
+  case fun_XU0: n = gs.nAllStar;    break;
+  case fun_XE1: n = gs.nAstLo;      break;
+  case fun_XE2: n = gs.nAstHi;      break;
+  case fun_XE:  n = gs.nAstLabel;   break;
+  case fun_XL0: n = gs.nLabelCity;  break;
+  case fun_X1:  n = gs.objLeft;     break;
+  case fun_XGx: r = gs.rRot;        break;
+  case fun_XGy: r = gs.rTilt;       break;
+  case fun_XZ:  n = gs.objTrack;    break;
+#endif
+
+  // Programming functions (related to variables and control flow)
   case funVar:
     if (FBetween(n1, 0, cLetter)) {
       fRetReal = rgparVar[n1].fReal;
@@ -947,9 +1124,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     break;
   case funRndSeed:
     srand(n1);
-    n = 0;
+    n = n1;
     break;
 
+  // Variable assignment functions
   case funAssign:
   case funAssign2:
     if (FBetween(n1, 0, cLetter)) {
@@ -1151,28 +1329,6 @@ void GetParameter(CONST char *sz, PAR *ppar)
 ** Trie Tree Routines
 ******************************************************************************
 */
-
-// Return whether two ranges of characters are equal. Either string ending
-// prematurely with a zero terminator makes the strings not equal.
-
-flag FEqRgch(CONST char *rgch1, CONST char *rgch2, int cch, flag fInsensitive)
-{
-  int ich;
-
-  if (!fInsensitive) {
-    for (ich = 0; ich < cch; ich++) {
-      if (rgch1[ich] == '\0' || rgch1[ich] != rgch2[ich])
-        return fFalse;
-    }
-  } else {
-    for (ich = 0; ich < cch; ich++) {
-      if (rgch1[ich] == '\0' || ChCap(rgch1[ich]) != ChCap(rgch2[ich]))
-        return fFalse;
-    }
-  }
-  return fTrue;
-}
-
 
 // Create a trie tree within the buffer rgsOut of size csTrieMax. Returns the
 // size of the trie in shorts, or -1 on failure. The input list of strings is
@@ -1566,6 +1722,6 @@ void ExpInit(void)
 {
   ClearB((pbyte)rgparVar, sizeof(rgparVar));
 }
-#endif /* EXPRESS */
+#endif // EXPRESS
 
 /* express.cpp */

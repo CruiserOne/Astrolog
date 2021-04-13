@@ -5064,8 +5064,10 @@ static void rot_back(int ipli)
   double xrot, yrot, zrot;
   double *chcfx, *chcfy, *chcfz;
   double *refepx, *refepy;
-  double seps2000 = swed.oec2000.seps;
-  double ceps2000 = swed.oec2000.ceps;
+  // epsilon as used in chopt.c
+  // double eps2000 = 0.409092804;       	// eps 2000 in radians 
+  double seps2000 = 0.39777715572793088;	// sin(eps2000) 
+  double ceps2000 = 0.91748206215761929;	// cos(eps2000) 
   struct plan_data *pdp = &swed.pldat[ipli];
   int nco = pdp->ncoe;
   t = pdp->tseg0 + pdp->dseg / 2;
@@ -6175,12 +6177,11 @@ static int32 plaus_iflag(int32 iflag, int32 ipl, double tjd, char *serr)
   }
   /* if barycentric bit, turn heliocentric bit off */
   if (iflag & SEFLG_BARYCTR) 
-    iflag = iflag & ~SEFLG_HELCTR; 
-  /* if heliocentric bit, turn aberration and deflection off */
+    iflag = iflag & ~(SEFLG_HELCTR); 
   if (iflag & SEFLG_HELCTR) 
-    iflag |= SEFLG_NOABERR | SEFLG_NOGDEFL; /*iflag |= SEFLG_TRUEPOS;*/
-  /* same, if barycentric bit */
-  if (iflag & SEFLG_BARYCTR) 
+    iflag = iflag & ~(SEFLG_BARYCTR); 
+  /* if heliocentric bit, turn aberration and deflection off */
+  if (iflag & (SEFLG_HELCTR|SEFLG_BARYCTR)) 
     iflag |= SEFLG_NOABERR | SEFLG_NOGDEFL; /*iflag |= SEFLG_TRUEPOS;*/
   /* if no_precession bit is set, set also no_nutation bit */
   if (iflag & SEFLG_J2000)
@@ -8136,7 +8137,7 @@ int32 CALL_CONV swe_fixstar_mag(char *star, double *mag, char *serr)
 
 int32 CALL_CONV swe_calc_pctr(double tjd, int32 ipl, int32 iplctr, int32 iflag, double *xxret, char *serr) 
 {
-  double t = 0, dt, daya[2], dtsave_for_defl;
+  double t = 0, dt, daya[2], dtsave_for_defl = 0;
   double xx[6], xxctr[6], xxctr2[6], xx0[6], xxsv[24], xxsp[6], dx[6], xreturn[24];
   double *xs;
   int i, j, niter;
@@ -8147,12 +8148,14 @@ int32 CALL_CONV swe_calc_pctr(double tjd, int32 ipl, int32 iplctr, int32 iflag, 
 	  sprintf(serr, "ipl and iplctr (= %d) must not be identical\n", ipl);
 	return ERR;
   }
+  iflag = plaus_iflag(iflag, ipl, tjd, serr);
   epheflag = iflag & SEFLG_EPHMASK;
   // this fills in obliquity and nutation values in swed
-  swe_calc(tjd + swe_deltat_ex(tjd, epheflag, serr), SE_ECL_NUT, 0, xx, serr);
+  swe_calc(tjd + swe_deltat_ex(tjd, epheflag, serr), SE_ECL_NUT, iflag, xx, serr);
   iflag &= ~(SEFLG_HELCTR|SEFLG_BARYCTR);
   iflag2 = epheflag;
   iflag2 |= (SEFLG_BARYCTR|SEFLG_J2000|SEFLG_ICRS|SEFLG_TRUEPOS|SEFLG_EQUATORIAL|SEFLG_XYZ|SEFLG_SPEED);
+  iflag2 |= (SEFLG_NOABERR|SEFLG_NOGDEFL);
   retc = swe_calc(tjd, iplctr, iflag2, xxctr, serr);
   if (retc == ERR) 
     return ERR;
@@ -8373,6 +8376,29 @@ int32 CALL_CONV swe_calc_pctr(double tjd, int32 ipl, int32 iplctr, int32 iflag, 
   if (retc == ERR)
     return ERR;
   return(iflag);
+}
+
+// returns data from internal file structures sweph.fidat
+// used in last call to swe_calc() or swe_fixstar()
+// ifno = 0     planet file sepl_xxx, used for Sun .. Pluto, or jpl file
+// ifno = 1     moon file semo_xxx
+// ifno = 2     main asteroid file seas_xxx  if such an object was computed
+// ifno = 3     other asteroid or planetary moon file, if such object was computed
+// ifno = 4     star file
+// Return value: full file pathname, or NULL if no data
+// tfstart = start date of file,
+// tfend   = end data of fila,
+// denum   = jpl ephemeris number 406 or 431 from which file was derived
+// all three return values are zero for a jpl file or a star file.
+const char *CALL_CONV swe_get_current_file_data(int ifno, double *tfstart, double *tfend, int *denum)
+{
+  if (ifno < 0 || ifno > 4) return NULL;
+  struct file_data *pfp = &swed.fidat[ifno];
+  if (strlen(pfp->fnam) == 0) return NULL;
+  *tfstart = pfp->tfstart;
+  *tfend = pfp->tfend;
+  *denum = pfp->sweph_denum;
+  return pfp->fnam;
 }
 #endif /* SWISS */
 

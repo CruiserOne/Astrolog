@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: matrix.cpp
+** Astrolog (Version 7.20) File: matrix.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -169,8 +169,8 @@ CONST real rStarData[cStar*6] = {
 ******************************************************************************
 */
 
-/* Given a month, day, and year, convert it into a single Julian day value, */
-/* i.e. the number of days passed since a fixed reference date.             */
+// Given a month, day, and year, convert it into a single Julian day value,
+// i.e. the number of days passed since a fixed reference date.
 
 long MatrixMdyToJulian(int mon, int day, int yea)
 {
@@ -185,8 +185,8 @@ long MatrixMdyToJulian(int mon, int day, int yea)
 }
 
 
-/* Take a Julian day value, and convert it back into the corresponding */
-/* month, day, and year.                                               */
+// Take a Julian day value, and convert it back into the corresponding month,
+// day, and year.
 
 void MatrixJulianToMdy(real JD, int *mon, int *day, int *yea)
 {
@@ -206,10 +206,10 @@ void MatrixJulianToMdy(real JD, int *mon, int *day, int *yea)
 }
 
 
-/* This is a subprocedure of CastChart(). Once we have the chart parameters */
-/* calculate a few important things related to the date, i.e. the Greenwich */
-/* time, the Julian day and fractional part of the day, the offset to the   */
-/* sidereal, and a couple of other things.                                  */
+// This is a subprocedure of CastChart(). Once we have the chart parameters
+// calculate a few important things related to the date, i.e. the Greenwich
+// (UTC) time, the Julian day and fractional part of the day, the offset to
+// the sidereal, and a couple of other things.
 
 real ProcessInput(void)
 {
@@ -228,7 +228,7 @@ real ProcessInput(void)
 }
 
 
-/* Another modulus function, this time for the range of 0 to 2 Pi. */
+// Another modulus function, this time for the range of 0 to 2 Pi.
 
 real ModRad(real r)
 {
@@ -240,7 +240,7 @@ real ModRad(real r)
 }
 
 
-/* Convert polar to rectangular coordinates. */
+// Convert polar to rectangular coordinates.
 
 void PolToRec(real a, real r, real *x, real *y)
 {
@@ -251,7 +251,7 @@ void PolToRec(real a, real r, real *x, real *y)
 }
 
 
-/* Convert rectangular to spherical coordinates. */
+// Convert rectangular to spherical coordinates.
 
 real RecToSph(real B, real L, real O)
 {
@@ -275,9 +275,9 @@ real RecToSph(real B, real L, real O)
 }
 
 
-/* This is another subprocedure of CastChart(). Calculate a few variables */
-/* corresponding to the chart parameters that are used later on. The      */
-/* astrological vertex (object number 20) is also calculated here.        */
+// This is another subprocedure of CastChart(). Calculate a few variables
+// corresponding to the chart parameters that are used later on. The
+// astrological vertex is also calculated here.
 
 void ComputeVariables(real *vtx)
 {
@@ -287,9 +287,9 @@ void ComputeVariables(real *vtx)
     tim = JulianDayFromTime(is.T) + 0.5;
     tim = RFract(tim)*24.0;
   }
-  is.RA = RFromD(Mod((6.6460656 + 2400.0513*is.T + 2.58E-5*is.T*is.T +
-    tim)*15.0 - OO));
-  L = is.RA + rPi; B = rPiHalf - RAbs(RFromD(AA));
+  is.RA = Mod((6.6460656 + 2400.0513*is.T + 2.58E-5*is.T*is.T +
+    tim)*15.0 - OO);
+  L = RFromD(is.RA) + rPi; B = rPiHalf - RAbs(RFromD(AA));
   if (AA < 0.0)
     B = -B;
   G = RecToSph(B, L, -is.OB);
@@ -303,20 +303,20 @@ void ComputeVariables(real *vtx)
 ******************************************************************************
 */
 
-/* The following three functions calculate the Midheaven, Ascendant, and  */
-/* East Point of the chart in question, based on time and location. The   */
-/* first two are also used in some of the house cusp calculation routines */
-/* as a quick way to get the 10th and 1st cusps. The East Point object is */
-/* technically defined as the Ascendant's position at zero latitude.      */
+// The following three functions calculate the Midheaven, Ascendant, and East
+// Point of the chart in question, based on time and location. The first two
+// are also used in some of the house cusp calculation routines as a quick way
+// to get the 10th and 1st cusps. The East Point object is technically defined
+// as the Ascendant's position at zero latitude.
 
 real CuspMidheaven(void)
 {
   real MC;
 
-  MC = RAtn(RTan(is.RA)/RCosD(is.OB));
+  MC = RAtn(RTanD(is.RA)/RCosD(is.OB));
   if (MC < 0.0)
     MC += rPi;
-  if (is.RA > rPi)
+  if (RFromD(is.RA) > rPi)
     MC += rPi;
   return Mod(DFromR(MC)+is.rSid);
 }
@@ -325,7 +325,8 @@ real CuspAscendant(void)
 {
   real Asc;
 
-  Asc = RAngle(-RSin(is.RA)*RCosD(is.OB)-RTanD(AA)*RSinD(is.OB), RCos(is.RA));
+  Asc = RAngle(-RSinD(is.RA)*RCosD(is.OB) - RTanD(AA)*RSinD(is.OB),
+    RCosD(is.RA));
   return Mod(DFromR(Asc)+is.rSid);
 }
 
@@ -333,19 +334,19 @@ real CuspEastPoint(void)
 {
   real EP;
 
-  EP = RAngle(-RSin(is.RA)*RCosD(is.OB), RCos(is.RA));
+  EP = RAngle(-RSinD(is.RA)*RCosD(is.OB), RCosD(is.RA));
   return Mod(DFromR(EP)+is.rSid);
 }
 
 
-/* These are various different algorithms for calculating the house cusps: */
+// These are various different algorithms for calculating the house cusps.
 
 real CuspPlacidus(real deg, real FF, flag fNeg)
 {
   real LO, R1, XS, X;
   int i;
 
-  R1 = is.RA+RFromD(deg);
+  R1 = RFromD(is.RA + deg);
   X = fNeg ? 1.0 : -1.0;
   // Looping 10 times is arbitrary, but it's what other programs do.
   for (i = 1; i <= 10; i++) {
@@ -355,7 +356,7 @@ real CuspPlacidus(real deg, real FF, flag fNeg)
     XS = RAcos(XS);
     if (XS < 0.0)
       XS += rPi;
-    R1 = is.RA + (fNeg ? rPi-(XS/FF) : (XS/FF));
+    R1 = RFromD(is.RA) + (fNeg ? rPi-(XS/FF) : (XS/FF));
   }
   LO = RAtn(RTan(R1)/RCosD(is.OB));
   if (LO < 0.0)
@@ -388,7 +389,7 @@ void HouseKoch(void)
   real A1, A2, A3, KN, D, X;
   int i;
 
-  A1 = RSin(is.RA)*RTanD(AA)*RTanD(is.OB);
+  A1 = RSinD(is.RA)*RTanD(AA)*RTanD(is.OB);
   A1 = RAsin(A1);
   for (i = 1; i <= cSign; i++) {
     D = Mod(60.0+30.0*(real)i);
@@ -397,7 +398,7 @@ void HouseKoch(void)
       KN = -1.0;
       A2 = D/rDegQuad-3.0;
     }
-    A3 = RFromD(Mod(DFromR(is.RA)+D+A2*DFromR(A1)));
+    A3 = RFromD(Mod(is.RA+D+A2*DFromR(A1)));
     X = RAngle(RCos(A3)*RCosD(is.OB)-KN*RTanD(AA)*RSinD(is.OB), RSin(A3));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
@@ -415,8 +416,8 @@ void HouseCampanus(void)
       DN += rPi;
     if (RSin(KO) < 0.0)
       DN += rPi;
-    X = RAngle(RCos(is.RA+DN)*RCosD(is.OB)-RSin(DN)*RTanD(AA)*RSinD(is.OB),
-      RSin(is.RA+DN));
+    X = RAngle(RCos(RFromD(is.RA)+DN)*RCosD(is.OB) -
+      RSin(DN)*RTanD(AA)*RSinD(is.OB), RSin(RFromD(is.RA)+DN));
     chouse[i] = Mod(DFromR(X)+is.rSid);
   }
 }
@@ -427,9 +428,9 @@ void HouseMeridian(void)
   int i;
 
   for (i = 1; i <= cSign; i++) {
-    D = RFromD(60.0+30.0*(real)i);
-    X = RAngle(RCos(is.RA+D)*RCosD(is.OB), RSin(is.RA+D));
-    chouse[i] = Mod(DFromR(X)+is.rSid);
+    D = 60.0 + 30.0*(real)i;
+    X = RAngleD(RCosD(is.RA + D)*RCosD(is.OB), RSinD(is.RA + D));
+    chouse[i] = Mod(X + is.rSid);
   }
 }
 
@@ -439,10 +440,10 @@ void HouseRegiomontanus(void)
   int i;
 
   for (i = 1; i <= cSign; i++) {
-    D = RFromD(60.0+30.0*(real)i);
-    X = RAngle(RCos(is.RA+D)*RCosD(is.OB)-RSin(D)*RTanD(AA)*RSinD(is.OB),
-      RSin(is.RA+D));
-    chouse[i] = Mod(DFromR(X)+is.rSid);
+    D = 60.0 + 30.0*(real)i;
+    X = RAngleD(RCosD(is.RA + D)*RCosD(is.OB) -
+      RSinD(D)*RTanD(AA)*RSinD(is.OB), RSinD(is.RA + D));
+    chouse[i] = Mod(X + is.rSid);
   }
 }
 
@@ -452,9 +453,9 @@ void HouseMorinus(void)
   int i;
 
   for (i = 1; i <= cSign; i++) {
-    D = RFromD(60.0+30.0*(real)i);
-    X = RAngle(RCos(is.RA+D), RSin(is.RA+D)*RCosD(is.OB));
-    chouse[i] = Mod(DFromR(X)+is.rSid);
+    D = 60.0 + 30.0*(real)i;
+    X = RAngleD(RCosD(is.RA + D), RSinD(is.RA + D)*RCosD(is.OB));
+    chouse[i] = Mod(X + is.rSid);
   }
 }
 
@@ -462,7 +463,7 @@ real CuspTopocentric(real deg)
 {
   real OA, X, LO;
 
-  OA = ModRad(is.RA+RFromD(deg));
+  OA = ModRad(RFromD(is.RA + deg));
   X = RAtn(RTan(AA)/RCos(OA));
   LO = RAtn(RCos(X)*RTan(OA)/RCos(X+RFromD(is.OB)));
   if (LO < 0.0)
@@ -498,8 +499,8 @@ void HouseTopocentric(void)
 ******************************************************************************
 */
 
-/* Given three values, return them combined as the coefficients of a */
-/* quadratic equation as a function of the chart time.               */
+// Given three values, return them combined as the coefficients of a
+// quadratic equation as a function of the chart time.
 
 real ReadThree(real r0, real r1, real r2)
 {
@@ -507,8 +508,8 @@ real ReadThree(real r0, real r1, real r2)
 }
 
 
-/* Another coordinate transformation. This is used by the ComputePlanets() */
-/* procedure to rotate rectangular coordinates by a certain amount.        */
+// Another coordinate transformation. This is used by the ComputePlanets()
+// procedure to rotate rectangular coordinates by a certain amount.
 
 void RecToSph2(real AP, real AN, real _IN, real *X, real *Y, real *G)
 {
@@ -524,8 +525,8 @@ void RecToSph2(real AP, real AN, real _IN, real *X, real *Y, real *G)
 }
 
 
-/* Calculate some harmonic delta error correction factors to add onto the */
-/* coordinates of Jupiter through Pluto, for better accuracy.             */
+// Calculate some harmonic delta error correction factors to add onto the
+// coordinates of Jupiter through Pluto, for better accuracy.
 
 void ErrorCorrect(int ind, real *x, real *y, real *z)
 {
@@ -553,20 +554,22 @@ void ErrorCorrect(int ind, real *x, real *y, real *z)
 }
 
 
-/* This is the (classic) heart of the whole program of Astrolog. Calculate */
-/* the position of each body that orbits the Sun. A heliocentric chart is  */
-/* most natural; extra calculation is needed to have other central bodies. */
+// This is the (classic) heart of the whole program of Astrolog. Calculate
+// the position of each body that orbits the Sun. A heliocentric chart is
+// most natural. Extra calculation is needed to have other central bodies.
 
 void ComputePlanets(void)
 {
-  real helioret[oNorm+1], heliox[oNorm+1], helioy[oNorm+1], helioz[oNorm+1];
+  real helioret[uranHi+1],
+    heliox[uranHi+1], helioy[uranHi+1], helioz[uranHi+1];
   real aber = 0.0, AU, E, EA, E1, M, XW, YW, AP, AN, _IN, X, Y, G, XS, YS, ZS;
   int ind = oSun, i;
   OE *poe;
 
-  while (ind <= (us.fUranian ? oNorm : cPlanet)) {
+  for (ind = oSun; ind <= (us.fUranian ? uranHi : cPlanet);
+    ind += (ind == oSun ? 2 : (ind == cPlanet ? uranLo+1-cPlanet : 1))) {
     if (ignore[ind] && ind > oSun && ind != us.objCenter)
-      goto LNextPlanet;
+      continue;
     poe = &rgoe[IoeFromObj(ind)];
 
     EA = M = ModRad(ReadThree(poe->ma0, poe->ma1, poe->ma2));
@@ -595,8 +598,6 @@ void ComputePlanets(void)
       (XS*XS+YS*YS));  // Helio daily motion
     space[ind].x = XS; space[ind].y = YS; space[ind].z = ZS;
     ProcessPlanet(ind, 0.0);
-LNextPlanet:
-    ind += (ind == oSun ? 2 : (ind != cPlanet ? 1 : uranLo+1-cPlanet));
   }
 
   space[oEar] = space[oSun];
@@ -609,18 +610,18 @@ LNextPlanet:
   if (us.objCenter == oSun) {
     // Use relative velocity if -v0 is in effect.
     if (us.fVelocity)
-      for (i = 0; i <= oNorm; i++)
+      for (i = 0; i <= uranHi; i++)
         ret[i] = 1.0;
     return;
   }
 
-  /* A second loop is needed for geocentric charts or central bodies other */
-  /* than the Sun. For example, we can't find the position of Mercury in   */
-  /* relation to Pluto until we know the position of Pluto in relation to  */
-  /* the Sun, and since Mercury is calculated first, another pass needed.  */
+  // A second loop is needed for geocentric charts or central bodies other
+  // than the Sun. For example, we can't find the position of Mercury in
+  // relation to Pluto until we know the position of Pluto in relation to
+  // the Sun, and since Mercury is calculated first, another pass needed.
 
   ind = us.objCenter != oMoo ? us.objCenter : oEar;
-  for (i = 0; i <= oNorm; i++) {
+  for (i = 0; i <= uranHi; i++) {
     helioret[i] = ret[i];
     if (i != oMoo && i != ind) {
       space[i].x -= space[ind].x;
@@ -628,8 +629,8 @@ LNextPlanet:
       space[i].z -= space[ind].z;
     }
   }
-  for (i = oEar; i <= (us.fUranian ? oNorm : cPlanet);
-    i += (i == oSun ? 2 : (i != cPlanet ? 1 : uranLo+1-cPlanet))) {
+  for (i = oEar; i <= (us.fUranian ? uranHi : cPlanet);
+    i += (i == oSun ? 2 : (i == cPlanet ? uranLo+1-cPlanet : 1))) {
     if ((ignore[i] && i > oSun) || i == ind)
       continue;
     XS = space[i].x; YS = space[i].y; ZS = space[i].z;
@@ -652,9 +653,9 @@ LNextPlanet:
 ******************************************************************************
 */
 
-/* Calculate the position and declination of the Moon, and the Moon's North  */
-/* Node. This has to be done separately from the other planets, because they */
-/* all orbit the Sun, while the Moon orbits the Earth.                       */
+// Calculate the position and declination of the Moon, and the Moon's North
+// Node. This has to be done separately from the other planets, because they
+// all orbit the Sun, while the Moon orbits the Earth.
 
 void ComputeLunar(real *moonlo, real *moonla, real *nodelo, real *nodela)
 {

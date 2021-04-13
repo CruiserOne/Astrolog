@@ -213,8 +213,8 @@ extern "C" {
                                       * 1962 - today to 0.002 arcsec. */
 #define SEFLG_JPLHOR	SEFLG_DPSIDEPS_1980
 #define SEFLG_JPLHOR_APPROX	(512*1024)   /* approximate JPL Horizons 1962 - today */
-#define SEFLG_CENTER_BODY	(1024*1024)  /* calculate position of center of body of 
-                                                planet, not barycenter of its system */
+#define SEFLG_CENTER_BODY	(1024*1024)  /* calculate position of center of body (COB)
+                                                of planet, not barycenter of its system */
 #define SEFLG_TEST_PLMOON	(2*1024*1024 | SEFLG_J2000 | SEFLG_ICRS | SEFLG_HELCTR | SEFLG_TRUEPOS)  /* test raw data in files sepm9* */
 
 
@@ -755,6 +755,7 @@ ext_def(double) swe_get_ayanamsa_ut(double tjd_ut);
 
 
 ext_def(const char *) swe_get_ayanamsa_name(int32 isidmode);
+ext_def(const char *) swe_get_current_file_data(int ifno, double *tfstart, double *tfend, int *denum);
 
 /*ext_def(void) swe_set_timeout(int32 tsec);*/
 

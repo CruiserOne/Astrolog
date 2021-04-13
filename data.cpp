@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.10) File: data.cpp
+** Astrolog (Version 7.20) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2020 by
+** not enumerated below used in this program are Copyright (C) 1991-2021 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/30/2020.
+** Last code change made 4/11/2021.
 */
 
 #include "astrolog.h"
@@ -67,7 +67,7 @@ extern unsigned _stklen = 0x4000;
 US us = {
 
   // Chart types
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Chart suboptions
   0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
@@ -76,7 +76,7 @@ US us = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Main flags
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef EPHEM
   1,
 #else
@@ -105,11 +105,11 @@ US us = {
 #else
   1,
 #endif
-  0, 0, 0, 0, 0, 0, 0, 0,
-
-  // Rare flags
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+  // Obscure flags
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+  1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Value settings
   0,
@@ -144,26 +144,29 @@ US us = {
   "",
 
   // Value subsettings
-  0, 5, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, oEar, oEar, 0,
-  BIODAYS, 1,
+  0, 5, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, rSmall, oEar, oEar,
+  0, BIODAYS, 1,
 
   // AstroExpressions
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL};
 
 IS is = {
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0.0, 0.0, 0.0, 0.0, rAxis};
+  fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
+  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0};
 
 CI ciCore = {11, 19, 1971, HM(11, 1),       0.0, 8.0, DEFAULT_LOC, "", ""};
 CI ciMain = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),   0.0, 0.0, DEFAULT_LOC, "", ""};
 CI ciThre = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CI ciFour = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTran = {1,  1,  2019, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {10, 1,  2020, HMS(14, 5, 15),  1.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciTran = {1,  1,  2021, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciSave = {4,  11, 2021, HMS(19, 30, 50), 1.0, 8.0, DEFAULT_LOC, "", ""};
 CI ciGreg = {10, 15, 1582, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CP cp0, cp1, cp2, cp3, cp4;
 
@@ -186,27 +189,31 @@ real rStarBrightDef[cStar+1] = {-1.0}, rStarBright[cStar+1],
   rStarDistDef[cStar+1], rStarDist[cStar+1];
 char *szStarCustom[cStar+1];
 
-/* Restriction status of each object, as specified with -R switch. */
+// Restriction status of each object, as specified with -R switch.
 
 byte ignore[objMax] = {1,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                     // Planets
   0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,                  // Minors
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,               // Cusps
   1, 1, 1, 1, 1, 1, 1, 1, 1,                        // Uranians
+  1, 1, 1, 1, 1, 1, 1, 1, 1,                        // Dwarfs
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // Moons
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  // Stars
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 
-/* Restriction of objects when transiting, as specified with -RT switch. */
+// Restriction of objects when transiting, as specified with -RT switch.
 
 byte ignore2[objMax] = {1,
   0, 1, 0, 0, 0, 0, 0, 0, 0, 0,                     // Planets
   0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1,                  // Minors
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,               // Cusps
   1, 1, 1, 1, 1, 1, 1, 1, 1,                        // Uranians
+  1, 1, 1, 1, 1, 1, 1, 1, 1,                        // Dwarfs
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // Moons
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  // Stars
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 
-/* Restriction status of each aspect, as specified with -RA switch. */
+// Restriction status of each aspect, as specified with -RA switch.
 
 byte ignorea[cAspect+1] = {0,
   0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -214,7 +221,7 @@ byte ignorea[cAspect+1] = {0,
 byte ignorez[arMax] = {0, 0, 0, 0};     // Restrictions for -Zd chart events.
 byte ignore7[rrMax] = {0, 1, 1, 0, 1};  // Restrictions for rulership types.
 
-/* Gauquelin sector plus zones, as specified with -Yl switch. */
+// Gauquelin sector plus zones, as specified with -Yl switch.
 
 byte pluszone[cSector+1] = {0,
   1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
@@ -256,6 +263,17 @@ CONST char *szObjName[objMax+4] = {
   "9th Cusp", "Midheaven", "11th Cusp", "12th Cusp",
   "Vulcan", "Cupido", "Hades", "Zeus", "Kronos",            // Uranians
   "Apollon", "Admetos", "Vulkanus", "Poseidon",
+  "Hygiea", "Pholus", "Eris", "Haumea", "Makemake",         // Dwarfs
+  "Gonggong", "Quaoar", "Sedna", "Orcus",
+
+  "Phobos", "Deimos",                                       // Moons
+  "Ganymede", "Callisto", "Io", "Europa",
+  "Titan", "Rhea", "Iapetus", "Dione",
+  "Tethys", "Hyperion", "Enceladus", "Mimas",
+  "Titania", "Oberon", "Umbriel", "Ariel", "Miranda",
+  "Triton", "Proteus", "Nereid",
+  "Charon", "Hydra", "Nix", "Kerberos", "Styx",
+  "JupCOB", "SatCOB", "UraCOB", "NepCOB", "PluCOB",
 
   "Achernar", "Polaris", "Zeta Retic.", "Pleiades",         // Stars
   "Aldebaran", "Capella", "Rigel", "Bellatrix", "Alnath",
@@ -270,8 +288,10 @@ CONST char *szObjName[objMax+4] = {
 
   "1st Cusp", "4th Cusp", "7th Cusp", "10th Cusp"};
 CONST StrLook rgObjName[] = {{"Node", oNod}, {"Nod:", oNod},
+  {"Rahu", oNod}, {"Ketu", oSou},
   {"M.C.", oMC}, {"I.C.", oNad},
   {"1st", oAsc}, {"4th", oNad}, {"7th", oDes}, {"10th", oMC},
+  {"Vulcanus", oVlk},
   {"Star", starLo}, {"Alnilam", oOri}, {"M31", oAnd}, {"", -1}};
 CONST char *szObjDisp[objMax];
 
@@ -279,16 +299,20 @@ CONST char *szSystem[cSystem] = {
   "Placidus", "Koch", "Equal", "Campanus", "Meridian",
   "Regiomontanus", "Porphyry", "Morinus", "Topocentric", "Alcabitius",
   "Krusinski", "Equal (MC)", "Pullen (S.Ratio)", "Pullen (S.Delta)", "Whole",
-  "Vedic", "Sripati", "Horizon", "APC", "Carter P.Equ.", "Sunshine", "Null",
-  "Whole (MC)", "Vedic (MC)", "Equal (Balanced)", "Whole (Balanced)",
-  "Vedic (Balanced)"};
+  "Vedic", "Sripati", "Horizon", "APC", "Carter P.Equat.", "Sunshine", "Null",
+  "Whole (MC)", "Vedic (MC)",
+  "Equal (Balanced)", "Whole (Balanced)", "Vedic (Balanced)",
+  "Equal (EP)", "Whole (EP)", "Vedic (EP)",
+  "Equal (Vertex)", "Whole (Vertex)", "Vedic (Vertex)"};
 CONST StrLook rgSystem[] = {{"E-Asc", hsEqual}, {"E-MC", hsEqualMC},
   {"P-SR", hsSinewaveRatio}, {"P-SD", hsSinewaveDelta},
   {"Ratio", hsSinewaveRatio}, {"Delta", hsSinewaveDelta},
   {"S-Ratio", hsSinewaveRatio}, {"S-Delta", hsSinewaveDelta},
-  {"W-Asc", hsWhole}, {"W-MC", hsWholeMC}, {"W-Bal", hsWholeBalanced},
-  {"V-Asc", hsVedic}, {"V-MC", hsVedicMC}, {"V-Bal", hsVedicBalanced},
-  {"E-Bal", hsEqualBalanced},
+  {"W-Asc", hsWhole}, {"V-Asc", hsVedic},
+  {"W-MC", hsWholeMC}, {"V-MC", hsVedicMC}, {"E-Bal", hsEqualBalanced},
+  {"W-Bal", hsWholeBalanced}, {"V-Bal", hsVedicBalanced},
+  {"E-EP", hsEqualEP}, {"W-EP", hsWholeEP}, {"V-EP", hsVedicEP},
+  {"E-Ver", hsEqualVertex}, {"W-Ver", hsWholeVertex}, {"V-Ver", hsVedicVertex},
   {"", -1}};
 
 CONST char *szAspectName[cAspect2+1] = {"",
@@ -358,8 +382,8 @@ CONST char *szSuffix[cSign+1] = {"",
   "st", "nd", "rd", "th", "th", "th", "th", "th", "th", "th", "th", "th"};
 
 CONST char *szEphem[cmMax] = {
-  "Swiss Ephemeris 2.09.03m", "Moshier Formulas 2.09.03m",
-  "Placalc Ephemeris", "Matrix Formulas", "None"};
+  "Swiss Ephemeris 2.10", "Moshier Formulas 2.10",
+  "JPL Ephemeris 2.10", "Placalc Ephemeris", "Matrix Formulas", "None"};
 
 CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},
   {"Lahiri", 0.883333}, {"Krishnamurti", 0.98}, {"Raman", 2.329444},
@@ -383,6 +407,10 @@ real rObjOrb[oNorm+2] = {360.0,
   360.0, 360.0, 360.0, 360.0, 360.0, 360.0,
   360.0, 360.0, 360.0, 360.0, 360.0, 360.0,
   360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0,
+  360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0,
+  2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+  2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+  2.0, 2.0, 2.0, 2.0, 2.0,
   2.0};
 
 real rObjAdd[oNorm+2] = {0.0,
@@ -390,35 +418,51 @@ real rObjAdd[oNorm+2] = {0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0,
   0.0};
 
 int ruler1[oNorm+1] = {sSag,
   sLeo, sCan, sGem, sLib, sAri, sSag, sCap, sAqu, sPis, sSco,
   sPis, sTau, sVir, sLib, sSco, sAqu, sLeo, sSco, sPis, sLib, sAri,
   sAri, sTau, sGem, sCan, sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis,
-  sVir, sLib, sSco, sLeo, sCap, sSag, sVir, sAri, sSag};
+  sVir, sLib, sSco, sLeo, sCap, sSag, sVir, sAri, sSag,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int ruler2[oNorm+1] = {0,
   0, 0, sVir, sTau, sSco, sPis, sAqu, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0};
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int exalt[oNorm+1] = {sGem,
   sAri, sTau, sVir, sPis, sCap, sCan, sLib, sSco, sCan, sAqu,
   sCan, sCan, sCap, sLeo, sAqu, sGem, sSag, sPis, sSag, sPis, sCap,
   sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis, sAri, sTau, sGem, sCan,
-  sCap, sGem, sVir, sAri, sSag, sAqu, sSco, sLeo, sPis};
+  sCap, sGem, sVir, sAri, sSag, sAqu, sSco, sLeo, sPis,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  /* This array is the reverse of the ruler arrays:   */
-  /* Here, given a sign, return what planet rules it. */
+// This array is the reverse of the ruler arrays.
+// Here, given a sign, return what planet rules it.
 int rules[cSign+1] = {0,
   oMar, oVen, oMer, oMoo, oSun, oMer, oVen, oPlu, oJup, oSat, oUra, oNep};
 
-  /* Esoteric astrology */
+// Esoteric astrology tables
 int rgObjRay[oNorm+1] = {3,
   2, 4, 4, 5, 6, 2, 3, 7, 6, 1,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   1, 4, 2, 3, 1, 2, 3, 4, 5, 7, 5, 6,
-  1, 0, 0, 0, 0, 0, 0, 0, 0};
+  1, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 3, 2, 1, 4, 7, 6, 5,    // 3214765: Seven circuit Labyrinth sequence!
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int rgSignRay[cSign+1] = {0,
   17, 4, 2, 37, 15, 26, 3, 4, 456, 137, 5, 26};
 int rgSignRay2[cSign+1][cRay+1];
@@ -426,22 +470,34 @@ int rgObjEso1[oNorm+1] = {sSag,
   sLeo, sVir, sAri, sGem, sSco, sAqu, sCap, sLib, sCan, sPis,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   sAri, sTau, sGem, sCan, sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis,
-  sTau, 0, 0, 0, 0, 0, 0, 0, 0};
+  sTau, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int rgObjEso2[oNorm+1] = {0,
   0, 0, 0, 0, 0, 0, 0, 0, sLeo, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  sVir, 0, 0, 0, 0, 0, 0, 0, 0};
+  sVir, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int rgObjHie1[oNorm+1] = {sGem,
   sLeo, sAqu, sSco, sCap, sSag, sVir, sLib, sAri, sCan, sPis,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   sAri, sTau, sGem, sCan, sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis,
-  sTau, 0, 0, 0, 0, 0, 0, 0, 0};
+  sTau, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int rgObjHie2[oNorm+1] = {0,
   0, 0, 0, 0, 0, 0, 0, sLeo, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  sAqu, 0, 0, 0, 0, 0, 0, 0, 0};
+  sAqu, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int rgSignEso1[cSign+1] = {0,
   oMer, oVul, oVen, oNep, oSun, oMoo, oUra, oMar, oEar, oSat, oJup, oPlu};
 int rgSignEso2[cSign+1] = {0,
@@ -459,11 +515,11 @@ CONST char *szRayName[cRay+1] = {"",
 CONST char *szRayWill[cRay+1] = {"",
   "Initiate", "Unify", "Evolve", "Harmonize", "Act", "Cause", "Express"};
 
-  /* Colors */
-CONST char *szColor[cColor+2] = {"Black",
+// Colors
+CONST char *szColor[cColor+4] = {"Black",
   "Maroon", "DkGreen", "Orange", "DkBlue", "Purple", "DkCyan", "LtGray",
   "Gray", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
-  "Element", "Ray"};
+  "Element", "Ray", "Star", "Planet"};
 CONST char *szColorHTML[cColor] = {"Black",
   "#7f0000", "#007f00", "#7f7f00", "#00007f", "Purple", "#007f7f", "#bfbfbf",
   "#7f7f7f", "Red", "00ff00", "Yellow", "Blue", "Magenta", "Cyan", "White"};
@@ -476,7 +532,7 @@ int kAspA[cAspect+1] = {kWhite,
   kYellow, kBlue, kRed, kGreen, kCyan,
   kMagenta, kMagenta, kOrange, kOrange, kDkCyan, kDkCyan,
   kDkCyan, kMaroon, kPurple, kPurple, kMaroon, kMaroon, kPurple};
-int kObjU[oNorm+1] = {kYellow,
+int kObjU[oNorm+2] = {kYellow,
   kElement, kElement, kElement, kElement, kElement,
     kElement, kElement, kElement, kElement, kElement,
   kMagenta, kMagenta, kMagenta, kMagenta, kMagenta,
@@ -484,69 +540,136 @@ int kObjU[oNorm+1] = {kYellow,
   kElement, kElement, kElement, kElement, kElement, kElement,
     kElement, kElement, kElement, kElement, kElement, kElement,
   kPurple,
-    kPurple, kPurple, kPurple, kPurple, kPurple, kPurple, kPurple, kPurple};
+    kPurple, kPurple, kPurple, kPurple, kPurple, kPurple, kPurple, kPurple,
+  kMagenta, kMagenta, kPurple, kPurple, kPurple, kPurple, kPurple, kPurple,
+    kPurple,
+  kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet,
+    kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet,
+    kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet,
+    kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet, kPlanet,
+  kStar};
 
-/* Influence information used by ChartInfluence() follows. The influence of */
-/* a planet in its ruling or exalting sign or house is tacked onto the last */
-/* two positions of the object and house influence array, respectively.     */
+// Influence information used by ChartInfluence() follows. The influence of a
+// planet in its ruling or exalting sign or house is tacked onto the last two
+// positions of the object and house influence array, respectively.
 
-  /* The inherent strength of each planet */
+// The inherent strength of each planet
 real rObjInf[oNorm1+6] = {30,
   30, 25, 10, 10, 10, 10, 10, 10, 10, 10,
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
   20, 10, 10, 10, 10, 10, 10, 10, 10, 15, 10, 10,
-  3, 3, 3, 3, 3, 3, 3, 3,
+  4, 3, 3, 3, 3, 3, 3, 3, 3,
+  3, 3, 3, 3, 3, 3, 3, 3, 3,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2,
   20, 10, 10, 10, 10};
 
-  /* The inherent strength of each house */
+// The inherent strength of each house
 real rHouseInf[cSign+6]  = {0,
   20, 0, 0, 10, 0, 0, 5, 0, 0, 15, 0, 0,
   15, 5, 5, 5, 5};
 
-  /* The inherent strength of each aspect */
+// The inherent strength of each aspect
 real rAspInf[cAspect+1] = {0.0,
   1.0, 0.8, 0.8, 0.6, 0.6, 0.4, 0.4, 0.2, 0.2,
   0.2, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
 
-  /* The inherent strength of each planet when transiting */
+// The inherent strength of each planet when transiting
 real rTransitInf[oNorm1+1] = {10,
   10, 4, 8, 9, 20, 30, 35, 40, 45, 50,
-  30, 15, 15, 15, 15, 30,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  50, 50, 50, 50, 50, 50, 50, 50,
-  80};
+  30, 15, 15, 15, 15, 30, 30, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  6, 50, 50, 50, 50, 50, 50, 50, 50,
+  15, 30, 50, 50, 50, 50, 50, 50, 50,
+  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  60};
 
-  /* Informational astronomical data for planets */
+// Informational astronomical data for planets
 CONST real rObjDist[oNorm+1] = {rEarthDist, 0.0, 0.3844,
   57.91, 108.2, 227.94, 778.33, 1426.98, 2870.99, 4497.07, 5913.52,
   13.670*rEarthDist, 2.767*rEarthDist, 2.770*rEarthDist, 2.669*rEarthDist,
   2.361*rEarthDist, 0.3844, 0.3844, 0.3844,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // Uranians
   0.13744*rEarthDist, 40.99837*rEarthDist, 50.66744*rEarthDist,
   59.21436*rEarthDist, 64.81690*rEarthDist, 70.29949*rEarthDist,
-  73.62765*rEarthDist, 77.25568*rEarthDist, 83.66907*rEarthDist};
+  73.62765*rEarthDist, 77.25568*rEarthDist, 83.66907*rEarthDist,
+  // Dwarfs
+  3.142*rEarthDist, 20.376*rEarthDist, 67.864*rEarthDist,
+  43.182*rEarthDist, 45.431*rEarthDist, 67.474*rEarthDist,
+  43.695*rEarthDist, 484.548*rEarthDist, 30.281*rEarthDist,
+  // Moons
+  0.0093772, 0.0234632, 1.0700428, 1.883, 0.421769, 0.671079,
+  1.22187, 0.52707, 3.56084, 0.37742, 0.29467, 1.500933, 0.23804, 0.18554,
+  0.4358, 0.5826, 0.266, 0.1912, 0.1298, 0.35476, 0.117647, 5.5134,
+  0.017536, 0.064738, 0.048694, 0.057783, 0.042656,
+  778.33, 1426.98, 2870.99, 4497.07, 5913.52};  // Units: M-km
 CONST real rObjYear[oNorm+1] = {1.0, 0.0, 27.32166/rDayInYear,
   87.969/rDayInYear, 224.701/rDayInYear, 686.98/rDayInYear, 11.8623,
   29.458, 84.01, 164.79, 248.54,
   51.0, 4.60, 4.61, 4.36, 3.63,
   6792.45/rDayInYear, 6792.45/rDayInYear, 699.65/rDayInYear,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // Uranians
   18.58/rDayInYear, 94923.63/rDayInYear, 129906.79/rDayInYear,
   163537.13/rDayInYear, 186804.87/rDayInYear, 210470.60/rDayInYear,
-  225232.03/rDayInYear, 241643.79/rDayInYear, 271464.37/rDayInYear};
-CONST real rObjDiam[oVes+1] = {12756.28, 1392000.0, 3476.3,
+  225232.03/rDayInYear, 241643.79/rDayInYear, 271464.37/rDayInYear,
+  // Dwarfs
+  5.57, 91.98, 559.07, 283.77, 306.22, 554.25, 288.84, 10666.28, 245.19,
+  // Moons
+  0.32/rDayInYear, 1.25/rDayInYear, 7.16/rDayInYear, 16.69/rDayInYear,
+  1.77/rDayInYear, 3.55/rDayInYear, 15.95/rDayInYear, 4.52/rDayInYear,
+  79.32/rDayInYear, 2.74/rDayInYear, 1.89/rDayInYear, 21.28/rDayInYear,
+  1.37/rDayInYear, 0.94/rDayInYear, 8.71/rDayInYear, 13.46/rDayInYear,
+  4.14/rDayInYear, 2.52/rDayInYear, 1.41/rDayInYear, -5.88/rDayInYear,
+  1.12/rDayInYear, 360.11/rDayInYear, 6.39/rDayInYear, 38.2/rDayInYear,
+  24.85/rDayInYear, 32.17/rDayInYear, 20.16/rDayInYear,
+  11.8623, 29.458, 84.01, 164.79, 248.54};  // Units: years
+real rObjDiam[oNorm+1] = {12756.28, 1392000.0, 3476.3,
   4878.0, 12102.0, 6786.0, 142984.0, 120536.0, 51118.0, 49528.0, 2372.0,
-  320.0, 955.0, 538.0, 226.0, 503.0}; // Units: km
-CONST real rObjDay[oVes+1] = {24.0, 30.0*24.0, 27.322*24.0,
+  320.0, 955.0, 538.0, 226.0, 503.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // Dwarfs
+  407.12, 190.0, 2326.0, 1560.0, 1454.0, 1230.0, 1121.0, 1060.0, 910.0,
+  // Moons
+  11.0*2.0, 6.0*2.0, 2634.0*2.0, 2403.0*2.0, 1821.0*2.0, 1565.0*2.0,
+  2575.0*2.0, 764.0*2.0, 734.0*2.0, 562.0*2.0,
+  536.0*2.0, 252.0*2.0, 199.0*2.0, 133.0*2.0,
+  789.0*2.0, 761.0*2.0, 585.0*2.0, 579.0*2.0, 236.0*2.0,
+  1353.0*2.0, 209.0*2.0, 170.0*2.0,
+  605.0*2.0, 39.0*2.0, 38.0*2.0, 13.0*2.0, 11.0*2.0,
+  142984.0, 120536.0, 51118.0, 49528.0, 2372.0};  // Units: km
+CONST real rObjDay[oNorm+1] = {24.0, 30.0*24.0, 27.322*24.0,
   58.65*24.0, 243.01*24.0, 24.6229, 9.841, 10.233, 17.9, 19.2, 6.3872*24.0,
-  5.918, 9.074170, 7.8132, 7.210, 5.34212766}; // Units: hr
+  5.918, 9.074170, 7.8132, 7.210, 5.34212766, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // Dwarfs
+  13.828, 9.980, 25.9, 3.9154, 22.8266, 22.40, 8.840, 10.273, 13.188,
+  // Moons
+  0.319*24.0, 1.263*24.0, 7.155*24.0, 16.689*24.0, 1.769*24.0, 3.552*24.0,
+  15.945*24.0, 4.518*24.0, 79.33*24.0, 2.737*24.0,
+  1.888*24.0, 0.0, 1.370*24.0, 0.942*24.0,
+  8.706*24.0, 13.463*24.0, 4.144*24.0, 2.520*24.0, 1.413*24.0,
+  5.877*24.0, 1.122*24.0, 360.13619,
+  6.38723*24.0, 0.0, 0.0, 0.0, 0.0,
+  9.841, 10.233, 17.9, 19.2, 6.3872*24.0};  // Units: hr
 CONST real rObjMass[oPlu+1] = {1.0, 322946.0, 0.0123,
   0.0553, 0.8149, 0.1074, 317.938, 95.181, 14.531, 17.135, 0.0022};
 CONST real rObjAxis[oPlu+1] = {23.5, 0.0, 6.7,
   2.0, 2.7, 25.19, 3.12, 26.73, 82.14, 29.6, 57.54};
-CONST byte cSatellite[oPlu+1] = {1, 9, 0,
-  0, 0, 2, 16, 18, 15, 8, 1};
+CONST int cSatellite[oPlu+1] = {1, 9, 0,
+  0, 0, 2, 4, 8, 5, 3, 5};
+CONST int nMooMap[6][8] = {
+  { 0,  1, -1, -1, -1, -1, -1, -1},  // Mars
+  { 4,  5,  2,  3, -1, -1, -1, -1},  // Jupiter
+  {13, 12, 10,  9,  7,  6, 11,  8},  // Saturn
+  {17, 16, 14, 15, 18, -1, -1, -1},  // Uranus
+  {19, 21, -1, -1, -1, -1, -1, 20},  // Neptune
+  {22, 24, 23, 25, 26, -1, -1, -1}}; // Pluto
 
 #ifdef ARABIC
 CONST AI ai[cPart] = {
@@ -728,7 +851,7 @@ CONST AI ai[cPart] = {
   {" 30 07 02 H", "Torture"},
   {" 02h04D   H", "Lost Objects"}
 };
-#endif /* ARABIC */
+#endif // ARABIC
 
 
 /*
@@ -811,7 +934,7 @@ CONST char *szCnstlGenitive[cCnstl+1] = {"",
   "is", "2ium", "", "", "1dis", "", "", "",
   "", "is", "", "!1is", "1tis", "", "", "",
   "2i1is", "", " is", " is", "1orum", "1inis", "1tis", ""};
-#endif /* CONSTEL */
+#endif // CONSTEL
 
 
 #ifdef INTERPRET
@@ -847,6 +970,7 @@ char *szMindPart[oNorm+1] = {"arena of practical life experience",
   "", "", "", "", "", "", "", "",
   "view as seen in the eyes of others, reputation, and social standing",
   "", "",
+  // Uranians
   "will to purify and forge both physically and spiritually",
   "group associations and matters relating to art",
   "dark, secretive, past, shameful side",
@@ -855,7 +979,50 @@ char *szMindPart[oNorm+1] = {"arena of practical life experience",
   "progressive, abundant energies",
   "intense, focused nature",
   "greatly forceful energies",
-  "idealistic, honorable side"};
+  "idealistic, honorable side",
+  // Dwarfs
+  "tendency toward purification and hygiene",
+  "ability to change quickly, and deal with instability and the unexpected",
+  "relation to energies of discord, strife, and scheming for advantage",
+  "relation to energies of birth, sacrifice, and giving of oneself",
+  "relation to energies of manifestation, will, and direction",
+  "relation to energies of destruction, shifting, and unifying",
+  "relation to energies of new creation, group activity, and laws",
+  "relation to energies of victimization, trauma, and caretaking",
+  "relation to energies of ripe karma, review, and necessary endings",
+  // Moons
+  "assertive part of Mars",
+  "active part of Mars",
+  "abundance part of Jupiter",
+  "wisdom part of Jupiter",
+  "creative part of Jupiter",
+  "lively part of Jupiter",
+  "past and karmic part of Saturn",
+  "family ties part of Saturn",
+  "limitation part of Saturn",
+  "respect part of Saturn",
+  "solitude and self-reliance part of Saturn",
+  "timing part of Saturn",
+  "manifestation part of Saturn",
+  "discipline part of Saturn",
+  "individuality part of Uranus",
+  "driving change part of Uranus",
+  "challenge of expression part of Uranus",
+  "inspirational part of Uranus",
+  "idealism part of Uranus",
+  "psychological depths part of Neptune",
+  "fluidity and illusion part of Neptune",
+  "compassion and unity part of Neptune",
+  "guidance to transformation part of Pluto",
+  "struggle for transformation part of Pluto",
+  "darkness and shadow side part of Pluto",
+  "resistance to transformation part of Pluto",
+  "essence of transformation part of Pluto",
+  "enthusiastic, faithful, wise, expansive, spontaneous nature",
+  "part of mind that is disciplined, respectful, and solitary",
+  "individuality, desires for change, and tendency to go against social norms",
+  "intuitive, spiritual, compassionate, psychic nature",
+  "destiny, and capacity to transform the self and the outer world"};
 
 char *szDesc[cSign+1] = {"",
   "forceful, energetic, direct, courageous",
@@ -919,7 +1086,7 @@ char *szTherefore[cAspect+1] = {"",
   "They can often relate in a discordant way", "", "", "", "", "",
   "", "", "", "", "", "", ""};
 
-/* Modifier array makes the interpretation stronger for narrower orbs. */
+// Modifier array makes the interpretation stronger for narrower orbs.
 
 char *szModify[3][cAspect] =
   {{"always ", "always ", "irreconcilably ", "always ", "much ",
@@ -929,6 +1096,6 @@ char *szModify[3][cAspect] =
   {"somewhat ", "somewhat ", "somewhat ", "somewhat ", "some ", "somewhat ",
   "sometimes ", "sometimes ", "sometimes ", "sometimes ", "sometimes ",
   "", "", "", "", "", "", ""}};
-#endif /* INTERPRET */
+#endif // INTERPRET
 
 /* data.cpp */
