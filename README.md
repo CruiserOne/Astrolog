@@ -1,4 +1,4 @@
-# Astrolog 7.20
+# Astrolog 7.30
 
 This is a copy of the "official" version of Astrolog 7.30 (released September 10, 2021) described at: http://www.astrolog.org/astrolog.htm
 
