@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: astrolog.h
+** Astrolog (Version 7.30) File: astrolog.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/10/2021.
+** Last code change made 9/8/2021.
 */
 
 /*
@@ -75,12 +75,12 @@
 //#define WIN /* Comment out this #define if you don't have MS Windows, or */
             /* else have them but want a command line version instead.   */
 
+//#define WCLI /* Comment out this #define if you don't want to compile a    */
+             /* command line Windows version that can still popup windows. */
+
 //#define MACG /* Comment out this #define if you don't have a Mac, or else  */
              /* have one and don't wish to compile in Mac screen graphics. */
              /* Note modern Mac's may be able to compile with X11 instead. */
-
-//#define WCLI /* Comment out this #define if you don't want to compile a    */
-             /* command line Windows version that can still popup windows. */
 
 #define TIME /* Comment out this #define if your compiler can't take the  */
              /* calls to the 'time' or 'localtime' functions as in time.h */
@@ -256,19 +256,18 @@
 */
 
 #ifdef GRAPH
-#define BITMAPX    2730  // Maximum window size allowed.
-#define BITMAPY    2730
+#define BITMAPX    4096  // Maximum window size allowed.
+#define BITMAPY    4096
 #define BITMAPX1    180  // Minimum window size allowed.
 #define BITMAPY1    180
 #define DEFAULTX    600  // Default window size.
 #define DEFAULTY    600
 #define SIDESIZE    160  // Size of wheel chart information sidebar.
-#define MAXMETA 1000000  // Max bytes allowed in a metafile.
+#define MAXMETA 8000000  // Max bytes allowed in a metafile.
 #define METAMUL      12  // Metafile coordinate to chart pixel ratio.
 #define PSMUL        11  // PostScript coordinate to chart pixel ratio.
 #define WIREMUL      10  // Wireframe coordinate to chart pixel ratio.
 #define CELLSIZE     14  // Size for each cell in the aspect grid.
-#define DEGINC        2  // Number of degrees per segment for circles.
 #define DEFORB      7.0  // Min distance glyphs can be from each other.
 #define MAXSCALE    400  // Max scale factor as passed to -Xs swtich.
 #endif // GRAPH
@@ -369,6 +368,11 @@
 #ifdef WIRE
 #define VECTOR
 #endif
+#ifdef SWISS
+#ifdef WINANY
+#define JPLWEB
+#endif
+#endif // SWISS
 
 
 /*
@@ -497,9 +501,9 @@
 #define fTrue  TRUE
 
 #define szAppNameCore "Astrolog"
-#define szVersionCore "7.20"
-#define szVerCore     "720"
-#define szDateCore    "April 2021"
+#define szVersionCore "7.30"
+#define szVerCore     "730"
+#define szDateCore    "September 2021"
 #define szAddressCore \
   "Astara@msn.com - http://www.astrolog.org/astrolog.htm"
 #define szNowCore     "now"
@@ -514,6 +518,7 @@
 #define dwCanary   0x87654321
 #define nDegMax    360
 #define nDegHalf   180
+#define nMillion   1000000
 #define nLarge     9999999
 #define nNegative  -1000
 #define yeaJ2G     1582
@@ -551,8 +556,10 @@
 #define rAxis      23.44578889
 #define rSatRingA  136780.0
 #define rSatRingB  92000.0
+#define rUraRing   51149.0
 #define rSmall     (1.7453E-09)
 #define rLarge     10000.0
+#define rInvalid   (1.23456789E-09)
 #define rRound     0.5
 
 #define chNull     '\0'
@@ -579,12 +586,14 @@
 #define cColor     16
 #define cRainbow   7
 #define cRay       7
-#define cFont      7
+#define cRing      6
 #define xFont      6
 #define yFont      10
-#define xFontT     (xFont * gi.nScaleTextT)
-#define yFontT     (yFont * gi.nScaleTextT)
-#define xSideT     (SIDESIZE * gi.nScaleTextT)
+#define xFont2     (xFont >> 1)
+#define yFont2     (yFont >> 1)
+#define xFontT     (xFont2 * gi.nScaleTextT2)
+#define yFontT     (yFont2 * gi.nScaleTextT2)
+#define xSideT     (SIDESIZE * gi.nScaleTextT2 >> 1)
 
 // Atlas values
 
@@ -722,12 +731,14 @@ enum _objects {
   oQua = (dwarfLo + 6),
   oSed = (dwarfLo + 7),
   oOrc = (dwarfLo + 8),
+  oUrT = (moonsLo + 14),
   oJuC = (cobLo + 0),
   oSaC = (cobLo + 1),
   oUrC = (cobLo + 2),
   oNeC = (cobLo + 3),
   oPlC = (cobLo + 4),
   oOri = (starLo-1 + 10),
+  oAlr = (starLo-1 + 45),
   oAnd = (starLo-1 + 47),
   cObj = 130,
 };
@@ -787,21 +798,34 @@ enum _housesystem {
   hsAPC           = 18,
   hsCarter        = 19,
   hsSunshine      = 20,
-  hsNull          = 21,
+  hsSavardA       = 21,
+  hsNull          = 22,
   // New experimental house systems follow:
-  hsWholeMC       = 22,
-  hsVedicMC       = 23,
-  hsEqualBalanced = 24,
-  hsWholeBalanced = 25,
-  hsVedicBalanced = 26,
-  hsEqualEP       = 27,
-  hsWholeEP       = 28,
-  hsVedicEP       = 29,
-  hsEqualVertex   = 30,
-  hsWholeVertex   = 31,
-  hsVedicVertex   = 32,
-  cSystem = 33,
+  hsWholeMC       = 23,
+  hsVedicMC       = 24,
+  hsEqualBalanced = 25,
+  hsWholeBalanced = 26,
+  hsVedicBalanced = 27,
+  hsEqualEP       = 28,
+  hsWholeEP       = 29,
+  hsVedicEP       = 30,
+  hsEqualVertex   = 31,
+  hsWholeVertex   = 32,
+  hsVedicVertex   = 33,
+  cSystem = 34,
 };
+
+// House system models
+
+enum _housemodel {
+  hmEcliptic = 0,   // Standard 2D: Equator of houses is ecliptic
+  hmPrime    = 1,   // 3D: Equator of houses is prime vertical
+  hmHorizon  = 2,   // 3D: Equator of houses is local horizon
+  hmEquator  = 3,   // 3D: Equator of houses is celestial equator
+  cMethod = 3,
+};
+
+// Progressed chart types
 
 enum _progressiontype {
   ptCast     = 0,
@@ -827,8 +851,10 @@ enum _relationshipchart {
   rcDual       = -1,
   rcTriWheel   = -2,
   rcQuadWheel  = -3,
-  rcTransit    = -4,
-  rcProgress   = -5,
+  rcQuinWheel  = -4,
+  rcHexaWheel  = -5,
+  rcTransit    = -6,
+  rcProgress   = -7,
 };
 
 // Aspect configurations
@@ -907,20 +933,20 @@ enum _graphicschart {
   gEsoteric   = 9,
   gAstroGraph = 10,
   gEphemeris  = 11,
-  gLocal      = 12,
-  gTraTraGra  = 13,
-  gTraNatGra  = 14,
-  gSphere     = 15,
-  gWorldMap   = 16,
-  gGlobe      = 17,
-  gPolar      = 18,
-  gTelescope  = 19,
-  gBiorhythm  = 20,
+  gRising     = 12,
+  gLocal      = 13,
+  gTraTraGra  = 14,
+  gTraNatGra  = 15,
+  gSphere     = 16,
+  gWorldMap   = 17,
+  gGlobe      = 18,
+  gPolar      = 19,
+  gTelescope  = 20,
+  gBiorhythm  = 21,
 #ifdef WIN
-  gAspect     = 21,
-  gMidpoint   = 22,
-  gArabic     = 23,
-  gRising     = 24,
+  gAspect     = 22,
+  gMidpoint   = 23,
+  gArabic     = 24,
   gMoons      = 25,
   gTraTraTim  = 26,
   gTraTraInf  = 27,
@@ -984,8 +1010,9 @@ enum _calculationmethod {
   cmJPL     = 2,
   cmPlacalc = 3,
   cmMatrix  = 4,
-  cmNone    = 5,
-  cmMax     = 6,
+  cmJPLWeb  = 5,
+  cmNone    = 6,
+  cmMax     = 7,
 };
 
 // Draw text formatting flags
@@ -1031,6 +1058,21 @@ enum _filetype {
   ftPS   = 2,
   ftWmf  = 3,
   ftWire = 4,
+};
+
+// Font index
+
+enum _fontindex {
+  fiAstrolog = 0,
+  fiWingding = 1,
+  fiAstro    = 2,
+  fiEnigma   = 3,
+  fiHamburg  = 4,
+  fiAstronom = 5,
+  fiCourier  = 6,
+  fiConsolas = 7,
+  fiArial    = 8,
+  cFont = 9,
 };
 
 // Letters
@@ -1086,6 +1128,8 @@ enum _terminationcode {
 #define RSgn2(r) ((r) < 0.0 ? -1.0 : 1.0)
 #define FOdd(n) ((n) & 1)
 #define FBetween(v, v1, v2) ((v) >= (v1) && (v) <= (v2))
+#define FSameR(r1, r2) (RAbs((r1) - (r2)) < rSmall)
+#define FNearR(r1, r2) (RAbs((r1) - (r2)) < 0.001)
 #define ChCap(ch) (FUncapCh(ch) ? (ch) - 'a' + 'A' : (ch))
 #define ChUncap(ch) (FCapCh(ch) ? (ch) - 'A' + 'a' : (ch))
 #define FCapCh(ch) FBetween(ch, 'A', 'Z')
@@ -1171,12 +1215,14 @@ enum _terminationcode {
 #define FValidSign(n) FBetween(n, 1, cSign)
 #define FValidAspect(asp) FBetween(asp, 0, cAspect)
 #define FValidSystem(n) FBetween(n, 0, cSystem-1)
+#define FValidMethod(n) FBetween(n, 0, cMethod)
 #define FValidDivision(n) FBetween(n, 1, 2880)
 #define FValidOffset(r) FBetween(r, -rDegMax, rDegMax)
 #define FValidCenter(obj) (FBetween(obj, oEar, cObj) && FThing(obj))
 #define FValidHarmonic(r) FBetween(r, -10000000.0, 10000000.0)
 #define FValidWheel(n) FBetween(n, 0, WHEELROWS)
 #define FValidAstrograph(n) ((n) > 0 && (n) < 90)
+#define FValidAstrograph2(n) FBetween(n, 0, 40000)
 #define FValidPart(n) FBetween(n, 1, cPart)
 #define FValidDwad(n) FBetween(n, 0, 12)
 #define FValidBioday(n) FBetween(n, 1, 199)
@@ -1189,10 +1235,11 @@ enum _terminationcode {
 #define FValidGrid(n) FBetween(n, 0, cObj)
 #define FValidEsoteric(n) FBetween(n, 1, 32000)
 #define FValidScale(n) (FBetween(n, 100, MAXSCALE) && (n)%100 == 0)
+#define FValidScaleText(n) (FBetween(n, 100, MAXSCALE) && (n)%50 == 0)
 #define FValidBackPct(r) FBetween(r, 0.0, 100.0)
 #define FValidBackOrient(n) FBetween(n, -1, 1)
-#define FValidGraphx(x) (FBetween(x, BITMAPX1, BITMAPX) || (x) == 0)
-#define FValidGraphy(y) (FBetween(y, BITMAPY1, BITMAPY) || (y) == 0)
+#define FValidGraphX(x) (FBetween(x, BITMAPX1, BITMAPX) || (x) == 0)
+#define FValidGraphY(y) (FBetween(y, BITMAPY1, BITMAPY) || (y) == 0)
 #define FValidRotation(n) FBetween(n, 0, rDegMax-rSmall)
 #define FValidTilt(n) FBetween(n, -rDegQuad, rDegQuad)
 #define FValidColor(n) FBetween(n, 0, cColor-1)
@@ -1202,6 +1249,7 @@ enum _terminationcode {
 #define FValidBmpmode(ch) \
   ((ch) == 'N' || (ch) == 'C' || (ch) == 'V' || (ch) == 'A' || (ch) == 'B')
 #define FValidTimer(n) FBetween(n, 1, 32000)
+#define FValidTelescope(obj) (FItem(obj) || (obj) == -1)
 
 #define DM(d, m) ((d) + (m)/60.0)
 #define DMS(d, m, s) (DM(d, m) + (s)/3600.0)
@@ -1230,11 +1278,11 @@ enum _terminationcode {
 #define neg(v) v = -(v)
 #define PrintL() PrintCh('\n')
 #define PrintL2() PrintSz("\n\n")
-#define PrintF(sz) fprintf(file, sz)
-#define PrintFSz() fprintf(file, sz)
+#define PrintF(sz) fprintf(file, "%s", sz)
+#define PrintFSz() PrintF(sz)
 #define SwapN(n1, n2) (n1)^=(n2)^=(n1)^=(n2)
-#define FSwitchF(f) ((((f) | fOr) & !fAnd) ^ fNot)
-#define FSwitchF2(f) (((f) | (fOr || fNot)) & !fAnd)
+#define FSwitchF(f) ((((f) || fOr) && !fAnd) != fNot)
+#define FSwitchF2(f) (((f) || (fOr || fNot)) && !fAnd)
 #define SwitchF(f) f = FSwitchF(f)
 #define SwitchF2(f) f = FSwitchF2(f)
 #define SetCI(ci, M, D, Y, T, S, Z, O, A) \
@@ -1280,10 +1328,11 @@ enum _terminationcode {
 #define FOnWin(X, Y) FInRect((X), (Y), 0, 0, gs.xWin, gs.yWin)
 
 // Get a coordinate based on chart radius, a fraction, and (co)sin value.
-#define POINT1(U, R, S) ((int)(((U)+1.4)*(R)*(S)))
-#define POINT2(U, R, S) ((int)(((U)-0.3)*(R)*(S)))
+#define POINT0(U, R, S) ((int)(RFloor((U)*(R)+rRound)*(S)))
+#define POINT1(U, R, S) ((int)((RFloor((U)*(R)+rRound)+0.25)*(S)))
+#define POINT2(U, R, S) ((int)((RFloor((U)*(R)+rRound)-0.25)*(S)))
 
-// Determine (co)sin factors based on zodiac angle and chart orientation.
+// Determine (co)sine factors based on zodiac angle and chart orientation.
 #define PX(A) RCosD(A)
 #define PY(A) RSinD(A)
 #define PZ(A) PlaceInX(A)
@@ -1354,6 +1403,11 @@ typedef struct _StrLookR {
   char *sz;
   real r;
 } StrLookR;
+
+typedef struct _PT2S {
+  word x;
+  word y;
+} PT2S;
 
 typedef struct _PT3R {
   real x;
@@ -1485,6 +1539,7 @@ typedef struct _UserSettings {
 
   // Chart suboptions
   flag fVelocity;       // -v0
+  flag fListDecan;      // -v3
   flag fWheelReverse;   // -w0
   flag fGridConfig;     // -g0
   flag fGridMidpoint;   // -gm
@@ -1544,7 +1599,6 @@ typedef struct _UserSettings {
   flag fNoSwitches;
   flag fLoopInit;    // -Q0
   flag fSeconds;     // -b0
-  int nSwissEph;     // -bs
   flag fPlacalcAst;  // -ba
   flag fPlacalcPla;  // -bp
   flag fMatrixPla;   // -bm
@@ -1591,6 +1645,7 @@ typedef struct _UserSettings {
   flag fNoRead;       // -0i
   flag fNoQuit;       // -0q
   flag fNoGraphics;   // -0X
+  flag fNoNetwork;    // -0n
   flag fNoExp;        // -0~
   flag fExpOff;       // -~0
 
@@ -1601,7 +1656,9 @@ typedef struct _UserSettings {
   int   nEphemFactor;  // -E0
   int   nArabic;       // -P
   int   nRel;          // What relationship chart is in effect, if any?
+  int   nSwissEph;     // -bs
   int   nHouseSystem;  // -c
+  int   nHouse3D;      // -c3
   int   nAsp;          // -A
   int   objCenter;     // -h
   int   nDwad;         // -4
@@ -1629,6 +1686,7 @@ typedef struct _UserSettings {
   // Value subsettings
   int   nWheelRows;       // Number of rows per house to use for -w wheel.
   int   nAstroGraphStep;  // Latitude step rate passed to -L switch.
+  int   nAstroGraphDist;  // Maximum crossing distance passed to -L0 switch.
   int   nArabicParts;     // Arabic parts to include value passed to -P.
   int   nAtlasList;       // Number of rows to display value passed to -N.
   real  rZodiacOffset;    // Position shifting value passed to -s switch.
@@ -1640,6 +1698,8 @@ typedef struct _UserSettings {
   int   cSequenceLine;    // -Yq
   long  lTimeAddition;    // -Yz
   real  rDeltaT;          // -Yz0
+  real  rObjAddition;     // -YzO
+  real  rCuspAddition;    // -YzC
   int   objRot1;          // -Y1
   int   objRot2;          // -Y1
   int   nArabicNight;     // -YP
@@ -1667,11 +1727,14 @@ typedef struct _UserSettings {
   char *szExpProg0;       // -~p0
   char *szExpColObj;      // -~kO
   char *szExpColAsp;      // -~kA
+  char *szExpColFill;     // -~kv
   char *szExpFontSig;     // -~F
   char *szExpFontHou;     // -~FC
   char *szExpFontObj;     // -~FO
   char *szExpFontAsp;     // -~FA
   char *szExpSort;        // -~v
+  char *szExpDecan;       // -~v3
+  char *szExpSidebar;     // -~Xt
   char *szExpStar;        // -~U
   char *szExpAst;         // -~U0
   char *szExpCast1;       // -~q1
@@ -1736,6 +1799,8 @@ typedef struct _InternalSettings {
   real RA;             // Right ascension at time.
   real OB;             // Obliquity of ecliptic.
   real rDeltaT;        // Delta-T at chart time, in days.
+  real jdDeltaT;       // JD for cached Delta-T offset above.
+  real rNut;           // Nutation offset.
 } IS;
 
 typedef struct _ChartInfo {
@@ -1791,7 +1856,7 @@ typedef struct _GraphicsSettings {
   flag fColor;       // Are we drawing a color chart (-Xm not set).
   flag fInverse;     // Are we drawing in reverse video (-Xr set).
   flag fRoot;        // Are we drawing on the X11 background (-XB set).
-  flag fText;        // Are we printing chart info on chart (-XT set).
+  flag fText;        // Are we printing chart info on chart (-Xt set).
   int nFont;         // Which fonts to use for sign/house/obj/asp (-YXf).
   flag fAlt;         // Are we drawing in alternate mode (-Xi set).
   flag fBorder;      // Are we drawing borders around charts (-Xu set).
@@ -1809,6 +1874,7 @@ typedef struct _GraphicsSettings {
   flag fPrintMap;    // Are we printing globe names on draw (-XPv set).
   flag fKeepSquare;  // Are we preserving chart aspect ratio (-XQ set).
   flag fAnimMap;     // Are we animating map instead of time (-XN set).
+  flag fThick;       // Are we drawing thicker lines in charts (-Xx set).
   int xWin;          // Current hor. size of graphic chart (-Xw).
   int yWin;          // Current ver. size of graphic chart (-Xw).
   int nAnim;         // Current animation mode jump rate (-Xn).
@@ -1833,6 +1899,8 @@ typedef struct _GraphicsSettings {
   int nDecaType;     // Type of wheel chart decoration (-YXv).
   int nDecaSize;     // Size of wheel chart decoration (-YXv).
   int nDecaLine;     // Lines in wheel chart decoration (-YXv).
+  int nDecaFill;     // Fill method for wheel chart sections (-Xv).
+  char *szSidebar;   // Extra text to append to bottom of sidebar (-YXt)
   int nGridCell;     // Number of cells in -g grids (-YXg).
   real rspace;       // Radius in AU of -S orbit chart (-YXS).
   int cspace;        // Number of -S orbit trails allowed (-YXj).
@@ -1861,9 +1929,10 @@ typedef struct _GraphicsInternal {
   flag fDidSphere;    // Has a chart sphere been drawn once yet?
   real zViewRatio;    // Offset to adjust chart view (based on zoom).
   int nScale;         // Scale ratio, e.g. percentage / 100.
-  int nScaleText;     // Text scale ratio, i.e. percentage / 100.
+  int nScaleText;     // Text scale ratio, i.e. percentage / 50.
   int nScaleT;        // Internal units per pixel (1 for screen).
   int nScaleTextT;    // Internal text scale, i.e. nScaleText * nScaleT.
+  int nScaleTextT2;   // Twice internal text scale, i.e. nScaleTextT * 2.
   int nGridCell;      // Actual number of cells in -g grids.
   int nPenWid;        // Pen width to use when creating metafiles.
   int nFontPrev;      // System fonts to restore when turning fonts on.
@@ -1886,6 +1955,7 @@ typedef struct _GraphicsInternal {
   Bitmap bmpBack;     // Bitmap storing background, as loaded from file.
   Bitmap bmpBack2;    // Bitmap storing background, at current transparency.
   Bitmap bmpWorld;    // Bitmap storing world map, as loaded from file.
+  Bitmap bmpRising;   // Bitmap storing rising chart, as drawn within it.
 #ifdef SWISS
   ES *rges;           // List of extra star coordinates (-YXU).
   int cStarsLin;      // Count of extra star coordinates (-YXU).
@@ -1908,8 +1978,9 @@ typedef struct _GraphicsInternal {
 #endif
 #ifdef META           // Variables used by the metafile generator.
   word *pwMetaCur;    // Current mem position when making metafile.
+  long cbMeta;        // Maximum size allowed for metafile.
   word *pwPoly;       // Position for start of current polyline.
-  long cbMeta;
+  KI kiPoly;          // Line color for current polyline.
   KI kiLineAct;       // Desired and actual line color.
   KI kiLineDes;
   KI kiFillAct;       // Desired and actual fill color.
@@ -1969,12 +2040,13 @@ typedef struct _OrbitalElements {
   real in0, in1, in2;  // Inclination.
 } OE;
 
+#define szFileJPLCore  "astrolog.jpl"
 #ifdef WIN
+#define szFileTempCore "astrolog.tmp"
+#define szFileAutoCore "astrolog.bmp"
 #define nScrollDiv 24
 #define nScrollPage 6
 #define cchSzMaxFile 128
-#define szFileTempCore "astrolog.tmp"
-#define szFileAutoCore "astrolog.bmp"
 
 typedef struct _WindowInternal {
   HINSTANCE hinst;   // Instance of the Astrolog window class.

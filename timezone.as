@@ -1,4 +1,4 @@
-@AZ720  ; Astrolog 7.20 time zone changes.
+@AZ730  ; Astrolog 7.30 time zone changes.
 
 ; Time zone changes composed using data from TZ database version "2021a": https://data.iana.org/time-zones/tz-link.html
 ; From TZ database file LICENSE:

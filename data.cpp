@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: data.cpp
+** Astrolog (Version 7.30) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -70,7 +70,7 @@ US us = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Chart suboptions
-  0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+  0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
 
   // Table chart types
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -90,7 +90,7 @@ US us = {
 #else
   1,
 #endif
-  0, 0, 0, 0,
+  0, 0, 0,
 #ifdef PLACALC
 #ifndef SWISS
   1,
@@ -109,7 +109,7 @@ US us = {
 
   // Obscure flags
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-  1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Value settings
   0,
@@ -118,7 +118,9 @@ US us = {
   1,
   0,
   rcNone,
+  0,
   DEFAULT_SYSTEM,
+  hmPrime,
   DEFAULT_ASPECTS,
   oEar,
   0,
@@ -144,13 +146,13 @@ US us = {
   "",
 
   // Value subsettings
-  0, 5, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, rSmall, oEar, oEar,
-  0, BIODAYS, 1,
+  0, 5, 200, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, rInvalid,
+  0.0, 0.0, oEar, oEar, 0, BIODAYS, 1,
 
   // AstroExpressions
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL};
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 IS is = {
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
@@ -158,20 +160,23 @@ IS is = {
   0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0};
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0, rInvalid, 0.0};
 
-CI ciCore = {11, 19, 1971, HM(11, 1),       0.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciMain = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),   0.0, 0.0, DEFAULT_LOC, "", ""};
-CI ciThre = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFour = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTran = {1,  1,  2021, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {4,  11, 2021, HMS(19, 30, 50), 1.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciGreg = {10, 15, 1582, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CP cp0, cp1, cp2, cp3, cp4;
+CI ciCore = {11, 19, 1971, HM(11, 1),      0.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciMain = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),  0.0, 0.0, DEFAULT_LOC, "", ""};
+CI ciThre = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFour = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFive = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciHexa = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTran = {1,  1,  2021, 0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciSave = {9,  10, 2021, HMS(17, 0, 38), 1.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciGreg = {10, 15, 1582, 0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 
-CONST CI *rgpci[5] = {&ciCore, &ciMain, &ciTwin, &ciThre, &ciFour};
-CONST CP *rgpcp[5] = {&cp0, &cp1, &cp2, &cp3, &cp4};
+CI * CONST rgpci[cRing+1] = {&ciCore,
+  &ciMain, &ciTwin, &ciThre, &ciFour, &ciFive, &ciHexa};
+CP * CONST rgpcp[cRing+1] = {&cp0, &cp1, &cp2, &cp3, &cp4, &cp5, &cp6};
 
 
 /*
@@ -184,7 +189,7 @@ PT3R space[objMax];
 real force[objMax];
 GridInfo *grid = NULL;
 int rgobjList[objMax], starname[cStar+1], kObjA[objMax];
-char *szMacro[48], *szWheel[4+1] = {"", "", "", "", ""};
+char *szMacro[48], *szWheel[cRing+1] = {"", "", "", "", "", "", ""};
 real rStarBrightDef[cStar+1] = {-1.0}, rStarBright[cStar+1],
   rStarDistDef[cStar+1], rStarDist[cStar+1];
 char *szStarCustom[cStar+1];
@@ -269,7 +274,7 @@ CONST char *szObjName[objMax+4] = {
   "Phobos", "Deimos",                                       // Moons
   "Ganymede", "Callisto", "Io", "Europa",
   "Titan", "Rhea", "Iapetus", "Dione",
-  "Tethys", "Hyperion", "Enceladus", "Mimas",
+  "Tethys", "Enceladus", "Mimas", "Hyperion",
   "Titania", "Oberon", "Umbriel", "Ariel", "Miranda",
   "Triton", "Proteus", "Nereid",
   "Charon", "Hydra", "Nix", "Kerberos", "Styx",
@@ -296,10 +301,11 @@ CONST StrLook rgObjName[] = {{"Node", oNod}, {"Nod:", oNod},
 CONST char *szObjDisp[objMax];
 
 CONST char *szSystem[cSystem] = {
-  "Placidus", "Koch", "Equal", "Campanus", "Meridian",
-  "Regiomontanus", "Porphyry", "Morinus", "Topocentric", "Alcabitius",
-  "Krusinski", "Equal (MC)", "Pullen (S.Ratio)", "Pullen (S.Delta)", "Whole",
-  "Vedic", "Sripati", "Horizon", "APC", "Carter P.Equat.", "Sunshine", "Null",
+  "Placidus", "Koch", "Equal", "Campanus", "Meridian", "Regiomontanus",
+  "Porphyry", "Morinus", "Topocentric", "Alcabitius", "Krusinski",
+  "Equal (MC)", "Pullen (S.Ratio)", "Pullen (S.Delta)", "Whole", "Vedic",
+  "Sripati", "Horizon", "APC", "Carter P.Equat.", "Sunshine", "Savard-A",
+  "Null",
   "Whole (MC)", "Vedic (MC)",
   "Equal (Balanced)", "Whole (Balanced)", "Vedic (Balanced)",
   "Equal (EP)", "Whole (EP)", "Vedic (EP)",
@@ -308,6 +314,7 @@ CONST StrLook rgSystem[] = {{"E-Asc", hsEqual}, {"E-MC", hsEqualMC},
   {"P-SR", hsSinewaveRatio}, {"P-SD", hsSinewaveDelta},
   {"Ratio", hsSinewaveRatio}, {"Delta", hsSinewaveDelta},
   {"S-Ratio", hsSinewaveRatio}, {"S-Delta", hsSinewaveDelta},
+  {"Albategnius", hsSavardA}, {"Albategnus", hsSavardA},
   {"W-Asc", hsWhole}, {"V-Asc", hsVedic},
   {"W-MC", hsWholeMC}, {"V-MC", hsVedicMC}, {"E-Bal", hsEqualBalanced},
   {"W-Bal", hsWholeBalanced}, {"V-Bal", hsVedicBalanced},
@@ -382,8 +389,9 @@ CONST char *szSuffix[cSign+1] = {"",
   "st", "nd", "rd", "th", "th", "th", "th", "th", "th", "th", "th", "th"};
 
 CONST char *szEphem[cmMax] = {
-  "Swiss Ephemeris 2.10", "Moshier Formulas 2.10",
-  "JPL Ephemeris 2.10", "Placalc Ephemeris", "Matrix Formulas", "None"};
+  "Swiss Ephemeris 2.10.02", "Moshier Formulas 2.10.02",
+  "JPL Ephemeris 2.10.02", "Placalc Ephemeris", "Matrix Formulas",
+  "JPL Horizons Web Query", "None"};
 
 CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},
   {"Lahiri", 0.883333}, {"Krishnamurti", 0.98}, {"Raman", 2.329444},
@@ -602,15 +610,15 @@ CONST real rObjDist[oNorm+1] = {rEarthDist, 0.0, 0.3844,
   43.695*rEarthDist, 484.548*rEarthDist, 30.281*rEarthDist,
   // Moons
   0.0093772, 0.0234632, 1.0700428, 1.883, 0.421769, 0.671079,
-  1.22187, 0.52707, 3.56084, 0.37742, 0.29467, 1.500933, 0.23804, 0.18554,
+  1.22187, 0.52707, 3.56084, 0.37742, 0.29467, 0.23804, 0.18554, 1.500933,
   0.4358, 0.5826, 0.266, 0.1912, 0.1298, 0.35476, 0.117647, 5.5134,
   0.017536, 0.064738, 0.048694, 0.057783, 0.042656,
   778.33, 1426.98, 2870.99, 4497.07, 5913.52};  // Units: M-km
 CONST real rObjYear[oNorm+1] = {1.0, 0.0, 27.32166/rDayInYear,
-  87.969/rDayInYear, 224.701/rDayInYear, 686.98/rDayInYear, 11.8623,
-  29.458, 84.01, 164.79, 248.54,
-  51.0, 4.60, 4.61, 4.36, 3.63,
-  6792.45/rDayInYear, 6792.45/rDayInYear, 699.65/rDayInYear,
+  0.2408467, 0.61519726, 1.8808476, 11.862615,
+  29.447498, 84.016846, 164.79132, 247.92065,
+  50.71, 4.60, 4.62, 4.36, 3.63,
+  6792.45/rDayInYear, 6792.45/rDayInYear, 3396.225/rDayInYear,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   // Uranians
   18.58/rDayInYear, 94923.63/rDayInYear, 129906.79/rDayInYear,
@@ -621,19 +629,19 @@ CONST real rObjYear[oNorm+1] = {1.0, 0.0, 27.32166/rDayInYear,
   // Moons
   0.32/rDayInYear, 1.25/rDayInYear, 7.16/rDayInYear, 16.69/rDayInYear,
   1.77/rDayInYear, 3.55/rDayInYear, 15.95/rDayInYear, 4.52/rDayInYear,
-  79.32/rDayInYear, 2.74/rDayInYear, 1.89/rDayInYear, 21.28/rDayInYear,
-  1.37/rDayInYear, 0.94/rDayInYear, 8.71/rDayInYear, 13.46/rDayInYear,
+  79.32/rDayInYear, 2.74/rDayInYear, 1.89/rDayInYear, 1.37/rDayInYear,
+  0.94/rDayInYear, 21.28/rDayInYear, 8.71/rDayInYear, 13.46/rDayInYear,
   4.14/rDayInYear, 2.52/rDayInYear, 1.41/rDayInYear, -5.88/rDayInYear,
   1.12/rDayInYear, 360.11/rDayInYear, 6.39/rDayInYear, 38.2/rDayInYear,
   24.85/rDayInYear, 32.17/rDayInYear, 20.16/rDayInYear,
   11.8623, 29.458, 84.01, 164.79, 248.54};  // Units: years
-real rObjDiam[oNorm+1] = {12756.28, 1392000.0, 3476.3,
-  4878.0, 12102.0, 6786.0, 142984.0, 120536.0, 51118.0, 49528.0, 2372.0,
-  320.0, 955.0, 538.0, 226.0, 503.0, 0.0, 0.0, 0.0,
+real rObjDiam[oNorm+1] = {12756.28, 1392700.0, 3475.0,
+  4878.8, 12103.6, 6779.0, 139822.0, 116464.0, 50724.0, 49244.0, 2376.6,
+  271.37, 939.4, 545.0, 246.596, 525.4, 0.0, 0.0, 0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   // Dwarfs
-  407.12, 190.0, 2326.0, 1560.0, 1454.0, 1230.0, 1121.0, 1060.0, 910.0,
+  407.12, 290.0, 2326.0, 1560.0, 1454.0, 1230.0, 1121.0, 1060.0, 910.0,
   // Moons
   11.0*2.0, 6.0*2.0, 2634.0*2.0, 2403.0*2.0, 1821.0*2.0, 1565.0*2.0,
   2575.0*2.0, 764.0*2.0, 734.0*2.0, 562.0*2.0,
@@ -652,7 +660,7 @@ CONST real rObjDay[oNorm+1] = {24.0, 30.0*24.0, 27.322*24.0,
   // Moons
   0.319*24.0, 1.263*24.0, 7.155*24.0, 16.689*24.0, 1.769*24.0, 3.552*24.0,
   15.945*24.0, 4.518*24.0, 79.33*24.0, 2.737*24.0,
-  1.888*24.0, 0.0, 1.370*24.0, 0.942*24.0,
+  1.888*24.0, 1.370*24.0, 0.942*24.0, 0.0,
   8.706*24.0, 13.463*24.0, 4.144*24.0, 2.520*24.0, 1.413*24.0,
   5.877*24.0, 1.122*24.0, 360.13619,
   6.38723*24.0, 0.0, 0.0, 0.0, 0.0,
@@ -663,10 +671,10 @@ CONST real rObjAxis[oPlu+1] = {23.5, 0.0, 6.7,
   2.0, 2.7, 25.19, 3.12, 26.73, 82.14, 29.6, 57.54};
 CONST int cSatellite[oPlu+1] = {1, 9, 0,
   0, 0, 2, 4, 8, 5, 3, 5};
-CONST int nMooMap[6][8] = {
+CONST int nMooMap[6][8] = {  // Map JPL code number to Astrolog object index
   { 0,  1, -1, -1, -1, -1, -1, -1},  // Mars
   { 4,  5,  2,  3, -1, -1, -1, -1},  // Jupiter
-  {13, 12, 10,  9,  7,  6, 11,  8},  // Saturn
+  {12, 11, 10,  9,  7,  6, 13,  8},  // Saturn
   {17, 16, 14, 15, 18, -1, -1, -1},  // Uranus
   {19, 21, -1, -1, -1, -1, -1, 20},  // Neptune
   {22, 24, 23, 25, 26, -1, -1, -1}}; // Pluto
@@ -1002,9 +1010,9 @@ char *szMindPart[oNorm+1] = {"arena of practical life experience",
   "limitation part of Saturn",
   "respect part of Saturn",
   "solitude and self-reliance part of Saturn",
-  "timing part of Saturn",
   "manifestation part of Saturn",
   "discipline part of Saturn",
+  "timing part of Saturn",
   "individuality part of Uranus",
   "driving change part of Uranus",
   "challenge of expression part of Uranus",

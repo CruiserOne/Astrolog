@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: atlas.cpp
+** Astrolog (Version 7.30) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -1037,31 +1037,6 @@ int NParseHMS(CONST char *sz)
 }
 
 
-// Compose an Hours:Minutes:Seconds (HMS) time value, given a total number of
-// seconds. For example, 45015 (12*60*60+30*60+15) maps to "+12:30:15"
-
-char *SzHMS(int sec)
-{
-  static char szHMS[10];
-  int hr, min;
-  char ch;
-
-  ch = sec >= 0 ? '+' : '-';
-  sec = NAbs(sec);
-  hr = sec / 3600;
-  min = sec / 60 % 60;
-  sec %= 60;
-  // Don't display seconds or minutes:seconds if they're zero.
-  if (!us.fSeconds && min == 0 && sec == 0)
-    sprintf(szHMS, "%c%d", ch, hr);
-  else if (!us.fSeconds || sec == 0)
-    sprintf(szHMS, "%c%d:%02d", ch, hr, min);
-  else
-    sprintf(szHMS, "%c%d:%02d:%02d", ch, hr, min, sec);
-  return szHMS;
-}
-
-
 // Load zone change rules from an open file, consisting of the specified
 // number of rules, each consisting of a sublist of rule entries (total rule
 // entries also specified). Implements the -YY1 command switch.
@@ -1677,7 +1652,8 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
 // Given a location, display a list of cities from the atlas nearest to it.
 // Display it in text or in a Windows dialog. Implements the -Nl switch.
 
-flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae)
+flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
+  flag fAstroGraph)
 {
   AtlasEntry *pae;
   char sz[cchSzMax], *pch;
@@ -1727,15 +1703,19 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae)
         return fFalse;
       *piae = rgiae[0];
     }
-    AnsiColor(kWhite);
-    sprintf(sz, "Cities in atlas nearest: %s\n", SzLocation(lon, lat));
-    PrintSz(sz);
+    if (!fAstroGraph) {
+      AnsiColor(kWhite);
+      sprintf(sz, "Cities in atlas nearest: %s\n", SzLocation(lon, lat));
+      PrintSz(sz);
+    }
     AnsiColor(kDefault);
   }
 
   // Display list of cities.
-  fTimezoneChanges = FEnsureTimezoneChanges();
+  fTimezoneChanges = !fAstroGraph && FEnsureTimezoneChanges();
   for (i = 0; i < clist; i++) {
+    if (fAstroGraph && rgn[i] >= us.nAstroGraphDist)
+      break;
     if (lDialog == 0) {
       sprintf(sz, "%3d: ", i+1);
       PrintSz(sz);

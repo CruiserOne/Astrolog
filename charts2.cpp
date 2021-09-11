@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: charts2.cpp
+** Astrolog (Version 7.30) File: charts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -69,8 +69,7 @@ void ChartListingRelation(void)
   int cChart, i, j, k, l, n;
   real r, rT;
 
-  cChart = 2 + (us.nRel == rcTriWheel || us.nRel == rcQuadWheel) +
-    (us.nRel == rcQuadWheel);
+  cChart = 2 - (FBetween(us.nRel, rcHexaWheel, rcTriWheel) ? us.nRel+1 : 0);
 
   // Print header rows.
   AnsiColor(kWhiteA);
@@ -88,7 +87,7 @@ void ChartListingRelation(void)
       sprintf(sz, "%s %s", SzDate(rgpci[i]->mon, rgpci[i]->day,
         rgpci[i]->yea, us.fSeconds-1), SzTim(rgpci[i]->tim));
       PrintSz(sz);
-      PrintTab(' ', (us.fSeconds ? 23 : 16) - CchSz(sz));
+      PrintTab(' ', (us.fSeconds ? 24 : 17) - CchSz(sz));
     } else
       PrintSz(us.fSeconds ? "(No time or space)      " : "(No time/space)  ");
   }
@@ -519,22 +518,17 @@ void CastRelation(void)
     us.fProgress = fSav;
   cp2 = cp0;
 
-  // Cast the third and fourth charts.
+  // Cast the third through sixth charts.
 
-  if (us.nRel == rcTriWheel || us.nRel == rcQuadWheel) {
-    ciCore = ciThre;
-    FProcessCommandLine(szWheel[3]);
-    if (FNoTimeOrSpace(ciCore))
-      cp0 = cp3;
-    CastChart(3);
-    cp3 = cp0;
-    if (us.nRel == rcQuadWheel) {
-      ciCore = ciFour;
-      FProcessCommandLine(szWheel[4]);
+  if (FBetween(us.nRel, rcHexaWheel, rcTriWheel)) {
+    j = 2-(us.nRel+1);
+    for (i = 3; i <= j; i++) {
+      ciCore = *rgpci[i];
+      FProcessCommandLine(szWheel[i]);
       if (FNoTimeOrSpace(ciCore))
-        cp0 = cp4;
-      CastChart(4);
-      cp4 = cp0;
+        cp0 = *rgpcp[i];
+      CastChart(i);
+      *rgpcp[i] = cp0;
     }
   }
   ciCore = ciMain;
@@ -734,7 +728,7 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
 {
   char sz[cchSzDef];
   KI ki;
-  flag fSav = is.fSeconds;
+  flag fPar = (us.fParallel && asp >= aCon) || asp == aAlt, fSav = is.fSeconds;
 
   is.fSeconds = fFalse;
   AnsiColor(kObjA[obj1]);
@@ -743,17 +737,24 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
   else if (chart == 'e' || chart == 'u' || chart == 'U')
     PrintSz("progr ");
   sprintf(sz, "%7.7s", szObjDisp[obj1]); PrintSz(sz);
-  ki = kSignA(SFromZ(pos1));
+  ki = !fPar ? kSignA(SFromZ(pos1)) : kDefault;
   AnsiColor(ki);
   sprintf(sz, " %c", ret1 > 0 ? '(' : (ret1 < 0 ? '[' : '<')); PrintSz(sz);
   if (!us.fSeconds) {
-    sprintf(sz, "%.3s", szSignName[SFromZ(pos1)]); PrintSz(sz);
+    if (!fPar)
+      sprintf(sz, "%.3s", szSignName[SFromZ(pos1)]);
+    else
+      sprintf(sz, "%c%2d", pos1 < 0 ? '-' : '+', (int)RAbs(pos1));
+    PrintSz(sz);
   } else {
     if (asp == aSig && ret1 > 0)
       pos1 += 29.999;
     else if (asp == aDeg)
       pos1 = (real)obj2 * (rDegMax / (real)(cSign * us.nSignDiv));
-    PrintZodiac(pos1);
+    if (!fPar)
+      PrintZodiac(pos1);
+    else
+      PrintAltitude(pos1);
     AnsiColor(ki);
   }
   sprintf(sz, "%c", ret1 > 0 ? ')' : (ret1 < 0 ? ']' : '>')); PrintSz(sz);
@@ -792,15 +793,22 @@ void PrintAspect(int obj1, real pos1, int ret1, int asp,
       PrintSz("natal ");
     sprintf(sz, "%d%s 3D House", obj2, szSuffix[obj2]); PrintSz(sz);
   } else if (asp >= 0) {
-    ki = kSignA(SFromZ(pos2));
+    ki = !fPar ? kSignA(SFromZ(pos2)) : kDefault;
     AnsiColor(ki);
     if (chart == 't' || chart == 'u' || chart == 'T' || chart == 'U')
       PrintSz("natal ");
     sprintf(sz, "%c", ret2 > 0 ? '(' : (ret2 < 0 ? '[' : '<')); PrintSz(sz);
     if (!us.fSeconds) {
-      sprintf(sz, "%.3s", szSignName[SFromZ(pos2)]); PrintSz(sz);
+      if (!fPar)
+        sprintf(sz, "%.3s", szSignName[SFromZ(pos2)]);
+      else
+        sprintf(sz, "%c%2d", pos2 < 0 ? '-' : '+', (int)RAbs(pos2));
+      PrintSz(sz);
     } else {
-      PrintZodiac(pos2);
+      if (!fPar)
+        PrintZodiac(pos2);
+      else
+        PrintAltitude(pos2);
       AnsiColor(ki);
     }
     sprintf(sz, "%c ", ret2 > 0 ? ')' : (ret2 < 0 ? ']' : '>')); PrintSz(sz);
@@ -1073,8 +1081,8 @@ void ChartTransitInfluence(flag fProg)
 // local horizon sky the planet would appear to one at the given location. A
 // reference MC position at Greenwich is also needed for this.
 
-void EclToHorizon(real *azi, real *alt, real obj, real objalt,
-  real mc, real lat)
+void EclToHoriz(real *azi, real *alt, real obj, real objalt, real mc,
+  real lat)
 {
   real lonz, latz;
 

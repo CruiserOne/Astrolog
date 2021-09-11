@@ -18,7 +18,7 @@
   Authors: Dieter Koch and Alois Treindl, Astrodienst Zurich
 
 ************************************************************/
-/* Copyright (C) 1997 - 2008 Astrodienst AG, Switzerland.  All rights reserved.
+/* Copyright (C) 1997 - 2021 Astrodienst AG, Switzerland.  All rights reserved.
 
   License conditions
   ------------------
@@ -34,17 +34,17 @@
   system. The software developer, who uses any part of Swiss Ephemeris
   in his or her software, must choose between one of the two license models,
   which are
-  a) GNU public license version 2 or later
+  a) GNU Affero General Public License (AGPL)
   b) Swiss Ephemeris Professional License
 
   The choice must be made before the software developer distributes software
   containing parts of Swiss Ephemeris to others, and before any public
   service using the developed software is activated.
 
-  If the developer choses the GNU GPL software license, he or she must fulfill
+  If the developer choses the AGPL software license, he or she must fulfill
   the conditions of that license, which includes the obligation to place his
-  or her whole software project under the GNU GPL or a compatible license.
-  See http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+  or her whole software project under the AGPL or a compatible license.
+  See https://www.gnu.org/licenses/agpl-3.0.html
 
   If the developer choses the Swiss Ephemeris Professional license,
   he must follow the instructions as found in http://www.astro.com/swisseph/ 
@@ -489,6 +489,7 @@ extern "C" {
 #define SE_TIDAL_DE422          (-25.85)   /* JPL Interoffice Memorandum 14-mar-2008 on DE421 (sic!) Lunar Orbit */
 #define SE_TIDAL_DE430          (-25.82)   /* JPL Interoffice Memorandum 9-jul-2013 on DE430 Lunar Orbit */
 #define SE_TIDAL_DE431          (-25.80)   /* IPN Progress Report 42-196, February 15, 2014, p. 15; was (-25.82) in V. 2.00.00 */
+#define SE_TIDAL_DE441          (-25.936)   /* unpublished value, from email by Jon Giorgini to DK on 11 Apr 2021 */
 #define SE_TIDAL_26             (-26.0)
 #define SE_TIDAL_STEPHENSON_2016             (-25.85)
 #define SE_TIDAL_DEFAULT        SE_TIDAL_DE431
@@ -707,6 +708,15 @@ ext_def(int32) swe_calc_ut(double tjd_ut, int32 ipl, int32 iflag,
 	double *xx, char *serr);
 
 ext_def(int32) swe_calc_pctr(double tjd, int32 ipl, int32 iplctr, int32 iflag, double *xxret, char *serr);
+
+ext_def(double) swe_solcross(double x2cross, double jd_et, int32 flag, char *serr);
+ext_def(double) swe_solcross_ut(double x2cross, double jd_ut, int32 flag, char *serr);
+ext_def(double) swe_mooncross(double x2cross, double jd_et, int32 flag, char *serr);
+ext_def(double) swe_mooncross_ut(double x2cross, double jd_ut, int32 flag, char *serr);
+ext_def(double) swe_mooncross_node(double jd_et, int32 flag, double *xlon, double *xlat, char *serr);
+ext_def(double) swe_mooncross_node_ut(double jd_ut, int32 flag, double *xlon, double *xlat, char *serr);
+ext_def(int32) swe_helio_cross(int32 ipl, double x2cross, double jd_et, int32 iflag, int32 dir, double *jd_cross, char *serr);
+ext_def(int32) swe_helio_cross_ut(int32 ipl, double x2cross, double jd_ut, int32 iflag, int32 dir, double *jd_cross, char *serr);
 
 /* fixed stars */
 ext_def( int32 ) swe_fixstar(

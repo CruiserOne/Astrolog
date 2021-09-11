@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: xcharts2.cpp
+** Astrolog (Version 7.30) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -224,25 +224,20 @@ real HousePlaceInX(real deg, real degalt)
 // when creating bi-wheels and beyond.
 
 void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
-  int cx, int cy, real rx, real ry, real rz)
+  int cx, int cy, real rz)
 {
   CP cpA, cpB;
+  real rx = (real)cx, ry = (real)cy;
   int i, j;
 
   // Put the two sets of chart data to compare in cp1 and cp2.
   if (n1 != 1) {
     cpA = cp1;
-    switch (n1) {
-    case 2: cp1 = cp2; break;
-    case 3: cp1 = cp3; break;
-    }
+    cp1 = *rgpcp[n1];
   }
   if (n2 != 2) {
     cpB = cp2;
-    switch (n2) {
-    case 3: cp2 = cp3; break;
-    case 4: cp2 = cp4; break;
-    }
+    cp2 = *rgpcp[n2];
   }
 
   // Compute and draw the aspect lines.
@@ -278,7 +273,7 @@ void XChartWheelRelation()
     symbol[objMax];
   byte ignoreT[objMax];
   int cx, cy, i;
-  real unitx, unity, temp;
+  real unitx, unity;
 
   // Set up variables and temporarily automatically decrease the horizontal
   // chart size to leave room for the sidebar if that mode is in effect.
@@ -316,8 +311,7 @@ void XChartWheelRelation()
     DrawColor(kDkGreenB);
     DrawCircle(cx, cy, (int)(unitx*0.55+rRound), (int)(unity*0.55+rRound));
   }
-  DrawWheel(xsign, xhouse1, cx, cy, unitx, unity,
-    0.70, 0.74, 0.78, 0.82, 0.885);
+  DrawWheel(xsign, xhouse1, cx, cy, unitx, unity, 0.70, 0.78, 0.82);
 
   // Draw the outer ring of planets (based on the planets in the chart which
   // the houses do not reflect - the houses belong to the inner ring below).
@@ -325,67 +319,29 @@ void XChartWheelRelation()
   // ring, and then draw another line from this point to a another dot at the
   // same position in the inner ring as well.
 
-  FProcessCommandLine(szWheelX[2]);
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet2[i];
   if (us.nRel == rcTransit)
     for (i = 0; i <= is.nObj; i++) {
       ignoreT[i] = ignore[i];
       ignore[i] = ignore2[i];
     }
-  FillSymbolRing(symbol, 1.0);
+  DrawRing(2, 2 /* so lines are dotted */ + 1, xplanet2, symbol, cx, cy,
+    0.41, 0.43, 0.54, 0.56, 0.58, 0.61, 0.65, 1.0);
   if (us.nRel == rcTransit)
     for (i = 0; i <= is.nObj; i++)
       ignore[i] = ignoreT[i];
-
-  for (i = is.nObj; i >= 0; i--) if (FProper2(i)) {
-    if (gs.fLabel) {
-      temp = symbol[i];
-      DrawColor(cp2.dir[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, 0.58, PX(xplanet2[i])),
-        cy+POINT1(unity, 0.58, PY(xplanet2[i])),
-        cx+POINT2(unitx, 0.61, PX(temp)),
-        cy+POINT2(unity, 0.61, PY(temp)),
-        (cp2.dir[i] < 0.0 ? 1 : 0) - gs.fColor);
-      DrawObject(i, cx+POINT1(unitx, 0.65, PX(temp)),
-        cy+POINT1(unity, 0.65, PY(temp)));
-    }
-    DrawColor(kObjB[i]);
-    DrawPoint(cx+POINT1(unitx, 0.56, PX(xplanet2[i])),
-      cy+POINT1(unity, 0.56, PY(xplanet2[i])));
-    DrawPoint(cx+POINT1(unitx, 0.41, PX(xplanet2[i])),
-      cy+POINT1(unity, 0.41, PY(xplanet2[i])));
-    if (!gs.fHouseExtra) {
-      DrawColor(cp2.dir[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, 0.43, PX(xplanet2[i])),
-        cy+POINT1(unity, 0.43, PY(xplanet2[i])),
-        cx+POINT2(unitx, 0.54, PX(xplanet2[i])),
-        cy+POINT2(unity, 0.54, PY(xplanet2[i])), 2-gs.fColor);
-    }
-  }
-  for (i = 0; i <= is.nObj; i++)
-    if (!FProper2(i))
-      xplanet2[i] = -1.0;
 
   // Now draw the inner ring of planets. If it weren't for the outer ring,
   // this would be just like the standard non-relationship wheel chart with
   // only one set of planets. Again, draw glyph, and a line to the true point.
 
-  FProcessCommandLine(szWheelX[1]);
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet1[i];
-  FillSymbolRing(symbol, 1.1);
-  DrawSymbolRing(symbol, xplanet1, cp1.dir, cx, cy, unitx, unity,
-    0.41, 0.43, 0.46, 0.50);
-  for (i = 0; i <= is.nObj; i++)
-    if (!FProper(i))
-      xplanet1[i] = -1.0;
+  DrawRing(1, 2, xplanet1, symbol, cx, cy,
+    0.0, 0.0, 0.0, 0.41, 0.43, 0.46, 0.50, 1.1);
   FProcessCommandLine(szWheelX[0]);
 
   // Draw lines connecting planets between the two charts that have aspects.
 
   if (!gs.fEquator)
-    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, unitx, unity, 0.40);
+    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, 0.40);
 
   // Draw sidebar with chart information and positions if need be.
 
@@ -397,12 +353,13 @@ void XChartWheelRelation()
 // four rings, among three or four sets of chart data being compared. This
 // chart is obtained when the -r3 or -r4 switch is combined with -X switch.
 
-void XChartWheelThreeFour()
+void XChartWheelMulti()
 {
   real xsign[cSign+1], xhouse1[cSign+1], xplanet1[objMax], xplanet2[objMax],
-    xplanet3[objMax], xplanet4[objMax], symbol[objMax];
-  int cx, cy, i, fQuad;
-  real unitx, unity, base;
+    xplanet3[objMax], xplanet4[objMax], xplanet5[objMax], xplanet6[objMax],
+    symbol[objMax], ri2, rp, rl1, rl2, rg, rT;
+  int cx, cy, i, fQuad, fQuin, fHexa, nRing;
+  real unitx, unity, base, base2, off;
 
   // Set up variables and temporarily automatically decrease the horizontal
   // chart size to leave room for the sidebar if that mode is in effect.
@@ -415,8 +372,13 @@ void XChartWheelThreeFour()
     rDegQuad*(gs.objLeft < 0) : cp1.cusp[1];
   if (us.fVedic)
     gi.rAsc = gs.objLeft ? (gs.objLeft < 0 ? 120.0 : -60.0)-gi.rAsc : 0.0;
-  fQuad = (us.nRel == rcQuadWheel);
-  base = (fQuad ? 0.23 : 0.36);
+  fHexa = (us.nRel == rcHexaWheel);
+  fQuin = fHexa || (us.nRel == rcQuinWheel);
+  fQuad = fQuin || (us.nRel == rcQuadWheel);
+  nRing = 3 + fQuad + fQuin + fHexa;
+  base = (fHexa ? 0.11 : (fQuin ? 0.22 : (fQuad ? 0.23 : 0.36)));
+  base2 = base + (fQuin ? 0.01 : 0.02);
+  off = fQuin ? 0.11 : 0.13;
 
   // Fill out arrays with the degrees of the cusps and sign glyphs, and the
   // positions of the planet rings.
@@ -435,8 +397,14 @@ void XChartWheelThreeFour()
     xplanet1[i] = PZ(HousePlaceInX(cp1.obj[i], cp1.alt[i]));
     xplanet2[i] = PZ(HousePlaceInX(cp2.obj[i], cp2.alt[i]));
     xplanet3[i] = PZ(HousePlaceInX(cp3.obj[i], cp3.alt[i]));
-    if (fQuad)
+    if (fQuad) {
       xplanet4[i] = PZ(HousePlaceInX(cp4.obj[i], cp4.alt[i]));
+      if (fQuin) {
+        xplanet5[i] = PZ(HousePlaceInX(cp5.obj[i], cp5.alt[i]));
+        if (fHexa)
+          xplanet6[i] = PZ(HousePlaceInX(cp6.obj[i], cp6.alt[i]));
+      }
+    }
   }
 
   // Go draw the outer sign and house rings. We are drawing the houses of only
@@ -444,111 +412,84 @@ void XChartWheelThreeFour()
 
   if (gs.fColor) {
     DrawColor(kDkGreenB);
-    DrawCircle(cx, cy, (int)(unitx*0.61+rRound), (int)(unity*0.61+rRound));
-    DrawCircle(cx, cy, (int)(unitx*0.48+rRound), (int)(unity*0.48+rRound));
-    if (fQuad)
-      DrawCircle(cx, cy, (int)(unitx*0.35+rRound), (int)(unity*0.35+rRound));
+    rT = fQuin ? 0.64 : 0.61;
+    DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+    rT -= off;
+    DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+    if (fQuad) {
+      rT -= off;
+      DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+      if (fQuin) {
+        rT -= off;
+        DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+        if (fHexa)
+          rT -= off;
+          DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+      }
+    }
   }
-  DrawWheel(xsign, xhouse1, cx, cy, unitx, unity,
-    0.745, 0.78, 0.815, 0.84, 0.895);
+  if (fQuin)
+    DrawWheel(xsign, xhouse1, cx, cy, unitx, unity, 0.76, 0.82, 0.86);
+  else
+    DrawWheel(xsign, xhouse1, cx, cy, unitx, unity, 0.745, 0.815, 0.84);
 
   // Draw the outer ring of planets (i.e. the one the house cusps reflect).
   // Draw each glyph, a line from it to its actual position point in the outer
   // ring, and then draw another line from this point to a another dot at the
   // same position on the innermost ring as well.
 
-  FProcessCommandLine(szWheelX[1]);
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet1[i];
-  FillSymbolRing(symbol, 0.9);
-  DrawSymbolRing(symbol, xplanet1, ret, cx, cy, unitx, unity,
-    0.62, 0.63, 0.66, 0.70);
-  for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
-    DrawColor(kObjB[i]);
-    DrawPoint(cx+POINT1(unitx, base, PX(xplanet1[i])),
-      cy+POINT1(unity, base, PY(xplanet1[i])));
-    if (!gs.fHouseExtra) {
-      DrawColor(ret[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, base+0.02, PX(xplanet1[i])),
-        cy+POINT1(unity, base+0.02, PY(xplanet1[i])),
-        cx+POINT2(unitx, 0.59, PX(xplanet1[i])),
-        cy+POINT2(unity, 0.59, PY(xplanet1[i])), 3+fQuad-gs.fColor);
-    }
+  if (fQuin) {
+    ri2 = 0.62; rp = 0.65; rl1 = 0.66; rl2 = 0.68; rg = 0.72;
+  } else {
+    ri2 = 0.59; rp = 0.62; rl1 = 0.63; rl2 = 0.66; rg = 0.70;
   }
-  for (i = 0; i <= is.nObj; i++)
-    if (!FProper(i))
-      xplanet1[i] = -1.0;
+  DrawRing(1, nRing, xplanet1, symbol, cx, cy,
+    base, base2, ri2, rp, rl1, rl2, rg, 0.9);
 
   // Now draw the second to outermost ring of planets. Again, draw each glyph,
   // a line to its true point, and a line to the innermost ring.
 
-  FProcessCommandLine(szWheelX[2]);
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet2[i];
-  FillSymbolRing(symbol, 1.1);
-  DrawSymbolRing(symbol, xplanet2, cp2.dir, cx, cy, unitx, unity,
-    0.49, 0.50, 0.53, 0.57);
-  for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
-    DrawColor(kObjB[i]);
-    DrawPoint(cx+POINT1(unitx, base, PX(xplanet2[i])),
-      cy+POINT1(unity, base, PY(xplanet2[i])));
-    if (!gs.fHouseExtra) {
-      DrawColor(cp2.dir[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, base+0.02, PX(xplanet2[i])),
-        cy+POINT1(unity, base+0.02, PY(xplanet2[i])),
-        cx+POINT2(unitx, 0.46, PX(xplanet2[i])),
-        cy+POINT2(unity, 0.46, PY(xplanet2[i])), 2+fQuad-gs.fColor);
-    }
-  }
-  for (i = 0; i <= is.nObj; i++)
-    if (!FProper(i))
-      xplanet2[i] = -1.0;
+  ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
+  DrawRing(2, nRing, xplanet2, symbol, cx, cy,
+    base, base2, ri2, rp, rl1, rl2, rg, 1.1);
 
-  // The third ring (either the innermost or second to innermost) is next.
-  // Chart was cast earlier, and draw the glyphs and lines to true point.
+  // The third ring is next. Chart was cast earlier, and draw the glyphs and
+  // lines to true point. If a fourth ring is being done, first finish the
+  // third one by drawing lines from the true positions to the inner ring.
 
-  FProcessCommandLine(szWheelX[3]);
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet3[i];
-  FillSymbolRing(symbol, 1.4);
-  DrawSymbolRing(symbol, xplanet3, ret, cx, cy, unitx, unity,
-    0.36, 0.37, 0.40, 0.44);
-  for (i = 0; i <= is.nObj; i++)
-    if (!FProper(i))
-      xplanet3[i] = -1.0;
+  ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
+  DrawRing(3, nRing, xplanet3, symbol, cx, cy,
+    base, base2, ri2, rp, rl1, rl2, rg, 1.4);
 
   if (fQuad) {
+    // If the fourth ring is being done, take the chart that was cast earlier,
+    // and draw glyphs and lines to the true positions. If a fifth ring is
+    // being done, first finish the fourth one by drawing lines from the true
+    // positions to the inner ring.
 
-    // If a fourth ring is being done, first finish the third one by drawing
-    // lines from the true positions to the inner ring.
+    ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
+    DrawRing(4, nRing, xplanet4, symbol, cx, cy,
+      base, base2, ri2, rp, rl1, rl2, rg, 1.8);
 
-    for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
-      DrawColor(kObjB[i]);
-      DrawPoint(cx+POINT1(unitx, base, PX(xplanet3[i])),
-        cy+POINT1(unity, base, PY(xplanet3[i])));
-      if (!gs.fHouseExtra) {
-        DrawColor(ret[i] < 0.0 ? gi.kiGray : gi.kiOn);
-        DrawDash(cx+POINT1(unitx, base+0.02, PX(xplanet3[i])),
-          cy+POINT1(unity, base+0.02, PY(xplanet3[i])),
-          cx+POINT2(unitx, 0.33, PX(xplanet3[i])),
-          cy+POINT2(unity, 0.33, PY(xplanet3[i])), 2-gs.fColor);
+    if (fQuin) {
+      // If the fifth ring is being done, take the chart that was cast
+      // earlier, and draw glyphs and lines to the true positions. If a sixth
+      // ring is being done, first finish the fifth one by drawing lines from
+      // the true positions to the inner ring.
+
+      ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
+      DrawRing(5, nRing, xplanet5, symbol, cx, cy,
+        base, base2, ri2, rp, rl1, rl2, rg, 2.3);
+
+      if (fHexa) {
+        // If the sixth (innermost) ring is being done, take the chart that was
+        // cast earlier, and draw glyphs and lines to the true positions.
+
+        ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
+        DrawRing(6, nRing, xplanet6, symbol, cx, cy,
+          base, base2, ri2, rp, rl1, rl2, rg, 3.8);
       }
     }
-
-    // If the fourth (innermost) ring is being done, take the chart that was
-    // cast earlier, and draw glyphs and lines to the true positions.
-
-    FProcessCommandLine(szWheelX[4]);
-    for (i = 0; i <= is.nObj; i++)
-      xplanet4[i] = PZ(HousePlaceInX(cp4.obj[i], cp4.alt[i]));
-    for (i = 0; i <= is.nObj; i++)
-      symbol[i] = xplanet4[i];
-    FillSymbolRing(symbol, 1.8);
-    DrawSymbolRing(symbol, xplanet4, ret, cx, cy, unitx, unity,
-      0.23, 0.24, 0.27, 0.31);
-    for (i = 0; i <= is.nObj; i++)
-      if (!FProper(i))
-        xplanet4[i] = -1.0;
   }
   FProcessCommandLine(szWheelX[0]);
 
@@ -556,13 +497,26 @@ void XChartWheelThreeFour()
 
   if (!gs.fEquator) {
     base -= 0.02;
-    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, unitx, unity, base);
-    DrawAspectRelation(1, 3, xplanet1, xplanet3, cx, cy, unitx, unity, base);
-    DrawAspectRelation(2, 3, xplanet2, xplanet3, cx, cy, unitx, unity, base);
+    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, base);
+    DrawAspectRelation(1, 3, xplanet1, xplanet3, cx, cy, base);
+    DrawAspectRelation(2, 3, xplanet2, xplanet3, cx, cy, base);
     if (fQuad) {
-      DrawAspectRelation(1, 4, xplanet1, xplanet4, cx, cy, unitx, unity, base);
-      DrawAspectRelation(2, 4, xplanet2, xplanet4, cx, cy, unitx, unity, base);
-      DrawAspectRelation(3, 4, xplanet3, xplanet4, cx, cy, unitx, unity, base);
+      DrawAspectRelation(1, 4, xplanet1, xplanet4, cx, cy, base);
+      DrawAspectRelation(2, 4, xplanet2, xplanet4, cx, cy, base);
+      DrawAspectRelation(3, 4, xplanet3, xplanet4, cx, cy, base);
+      if (fQuin) {
+        DrawAspectRelation(1, 5, xplanet1, xplanet5, cx, cy, base);
+        DrawAspectRelation(2, 5, xplanet2, xplanet5, cx, cy, base);
+        DrawAspectRelation(3, 5, xplanet3, xplanet5, cx, cy, base);
+        DrawAspectRelation(4, 5, xplanet4, xplanet5, cx, cy, base);
+        if (fHexa) {
+          DrawAspectRelation(1, 6, xplanet1, xplanet6, cx, cy, base);
+          DrawAspectRelation(2, 6, xplanet2, xplanet6, cx, cy, base);
+          DrawAspectRelation(3, 6, xplanet3, xplanet6, cx, cy, base);
+          DrawAspectRelation(4, 6, xplanet4, xplanet6, cx, cy, base);
+          DrawAspectRelation(5, 6, xplanet5, xplanet6, cx, cy, base);
+        }
+      }
     }
   }
 
@@ -586,7 +540,7 @@ void XChartGridRelation()
 
   nScale = gi.nScale/gi.nScaleT;
   unit = CELLSIZE*gi.nScale; siz = (gi.nGridCell+1)*unit;
-  sprintf(szT, "");
+  *szT = chNull;
   i = us.fSmartCusp; us.fSmartCusp = fFalse;
   if (!FCreateGridRelation(gs.fAlt != us.fGridMidpoint))
     return;
@@ -679,7 +633,7 @@ void XChartGridRelation()
                 if (nScale == 3)
                   sz[7] = chNull;
               } else
-                sprintf(sz, "");
+                *sz = chNull;
 
             // For midpoint cells, print degree and minute.
             } else
@@ -1182,7 +1136,7 @@ void XChartTransit(flag fTrans, flag fProg)
 
   DrawColor(gi.kiOn);
   if (!fMonth)
-    sprintf(sz, SzDate(ciT.mon, ciT.day, ciT.yea, fFalse));
+    sprintf(sz, "%s", SzDate(ciT.mon, ciT.day, ciT.yea, fFalse));
   else if (!fYear)
     sprintf(sz, "%3.3s%5d", szMonth[ciT.mon], ciT.yea);
   else if (us.nEphemYears <= 1)
@@ -1273,9 +1227,9 @@ void XChartTransit(flag fTrans, flag fProg)
         }
         DrawObject(y, xp, yp2);
         DrawColor(gi.kiGray);
-        DrawBlock(0, yp, xo + iw - 1, yp);
+        DrawLineX(0, xo + iw - 1, yp);
         if (iy <= 1)
-          DrawBlock(0, yp - yRow, xo + iw - 1, yp - yRow);
+          DrawLineX(0, xo + iw - 1, yp - yRow);
 
         // Draw the graph itself for the aspect in question.
         nMax = -1;
@@ -1287,7 +1241,7 @@ void XChartTransit(flag fTrans, flag fProg)
         for (iw = 0; iw < cTot; iw++) {
           if (iw == iwFocus) {
             DrawColor(kDkGreenB);
-            DrawBlock(xo + iw, yp - yRow + 1, xo + iw, yp-1);
+            DrawLineY(xo + iw, yp - yRow + 1, yp-1);
           } else if (iw % xWid == 0) {
             DrawColor(gi.kiGray);
             n = 1;
@@ -1304,7 +1258,7 @@ void XChartTransit(flag fTrans, flag fProg)
               (iw >= cTot-1 || n > pw[iw+1] ||
                 (iw < cTot-2 && n == pw[iw+1] && n > pw[iw+2]))) ?
               (dyp >= yRow-2 ? gi.kiOn : gi.kiLite) : kAspB[asp]);
-            DrawBlock(xo + iw, yp-1 - dyp, xo + iw, yp-1);
+            DrawLineY(xo + iw, yp-1 - dyp, yp-1);
 
             // Draw eclipse strength overlaying aspect strength, if present.
             if (fEclipse) {
@@ -1314,7 +1268,7 @@ void XChartTransit(flag fTrans, flag fProg)
                 n = (n-1) * (yRow-1) / 65535;
                 dyp = Min(dyp, n);
                 DrawColor(kDkBlueB);
-                DrawBlock(xo + iw, yp-1 - dyp, xo + iw, yp-1);
+                DrawLineY(xo + iw, yp-1 - dyp, yp-1);
               }
             }
           } // if
@@ -1347,6 +1301,251 @@ LDone:
   ciCore = ciMain;
   us.fProgress = fFalse;
   CastChart(1);
+}
+
+
+// Draw a black or white pixel on the screen, using a simple 1x1, 2x2, or 3x3
+// pixel dither pattern. Called from XChartRising() to simulate colors in
+// monochrome mode.
+
+void DrawPointDither(Bitmap *b, int x, int y, int k, int kmax)
+{
+  int m, n;
+  flag f;
+
+  if (kmax <= 1) {
+    f = (k > 0);
+  } else if (kmax == 2) {
+    m = x&1; n = y&1;
+    f = (k > n*2 + m);
+  } else {
+    m = x%3; n = y%3;
+    f = (k > n*3 + m);
+  }
+  if (b != NULL)
+    BmpSetXY(b, x, y, rgbbmp[f ? gi.kiOn : gi.kiOff]);
+  else if (f)
+    DrawPoint(x, y);
+}
+
+
+// Draw a chart showing visibility above the horizon for 1-3 planets. This
+// is a 2D graph with date on the vertical axis, and time of day along the
+// horizontal, with colors showing which planet(s) are above the horizon.
+
+flag XChartRising()
+{
+  byte ignoreSav[objMax];
+  char sz[cchSzDef];
+  int obj[3], x1, y1, x2, y2, xs, ys, imax = 0, i, j, x, y, ymax, n,
+    z = us.fSeconds ? 1 : 7, dy, dx, xp, yp;
+  real rgalt[241][3][2], mc, rT, azi, alt, altL, altR, altT, altB;
+  KI ki[8];
+
+  // Determine which objects and colors to use in chart.
+  for (i = 0; i <= cObj; i++)
+    if (!ignore[i]) {
+      obj[imax] = i;
+      imax++;
+      if (imax >= 3)
+        break;
+    }
+  if (imax <= 0)
+    obj[imax++] = oSun;
+  ki[0] = kBlackB; ki[1] = kRedB; ki[2] = kGreenB; ki[3] = kYellowB;
+  ki[4] = kBlueB; ki[5] = kMagentaB; ki[6] = kCyanB; ki[7] = kWhiteB;
+  if (gs.fInverse)
+    SwapN(ki[0], ki[7]);
+
+  // Set temporary restriction list for those objects used in this chart.
+  ClearB((pbyte)rgalt, sizeof(rgalt));
+  CopyRgb(ignore, ignoreSav, sizeof(ignore));
+  for (i = 0; i <= cObj; i++)
+    ignore[i] = fTrue;
+  for (i = 0; i < imax; i++)
+    ignore[obj[i]] = fFalse;
+  AdjustRestrictions();
+
+  // Determine pixel dimensions of chart.
+  ymax = DayInYear(YY);
+  x1 = 4 * xFontT; y1 = 6 * gi.nScaleTextT2;
+  x2 = gs.xWin - x1;
+  y2 = gs.yWin - y1 - gs.fLabel*gi.nScale*(gs.fColor ? 20 : 40);
+  xs = x2 - x1 - 2; ys = y2 - y1 - 2;
+  xs = (xs / 24) * 24; xs = Max(xs, 24);
+  dy = ys / ymax; dy = Max(dy, 1); ys = ymax * dy;
+  x2 = x1 + xs + 1; y2 = y1 + ys + 1;
+  dx = us.nDivision; dx = Min(dx, xs); dx = Min(dx, 240); dx = Max(dx, 4);
+#ifdef WINANY
+  if (!gi.fFile && !FAllocateBmp(&gi.bmpRising, xs, ys))
+    return fFalse;
+#endif
+
+  // Draw object combinations and their colors.
+  y = y2 + yFontT + gi.nScale*10;
+  x = ((x1 + x2) >> 1) - gi.nScale*5*(imax < 2 ? 0 : (imax == 2 ? 5 : 17));
+  for (i = 1; i <= 7; i += (FBetween(i, 2, 3) ? 2 : (i == 4 ? -1 : 1))) {
+    if (i >= (1 << imax))
+      continue;
+    for (n = 0; n < imax; n++) {
+      if (i & (1 << n)) {
+        j = kObjB[obj[n]]; kObjB[obj[n]] = ki[i];
+        DrawObject(obj[n], x, y);
+        kObjB[obj[n]] = j;
+        if (!gs.fColor) {
+          j = i + (imax == 2 && i >= 2) + (imax >= 3 && i >= 4)*2;
+          for (yp = y + gi.nScale*10; yp <= y + gi.nScale*20; yp++)
+            for (xp = x - gi.nScale*5; xp <= x + gi.nScale*5; xp++)
+              DrawPointDither(NULL, xp, yp, j, imax);
+        }
+        x += gi.nScale*10;
+      }
+    }
+    x += gi.nScale*10;
+  }
+  if (gs.fInverse)
+    SwapN(ki[0], ki[7]);
+
+  // Draw the main graph itself.
+  MM = DD = 1;
+  for (y = 0; y < ymax; y++) {
+    if (z > 1 && y % z == 0)
+      for (x = 0; x <= dx; x++)
+        for (i = 0; i < imax; i++)
+          rgalt[x][i][1] = rgalt[x][i][0];
+    if (z <= 1 || y <= 0 || y % z == 1) {
+      n = (z <= 1 || y <= 0);
+      for (x = 0; x <= dx; x++) {
+        TT = (real)x * 24.0 / (real)dx;
+        CastChart(-1);
+        mc = planet[oMC]; rT = planetalt[oMC];
+        EclToEqu(&mc, &rT);
+        for (i = 0; i < imax; i++) {
+          j = obj[i];
+          EclToHoriz(&azi, &alt, planet[j], planetalt[j], mc, AA);
+          rgalt[x][i][n] = alt;
+        }
+      }
+      TT = 0.0;
+      AddTime(&ciCore, 4, z);
+    }
+    for (x = 0; x < xs; x++) {
+      n = 0;
+      for (i = imax-1; i >= 0; i--) {
+        rT = (real)x * dx / (real)xs;
+        j = (int)rT;
+        rT = RFract(rT);
+        altL = rgalt[j][i][1]; altR = rgalt[j+1][i][1];
+        altT = altL + (altR - altL) * rT;
+        if (z <= 1)
+          alt = altT;
+        else {
+          altL = rgalt[j][i][0]; altR = rgalt[j+1][i][0];
+          altB = altL + (altR - altL) * rT;
+          rT = (real)(y % z) / (real)z;
+          rT = RFract(rT);
+          alt = altT + (altB - altT) * rT;
+        }
+        if (!gi.fBmp || !gs.fColor || (gi.fFile && gs.ft > ftBmp)
+#ifndef WINANY
+          || !gi.fFile
+#endif
+          )
+          n = (n << 1) | (alt >= 0.0);
+        else
+          n = (n << 8) | (alt >= 0.0 ? 192+(int)(alt/rDegQuad*63.99) :
+            64+(int)(alt/rDegQuad*64.0));
+      }
+      xp = x; yp = y*dy;
+
+      // Draw the current pixels within the graph.
+      // This chart doesn't really work as a PS, Metafile, or Wireframe.
+      if (gi.fFile && gs.ft > ftBmp)
+        continue;
+      if (gs.fColor) {
+        for (i = 0; i < dy; i++) {
+          if (!gi.fFile) {
+#ifdef WINANY
+            BmpSetXY(&gi.bmpRising, xp, yp + i, !gi.fBmp ? rgbbmp[ki[n]] : n);
+#else
+            DrawColor(ki[n]);
+            DrawPoint(x1+1 + xp, y1+1 + yp + i);
+#endif
+          } else if (gs.ft == ftBmp)
+            SetXY(x1+1 + xp, y1+1 + yp + i, !gi.fBmp ? ki[n] : n);
+          else {
+            DrawColor(ki[n]);
+            DrawPoint(x1+1 + xp, y1+1 + yp + i);
+          }
+        }
+      } else {
+        n += (imax == 2 && n >= 2) + (imax >= 3 && n >= 4)*2;
+        for (i = 0; i < dy; i++) {
+#ifdef WINANY
+          if (!gi.fFile)
+            DrawPointDither(&gi.bmpRising, xp, yp + i, n, imax);
+          else
+#endif
+          DrawPointDither(NULL, x1+1 + xp, y1+1 + yp + i, n, imax);
+        }
+      }
+    }
+  }
+#ifdef WINANY
+  if (!gi.fFile)
+    BmpCopyWin(&gi.bmpRising, wi.hdc, x1+1, y1+1);
+#endif
+
+  // Label vertical (month) axis.
+  y = y1;
+  for (i = 1; i <= cSign; i++) {
+    sprintf(sz, "%.3s", szMonth[i]);
+    DrawColor(gi.kiOn);
+    DrawSz(sz,      xFontT/2, y, dtLeft | dtTop | dtScale2);
+    DrawSz(sz, x2 + xFontT/2, y, dtLeft | dtTop | dtScale2);
+    if (gs.fLabelCity && i > 1) {
+      DrawColor(gi.kiGray);
+      DrawLineX(x1, x2, y);
+    }
+    if (gs.fAlt && i == Mon) {
+      x = x1 + (int)((real)xs * Tim / 24.0);
+      n = y + Day*dy;
+      DrawColor(gi.kiGray);
+      DrawLineY(x, y1, y2);
+      DrawLineX(x1, x2, n);
+    }
+    y += DayInMonth(i, Yea)*dy;
+  }
+
+  // Label horizontal (time) axis.
+  n = 1 + xFontT * (4-us.fEuroTime) / (xs / 24);
+  for (i = 0; i < 24; i++) {
+    x = x1 + NMultDiv(xs, i, 24);
+    if (i % n == 0) {
+      if (!us.fEuroTime)
+        sprintf(sz, "%d%c", ((i+11) % 12)+1, i < 12 ? 'a' : 'p');
+      else
+        sprintf(sz, "%d", i);
+      DrawColor(gi.kiOn);
+      DrawSz(sz, x, y1 - 3*gi.nScaleTextT,
+        dtLeft | dtBottom | dtScale2);
+      DrawSz(sz, x, y2 + 3*gi.nScaleTextT,
+        dtLeft | dtTop | dtScale2);
+    }
+    if (gs.fLabelCity && i > 0) {
+      DrawColor(gi.kiGray);
+      DrawLineY(x, y1, y2);
+    }
+  }
+  DrawColor(gi.kiOn);
+  DrawEdge(x1, y1, x2, y2);
+
+  // Restore original chart.
+  CopyRgb(ignoreSav, ignore, sizeof(ignore));
+  AdjustRestrictions();
+  ciCore = ciMain;
+  CastChart(1);
+  return fTrue;
 }
 
 

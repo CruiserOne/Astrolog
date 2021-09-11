@@ -1,4 +1,4 @@
-# Astrolog (Version 7.20) File: Makefile (Unix version)
+# Astrolog (Version 7.30) File: Makefile (Unix version)
 #
 # IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 # not enumerated elsewhere in this program are Copyright (C) 1991-2020 by

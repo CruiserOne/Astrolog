@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: express.cpp
+** Astrolog (Version 7.30) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -61,13 +61,18 @@
 ******************************************************************************
 */
 
-#define cfunA 263
+#define cfunA 342
 #ifdef GRAPH
-#define cfunX 33
+#define cfunX 36
 #else
 #define cfunX 0
 #endif
-#define cfun (cfunA + cfunX)
+#ifdef WIN
+#define cfunW 9
+#else
+#define cfunW 0
+#endif
+#define cfun (cfunA + cfunX + cfunW)
 
 #define P2(n1, n2)             (((n2) << 2) | (n1))
 #define P3(n1, n2, n3)         (((n3) << 4) | P2(n1, n2))
@@ -82,6 +87,7 @@
 #define I_II   P3(I_, I_, I_)
 #define I_IX   P3(I_, I_, X_)
 #define I_III  P4(I_, I_, I_, I_)
+#define I_IIR  P4(I_, I_, I_, R_)
 #define I_IXX  P4(I_, I_, X_, X_)
 #define I_IIIX P5(I_, I_, I_, I_, X_)
 #define I_R    P2(I_, R_)
@@ -89,6 +95,7 @@
 #define I_EE   P3(I_, E_, E_)
 #define I_EEE  P4(I_, E_, E_, E_)
 #define R_I    P2(R_, I_)
+#define R_II   P3(R_, I_, I_)
 #define R_R    P2(R_, R_)
 #define R_RR   P3(R_, R_, R_)
 #define R_RRRR P5(R_, R_, R_, R_, R_)
@@ -107,6 +114,7 @@
 #define IIR(I, R) n = !fOptReal ? (I) : (R)
 #define SetReal(I, R) if (FBetween(I, 0, cLetter)) \
   { rgparVar[I].r = (R); rgparVar[I].fReal = fTrue; }
+#define FRingObj(ring, obj) (FBetween(ring, 0, cRing) && FValidObj(obj))
 
 typedef struct _function {
   int ifun;     // Index of function
@@ -124,7 +132,7 @@ typedef struct _parameter {
 PAR rgparVar[cLetter+1];       // List of variables
 char *rgszExpMacro[cLetter+1]; // List of macros
 
-extern CONST char *PchGetParameter P((CONST char *, PAR *, int, flag));
+extern CONST char *PchGetParameter P((CONST char *, PAR *, int, int, flag));
 extern void GetParameter P((CONST char *, PAR *));
 
 // Functions
@@ -188,6 +196,12 @@ enum _functionindex {
   funFloor,
   funFract,
   funRnd,
+  funRgb,
+  funRgbR,
+  funRgbG,
+  funRgbB,
+  funBlend,
+  funHue,
 
   // Specific functions (related to Astrolog and astrology)
   funSigns,
@@ -198,12 +212,20 @@ enum _functionindex {
   funMon2, funDay2, funYea2, funTim2, funDst2, funZon2, funLon2, funLat2,
   funMon3, funDay3, funYea3, funTim3, funDst3, funZon3, funLon3, funLat3,
   funMon4, funDay4, funYea4, funTim4, funDst4, funZon4, funLon4, funLat4,
+  funMon5, funDay5, funYea5, funTim5, funDst5, funZon5, funLon5, funLat5,
+  funMon6, funDay6, funYea6, funTim6, funDst6, funZon6, funLon6, funLat6,
+  funMonN, funDayN, funYeaN, funTimN, funDstN, funZonN, funLonN, funLatN,
+  funMonS, funDayS, funYeaS, funTimS, funDstS, funZonS, funLonS, funLatS,
   funMonT, funDayT, funYeaT, funTimT,
-  funObjLon,  funObjLat,  funObjDir,  funObjDirY,  funObjHou,
-  funObjLon1, funObjLat1, funObjDir1, funObjDirY1, funObjHou1,
-  funObjLon2, funObjLat2, funObjDir2, funObjDirY2, funObjHou2,
-  funObjLon3, funObjLat3, funObjDir3, funObjDirY3, funObjHou3,
-  funObjLon4, funObjLat4, funObjDir4, funObjDirY4, funObjHou4,
+  funMonG, funDayG, funYeaG,
+  funObjLon,  funObjLat,  funObjDir,  funObjDirY,  funObjDirL,  funObjHou,
+  funObjLon1, funObjLat1, funObjDir1, funObjDirY1, funObjDirL1, funObjHou1,
+  funObjLon2, funObjLat2, funObjDir2, funObjDirY2, funObjDirL2, funObjHou2,
+  funObjLon3, funObjLat3, funObjDir3, funObjDirY3, funObjDirL3, funObjHou3,
+  funObjLon4, funObjLat4, funObjDir4, funObjDirY4, funObjDirL4, funObjHou4,
+  funObjLon5, funObjLat5, funObjDir5, funObjDirY5, funObjDirL5, funObjHou5,
+  funObjLon6, funObjLat6, funObjDir6, funObjDirY6, funObjDirL6, funObjHou6,
+  funObjLonN, funObjLatN, funObjDirN, funObjDirYN, funObjDirLN, funObjHouN,
   funObjX,
   funObjY,
   funObjZ,
@@ -228,6 +250,7 @@ enum _functionindex {
   funCusp3, funCusp3D3,
   funCusp4, funCusp3D4,
   funCuspInf,
+  funSector,
   funLonSign,
   funLonDeg,
   funLonHou,
@@ -242,6 +265,7 @@ enum _functionindex {
   funRAMC,
   funDeltaT,
   funSidDiff,
+  funNutat,
   funSystem,
   funAspect,
   funAspect2,
@@ -255,6 +279,17 @@ enum _functionindex {
   funVersion,
 
   // Astrolog command switch settings (general)
+  fun_w1,
+  fun_aj,
+  fun_L1,
+  fun_L2,
+  fun_d1,
+  fun_EY,
+  fun_E01,
+  fun_E02,
+  fun_P1,
+  fun_N1,
+  fun_I1,
   fun_A3,
   fun_Ap,
   fun_AP,
@@ -262,8 +297,10 @@ enum _functionindex {
   fun_b0,
   fun_c,
   fun_c3,
+  fun_c31,
   fun_s,
   fun_s0,
+  fun_s1,
   fun_sr,
   fun_sr0,
   fun_h,
@@ -304,6 +341,7 @@ enum _functionindex {
   fun_XT,
   fun_Xi,
   fun_Xu,
+  fun_Xx,
   fun_Xl,
   fun_XA,
   fun_XL,
@@ -327,9 +365,26 @@ enum _functionindex {
   fun_XE,
   fun_XL0,
   fun_X1,
+  fun_Xv,
   fun_XGx,
   fun_XGy,
   fun_XZ,
+  fun_YXK,
+#endif
+
+#ifdef WIN
+  // Functions related to Windows operations
+  funMouse,
+
+  // Astrolog command switch settings (Windows)
+  fun_WN,
+  fun_Wn,
+  fun_Wh,
+  fun_Wt,
+  fun_Wo,
+  fun_Wo0,
+  fun_Wo3,
+  fun_WZ,
 #endif
 
   // Programming functions (related to variables and control flow)
@@ -416,6 +471,12 @@ CONST FUN rgfun[cfun] = {
 {funFloor, "Floor", 1, R_R},
 {funFract, "Fract", 1, R_R},
 {funRnd,   "Rnd",   2, I_II},
+{funRgb,   "Rgb",   3, I_III},
+{funRgbR,  "RgbR",  1, I_I},
+{funRgbG,  "RgbG",  1, I_I},
+{funRgbB,  "RgbB",  1, I_I},
+{funBlend, "Blend", 3, I_IIR},
+{funHue,   "Hue",   1, I_R},
 
 // Specific functions (related to Astrolog and astrology)
 {funSigns,   "Signs",    0, I_},
@@ -461,35 +522,93 @@ CONST FUN rgfun[cfun] = {
 {funZon4,    "Zon4",     0, R_},
 {funLon4,    "Lon4",     0, R_},
 {funLat4,    "Lat4",     0, R_},
+{funMon5,    "Mon5",     0, I_},
+{funDay5,    "Day5",     0, I_},
+{funYea5,    "Yea5",     0, I_},
+{funTim5,    "Tim5",     0, R_},
+{funDst5,    "Dst5",     0, R_},
+{funZon5,    "Zon5",     0, R_},
+{funLon5,    "Lon5",     0, R_},
+{funLat5,    "Lat5",     0, R_},
+{funMon6,    "Mon6",     0, I_},
+{funDay6,    "Day6",     0, I_},
+{funYea6,    "Yea6",     0, I_},
+{funTim6,    "Tim6",     0, R_},
+{funDst6,    "Dst6",     0, R_},
+{funZon6,    "Zon6",     0, R_},
+{funLon6,    "Lon6",     0, R_},
+{funLat6,    "Lat6",     0, R_},
+{funMonN,    "MonN",     1, I_I},
+{funDayN,    "DayN",     1, I_I},
+{funYeaN,    "YeaN",     1, I_I},
+{funTimN,    "TimN",     1, R_I},
+{funDstN,    "DstN",     1, R_I},
+{funZonN,    "ZonN",     1, R_I},
+{funLonN,    "LonN",     1, R_I},
+{funLatN,    "LatN",     1, R_I},
+{funMonS,    "MonS",     0, I_},
+{funDayS,    "DayS",     0, I_},
+{funYeaS,    "YeaS",     0, I_},
+{funTimS,    "TimS",     0, R_},
+{funDstS,    "DstS",     0, R_},
+{funZonS,    "ZonS",     0, R_},
+{funLonS,    "LonS",     0, R_},
+{funLatS,    "LatS",     0, R_},
 {funMonT,    "MonT",     0, I_},
 {funDayT,    "DayT",     0, I_},
 {funYeaT,    "YeaT",     0, I_},
 {funTimT,    "TimT",     0, R_},
+{funMonG,    "MonG",     0, I_},
+{funDayG,    "DayG",     0, I_},
+{funYeaG,    "YeaG",     0, I_},
 {funObjLon,   "ObjLon",    1, R_I}, 
 {funObjLat,   "ObjLat",    1, R_I},
 {funObjDir,   "ObjDir",    1, R_I},
 {funObjDirY,  "ObjDirY",   1, R_I},
+{funObjDirL,  "ObjDirL",   1, R_I},
 {funObjHou,   "ObjHouse",  1, I_I},
 {funObjLon1,  "ObjLon1",   1, R_I}, 
 {funObjLat1,  "ObjLat1",   1, R_I},
 {funObjDir1,  "ObjDir1",   1, R_I},
 {funObjDirY1, "ObjDirY1",  1, R_I},
+{funObjDirL1, "ObjDirL1",  1, R_I},
 {funObjHou1,  "ObjHouse1", 1, I_I},
 {funObjLon2,  "ObjLon2",   1, R_I}, 
 {funObjLat2,  "ObjLat2",   1, R_I},
 {funObjDir2,  "ObjDir2",   1, R_I},
 {funObjDirY2, "ObjDirY2",  1, R_I},
+{funObjDirL2, "ObjDirL2",  1, R_I},
 {funObjHou2,  "ObjHouse2", 1, I_I},
 {funObjLon3,  "ObjLon3",   1, R_I}, 
 {funObjLat3,  "ObjLat3",   1, R_I},
 {funObjDir3,  "ObjDir3",   1, R_I},
 {funObjDirY3, "ObjDirY3",  1, R_I},
+{funObjDirL3, "ObjDirL3",  1, R_I},
 {funObjHou3,  "ObjHouse3", 1, I_I},
 {funObjLon4,  "ObjLon4",   1, R_I}, 
 {funObjLat4,  "ObjLat4",   1, R_I},
 {funObjDir4,  "ObjDir4",   1, R_I},
 {funObjDirY4, "ObjDirY4",  1, R_I},
+{funObjDirL4, "ObjDirL4",  1, R_I},
 {funObjHou4,  "ObjHouse4", 1, I_I},
+{funObjLon5,  "ObjLon5",   1, R_I}, 
+{funObjLat5,  "ObjLat5",   1, R_I},
+{funObjDir5,  "ObjDir5",   1, R_I},
+{funObjDirY5, "ObjDirY5",  1, R_I},
+{funObjDirL5, "ObjDirL5",  1, R_I},
+{funObjHou5,  "ObjHouse5", 1, I_I},
+{funObjLon6,  "ObjLon6",   1, R_I}, 
+{funObjLat6,  "ObjLat6",   1, R_I},
+{funObjDir6,  "ObjDir6",   1, R_I},
+{funObjDirY6, "ObjDirY6",  1, R_I},
+{funObjDirL6, "ObjDirL6",  1, R_I},
+{funObjHou6,  "ObjHouse6", 1, I_I},
+{funObjLonN,  "ObjLonN",   2, R_II}, 
+{funObjLatN,  "ObjLatN",   2, R_II},
+{funObjDirN,  "ObjDirN",   2, R_II},
+{funObjDirYN, "ObjDirYN",  2, R_II},
+{funObjDirLN, "ObjDirLN",  2, R_II},
+{funObjHouN,  "ObjHouseN", 2, I_II},
 {funObjX,    "ObjX",     1, R_I},
 {funObjY,    "ObjY",     1, R_I},
 {funObjZ,    "ObjZ",     1, R_I},
@@ -519,6 +638,7 @@ CONST FUN rgfun[cfun] = {
 {funCusp4,   "Cusp4",    1, R_I},
 {funCusp3D4, "Cusp3D4",  1, R_I},
 {funCuspInf, "HouseInf", 1, R_I},
+{funSector,  "PlusZone", 1, I_I},
 {funLonSign, "LonSign",  1, I_R},
 {funLonDeg,  "LonDeg",   1, R_R},
 {funLonHou,  "LonHouse", 1, I_R},
@@ -533,6 +653,7 @@ CONST FUN rgfun[cfun] = {
 {funRAMC,    "RAMC",     0, R_},
 {funDeltaT,  "DeltaT",   0, R_},
 {funSidDiff, "SidDiff",  0, R_},
+{funNutat,   "Nutation", 0, R_},
 {funSystem,  "HouseSys", 0, I_}, // Same as _c
 {funAspect,  "AspLon",   3, I_III},
 {funAspect2, "AspLon2",  3, I_III},
@@ -546,6 +667,17 @@ CONST FUN rgfun[cfun] = {
 {funVersion, "Version",  0, R_},
 
 // Astrolog command switch settings (general)
+{fun_w1,  "_w1",  0, I_},
+{fun_aj,  "_aj",  0, I_},
+{fun_L1,  "_L1",  0, I_},
+{fun_L2,  "_L2",  0, I_},
+{fun_d1,  "_d1",  0, I_},
+{fun_EY,  "_EY",  0, I_},
+{fun_E01, "_E01", 0, I_},
+{fun_E02, "_E02", 0, I_},
+{fun_P1,  "_P1",  0, I_},
+{fun_N1,  "_N1",  0, I_},
+{fun_I1,  "_I1",  0, I_},
 {fun_A3,  "_A3",  0, I_},
 {fun_Ap,  "_Ap",  0, I_},
 {fun_AP,  "_APP", 0, I_},
@@ -553,8 +685,10 @@ CONST FUN rgfun[cfun] = {
 {fun_b0,  "_b0",  0, I_},
 {fun_c,   "_c",   0, I_},
 {fun_c3,  "_c3",  0, I_},
+{fun_c31, "_c31", 0, I_},
 {fun_s,   "_s",   0, I_},
-{fun_s0,  "_s0",  0, R_},
+{fun_s0,  "_s0",  0, I_},
+{fun_s1,  "_s1",  0, R_},
 {fun_sr,  "_sr",  0, I_},
 {fun_sr0, "_sr0", 0, I_},
 {fun_h,   "_h",   0, I_},
@@ -595,6 +729,7 @@ CONST FUN rgfun[cfun] = {
 {fun_XT,  "_XT",  0, I_},
 {fun_Xi,  "_Xi",  0, I_},
 {fun_Xu,  "_Xuu", 0, I_},
+{fun_Xx,  "_Xx",  0, I_},
 {fun_Xl,  "_Xll", 0, I_},
 {fun_XA,  "_XA",  0, I_},
 {fun_XL,  "_XL",  0, I_},
@@ -618,9 +753,26 @@ CONST FUN rgfun[cfun] = {
 {fun_XE,  "_XE",  0, I_},
 {fun_XL0, "_XL0", 0, I_},
 {fun_X1,  "_X1",  0, I_},
+{fun_Xv,  "_Xv",  0, I_},
 {fun_XGx, "_XGx", 0, R_},
 {fun_XGy, "_XGy", 0, R_},
 {fun_XZ,  "_XZ",  0, I_},
+{fun_YXK, "_YXK", 1, I_I},
+#endif
+
+#ifdef WIN
+// Functions related to Windows operations
+{funMouse, "Mouse", 1, I_I},
+
+// Astrolog command switch settings (Windows)
+{fun_WN,   "_WN",   1, I_},
+{fun_Wn,   "_Wnn",  1, I_},
+{fun_Wh,   "_Wh",   1, I_},
+{fun_Wt,   "_Wt",   1, I_},
+{fun_Wo,   "_Wo",   1, I_},
+{fun_Wo0,  "_Wo0",  1, I_},
+{fun_Wo3,  "_Wo3",  1, I_},
+{fun_WZ,   "_WZ",   1, I_},
 #endif
 
 // Programming functions (related to variables and control flow)
@@ -676,17 +828,6 @@ CONST FUN rgfun[cfun] = {
 ******************************************************************************
 */
 
-// Copy a range of characters and zero terminate it. If there are too many
-// characters to fit in the destination buffer, the string is truncated.
-
-void CopyRgchToSz(CONST char *pch, int cch, char *sz, int cchMax)
-{
-  cch = Min(cch, cchMax-1);
-  CopyRgb((byte *)pch, (byte *)sz, cch);
-  sz[cch] = chNull;
-}
-
-
 // Convert a range of characters to upper case.
 
 void UpperRgch(char *rgch, int cch)
@@ -736,6 +877,9 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   real r = 0.0, r1, r2, r3, r4;
   char sz[cchSzMax];
   flag fRetOpt = fFalse, fRetReal = fFalse, fOpt = fFalse, fOptReal = fFalse;
+#ifdef WIN
+  POINT pt;
+#endif
 
   // Analyze the input and output parameter types.
   for (ipar = 0; ipar <= rgfun[ifun].nParam; ipar++) {
@@ -834,80 +978,144 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funFloor: r = RFloor(r1); break;
   case funFract: r = r1 - RFloor(r1); break;
   case funRnd:   n = (rand() & 16383) * (n2 - n1 + 1) / 16384 + n1; break;
+  case funRgb:   n = Rgb(n1, n2, n3); break;
+  case funRgbR:  n = RgbR(n1); break;
+  case funRgbG:  n = RgbG(n1); break;
+  case funRgbB:  n = RgbB(n1); break;
+  case funBlend: n = KvBlend(n1, n2, r3); break;
+  case funHue:   n = KvHue(r1); break;
 
   // Specific functions (related to Astrolog and astrology)
-  case funSigns:   n = cSign;   break;
-  case funObjs:    n = is.nObj; break;
-  case funAsps:    n = us.nAsp; break;
-  case funMon:     n = MM; break;
-  case funDay:     n = DD; break;
-  case funYea:     n = YY; break;
-  case funTim:     r = TT; break;
-  case funDst:     r = SS; break;
-  case funZon:     r = ZZ; break;
-  case funLon:     r = OO; break;
-  case funLat:     r = AA; break;
-  case funMon1:    n = ciMain.mon; break;
-  case funDay1:    n = ciMain.day; break;
-  case funYea1:    n = ciMain.yea; break;
-  case funTim1:    r = ciMain.tim; break;
-  case funDst1:    r = ciMain.dst; break;
-  case funZon1:    r = ciMain.zon; break;
-  case funLon1:    r = ciMain.lon; break;
-  case funLat1:    r = ciMain.lat; break;
-  case funMon2:    n = ciTwin.mon; break;
-  case funDay2:    n = ciTwin.day; break;
-  case funYea2:    n = ciTwin.yea; break;
-  case funTim2:    r = ciTwin.tim; break;
-  case funDst2:    r = ciTwin.dst; break;
-  case funZon2:    r = ciTwin.zon; break;
-  case funLon2:    r = ciTwin.lon; break;
-  case funLat2:    r = ciTwin.lat; break;
-  case funMon3:    n = ciThre.mon; break;
-  case funDay3:    n = ciThre.day; break;
-  case funYea3:    n = ciThre.yea; break;
-  case funTim3:    r = ciThre.tim; break;
-  case funDst3:    r = ciThre.dst; break;
-  case funZon3:    r = ciThre.zon; break;
-  case funLon3:    r = ciThre.lon; break;
-  case funLat3:    r = ciThre.lat; break;
-  case funMon4:    n = ciFour.mon; break;
-  case funDay4:    n = ciFour.day; break;
-  case funYea4:    n = ciFour.yea; break;
-  case funTim4:    r = ciFour.tim; break;
-  case funDst4:    r = ciFour.dst; break;
-  case funZon4:    r = ciFour.zon; break;
-  case funLon4:    r = ciFour.lon; break;
-  case funLat4:    r = ciFour.lat; break;
-  case funMonT:    n = ciTran.mon; break;
-  case funDayT:    n = ciTran.day; break;
-  case funYeaT:    n = ciTran.yea; break;
-  case funTimT:    r = ciTran.tim; break;
-  case funObjLon:   r = FValidObj(n1)   ? planet[n1]     : 0.0; break;
-  case funObjLat:   r = FValidObj(n1)   ? planetalt[n1]  : 0.0; break;
-  case funObjDir:   r = FValidObj(n1)   ? ret[n1]        : 0.0; break;
-  case funObjDirY:  r = FValidObj(n1)   ? retalt[n1]     : 0.0; break;
-  case funObjHou:   n = FValidObj(n1)   ? inhouse[n1]    : 0;   break;
-  case funObjLon1:  r = FValidObj(n1)   ? cp1.obj[n1]    : 0.0; break;
-  case funObjLat1:  r = FValidObj(n1)   ? cp1.alt[n1]    : 0.0; break;
-  case funObjDir1:  r = FValidObj(n1)   ? cp1.dir[n1]    : 0.0; break;
-  case funObjDirY1: r = FValidObj(n1)   ? cp1.diralt[n1] : 0.0; break;
-  case funObjHou1:  n = FValidObj(n1)   ? cp1.house[n1]  : 0;   break;
-  case funObjLon2:  r = FValidObj(n1)   ? cp2.obj[n1]    : 0.0; break;
-  case funObjLat2:  r = FValidObj(n1)   ? cp2.alt[n1]    : 0.0; break;
-  case funObjDir2:  r = FValidObj(n1)   ? cp2.dir[n1]    : 0.0; break;
-  case funObjDirY2: r = FValidObj(n1)   ? cp2.diralt[n1] : 0.0; break;
-  case funObjHou2:  n = FValidObj(n1)   ? cp2.house[n1]  : 0;   break;
-  case funObjLon3:  r = FValidObj(n1)   ? cp3.obj[n1]    : 0.0; break;
-  case funObjLat3:  r = FValidObj(n1)   ? cp3.alt[n1]    : 0.0; break;
-  case funObjDir3:  r = FValidObj(n1)   ? cp3.dir[n1]    : 0.0; break;
-  case funObjDirY3: r = FValidObj(n1)   ? cp3.diralt[n1] : 0.0; break;
-  case funObjHou3:  n = FValidObj(n1)   ? cp3.house[n1]  : 0;   break;
-  case funObjLon4:  r = FValidObj(n1)   ? cp4.obj[n1]    : 0.0; break;
-  case funObjLat4:  r = FValidObj(n1)   ? cp4.alt[n1]    : 0.0; break;
-  case funObjDir4:  r = FValidObj(n1)   ? cp4.dir[n1]    : 0.0; break;
-  case funObjDirY4: r = FValidObj(n1)   ? cp4.diralt[n1] : 0.0; break;
-  case funObjHou4:  n = FValidObj(n1)   ? cp4.house[n1]  : 0;   break;
+  case funSigns: n = cSign;   break;
+  case funObjs:  n = is.nObj; break;
+  case funAsps:  n = us.nAsp; break;
+  case funMon:  n = MM; break;
+  case funDay:  n = DD; break;
+  case funYea:  n = YY; break;
+  case funTim:  r = TT; break;
+  case funDst:  r = SS; break;
+  case funZon:  r = ZZ; break;
+  case funLon:  r = OO; break;
+  case funLat:  r = AA; break;
+  case funMon1: n = ciMain.mon; break;
+  case funDay1: n = ciMain.day; break;
+  case funYea1: n = ciMain.yea; break;
+  case funTim1: r = ciMain.tim; break;
+  case funDst1: r = ciMain.dst; break;
+  case funZon1: r = ciMain.zon; break;
+  case funLon1: r = ciMain.lon; break;
+  case funLat1: r = ciMain.lat; break;
+  case funMon2: n = ciTwin.mon; break;
+  case funDay2: n = ciTwin.day; break;
+  case funYea2: n = ciTwin.yea; break;
+  case funTim2: r = ciTwin.tim; break;
+  case funDst2: r = ciTwin.dst; break;
+  case funZon2: r = ciTwin.zon; break;
+  case funLon2: r = ciTwin.lon; break;
+  case funLat2: r = ciTwin.lat; break;
+  case funMon3: n = ciThre.mon; break;
+  case funDay3: n = ciThre.day; break;
+  case funYea3: n = ciThre.yea; break;
+  case funTim3: r = ciThre.tim; break;
+  case funDst3: r = ciThre.dst; break;
+  case funZon3: r = ciThre.zon; break;
+  case funLon3: r = ciThre.lon; break;
+  case funLat3: r = ciThre.lat; break;
+  case funMon4: n = ciFour.mon; break;
+  case funDay4: n = ciFour.day; break;
+  case funYea4: n = ciFour.yea; break;
+  case funTim4: r = ciFour.tim; break;
+  case funDst4: r = ciFour.dst; break;
+  case funZon4: r = ciFour.zon; break;
+  case funLon4: r = ciFour.lon; break;
+  case funLat4: r = ciFour.lat; break;
+  case funMon5: n = ciFive.mon; break;
+  case funDay5: n = ciFive.day; break;
+  case funYea5: n = ciFive.yea; break;
+  case funTim5: r = ciFive.tim; break;
+  case funDst5: r = ciFive.dst; break;
+  case funZon5: r = ciFive.zon; break;
+  case funLon5: r = ciFive.lon; break;
+  case funLat5: r = ciFive.lat; break;
+  case funMon6: n = ciHexa.mon; break;
+  case funDay6: n = ciHexa.day; break;
+  case funYea6: n = ciHexa.yea; break;
+  case funTim6: r = ciHexa.tim; break;
+  case funDst6: r = ciHexa.dst; break;
+  case funZon6: r = ciHexa.zon; break;
+  case funLon6: r = ciHexa.lon; break;
+  case funLat6: r = ciHexa.lat; break;
+  case funMonN: n = FBetween(n1, 0, cRing) ? rgpci[n1]->mon : 0;   break;
+  case funDayN: n = FBetween(n1, 0, cRing) ? rgpci[n1]->day : 0;   break;
+  case funYeaN: n = FBetween(n1, 0, cRing) ? rgpci[n1]->yea : 0;   break;
+  case funTimN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->tim : 0.0; break;
+  case funDstN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->dst : 0.0; break;
+  case funZonN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->zon : 0.0; break;
+  case funLonN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->lon : 0.0; break;
+  case funLatN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->lat : 0.0; break;
+  case funMonS: n = ciSave.mon; break;
+  case funDayS: n = ciSave.day; break;
+  case funYeaS: n = ciSave.yea; break;
+  case funTimS: r = ciSave.tim; break;
+  case funDstS: r = ciSave.dst; break;
+  case funZonS: r = ciSave.zon; break;
+  case funLonS: r = ciSave.lon; break;
+  case funLatS: r = ciSave.lat; break;
+  case funMonT: n = ciTran.mon; break;
+  case funDayT: n = ciTran.day; break;
+  case funYeaT: n = ciTran.yea; break;
+  case funTimT: r = ciTran.tim; break;
+  case funMonG: n = ciGreg.mon; break;
+  case funDayG: n = ciGreg.day; break;
+  case funYeaG: n = ciGreg.yea; break;
+  case funObjLon:   r = FValidObj(n1) ? planet[n1]     : 0.0; break;
+  case funObjLat:   r = FValidObj(n1) ? planetalt[n1]  : 0.0; break;
+  case funObjDir:   r = FValidObj(n1) ? ret[n1]        : 0.0; break;
+  case funObjDirY:  r = FValidObj(n1) ? retalt[n1]     : 0.0; break;
+  case funObjDirL:  r = FValidObj(n1) ? retlen[n1]     : 0.0; break;
+  case funObjHou:   n = FValidObj(n1) ? inhouse[n1]    : 0;   break;
+  case funObjLon1:  r = FValidObj(n1) ? cp1.obj[n1]    : 0.0; break;
+  case funObjLat1:  r = FValidObj(n1) ? cp1.alt[n1]    : 0.0; break;
+  case funObjDir1:  r = FValidObj(n1) ? cp1.dir[n1]    : 0.0; break;
+  case funObjDirY1: r = FValidObj(n1) ? cp1.diralt[n1] : 0.0; break;
+  case funObjDirL1: r = FValidObj(n1) ? cp1.dirlen[n1] : 0.0; break;
+  case funObjHou1:  n = FValidObj(n1) ? cp1.house[n1]  : 0;   break;
+  case funObjLon2:  r = FValidObj(n1) ? cp2.obj[n1]    : 0.0; break;
+  case funObjLat2:  r = FValidObj(n1) ? cp2.alt[n1]    : 0.0; break;
+  case funObjDir2:  r = FValidObj(n1) ? cp2.dir[n1]    : 0.0; break;
+  case funObjDirY2: r = FValidObj(n1) ? cp2.diralt[n1] : 0.0; break;
+  case funObjDirL2: r = FValidObj(n1) ? cp2.dirlen[n1] : 0.0; break;
+  case funObjHou2:  n = FValidObj(n1) ? cp2.house[n1]  : 0;   break;
+  case funObjLon3:  r = FValidObj(n1) ? cp3.obj[n1]    : 0.0; break;
+  case funObjLat3:  r = FValidObj(n1) ? cp3.alt[n1]    : 0.0; break;
+  case funObjDir3:  r = FValidObj(n1) ? cp3.dir[n1]    : 0.0; break;
+  case funObjDirY3: r = FValidObj(n1) ? cp3.diralt[n1] : 0.0; break;
+  case funObjDirL3: r = FValidObj(n1) ? cp3.dirlen[n1] : 0.0; break;
+  case funObjHou3:  n = FValidObj(n1) ? cp3.house[n1]  : 0;   break;
+  case funObjLon4:  r = FValidObj(n1) ? cp4.obj[n1]    : 0.0; break;
+  case funObjLat4:  r = FValidObj(n1) ? cp4.alt[n1]    : 0.0; break;
+  case funObjDir4:  r = FValidObj(n1) ? cp4.dir[n1]    : 0.0; break;
+  case funObjDirY4: r = FValidObj(n1) ? cp4.diralt[n1] : 0.0; break;
+  case funObjDirL4: r = FValidObj(n1) ? cp4.dirlen[n1] : 0.0; break;
+  case funObjHou4:  n = FValidObj(n1) ? cp4.house[n1]  : 0;   break;
+  case funObjLon5:  r = FValidObj(n1) ? cp5.obj[n1]    : 0.0; break;
+  case funObjLat5:  r = FValidObj(n1) ? cp5.alt[n1]    : 0.0; break;
+  case funObjDir5:  r = FValidObj(n1) ? cp5.dir[n1]    : 0.0; break;
+  case funObjDirY5: r = FValidObj(n1) ? cp5.diralt[n1] : 0.0; break;
+  case funObjDirL5: r = FValidObj(n1) ? cp5.dirlen[n1] : 0.0; break;
+  case funObjHou5:  n = FValidObj(n1) ? cp5.house[n1]  : 0;   break;
+  case funObjLon6:  r = FValidObj(n1) ? cp6.obj[n1]    : 0.0; break;
+  case funObjLat6:  r = FValidObj(n1) ? cp6.alt[n1]    : 0.0; break;
+  case funObjDir6:  r = FValidObj(n1) ? cp6.dir[n1]    : 0.0; break;
+  case funObjDirY6: r = FValidObj(n1) ? cp6.diralt[n1] : 0.0; break;
+  case funObjDirL6: r = FValidObj(n1) ? cp6.dirlen[n1] : 0.0; break;
+  case funObjHou6:  n = FValidObj(n1) ? cp6.house[n1]  : 0;   break;
+  case funObjLonN:  r = FRingObj(n1, n2) ? rgpcp[n1]->obj[n2]    : 0.0; break;
+  case funObjLatN:  r = FRingObj(n1, n2) ? rgpcp[n1]->alt[n2]    : 0.0; break;
+  case funObjDirN:  r = FRingObj(n1, n2) ? rgpcp[n1]->dir[n2]    : 0.0; break;
+  case funObjDirYN: r = FRingObj(n1, n2) ? rgpcp[n1]->diralt[n2] : 0.0; break;
+  case funObjDirLN: r = FRingObj(n1, n2) ? rgpcp[n1]->dirlen[n2] : 0.0; break;
+  case funObjHouN:  n = FRingObj(n1, n2) ? rgpcp[n1]->house[n2]  : 0;   break;
   case funObjX:    r = FValidObj(n1)    ? space[n1].x   : 0.0; break;
   case funObjY:    r = FValidObj(n1)    ? space[n1].y   : 0.0; break;
   case funObjZ:    r = FValidObj(n1)    ? space[n1].z   : 0.0; break;
@@ -937,6 +1145,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funCusp4:   r = FValidSign(n1)   ? cp4.cusp[n1]  : 0.0; break;
   case funCusp3D4: r = FValidSign(n1)   ? cp4.cusp3[n1] : 0.0; break;
   case funCuspInf: r = FBetween(n1, 1, cSign+5) ? rHouseInf[n1] : 0.0; break;
+  case funSector:  n = FSector(n1) ? pluszone[n1] : 0; break;
   case funLonSign: n = SFromZ(r1); break;
   case funLonDeg:  r = r1 - (real)((SFromZ(r1)-1)*30); break;
   case funLonHou:  n = NHousePlaceIn2D(r1); break;
@@ -951,6 +1160,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funRAMC:    r = is.RA; break;
   case funDeltaT:  r = is.rDeltaT * 86400.0; break;
   case funSidDiff: r = is.rOff; break;
+  case funNutat:   r = is.rNut; break;
   case funSystem:  n = us.nHouseSystem; break;
   case funAspect:  n = GetAspect(planet, planet, planetalt, planetalt, ret,
     ret, n1, n2, &r); SetReal(n3, r); break;
@@ -970,6 +1180,17 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funVersion: r = atof(szVersionCore); break;
 
   // Astrolog command switch settings (general)
+  case fun_w1:  n = us.nWheelRows;      break;
+  case fun_aj:  n = us.nAspectSort;     break;
+  case fun_L1:  n = us.nAstroGraphStep; break;
+  case fun_L2:  n = us.nAstroGraphDist; break;
+  case fun_d1:  n = us.nDivision;       break;
+  case fun_EY:  n = us.nEphemYears;     break;
+  case fun_E01: n = us.nEphemRate;      break;
+  case fun_E02: n = us.nEphemFactor;    break;
+  case fun_P1:  n = us.nArabicParts;    break;
+  case fun_N1:  n = us.nAtlasList;      break;
+  case fun_I1:  n = us.nScreenWidth;    break;
   case fun_A3:  n = us.fAspect3D;     break;
   case fun_Ap:  n = us.fAspectLat;    break;
   case fun_AP:  n = us.fParallel2;    break;
@@ -977,8 +1198,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_b0:  n = us.fSeconds;      break;
   case fun_c:   n = us.nHouseSystem;  break;
   case fun_c3:  n = us.fHouse3D;      break;
+  case fun_c31: n = us.nHouse3D;      break;
   case fun_s:   n = us.fSidereal;     break;
-  case fun_s0:  r = us.rZodiacOffset; break;
+  case fun_s0:  n = us.nDegForm;      break;
+  case fun_s1:  r = us.rZodiacOffset; break;
   case fun_sr:  n = us.fEquator;      break;
   case fun_sr0: n = us.fEquator2;     break;
   case fun_h:   n = us.objCenter;     break;
@@ -1019,6 +1242,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_XT:  n = gs.fText;       break;
   case fun_Xi:  n = gs.fAlt;        break;
   case fun_Xu:  n = gs.fBorder;     break;
+  case fun_Xx:  n = gs.fThick;      break;
   case fun_Xl:  n = gs.fLabel;      break;
   case fun_XA:  n = gs.fLabelAsp;   break;
   case fun_XL:  n = gs.fLabelCity;  break;
@@ -1042,9 +1266,34 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_XE:  n = gs.nAstLabel;   break;
   case fun_XL0: n = gs.nLabelCity;  break;
   case fun_X1:  n = gs.objLeft;     break;
+  case fun_Xv:  n = gs.nDecaFill;   break;
   case fun_XGx: r = gs.rRot;        break;
   case fun_XGy: r = gs.rTilt;       break;
   case fun_XZ:  n = gs.objTrack;    break;
+  case fun_YXK: n = FValidColor(n1) ? rgbbmp[n1] : 0; break;
+#endif
+
+#ifdef WIN
+  // Functions related to Windows operations
+  case funMouse:
+    GetCursorPos(&pt);
+    ScreenToClient(wi.hwnd, &pt);
+    if (FBetween(n1, 0, cLetter-1)) {
+      rgparVar[n1].n   = pt.x; rgparVar[n1].fReal   = fFalse;
+      rgparVar[n1+1].n = pt.y; rgparVar[n1+1].fReal = fFalse;
+    }
+    n = LFromWW(pt.x, pt.y);
+    break;
+
+  // Astrolog command switch settings (Windows)
+  case fun_WN:  n = wi.nTimerDelay;   break;
+  case fun_Wn:  n = wi.fNoUpdate;     break;
+  case fun_Wh:  n = wi.fHourglass;    break;
+  case fun_Wt:  n = wi.fNoPopup;      break;
+  case fun_Wo:  n = wi.fAutoSave;     break;
+  case fun_Wo0: n = wi.fAutoSaveNum;  break;
+  case fun_Wo3: n = wi.fAutoSaveWire; break;
+  case fun_WZ:  n = wi.fSaverRun;     break;
 #endif
 
   // Programming functions (related to variables and control flow)
@@ -1068,46 +1317,46 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     fRetReal = fFalse;
     n = (n1 != 0);
     if (n) {
-      PchGetParameter(rgpchEval[0], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
       goto LParseRet;
     }
     break;
   case funIfElse:
     n = (n1 != 0);
-    PchGetParameter(rgpchEval[!n], &rgpar[0], 1, fTrue);
+    PchGetParameter(rgpchEval[!n], &rgpar[0], ifun, 1, fTrue);
     goto LParseRet;
     break;
   case funDoCount:
     fRetReal = fFalse;
     for (n = 0; n < n1; n++)
-      PchGetParameter(rgpchEval[0], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
     if (n > 0)
       goto LParseRet;
     break;
   case funWhile:
     fRetReal = fFalse;
     loop {
-      PchGetParameter(rgpchEval[0], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
       if (!(rgpar[0].fReal ? rgpar[0].r != 0.0 : rgpar[0].n != 0))
         break;
-      PchGetParameter(rgpchEval[1], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[1], &rgpar[0], ifun, 1, fTrue);
       fRetReal = rgpar[0].fReal;
       EIR(rgpar[0].n, rgpar[0].r);
     }
     break;
   case funDoWhile:
     do {
-      PchGetParameter(rgpchEval[1], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[1], &rgpar[0], ifun, 1, fTrue);
       fRetReal = rgpar[0].fReal;
       EIR(rgpar[0].n, rgpar[0].r);
-      PchGetParameter(rgpchEval[0], &rgpar[0], 1, fTrue);
+      PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
     } while (rgpar[0].fReal ? rgpar[0].r != 0.0 : rgpar[0].n != 0);
     break;
   case funFor:
     if (FBetween(n1, 0, cLetter)) {
       rgparVar[n1] = rgpar[2];
       for (rgparVar[n1].n = n2; rgparVar[n1].n <= n3; rgparVar[n1].n++)
-        PchGetParameter(rgpchEval[0], &rgpar[0], 1, fTrue);
+        PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
       n = rgparVar[n1].n;
     } else
       n = 0;
@@ -1170,12 +1419,12 @@ LParseRet:
 // parameter in either a string or numeric return variable, or null on error.
 // Also update the command line position to point after the parameter.
 
-CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int iParam,
-  flag fEval)
+CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
+  int iParam, flag fEval)
 {
   char sz[cchSzMax*2], szT[cchSzMax], ch1, ch, *pchEdit;
   CONST char *rgpchEval[2], *pchParam, *pchT;
-  int ifun, iParamT, cch, n;
+  int ifunT, iParamT, cch, n;
   PAR rgpar2[4];
   flag fSkipEval;
 
@@ -1183,7 +1432,12 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int iParam,
   while (*pchCur == ' ')
     pchCur++;
   if (*pchCur == chNull) {
-    sprintf(sz, "Couldn't get parameter %d due to end of line.\n", iParam);
+    if (ifun >= 0)
+      sprintf(szT, " of function %s", rgfun[ifun].szName);
+    else
+      *szT = chNull;
+    sprintf(sz, "Couldn't get parameter %d%s due to end of line.\n", iParam,
+      szT);
     PrintWarning(sz);
     goto LError;
   }
@@ -1258,32 +1512,32 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int iParam,
   }
 
   // Check for function.
-  ifun = ILookupTrie(is.rgsTrieFun, pchParam, cch, fTrue);
-  if (ifun >= 0) {
+  ifunT = ILookupTrie(is.rgsTrieFun, pchParam, cch, fTrue);
+  if (ifunT >= 0) {
     rgpchEval[0] = rgpchEval[1] = NULL;
 
     // Recursively get the parameters to the function.
-    for (iParamT = 1; iParamT <= rgfun[ifun].nParam; iParamT++) {
+    for (iParamT = 1; iParamT <= rgfun[ifunT].nParam; iParamT++) {
       fSkipEval = fFalse;
       // Some parameters shouldn't be evaluated yet, but just skipped over.
-      if (((ifun == funIf || ifun == funIfElse || ifun == funDoCount) &&
+      if (((ifunT == funIf || ifunT == funIfElse || ifunT == funDoCount) &&
           iParamT == 2) ||
-        ((ifun == funWhile || ifun == funDoWhile) && iParamT == 1) ||
-        (ifun == funFor && iParamT == 4)) {
+        ((ifunT == funWhile || ifunT == funDoWhile) && iParamT == 1) ||
+        (ifunT == funFor && iParamT == 4)) {
         fSkipEval = fTrue;
         rgpchEval[0] = pchCur;
-      } else if ((ifun == funIfElse && iParamT == 3) ||
-        ((ifun == funWhile || ifun == funDoWhile) && iParamT == 2)) {
+      } else if ((ifunT == funIfElse && iParamT == 3) ||
+        ((ifunT == funWhile || ifunT == funDoWhile) && iParamT == 2)) {
         fSkipEval = fTrue;
         rgpchEval[1] = pchCur;
       }
-      pchCur = PchGetParameter(pchCur, &rgpar2[iParamT], iParamT,
+      pchCur = PchGetParameter(pchCur, &rgpar2[iParamT], ifunT, iParamT,
         fEval && !fSkipEval);
       if (pchCur == NULL)
         return NULL;
     }
     if (fEval) {
-      if (!FEvalFunction(ifun, rgpar2, (char **)rgpchEval))
+      if (!FEvalFunction(ifunT, rgpar2, (char **)rgpchEval))
         return NULL;
       rgpar[0] = rgpar2[0];
     }
@@ -1319,7 +1573,7 @@ void GetParameter(CONST char *sz, PAR *ppar)
   CONST char *pch = sz;
 
   do {
-    pch = PchGetParameter(pch, ppar, 1, fTrue);
+    pch = PchGetParameter(pch, ppar, -1, 1, fTrue);
   } while (pch != NULL && *pch != chNull);
 }
 
@@ -1478,7 +1732,7 @@ LDone:
   for (isz = 0; isz < cszIn; isz++) {
     is = 0;
     for (ich = 0;; ich++) {
-      if (rgszIn[isz][ich] == '\0') {
+      if (rgszIn[isz][ich] == chNull) {
         // Handle the substring case (short 0).
         Assert(rgsOut[is] == 0 || !fInsensitive);
         rgsOut[is] = isz+1;
@@ -1501,7 +1755,7 @@ LDone:
       Assert(isT != 0);
       if (isT <= 0) {
         // Handle the payload pointer within standard node case.
-        Assert(rgszIn[isz][ich + 1] == '\0');
+        Assert(rgszIn[isz][ich + 1] == chNull);
         rgsOut[is + 2 + (chT - chLo)] = -(isz+1);
         break;
       }
@@ -1543,12 +1797,12 @@ int ILookupTrie(CONST TRIE rgsIn, CONST char *rgch, int cch,
       pch1 = (char *)&rgsIn[is + 3], pch2 = pch, cchT = chLo;
       if (!fInsensitive) {
         while (cchT > 0 && *pch1 == *pch2) {
-          Assert(*pch1 != '\0');
+          Assert(*pch1 != chNull);
           pch1++, pch2++, cchT--;
         }
       } else {
         while (cchT > 0 && *pch1 == ChCap(*pch2)) {
-          Assert(*pch1 != '\0');
+          Assert(*pch1 != chNull);
           pch1++, pch2++, cchT--;
         }
       }
@@ -1670,14 +1924,12 @@ flag ShowParseExpression(CONST char *sz)
     return fFalse;
 
   GetParameter(sz, &par);
-  if (!us.fExpOff) {
-    if (!par.fReal)
-      sprintf(szNum, "%d", par.n);
-    else
-      FormatR(szNum, par.r, 6);
-    sprintf(szMsg, "Expression returned: %s\n", szNum);
-    PrintNotice(szMsg);
-  }
+  if (!par.fReal)
+    sprintf(szNum, "%d", par.n);
+  else
+    FormatR(szNum, par.r, 6);
+  sprintf(szMsg, "Expression returned: %s\n", szNum);
+  PrintNotice(szMsg);
   return fTrue;
 }
 
@@ -1713,6 +1965,22 @@ void ExpSetR(int i, real r)
 {
   rgparVar[i].fReal = fTrue;
   rgparVar[i].r = r;
+}
+
+
+// Set a string to an AstroExpression custom variable.
+
+char *PchFormatExpression(char *sz, int i)
+{
+  char *pch;
+
+  if (rgparVar[i].fReal)
+    sprintf(sz, "%lf", rgparVar[i].r);
+  else
+    sprintf(sz, "%d", rgparVar[i].n);
+  for (pch = sz; *pch; pch++)
+    ;
+  return pch;
 }
 
 

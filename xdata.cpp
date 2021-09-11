@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: xdata.cpp
+** Astrolog (Version 7.30) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -69,22 +69,23 @@ GS gs = {
 #endif
   fTrue, fTrue, fFalse, fFalse, fTrue, fTrue, fFalse, fTrue, fTrue, fFalse,
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, fTrue, fFalse, DEFAULTX, DEFAULTY,
+  fFalse, fTrue, fFalse, fFalse, DEFAULTX, DEFAULTY,
 #ifdef WIN
   -10,
 #else
   0,
 #endif
   200, 100, 0, 0, 0, 3, 0, 0, 0.0, 0.0, oMoo, BITMAPMODE, 25.0, 1, 0,
-  8.5, 11.0, NULL, 0, 25, 11, oCore, 0.0, 1000, 0, 600, 1111,
+  8.5, 11.0, NULL, 0, 25, 11, 1, NULL, oCore, 0.0, 1000, 0, 600, 1111,
   fFalse, fFalse, fTrue, 7, 0, NULL, NULL};
 
 GI gi = {
   0, fFalse, -1,
   NULL, 0, NULL, NULL, 0.0, fFalse, fFalse, 1.0,
-  2, 1, 1, 1, 20, 10, 1022, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
+  2, 1, 1, 1, 1, 20, 10, 61822, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
   -1, -1, NULL, 0, 0, NULL,
   fTrue, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL},
+  {0, 0, 0, NULL},
 #ifdef SWISS
   NULL, 0,
 #endif
@@ -95,7 +96,7 @@ GI gi = {
   fFalse, 0, fFalse, 0, 0, 1.0,
 #endif
 #ifdef META
-  NULL, NULL, MAXMETA, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  NULL, MAXMETA, NULL, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 #endif
 #ifdef WIRE
   NULL, 0, 0, -1, 0,
@@ -161,15 +162,15 @@ CONST int ikPalette[cColor] =
 CONST int rgcmdMode[gMax] = {0,
   cmdChartList, cmdChartWheel, cmdChartGrid, cmdChartHorizon, cmdChartOrbit,
   cmdChartSector, cmdChartCalendar, cmdChartInfluence, cmdChartEsoteric,
-  cmdChartAstroGraph, cmdChartEphemeris, cmdChartLocal, cmdTransit, cmdTransit,
-  cmdChartSphere, cmdChartMap, cmdChartGlobe, cmdChartPolar, cmdChartTelescope,
-  0/*cmdRelBiorhythm*/, cmdChartAspect, cmdChartMidpoint, cmdChartArabic,
-  cmdChartRising, cmdChartMoons, cmdTransit, cmdTransit, cmdTransit,
-  cmdTransit, cmdHelpSign, cmdHelpObject, cmdHelpAspect, cmdHelpConstellation,
-  cmdHelpPlanetInfo, cmdHelpRay, cmdHelpMeaning, cmdHelpSwitch,
-  cmdHelpObscure, cmdHelpKeystroke, cmdHelpCredit};
+  cmdChartAstroGraph, cmdChartEphemeris, cmdChartRising, cmdChartLocal,
+  cmdTransit, cmdTransit, cmdChartSphere, cmdChartMap, cmdChartGlobe,
+  cmdChartPolar, cmdChartTelescope, 0/*cmdRelBiorhythm*/, cmdChartAspect,
+  cmdChartMidpoint, cmdChartArabic, cmdChartMoons, cmdTransit, cmdTransit,
+  cmdTransit, cmdTransit, cmdHelpSign, cmdHelpObject, cmdHelpAspect,
+  cmdHelpConstellation, cmdHelpPlanetInfo, cmdHelpRay, cmdHelpMeaning,
+  cmdHelpSwitch, cmdHelpObscure, cmdHelpKeystroke, cmdHelpCredit};
 #endif
-char *szWheelX[4+1] = {NULL, NULL, NULL, NULL, NULL};
+char *szWheelX[cRing+1] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 // These are the actual color arrays and variables used by the program.
 // Technically, Astrolog always assumes charts are being drawn in color.
@@ -177,6 +178,12 @@ char *szWheelX[4+1] = {NULL, NULL, NULL, NULL, NULL};
 
 KI kMainB[9], kRainbowB[cRainbow+1], kElemB[cElem], kAspB[cAspect+1],
   kObjB[objMax], kRayB[cRay+2];
+
+CONST char *rgszFontName[cFont] = {szAppNameCore, "Wingdings", "Astro",
+  "EnigmaAstrology", "HamburgSymbols", "Astronomicon",
+  "Courier New", "Consolas", "Arial"};
+CONST char rgszFontAllow[5][cFont+1] =
+  {"0-----67-", "0123456--", "0----5678", "0-234567-", "0-2345678"};
 
 #ifdef X11
 // Some physical X window variables dealing with the window itself.
@@ -323,16 +330,16 @@ CONST char *szDrawObjectDef2[objMax+9] = {
   "BELHL4G3D4F3R4E3U4HUE7ND5L5",       // Mars
   "BH6BRRF2D2GDGDGDGDR10ND2NR4U12E2",  // Jupiter
   "",  // Saturn
-  "BD4LGD2FR2EU2HLU6NU2NR4L4NU4D2G2BU10NF2BR12G2D6F2",  // Uranus #1
-  "BD8U4NL4NR4U12NF2NG2BL6DNFNGD3FDFRFR4EREUEU3NGNFU",  // Neptune
-  "D4NL4NR4D4BU16LGD2FR2EU2HLBL6D4FDFRFR4EREUEU4",      // Pluto  #1
-  "BG4LGD2FR2EU2HLU7RF2RF2RFBU10GLG2LG2BLU5",           // Chiron
-  "BD8U2NL6NR6U4R3E3U4H3L4G2",                          // Ceres
-  "BD8U2NL6NR6U2E4HUHUHUHNUGDGDGDGF4",                  // Pallas Athena
-  "BD8U2NL4NR4U8NL7NR7NE5NF5NG5NH5U6",                  // Juno
-  "BU8D3BG5NL3DF2DF2DFEUE2UE2UR3BH4GDG2DGHUH2UH",       // Vesta
-  "BG4BDHL2GD2FR2EU5H2U4E4R4F4D4G2D5FR2EU2HL2G",        // North Node
-  "BH4BUGL2HU2ER2FD5G2D4F4R4E4U4H2U5ER2FD2GL2H",        // South Node
+  "BD4LGD2FR2EU2HLU6NU2NR4L4NU4D2G2BU10NF2BR12G2D6F2",   // Uranus #1
+  "BD8U4NL4NR4U12NF2NG2BL6NF2NG2D4FDFRFR4EREUEU4NG2NF2", // Neptune
+  "D4NL4NR4D4BU16LGD2FR2EU2HLBL6D4FDFRFR4EREUEU4",       // Pluto  #1
+  "BG4LGD2FR2EU2HLU7RF2RF2RFBU10GLG2LG2BLU5",            // Chiron
+  "BD8U2NL6NR6U4R3E3U4H3L4G2",                           // Ceres
+  "BD8U2NL6NR6U2E4HUHUHUHNUGDGDGDGF4",                   // Pallas Athena
+  "BD8U2NL4NR4U8NL7NR7NE5NF5NG5NH5U6",                   // Juno
+  "BU8D3BG5NL3DF2DF2DFEUE2UE2UR3BH4GDG2DGHUH2UH",        // Vesta
+  "BG4BDHL2GD2FR2EU5H2U4E4R4F4D4G2D5FR2EU2HL2G",         // North Node
+  "BH4BUGL2HU2ER2FD5G2D4F4R4E4U4H2U5ER2FD2GL2H",         // South Node
   "",  // Lilith #1
   "",  // Part of Fortune
   "",  // Vertex

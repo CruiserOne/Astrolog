@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: charts3.cpp
+** Astrolog (Version 7.30) File: charts3.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -356,7 +356,7 @@ void ChartInDaySearch(flag fProg)
             RAbs(cp2.diralt[i]))*divsiz + (real)(div-1)*divsiz;
           pid[occurcount].pos1 = pid[occurcount].pos2 =
             RAbs(cp1.diralt[i])/(RAbs(cp1.diralt[i])+RAbs(cp2.diralt[i])) *
-            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
+            (cp2.alt[i]-cp1.alt[i]) + cp1.alt[i];
           pid[occurcount].ret1 = pid[occurcount].ret2 =
             (int)RSgn(cp1.dir[i]) + (int)RSgn(cp2.dir[i]);
           pid[occurcount].mon = mon0;
@@ -467,10 +467,19 @@ void ChartInDaySearch(flag fProg)
 
             d1 = cp1.alt[i]; d2 = cp2.alt[i];
             e1 = cp1.alt[j]; e2 = cp2.alt[j];
-            g = cp1.obj[i]; EclToEqu(&g, &d1);
-            g = cp2.obj[i]; EclToEqu(&g, &d2);
-            g = cp1.obj[j]; EclToEqu(&g, &e1);
-            g = cp2.obj[j]; EclToEqu(&g, &e2);
+            if (!us.fEquator2 && !us.fParallel2) {
+              // If have ecliptic latitude and want declination, convert.
+              g = cp1.obj[i]; EclToEqu(&g, &d1);
+              g = cp2.obj[i]; EclToEqu(&g, &d2);
+              g = cp1.obj[j]; EclToEqu(&g, &e1);
+              g = cp2.obj[j]; EclToEqu(&g, &e2);
+            } else if (us.fEquator2 && us.fParallel2) {
+              // If have equatorial declination and want latitude, convert.
+              g = cp1.obj[i]; EquToEcl(&g, &d1);
+              g = cp2.obj[i]; EquToEcl(&g, &d2);
+              g = cp1.obj[j]; EquToEcl(&g, &e1);
+              g = cp2.obj[j]; EquToEcl(&g, &e2);
+            }
 
             // Search each potential aspect in turn. Negate the sign of the
             // aspect if needed, so can then treat it like a parallel.
@@ -500,19 +509,17 @@ void ChartInDaySearch(flag fProg)
               f1 = d2-d1;
               f2 = e2-e1;
               g = (d1-e1)/(f2-f1);
+              if (k == aOpp) {
+                neg(e1);
+                neg(e2);
+              }
               pid[occurcount].time = g*divsiz + (real)(div-1)*divsiz;
-              pid[occurcount].pos1 = Mod(cp1.obj[i]+
-                RSgn(cp2.obj[i]-cp1.obj[i])*
-                (RAbs(cp2.obj[i]-cp1.obj[i]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[i], cp2.obj[i]));
-              pid[occurcount].pos2 = Mod(cp1.obj[j]+
-                RSgn(cp2.obj[j]-cp1.obj[j])*
-                (RAbs(cp2.obj[j]-cp1.obj[j]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[j], cp2.obj[j]));
+              pid[occurcount].pos1 = d1 + (d2 - d1)*g;
+              pid[occurcount].pos2 = e1 + (e2 - e1)*g;
               pid[occurcount].ret1 =
-                (int)RSgn(cp1.dir[i]) + (int)RSgn(cp2.dir[i]);
+                (int)RSgn(cp1.diralt[i]) + (int)RSgn(cp2.diralt[i]);
               pid[occurcount].ret2 =
-                (int)RSgn(cp1.dir[j]) + (int)RSgn(cp2.dir[j]);
+                (int)RSgn(cp1.diralt[j]) + (int)RSgn(cp2.diralt[j]);
               occurcount++;
             }
           }
@@ -587,7 +594,7 @@ void ChartTransitSearch(flag fProg)
   int source[MAXINDAY], aspect[MAXINDAY], dest[MAXINDAY], isret[MAXINDAY],
     M1, M2, Y1, Y2, counttotal = 0, occurcount, division, div, nAsp, fNoCusp,
     i, j, k, s1, s2, s3, s4;
-  real pos[MAXINDAY],
+  real posT[MAXINDAY], posN[MAXINDAY],
     divsiz, daysiz, d, e1, e2, f1, f2, mc = is.MC, ob = is.OB;
   CP cpT = cp0;
   CI ciT;
@@ -690,7 +697,8 @@ void ChartTransitSearch(flag fProg)
             time[occurcount] = MinDistance(f1,
               (real)(cp1.dir[i] >= 0.0 ? s2 : s1) * 30.0) /
               MinDistance(f1, f2)*divsiz + (real)(div-1)*divsiz;
-            pos[occurcount] = cp1.obj[i];
+            posT[occurcount] = cp1.obj[i];
+            posN[occurcount] = cpT.obj[i];
             isret[occurcount] = (int)RSgn(cp1.dir[i]) +
               (int)RSgn(cp2.dir[i]);
             occurcount++;
@@ -738,10 +746,11 @@ void ChartTransitSearch(flag fProg)
               dest[occurcount] = i;
               time[occurcount] = RAbs(f1)/(RAbs(f1)+RAbs(f2))*divsiz +
                 (real)(div-1)*divsiz;
-              pos[occurcount] = Mod(
+              posT[occurcount] = Mod(
                 MinDistance(cp1.obj[j], Mod(d-rAspAngle[k])) <
                 MinDistance(cp2.obj[j], Mod(d+rAspAngle[k])) ?
                 d-rAspAngle[k] : d+rAspAngle[k]);
+              posN[occurcount] = cpT.obj[i];
               isret[occurcount] = (int)RSgn(cp1.dir[j]) +
                 (int)RSgn(cp2.dir[j]);
               occurcount++;
@@ -752,6 +761,18 @@ void ChartTransitSearch(flag fProg)
 
           for (k = 1; k <= nAsp; k++) if (FAcceptAspect(i, k, j)) {
             d = cpT.alt[i]; e1 = cp1.alt[j]; e2 = cp2.alt[j];
+            if (!us.fEquator2 && !us.fParallel2) {
+              // If have ecliptic latitude and want declination, convert.
+              f1 = cpT.obj[i]; EclToEqu(&f1, &d);
+              f1 = cp1.obj[j]; EclToEqu(&f1, &e1);
+              f2 = cp2.obj[j]; EclToEqu(&f2, &e2);
+            } else if (us.fEquator2 && us.fParallel2) {
+              // If have equatorial declination and want latitude, convert.
+              f1 = cpT.obj[i]; EquToEcl(&f1, &d);
+              f1 = cp1.obj[j]; EquToEcl(&f1, &e1);
+              f2 = cp2.obj[j]; EquToEcl(&f2, &e2);
+            }
+
             if (k == aOpp) {
               neg(e1);
               neg(e2);
@@ -766,14 +787,19 @@ void ChartTransitSearch(flag fProg)
               // Ok, found a parallel transit. Now determine the time and save
               // this transit in the list to be printed.
 
+              if (k == aOpp) {
+                neg(e1);
+                neg(e2);
+              }
               source[occurcount] = j;
               aspect[occurcount] = k;
               dest[occurcount] = i;
               time[occurcount] = RAbs(f1)/(RAbs(f1)+RAbs(f2))*divsiz +
                 (real)(div-1)*divsiz;
-              pos[occurcount] = cpT.obj[i];
-              isret[occurcount] = (int)RSgn(cp1.dir[j]) +
-                (int)RSgn(cp2.dir[j]);
+              posT[occurcount] = e1 + (e2 - e1)*RAbs(f1)/(RAbs(f1)+RAbs(f2));
+              posN[occurcount] = d;
+              isret[occurcount] = (int)RSgn(cp1.diralt[j]) +
+                (int)RSgn(cp2.diralt[j]);
               occurcount++;
             }
           }
@@ -790,7 +816,8 @@ void ChartTransitSearch(flag fProg)
           SwapN(aspect[j], aspect[j+1]);
           SwapN(dest[j], dest[j+1]);
           SwapR(&time[j], &time[j+1]);
-          SwapR(&pos[j], &pos[j+1]);
+          SwapR(&posT[j], &posT[j+1]);
+          SwapR(&posN[j], &posN[j+1]);
           SwapN(isret[j], isret[j+1]);
           j--;
         }
@@ -831,9 +858,8 @@ void ChartTransitSearch(flag fProg)
         }
         sprintf(sz, "%s %s ",
           SzDate(MonT, s1+1, YeaT, fFalse), SzTime(s2, s3, s4)); PrintSz(sz);
-        PrintAspect(source[i], pos[i], isret[i], aspect[i],
-          dest[i], cpT.obj[dest[i]], (int)RSgn(cpT.dir[dest[i]]),
-          (char)(fProg ? 'u' : 't'));
+        PrintAspect(source[i], posT[i], isret[i], aspect[i], dest[i],
+          posN[i], (int)RSgn(cpT.dir[dest[i]]), (char)(fProg ? 'u' : 't'));
 
         // Check for a Solar, Lunar, or any other return.
 
@@ -1255,8 +1281,8 @@ void ChartInDayHorizon(void)
     // reaches its zenith, or reaches its nadir.
 
     for (i = 0; i <= is.nObj; i++) if (!ignore[i] && FThing(i)) {
-      EclToHorizon(&azi1, &alt1, cp1.obj[i], rgalt1[i], mc1, Lat);
-      EclToHorizon(&azi2, &alt2, cp2.obj[i], rgalt2[i], mc2, Lat);
+      EclToHoriz(&azi1, &alt1, cp1.obj[i], rgalt1[i], mc1, Lat);
+      EclToHoriz(&azi2, &alt2, cp2.obj[i], rgalt2[i], mc2, Lat);
       j = 0;
 
       // Check for transits to the horizon.
@@ -1268,8 +1294,9 @@ void ChartInDayHorizon(void)
       // Check for transits to the meridian.
       } else if (RSgn(MinDifference(azi1, rDegQuad)) !=
         RSgn(MinDifference(azi2, rDegQuad))) {
-        j = 2 + 2*(MinDistance(azi1, rDegQuad) < rDegQuad);
-        d = RAbs(azi1 - (j > 2 ? rDegQuad : 270.0))/MinDistance(azi1, azi2);
+        j = 2 + 2*(alt1+alt2 < 0.0);
+        d = RAbs(azi1 - (MinDistance(azi1, rDegQuad) < rDegQuad ? rDegQuad :
+          270.0))/MinDistance(azi1, azi2);
         k = alt1 + d*(alt2-alt1);
       }
       if (j && !ignorez[j-1] && occurcount < MAXINDAY) {
@@ -1490,7 +1517,7 @@ void ChartEphemeris(void)
         }
         if (ret[j] < 0.0) {
           AnsiColor(kDefault);
-          PrintCh(chRet2);
+          PrintCh(is.fSeconds ? chRet : chRet2);
         }
         if (k < is.nObj)
           PrintTab(' ', 1 - (ret[j] < 0.0) + is.fSeconds);

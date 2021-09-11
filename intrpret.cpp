@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: intrpret.cpp
+** Astrolog (Version 7.30) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -538,7 +538,7 @@ void InterpretMidpointRelation(int x, int y)
 
 
 CONST char *szAngle[cElem] = {"project", "feel within",
-  "receive", "be seen as"};
+  "attract and receive", "be seen as"};
 
 // Print an interpretation for a latitude crossing in effect in an astro-graph
 // chart. This is called from the ChartAstroGraph() routine.
@@ -550,7 +550,7 @@ void InterpretAstroGraph(int obj1, int cusp1, int obj2, int cusp2)
 
   if (!FInterpretObj(obj1) || !FInterpretObj(obj2))
     return;
-  FieldWord("At this location"); FieldWord(szPerson0);
+  FieldWord("Near this location"); FieldWord(szPerson0);
   FieldWord("can more easily");
   sprintf(sz, "%s their %s, and also %s their %s.",
     szAngle[c1], szMindPart[obj1], szAngle[c2], szMindPart[obj2]);

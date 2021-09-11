@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: xdevice.cpp
+** Astrolog (Version 7.30) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -82,7 +82,13 @@ INLINE void _GetRGB(CONST byte *pb, int *r, int *g, int *b)
   { *b = *pb; *g = *(pb+1); *r = *(pb+2); }
 void BmpSetXY(Bitmap *b, int x, int y, KV kv)
   { _SetRGB(_PbXY(b, x, y), RgbR(kv), RgbG(kv), RgbB(kv)); }
-INLINE KI GetXY(int x, int y)
+KV BmpGetXY(Bitmap *b, int x, int y)
+  { return _GetXY(b, x, y); }
+void SetXY(int x, int y, KI ki)
+  { if (!gi.fBmp) BmSet(gi.bm, x, y, ki); else BmpSetXY(&gi.bmp, x, y, ki); }
+KI GetXY(int x, int y)
+  { return !gi.fBmp ? FBmGet(gi.bm, x, y) : _GetXY(&gi.bmp, x, y); }
+KI BmGetXY(int x, int y)
   { return !gi.fBmp ? FBmGet(gi.bm, x, y) : (_GetXY(&gi.bmp, x, y) > 0)*15; }
 
 
@@ -373,7 +379,7 @@ void BmpCopyBlock2(CONST Bitmap *bs, real x1, real y1, real x2, real y2,
 // Copy a 24 bit bitmap structure to a Windows DC. Since Astrolog's internal
 // bitmap structure is the same as Windows, it can be done all at once.
 
-void BmpCopyWin(CONST Bitmap *b, HDC hdc)
+void BmpCopyWin(CONST Bitmap *b, HDC hdc, int x, int y)
 {
   BITMAPINFO bi;
 
@@ -390,7 +396,7 @@ void BmpCopyWin(CONST Bitmap *b, HDC hdc)
   bi.bmiHeader.biWidth  =  (b->x);
   bi.bmiHeader.biHeight = -(b->y);
 
-  SetDIBitsToDevice(hdc, 0, 0, b->x, b->y, 0, 0, 0, b->y,
+  SetDIBitsToDevice(hdc, x, y, b->x, b->y, 0, 0, 0, b->y,
     b->rgb, (BITMAPINFO *)&bi, DIB_RGB_COLORS);
 }
 #endif
@@ -495,7 +501,7 @@ flag FBmpDrawBack(Bitmap *bDest)
     }
     wi.hbmpPrev = (HBITMAP)SelectObject(wi.hdcBack, wi.hbmpBack);
     xLast = b2->x; yLast = b2->y;
-    BmpCopyWin(b2, wi.hdcBack);
+    BmpCopyWin(b2, wi.hdcBack, 0, 0);
   }
   SetStretchBltMode(wi.hdc, COLORONCOLOR);
   StretchBlt(wi.hdc, x1, y1, x2, y2, wi.hdcBack, x3, y3, x4, y4, SRCCOPY);
@@ -511,7 +517,7 @@ flag FBmpDrawMap()
 {
   Bitmap *bmp = &gi.bmp;
   int nScl = 1, xc, yc, zc, x1, x2, y1, y2, xi, yi, n, n2;
-  real deg = Mod(rDegMax - gs.rRot), lonMC, latMC, lonS, latS, rxc, ryc, rzc,
+  real deg = Mod(rDegMax - gs.rRot), lonS, latS, rxc, ryc, rzc,
     lon, lat, lat0, rT, rLen, sint, cost, sina, cosa;
   KV kv;
 
@@ -572,16 +578,10 @@ flag FBmpDrawMap()
   } else if (gi.nMode == gPolar) {
     if (!FBmpDrawBack(bmp))
       BmpSetAll(bmp, rgbbmp[gi.kiOff]);
-    if (gs.fEcliptic) {
-      lonMC = Tropical(is.MC); latMC = 0.0;
-      EclToEqu(&lonMC, &latMC);
-    }
-    lonMC = Tropical(is.MC); latMC = 0.0;
-    EclToEqu(&lonMC, &latMC);
     lonS = Tropical(planet[oSun]);
     latS = planetalt[oSun];
     EclToEqu(&lonS, &latS);
-    lonS = Mod(lonS - lonMC + rDegHalf - Lon);
+    lonS = Mod(lonS - is.lonMC + rDegHalf - Lon);
     for (y1 = 0; y1 < gs.yWin; y1++) {
       yi = !FOdd(gs.yWin) && y1 > yc;
       for (x1 = 0; x1 < gs.xWin; x1++) {
@@ -604,7 +604,7 @@ flag FBmpDrawMap()
           lon = Tropical(lon);
           lat = rDegQuad - lat;
           EclToEqu(&lon, &lat);
-          lon = Mod(lon - lonMC + rDegHalf - Lon);
+          lon = Mod(lon - is.lonMC + rDegHalf - Lon);
           lat = rDegQuad - lat;
         }
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
@@ -625,12 +625,10 @@ flag FBmpDrawMap()
       sint = RSinD(-gs.rTilt);
       cost = RCosD(-gs.rTilt);
     }
-    lonMC = Tropical(is.MC); latMC = 0.0;
-    EclToEqu(&lonMC, &latMC);
     lonS = Tropical(planet[oSun]);
     latS = planetalt[oSun];
     EclToEqu(&lonS, &latS);
-    lonS = Mod(lonS - lonMC + rDegHalf - Lon);
+    lonS = Mod(lonS - is.lonMC + rDegHalf - Lon);
     for (y1 = 0; y1 < gs.yWin; y1++) {
       yi = !FOdd(gs.yWin) && y1 > yc;
       rT = (ryc - (real)y1) / ryc;
@@ -680,7 +678,7 @@ flag FBmpDrawMap()
           lon = Tropical(lon);
           lat = rDegQuad - lat;
           EclToEqu(&lon, &lat);
-          lon = Mod(lon - lonMC + rDegHalf - Lon);
+          lon = Mod(lon - is.lonMC + rDegHalf - Lon);
           lat = rDegQuad - lat;
         }
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
@@ -696,7 +694,7 @@ flag FBmpDrawMap()
 
 #ifdef WINANY
   if (!gi.fFile)
-    BmpCopyWin(bmp, wi.hdc);
+    BmpCopyWin(bmp, wi.hdc, 0, 0);
 #endif
   return fTrue;
 }
@@ -742,7 +740,7 @@ flag FBmpDrawMap2(int x1, int y1, int x2, int y2,
 
 #ifdef WINANY
   if (!gi.fFile)
-    BmpCopyWin(bmp, wi.hdc);
+    BmpCopyWin(bmp, wi.hdc, 0, 0);
 #endif
   return fTrue;
 }
@@ -792,7 +790,7 @@ void WriteXBitmap(FILE *file, CONST char *name, char mode)
           mode == 'N' ? "  " : (mode == 'C' ? " " : ""));
       value = 0;
       for (i = (mode != 'V' ? 7 : 15); i >= 0; i--)
-        value = (value << 1) + (!(GetXY(x+i, y)^
+        value = (value << 1) + (!(BmGetXY(x+i, y)^
           (gs.fInverse*15))^gs.fInverse && (x + i < gs.xWin));
       if (mode == 'N')
         putc(' ', file);
@@ -827,7 +825,7 @@ void WriteAscii(FILE *file)
 
   for (y = 0; y < gs.yWin; y++) {
     for (x = 0; x < gs.xWin; x++) {
-      i = GetXY(x, y);
+      i = BmGetXY(x, y);
       if (gs.fColor)
         putc(ChHex(i), file);
       else
@@ -1130,23 +1128,22 @@ void PsLineWidth(int linewidth)
 
 // Set a system font and size to be used by PostScript text commands.
 
-void PsFont(int psfont)
+void PsFont(int nFont)
 {
+  CONST char *szFont;
   int z;
 
-  if (psfont != gi.nFontPS && gs.nFont > 0) {
-    if (psfont <= 2) {
-      z = psfont == 1 ? 32*PSMUL : 23*PSMUL;
-      fprintf(gi.file, "/Astro[%d 0 0 -%d 0 0]sf\n", z, z);
-    } else if (psfont == 3) {
-      z = 26*PSMUL;
-      fprintf(gi.file, "/Times-Roman[%d 0 0 -%d 0 0]sf\n", z, z);
-    } else {
-      z = 10*PSMUL;
-      fprintf(gi.file, "/Courier[%d 0 0 -%d 0 0]sf\n", z, z);
-    }
-    gi.nFontPS = psfont;
+  if (nFont == gi.nFontPS || gs.nFont == 0)
+    return;
+  szFont = rgszFontName[nFont];
+  z = PSMUL*gi.nScale;
+  if (nFont == fiAstrolog) {
+    szFont = "Times-Roman"; z = 4*PSMUL*gi.nScaleText;
+  } else if (nFont == fiCourier) {
+    szFont = "Courier"; z = 5*PSMUL*gi.nScaleText;
   }
+  fprintf(gi.file, "/%s[%d 0 0 -%d 0 0]sf\n", szFont, z, z);
+  gi.nFontPS = nFont;
 }
 
 
@@ -1179,9 +1176,9 @@ void PsBegin()
     fprintf(gi.file, "%%%%EndProcSet\n");
     fprintf(gi.file, "%%%%Page: 1 1\n");
   }
-  PsFont(2);
+  PsFont(fiAstrolog);
   fprintf(gi.file, "gsave\n");
-  PsLineWidth(gi.nPenWid/2);
+  PsLineWidth(!gs.fThick ? gi.nPenWid/2 : gi.nPenWid*2);
   gi.xPen = -1;
   PrintProgress("Creating PostScript chart file.");
 }
@@ -1191,6 +1188,8 @@ void PsBegin()
 
 void PsEnd()
 {
+  int i;
+
   PsStrokeForce();
   if (gi.fEps)
     fprintf(gi.file, "%%%%EOF\n");
@@ -1199,10 +1198,10 @@ void PsEnd()
     fprintf(gi.file, "%%%%PageTrailer\n");
     fprintf(gi.file, "%%%%Trailer\n");
     fprintf(gi.file, "%%%%DocumentFonts: Times-Roman\n");
-    if (gs.nFont > 0) {
-      fprintf(gi.file, "%%%%+ Courier\n");
-      fprintf(gi.file, "%%%%+ Astro\n");
-    }
+    if (gs.nFont > 0)
+      for (i = 1; i < cFont; i++)
+        fprintf(gi.file, "%%%%+ %s\n",
+          i != fiCourier ? rgszFontName[i] : "Courier");
   }
 }
 #endif // PS
@@ -1237,6 +1236,19 @@ void MetaLong(long l)
 }
 
 
+// Output a string into the metafile buffer stream.
+
+void MetaSz(CONST char *sz)
+{
+  while (*sz) {
+    MetaWord(WFromBB(sz[0], sz[1]));
+    if (sz[1] == chNull)
+      break;
+    sz += 2;
+  }
+}
+
+
 // Output any necessary metafile records to make the current actual settings
 // of line color, fill color, etc, be those that are desired. This is
 // generally called by the primitives routines before any figure record is
@@ -1246,6 +1258,11 @@ void MetaLong(long l)
 
 void MetaSelect()
 {
+  if (gi.pwPoly != NULL) {        // Invalidate PolyLine cache
+    gi.pwPoly = NULL;
+    MetaPoint(gi.xPen, gi.yPen, rgbbmp[gi.kiPoly]);
+    gi.xPen = -1;    
+  }
   if (gi.kiLineDes != gi.kiLineAct) {
     MetaSelectObject(gi.kiLineDes);
     gi.kiLineAct = gi.kiLineDes;
@@ -1266,7 +1283,6 @@ void MetaSelect()
     MetaTextAlign(gi.nAlignDes);
     gi.nAlignAct = gi.nAlignDes;
   }
-  gi.xPen = -1;    // Invalidate PolyLine cache
 }
 
 
@@ -1281,20 +1297,20 @@ void MetaInit()
   gi.pwMetaCur = (word *)gi.bm;
   // Placeable Metaheader
   MetaLong(0x9AC6CDD7L);
-  MetaWord(0);                      // Not used
+  MetaWord(0);                             // Not used
   MetaWord(0); MetaWord(0);
   MetaWord(gs.xWin); MetaWord(gs.yWin);
   MetaWord(gs.xWin/6);                     // Units per inch
-  MetaLong(0L);                     // Not used
+  MetaLong(0L);                            // Not used
   MetaWord(0x9AC6 ^ 0xCDD7 ^ gs.xWin ^ gs.yWin ^ gs.xWin/6);  // Checksum
   // Metaheader
-  MetaWord(1);                      // Metafile type
-  MetaWord(9);                      // Size of header in words
-  MetaWord(0x300);                  // Windows version
-  MetaLong(0L);                     // Size of entire metafile in words
-  MetaWord(16*5+1+(gs.nFont>0)*4);  // Number of objects in metafile
-  MetaLong(17L);                    // Size of largest record in words
-  MetaWord(0);                      // Not used
+  MetaWord(1);                             // Metafile type
+  MetaWord(9);                             // Size of header in words
+  MetaWord(0x300);                         // Windows version
+  MetaLong(0L);                            // Size of entire metafile in words
+  MetaWord(16*5+1+(gs.nFont>0)*(cFont-1)); // Number of objects in metafile
+  MetaLong(17L);                           // Size of largest record in words
+  MetaWord(0);                             // Not used
   // Setup
   MetaEscape(17);
   MetaLong(LFromBB('A', 's', 't', 'r'));  // "Astr"
@@ -1311,7 +1327,7 @@ void MetaInit()
   // Colors
   for (j = 1; j <= 4; j++)
     for (i = 0; i < 16; i++) {
-      k = j <= 1 ? gi.nPenWid : 0;
+      k = (j <= 1 ? gi.nPenWid * (1 + gs.fThick) : 0);
       MetaCreatePen(j <= 2 ? 0 : j-2 /* PS_SOLID; PS_DASH; PS_DOT */,
         k, rgbbmp[i]);
     }
@@ -1320,31 +1336,20 @@ void MetaInit()
   }
   MetaCreateBrush(1 /* BS_NULL */, 0L);
   // Fonts
-  if (gs.nFont > 0) {
-    MetaCreateFont(5, 0, -8*gi.nScale, 2 /* Symbol Charset */);
-    MetaWord(WFromBB(1 /* Draft */, 1 | 0x10 /* Fixed | Roman */));
-    MetaLong(LFromBB('W', 'i', 'n', 'g'));
-    MetaLong(LFromBB('d', 'i', 'n', 'g'));
-    MetaWord(WFromBB('s', 0));
-
-    MetaCreateFont(8, 0, -6*gi.nScale, 0 /* Ansi Charset */);
-    MetaWord(WFromBB(0 /* Default */, 2 | 0x10 /* Variable | Roman */));
-    MetaLong(LFromBB('T', 'i', 'm', 'e'));
-    MetaLong(LFromBB('s', ' ', 'N', 'e'));
-    MetaLong(LFromBB('w', ' ', 'R', 'o'));
-    MetaLong(LFromBB('m', 'a', 'n', 0));
-
-    MetaCreateFont(6, 6*METAMUL, 10*METAMUL, 0 /* Ansi Charset */);
-    MetaWord(WFromBB(1 /* Draft */, 1 | 0x30 /* Fixed | Modern */));
-    MetaLong(LFromBB('C', 'o', 'u', 'r'));
-    MetaLong(LFromBB('i', 'e', 'r', ' '));
-    MetaLong(LFromBB('N', 'e', 'w', 0));
-
-    MetaCreateFont(3, 0, -11*gi.nScale, 0 /* Ansi Charset */);
-    MetaWord(WFromBB(0 /* Default */, 2 | 0 /* Variable | Don't Care */));
-    MetaLong(LFromBB('A', 's', 't', 'r'));
-    MetaLong(WFromBB('o', 0));
-  }
+  if (gs.nFont > 0)
+    for (i = 1; i < cFont; i++) {
+      j = (CchSz(rgszFontName[i]) + 1) >> 1;
+      MetaCreateFont(j, 0, i < fiCourier ? -METAMUL*gi.nScale : yFontT,
+        i == fiWingding ? 2 /* Symbol Charset */ : 0 /* Ansi Charset */);
+      j = (i == fiWingding || i >= fiCourier ?
+        1 /* Draft */ : 0 /* Default */);
+      k = (i == fiWingding || i == fiCourier || i == fiConsolas ?
+          1 /* Fixed */ : 2 /* Variable */) |
+        (i <= fiWingding ? 0x10 /* Roman */ :
+          (i >= fiCourier ? 0x30 /* Modern */ : 0 /* Don't Care */));
+      MetaWord(WFromBB(j, k));
+      MetaSz(rgszFontName[i]);
+    }
   gi.kiLineAct = gi.kiFillAct = gi.nFontAct = gi.kiTextAct = gi.nAlignAct = -1;
 }
 
@@ -1464,7 +1469,7 @@ void WireLine(int x1, int y1, int z1, int x2, int y2, int z2)
 }
 
 
-// Comment me
+// Add a small but still visible dot to the current wireframe file.
 
 void WireSpot(int x, int y, int z)
 {
@@ -1532,15 +1537,11 @@ void WireStar(int x, int y, int z, ES *pes)
 
 void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 {
-  real lonMC, latMC;
-
   // Compute coordinates for a general globe invoked with -XG switch.
 
   if (gi.nMode == gSphere) {
     // Chart sphere coordinates are relative to the local horizon.
-    lonMC = Tropical(is.MC); latMC = 0.0;
-    EclToEqu(&lonMC, &latMC);
-    x1 = Mod(rDegMax - (x1 + lonMC) + rDegQuad);
+    x1 = Mod(rDegMax - (x1 + is.lonMC) + rDegQuad);
     y1 = rDegQuad - y1;
     EquToLocal(&x1, &y1, rDegQuad - Lat);
     y1 = rDegQuad - y1;
@@ -1563,10 +1564,10 @@ void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 // corresponding to them. Like FMapCalc() except for 3D wireframe format.
 
 void WireMapCalc(real x1, real y1, int *xp, int *yp, int *zp, flag fSky,
-  real lonMC, real rT, int rz, real deg)
+  real rT, int rz, real deg)
 {
   if (!fSky)
-    x1 = lonMC - x1;
+    x1 = is.lonMC - x1;
   if (x1 < 0.0)
     x1 += rDegMax;
   if (x1 > rDegHalf)
@@ -1651,8 +1652,7 @@ void WireDrawGlobe(flag fSky, real deg)
   // Compute screen coordinates of each object, if it's even visible.
 
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
-    WireMapCalc(planet1[i], planet2[i], &u, &v, &w, fSky,
-      planet1[oMC], rT, rz, deg);
+    WireMapCalc(planet1[i], planet2[i], &u, &v, &w, fSky, rT, rz, deg);
     X[i] = u;
     Y[i] = v;
     Z[i] = w;
@@ -1680,7 +1680,7 @@ void WireDrawGlobe(flag fSky, real deg)
         x1 = Tropical((real)j);
         y1 = (real)k;
         EclToEqu(&x1, &y1);
-        WireMapCalc(x1, y1, &u, &v, &w, fSky, planet1[oMC], rT, rz, deg);
+        WireMapCalc(x1, y1, &u, &v, &w, fSky, rT, rz, deg);
         WireSpot(u, v, w);
       }
     }
@@ -1721,7 +1721,7 @@ void WireDrawGlobe(flag fSky, real deg)
       x1 = es.lon; y1 = es.lat;
       x1 = Tropical(x1);
       EclToEqu(&x1, &y1);
-      WireMapCalc(x1, y1, &j, &k, &l, fSky, planet1[oMC], rT, rz, deg);
+      WireMapCalc(x1, y1, &j, &k, &l, fSky, rT, rz, deg);
       WireStar(j, k, l, &es);
     }
   }
@@ -1735,7 +1735,7 @@ void WireDrawGlobe(flag fSky, real deg)
       x1 = es.lon; y1 = es.lat;
       x1 = Tropical(x1);
       EclToEqu(&x1, &y1);
-      WireMapCalc(x1, y1, &j, &k, &l, fSky, planet1[oMC], rT, rz, deg);
+      WireMapCalc(x1, y1, &j, &k, &l, fSky, rT, rz, deg);
       WireStar(j, k, l, &es);
     }
   }
@@ -1779,7 +1779,7 @@ void WireDrawGlobe(flag fSky, real deg)
           CoorXform(&x1, &y1, rDegQuad - planet2[i]);
           x1 += planet1[i] + rDegQuad;
         }
-        WireMapCalc(x1, y1, &x, &y, &z, fSky, planet1[oMC], rT, rz, deg);
+        WireMapCalc(x1, y1, &x, &y, &z, fSky, rT, rz, deg);
         if (j > 0)
           WireLine(xold, yold, zold, x, y, z);
         xold = x; yold = y; zold = z;
@@ -1800,7 +1800,7 @@ void WireDrawGlobe(flag fSky, real deg)
         x1 = Mod(x1 + rDegQuad);
         CoorXform(&x1, &y1, rDegQuad + planet2[i]);
         x1 = Mod(x1 - rDegQuad + planet1[i]);
-        WireMapCalc(x1, y1, &x, &y, &z, fSky, planet1[oMC], rT, rz, deg);
+        WireMapCalc(x1, y1, &x, &y, &z, fSky, rT, rz, deg);
         if (j > 0)
           WireLine(xold, yold, zold, x, y, z);
         xold = x; yold = y; zold = z;
@@ -1835,7 +1835,7 @@ void WireChartOrbit()
   // Compute coordinates of planets.
   i = gi.nScale/gi.nScaleT;
   sz = gs.rspace > 0.0 ? gs.rspace : (i <= 1 ? 90.0 : (i == 2 ? 30.0 :
-    (i == 3 ? 6.0 : (gi.nScaleText <= 1 ? 1.0 : 0.006))));
+    (i == 3 ? 6.0 : (gi.nScaleText/2 <= 1 ? 1.0 : 0.006))));
   zWin = Min(gs.xWin, gs.yWin);
   sx = (real)zWin/sz;
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
@@ -1887,9 +1887,10 @@ void WireChartOrbit()
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     DrawColor(kObjB[i]);
     if (!gs.fAlt || i > oVes)
-      j = 3 * gi.nScaleT;
+      j = 0;
     else
-      j = (int)(RLog10(rObjDiam[i]) * (real)gi.nScaleT);
+      j = (int)(RLog10(RObjDiam(i)) * (real)gi.nScaleT);
+    j = Max(j, 3 * gi.nScaleT);
     WireOctahedron(x[i], y[i], z[i], j);
     gi.zDefault = z[i] + (j + 5*gi.nScaleT);
     DrawObject(i, x[i], y[i]);
@@ -2020,7 +2021,7 @@ void WireSphereZodiac(real lon, real lat, int zr, int *xp, int *yp, int *zp)
 
 void WireSphereEarth(real azi, real alt, int zr, int *xp, int *yp, int *zp)
 {
-  azi = Mod(azi + Lon + rDegQuad);
+  azi = Mod(-azi);
   CoorXform(&azi, &alt, rDegQuad - Lat);
   WireSphereLocal(azi + rDegQuad, -alt, zr, xp, yp, zp);
 }
@@ -2034,8 +2035,8 @@ void WireChartSphere()
   char sz[cchSzDef];
   int rgx[objMax], rgy[objMax], rgz[objMax], zGlyph, zGlyph2,
     cChart, iChart, zr, xo = 0, yo = 0, zo = 0, xp, yp, zp, i, j, k, k2, nSav;
-  flag fNoHorizon;
-  real lonMC, latMC;
+  flag fHouse3D = !us.fHouse3D, fNoHorizon;
+  real rT;
   CONST CP *pcp;
   CP cpSav;
 #ifdef SWISS
@@ -2051,11 +2052,7 @@ void WireChartSphere()
   zr = Min(gs.xWin >> 1, gs.yWin >> 1) - zGlyph;
   cChart = 1 +
     (us.nRel <= rcDual) + (us.nRel <= rcTriWheel) + (us.nRel <= rcQuadWheel);
-
-  lonMC = Tropical(is.MC); latMC = 0.0;
-  EclToEqu(&lonMC, &latMC);
-  latMC = Lat;
-  is.lonMC = lonMC; is.latMC = latMC;
+  is.latMC = Lat;
 
   // Draw constellations.
   if (gs.fConstel) {
@@ -2065,7 +2062,7 @@ void WireChartSphere()
   }
 
   // Draw horizon.
-  if (!fNoHorizon || (!gs.fHouseExtra && !us.fHouse3D)) {
+  if (!fNoHorizon || (!gs.fHouseExtra && fHouse3D)) {
     if (!gs.fColorHouse)
       DrawColor(gi.kiOn);
     for (i = 0; i <= nDegMax; i++) {
@@ -2115,23 +2112,42 @@ void WireChartSphere()
     }
   }
 
-  // Draw house wedges and meridian.
+  // Draw 3D house wedges and meridian.
   if (!gs.fColorHouse)
     DrawColor(kDkGreenB);
-  for (j = 30; j < nDegMax; j += (j != 150 ? 30 : 60)) {
-    if (!(!gs.fHouseExtra && !us.fHouse3D) &&
-      !((j == 90 || j == 270) && !fNoHorizon))
+  for (j = -1; j <= cSign; j++) {
+    if (!(!gs.fHouseExtra && fHouse3D) && !(j <= 0 && !fNoHorizon))
       continue;
-    if (gs.fColorHouse)
-      DrawColor(kSignB(j/30 + 1));
+    if (fHouse3D &&
+       ((j == sCap && chouse[j] == is.MC)  ||
+        (j == sCan && chouse[j] == Mod(is.MC  + rDegHalf))))
+      continue;
+    if (fHouse3D && us.nHouse3D == hmPrime &&
+       ((j == sAri && chouse[j] == is.Asc) ||
+        (j == sLib && chouse[j] == Mod(is.Asc + rDegHalf))))
+      continue;
+    if (fHouse3D && us.nHouse3D == hmHorizon &&
+       ((j == sAri && chouse[j] == Mod(is.Vtx + rDegHalf)) ||
+        (j == sLib && chouse[j] == is.Vtx)))
+      continue;
+    if (gs.fColorHouse) {
+      k = j > 0 ? j : (j < 0 ? sCan : sCap);
+      DrawColor(kSignB(k));
+    }
+    rT = j > 0 ? chouse3[j] : (j < 0 ? rDegQuad : 270.0);
     for (i = -90; i <= 90; i++) {
-      WireSpherePrime((real)j, (real)i, zr, &xp, &yp, &zp);
+      if (j <= 0 || us.nHouse3D == hmPrime)
+        WireSpherePrime(rT, (real)i, zr, &xp, &yp, &zp);
+      else if (us.nHouse3D == hmHorizon)
+        WireSphereLocal(rDegQuad - rT, (real)i, zr, &xp, &yp, &zp);
+      else
+        WireSphereEarth(rT, (real)i, zr, &xp, &yp, &zp);
       if (i > -90) {
         WireLine(xo, yo, zo, xp, yp, zp);
-        if ((j == 90 || j == 270) && i % 30 != 0) {
+        if (j <= 0) {
           k = i % 10 == 0 ? 3 : (i % 5 == 0 ? 2 : 1);
           for (k2 = -k; k2 <= k; k2 += (k << 1)) {
-            WireSphereMeridian((real)(j > 180 ? i+180 : 360-i), (real)k2 / 2.0,
+            WireSphereMeridian((real)(j == 0 ? i+180 : 360-i), (real)k2 / 2.0,
               zr, &xo, &yo, &zo);
             WireLine(xo, yo, zo, xp, yp, zp);
           }
@@ -2140,7 +2156,9 @@ void WireChartSphere()
       xo = xp; yo = yp; zo = zp;
     }
   }
-  if (!gs.fHouseExtra && us.fHouse3D)
+
+  // Draw 2D house wedges.
+  if (!gs.fHouseExtra && !fHouse3D)
     for (i = 1; i <= cSign; i++) {
       if (gs.fColorHouse)
         DrawColor(kSignB(i));

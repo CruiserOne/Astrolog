@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: general.cpp
+** Astrolog (Version 7.30) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -113,12 +113,12 @@ flag FEqRgch(CONST char *rgch1, CONST char *rgch2, int cch, flag fInsensitive)
 
   if (!fInsensitive) {
     for (ich = 0; ich < cch; ich++) {
-      if (rgch1[ich] == '\0' || rgch1[ich] != rgch2[ich])
+      if (rgch1[ich] == chNull || rgch1[ich] != rgch2[ich])
         return fFalse;
     }
   } else {
     for (ich = 0; ich < cch; ich++) {
-      if (rgch1[ich] == '\0' || ChCap(rgch1[ich]) != ChCap(rgch2[ich]))
+      if (rgch1[ich] == chNull || ChCap(rgch1[ich]) != ChCap(rgch2[ich]))
         return fFalse;
     }
   }
@@ -191,6 +191,17 @@ void CopyRgb(byte *pbSrc, byte *pbDst, int cb)
 {
   while (cb-- > 0)
     *pbDst++ = *pbSrc++;
+}
+
+
+// Copy a range of characters and zero terminate it. If there are too many
+// characters to fit in the destination buffer, the string is truncated.
+
+void CopyRgchToSz(CONST char *pch, int cch, char *sz, int cchMax)
+{
+  cch = Min(cch, cchMax-1);
+  CopyRgb((byte *)pch, (byte *)sz, cch);
+  sz[cch] = chNull;
 }
 
 
@@ -315,7 +326,7 @@ flag FCompareSzSubI(CONST char *sz1, CONST char *sz2)
 
 void FormatR(char *sz, real r, int n)
 {
-  char szT[8], *pch;
+  char szT[cchSzDef], *pch;
 
   sprintf(szT, "%%.%df", NAbs(n));
   sprintf(sz, szT, r);
@@ -325,6 +336,60 @@ void FormatR(char *sz, real r, int n)
     ;
   // Positive n means ensure at least one fractional digit.
   pch[n > 0 ? 1 + (*pch == '.') : (*pch != '.')] = chNull;
+}
+
+
+// Blend two RGB colors along the specified proportion between them. Returned
+// color ranges from the first color (ratio = 0) to the second (ratio = 1).
+
+KV KvBlend(KV kv1, KV kv2, real rRatio)
+{
+  return Rgb((int)((real)(RgbR(kv2) - RgbR(kv1)) * rRatio) + RgbR(kv1),
+    (int)((real)(RgbG(kv2) - RgbG(kv1)) * rRatio) + RgbG(kv1),
+    (int)((real)(RgbB(kv2) - RgbB(kv1)) * rRatio) + RgbB(kv1));
+}
+
+
+#define rHueMax  rDegMax
+#define rHueHalf rDegHalf
+#define rHue13   120.0
+#define rHue23   240.0
+#define rHue16   60.0
+
+// Return a RGB color of the rainbow given a number 0-360, in which 0 is red,
+// 120 is green, and 240 is blue.
+
+KV KvHue(real deg)
+{
+  int nR, nG, nB;
+  real rDiff;
+
+  while (deg >= rHueMax)
+    deg -= rHueMax;
+  while (deg < 0.0)
+    deg += rHueMax;
+  rDiff = RAbs(deg - rHueHalf);
+  if (rDiff > rHue13)
+    nR = 255;
+  else if (rDiff < rHue16)
+    nR = 0;
+  else
+    nR = NMultDiv((int)(rDiff - rHue16), 255, rHue16);
+  rDiff = RAbs(deg - rHue13);
+  if (rDiff < rHue16)
+    nG = 255;
+  else if (rDiff > rHue13)
+    nG = 0;
+  else
+    nG = NMultDiv((int)(rHue13 - rDiff), 255, rHue16);
+  rDiff = RAbs(deg - rHue23);
+  if (rDiff < rHue16)
+    nB = 255;
+  else if (rDiff > rHue13)
+    nB = 0;
+  else
+    nB = NMultDiv((int)(rHue13 - rDiff), 255, rHue16);
+  return Rgb(nR, nG, nB);
 }
 
 
@@ -785,7 +850,7 @@ void Terminate(int tc)
     sprintf(sz, "%c[0m", chEscape);    // Get out of any Ansi color mode.
     PrintSz(sz);
   }
-  FinalizeProgram();
+  FinalizeProgram(tc != tcOK);
   exit(NAbs(tc));
 }
 
@@ -1310,6 +1375,31 @@ char *SzDegree(real deg)
 }
 
 
+// Compose an Hours:Minutes:Seconds (HMS) time value, given a total number of
+// seconds. For example, 45015 (12*60*60+30*60+15) maps to "+12:30:15"
+
+char *SzHMS(int sec)
+{
+  static char szHMS[10];
+  int hr, min;
+  char ch;
+
+  ch = sec >= 0 ? '+' : '-';
+  sec = NAbs(sec);
+  hr = sec / 3600;
+  min = sec / 60 % 60;
+  sec %= 60;
+  // Don't display seconds or minutes:seconds if they're zero.
+  if (!us.fSeconds && min == 0 && sec == 0)
+    sprintf(szHMS, "%c%d", ch, hr);
+  else if (!us.fSeconds || sec == 0)
+    sprintf(szHMS, "%c%d:%02d", ch, hr, min);
+  else
+    sprintf(szHMS, "%c%d:%02d:%02d", ch, hr, min, sec);
+  return szHMS;
+}
+
+
 // Another string formatter, here return a date string given a month, day, and
 // year. Format with the day or month first based on whether the "European"
 // date variable is set or not. The routine also takes a parameter to indicate
@@ -1534,6 +1624,8 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
     is.fDst = (dh == us.zonDef-1);
     dst = (real)is.fDst;
   }
+  if (zon == zonLMT)
+    zon = us.lonDef / 15.0;
   jd = MdytszToJulian(st.wMonth, st.wDay, st.wYear,
     (real)(((st.wHour * 60 + st.wMinute + us.lTimeAddition) * 60 +
     st.wSecond) * 1000 + st.wMilliseconds) / (60.0 * 60.0 * 1000.0),
@@ -1554,6 +1646,8 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
 #ifdef MACOLD
   curtimer += 8;
 #endif
+  if (zon == zonLMT)
+    zon = us.lonDef / 15.0;
   hr = (real)(curtimer % 24) - (zon - (dst == dstAuto ? 0.0 : dst));
   curtimer /= 24;
   while (hr < 0.0) {

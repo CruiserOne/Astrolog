@@ -18,7 +18,7 @@
    modulo and normalization functions
 
 **************************************************************/
-/* Copyright (C) 1997 - 2008 Astrodienst AG, Switzerland.  All rights reserved.
+/* Copyright (C) 1997 - 2021 Astrodienst AG, Switzerland.  All rights reserved.
   
   License conditions
   ------------------
@@ -34,17 +34,17 @@
   system. The software developer, who uses any part of Swiss Ephemeris
   in his or her software, must choose between one of the two license models,
   which are
-  a) GNU public license version 2 or later
+  a) GNU Affero General Public License (AGPL)
   b) Swiss Ephemeris Professional License
 
   The choice must be made before the software developer distributes software
   containing parts of Swiss Ephemeris to others, and before any public
   service using the developed software is activated.
 
-  If the developer choses the GNU GPL software license, he or she must fulfill
+  If the developer choses the AGPL software license, he or she must fulfill
   the conditions of that license, which includes the obligation to place his
-  or her whole software project under the GNU GPL or a compatible license.
-  See http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+  or her whole software project under the AGPL or a compatible license.
+  See https://www.gnu.org/licenses/agpl-3.0.html
 
   If the developer choses the Swiss Ephemeris Professional license,
   he must follow the instructions as found in http://www.astro.com/swisseph/ 
@@ -2493,10 +2493,10 @@ static TLS double dt[TABSIZ_SPACE] = {
 /* 2010.0 - 2018.0 */
 66.0699, 66.3246, 66.6030, 66.9069, 67.2810, 67.6439, 68.1024, 68.5927, 68.9676, 69.2202,
 /* 2020.0 -        */
-69.3612,
+69.3612, 69.3593,
 /* Extrapolated values: 
  * 2021 - 2028 */
-         69.4271, 70.00,   70.50,   71.00,   71.50,   72.00,   72.50,   73.00,
+                  69.2581,   69.50,   70.00,   70.50,   71.00,   71.50,   72.00,
 };
 
 #define TAB2_SIZ	27
@@ -3235,6 +3235,8 @@ int32 swi_get_tid_acc(double tjd_ut, int32 iflag, int32 denum, int32 *denumret, 
     case 422: *tid_acc = SE_TIDAL_DE422; break;
     case 430: *tid_acc = SE_TIDAL_DE430; break;
     case 431: *tid_acc = SE_TIDAL_DE431; break;
+    case 440: *tid_acc = SE_TIDAL_DE441; break;
+    case 441: *tid_acc = SE_TIDAL_DE441; break;
     default: denum = SE_DE_NUMBER; *tid_acc = SE_TIDAL_DEFAULT; break;
   }
   *denumret = denum;
@@ -4189,7 +4191,7 @@ void CALL_CONV swe_set_astro_models(char *samod, int32 iflag)
   double dversion;
   char s[30], *sp;
   swi_init_swed_if_start();
-  if (*samod != '\0' && isdigit(*samod)) {
+  if (*samod != '\0' && isdigit((int) *samod)) {
     set_astro_models(samod);
   } else if (*samod == '\0' || strncmp(samod, "SE", 2) == 0) {
     strncpy(s, samod, 20);
@@ -4417,21 +4419,29 @@ void CALL_CONV swe_get_astro_models(char *samod, char *sdet, int32 iflag)
     imod = pmodel[i];
     switch(i) {
       case SE_MODEL_PREC_LONGTERM:
-	if (imod == SEMOD_PREC_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_PREC_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_PREC_SHORTTERM:
-	if (imod == SEMOD_PREC_DEFAULT_SHORT) imod = 0; break;
+	if (imod == SEMOD_PREC_DEFAULT_SHORT) imod = 0;
+	break;
       case SE_MODEL_NUT:
-	if (imod == SEMOD_NUT_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_NUT_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_SIDT:
-	if (imod == SEMOD_SIDT_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_SIDT_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_BIAS:
-	if (imod == SEMOD_BIAS_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_BIAS_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_JPLHOR_MODE:
-	if (imod == SEMOD_JPLHOR_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_JPLHOR_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_JPLHORA_MODE:
-	if (imod == SEMOD_JPLHORA_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_JPLHORA_DEFAULT) imod = 0;
+	break;
       case SE_MODEL_DELTAT:
-	if (imod == SEMOD_DELTAT_DEFAULT) imod = 0; break;
+	if (imod == SEMOD_DELTAT_DEFAULT) imod = 0;
+	break;
     }
     sprintf(samod0 + strlen(samod0), "%d,", imod);
   }

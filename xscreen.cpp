@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: xscreen.cpp
+** Astrolog (Version 7.30) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -64,7 +64,7 @@
 #ifdef X11
 // This information used to define Astrolog's X icon (ringed planet with
 // moons) is similar to the output format used by the bitmap program. You
-// could extract this section and run xsetroot -bitmap on it.
+// could extract this section and run "xsetroot -bitmap" on it.
 
 #define icon_width 48
 #define icon_height 48
@@ -261,7 +261,8 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
       break;
     }
     hdc = GetDC(hwnd);
-    hpen = (HPEN)CreatePen(PS_SOLID, 0, (COLORREF)rgbbmp[wi.kiPen]);
+    hpen = (HPEN)CreatePen(PS_SOLID, !gs.fThick ? 0 : 2,
+      (COLORREF)rgbbmp[wi.kiPen]);
     hpenOld = (HPEN)SelectObject(hdc, hpen);
 
     // Ctrl+click means draw a rectangle. Ctrl+Shift+click does ellipse.
@@ -316,6 +317,7 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 void BeginX()
 {
 #ifdef X11
+  gi.fBmp = fFalse;        // Astrolog can't draw 24 bit color bitmaps on X11.
   gi.disp = XOpenDisplay(gs.szDisplay);
   if (gi.disp == NULL) {
     PrintError("Can't open display.");
@@ -479,9 +481,9 @@ void AddTime(CI *pci, int mode, int toadd)
 
   if (m >= 60.0 || m < 0.0 || mode == 3) {
     if (m >= 60.0) {
-      m -= 60.0; toadd = NSgn(toadd);
+      m -= 60.0; toadd = NSgn2(toadd);
     } else if (m < 0.0) {
-      m += 60.0; toadd = NSgn(toadd);
+      m += 60.0; toadd = NSgn2(toadd);
     }
     h += toadd;
   }
@@ -490,9 +492,9 @@ void AddTime(CI *pci, int mode, int toadd)
 
   if (h >= 24 || h < 0 || mode == 4) {
     if (h >= 24) {
-      h -= 24; toadd = NSgn(toadd);
+      h -= 24; toadd = NSgn2(toadd);
     } else if (h < 0) {
-      h += 24; toadd = NSgn(toadd);
+      h += 24; toadd = NSgn2(toadd);
     }
     pci->day = AddDay(pci->mon, pci->day, pci->yea, toadd);
   }
@@ -502,10 +504,10 @@ void AddTime(CI *pci, int mode, int toadd)
   d = DayInMonth(pci->mon, pci->yea);
   if (pci->day > d || pci->day < 1 || mode == 5) {
     if (pci->day > d) {
-      pci->day -= d; toadd = NSgn(toadd);
+      pci->day -= d; toadd = NSgn2(toadd);
     } else if (pci->day < 1) {
       pci->day += DayInMonth(Mod12(pci->mon - 1), pci->yea);
-      toadd = NSgn(toadd);
+      toadd = NSgn2(toadd);
     }
     pci->mon += toadd;
   }
@@ -514,9 +516,9 @@ void AddTime(CI *pci, int mode, int toadd)
 
   if (pci->mon > 12 || pci->mon < 1 || mode == 6) {
     if (pci->mon > 12) {
-      pci->mon -= 12; toadd = NSgn(toadd);
+      pci->mon -= 12; toadd = NSgn2(toadd);
     } else if (pci->mon < 1) {
-      pci->mon += 12; toadd = NSgn(toadd);
+      pci->mon += 12; toadd = NSgn2(toadd);
     }
     pci->yea += toadd;
   }
@@ -711,16 +713,17 @@ void InteractX()
   PAINTSTRUCT ps;
   MSG msg;
 #endif
-  int fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse,
-    fBreak = fFalse, fPause = fFalse, fCast = fFalse, xcorner = 7,
-    mousex = -1, mousey = -1, buttonx = -1, buttony = -1, dir = 1,
-    length, key, i;
+  int fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse, fBreak = fFalse,
+    fPause = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
+    buttonx = -1, buttony = -1, dir = 1, length, key, i;
   KI coldrw = gi.kiLite;
 
   neg(gs.nAnim);
   while (!fBreak) {
     gi.nScale = gs.nScale/100;
-    gi.nScaleText = gs.nScaleText/100;
+    gi.nScaleText = gs.nScaleText/50;
+    if (gs.nFont/10000 == 0)
+      gi.nScaleText &= ~1;
 #ifdef WCLI
     if (wi.fDoResize) {
       wi.fDoResize = fFalse;
@@ -766,7 +769,7 @@ void InteractX()
     } else {
       if (gs.fKeepSquare && fSquare) {
         if (fSidebar)
-          gs.xWin -= SIDESIZE * gi.nScaleText;
+          gs.xWin -= (SIDESIZE * gi.nScaleText) >> 1;
         if (gs.xWin != gs.yWin) {
           i = Min(gs.xWin, gs.yWin);
           i = Max(i, BITMAPX1);
@@ -774,7 +777,7 @@ void InteractX()
           fResize = fTrue;
         }
         if (fSidebar)
-          gs.xWin += SIDESIZE * gi.nScaleText;
+          gs.xWin += (SIDESIZE * gi.nScaleText) >> 1;
       }
       if (gs.xWin < BITMAPX1) {
         gs.xWin = BITMAPX1;
@@ -1417,7 +1420,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 #endif
 
   case 'M':
-    if (FBetween(ch1, '1', '4')) {
+    if (FBetween(ch1, '1', '0' + cRing)) {
       i = (ch1 - '0') + (ch2 == '0');
       if (FErrorArgc("XM", argc, i))
         return tcError;
@@ -1515,9 +1518,9 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       darg++;
     } else
       j = i;
-    if (FErrorValN("Xw", !FValidGraphx(i), i, 1))
+    if (FErrorValN("Xw", !FValidGraphX(i), i, 1))
       return tcError;
-    if (FErrorValN("Xw", !FValidGraphy(j), j, 2))
+    if (FErrorValN("Xw", !FValidGraphY(j), j, 2))
       return tcError;
     gs.xWin = i; gs.yWin = j;
     darg++;
@@ -1542,9 +1545,14 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     i = NFromSz(argv[1]);
     if (i < 100)
       i *= 100;
-    if (FErrorValN("XS", !FValidScale(i), i, 0))
+    if (FErrorValN("XS", !FValidScaleText(i), i, 0))
       return tcError;
     gs.nScaleText = i;
+    gi.nScaleText = gs.nScaleText/50;    // Refresh so changing -XS works
+    if (gs.nFont/10000 == 0)
+      gi.nScaleText &= ~1;
+    gi.nScaleTextT2 = gi.nScaleText * gi.nScaleT;
+    gi.nScaleTextT = gi.nScaleTextT2 >> 1;
     darg++;
     break;
 
@@ -1562,6 +1570,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 
   case 'u':
     SwitchF(gs.fBorder);
+    break;
+
+  case 'x':
+    SwitchF(gs.fThick);
     break;
 
   case 'l':
@@ -1648,6 +1660,14 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     darg++;
     break;
 #endif
+
+  case 'v':
+    if (FErrorArgc("Xv", argc, 1))
+      return tcError;
+    i = NFromSz(argv[1]);
+    gs.nDecaFill = i;
+    darg++;
+    break;
 
   case 'X':
     if (argc > 1 && ((rT = RFromSz(argv[1])) || argv[1][0] == '0')) {
@@ -1846,6 +1866,13 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     }
     break;
 
+  case 't':
+    if (FErrorArgc("YXt", argc, 1))
+      return tcError;
+    gs.szSidebar = SzPersist(argv[1]);
+    darg++;
+    break;
+
   case 'g':
     if (FErrorArgc("YXg", argc, 1))
       return tcError;
@@ -1972,10 +1999,14 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (FErrorArgc("YXf", argc, 1))
       return tcError;
     i = NFromSz(argv[1]);
-    gs.nFont = (FBetween(i/1000, 0, 6) ? i/1000 : gs.nFont/1000)*1000 +
-      (FBetween(i/100%10, 0, 6) ? i/100%10 : gs.nFont/100%10)*100 +
-      (FBetween(i/10%10, 0, 6) ? i/10%10 : gs.nFont/10%10)*10 +
-      (FBetween(i%10, 0, 6) ? i%10 : gs.nFont%10);
+    if (FErrorValN("YXf", !FBetween(i, 0, 99999), i, 0))
+      return tcError;
+    gs.nFont =
+      (rgszFontAllow[0][i/10000]   > '-' ? i/10000   : gs.nFont/10000)*10000 +
+      (rgszFontAllow[1][i/1000%10] > '-' ? i/1000%10 : gs.nFont/1000%10)*1000 +
+      (rgszFontAllow[2][i/100%10]  > '-' ? i/100%10  : gs.nFont/100%10)*100 +
+      (rgszFontAllow[3][i/10%10]   > '-' ? i/10%10   : gs.nFont/10%10)*10 +
+      (rgszFontAllow[4][i%10]      > '-' ? i%10      : gs.nFont%10);
     if (gs.nFont != 0)
       gi.nFontPrev = gs.nFont;
     darg++;
@@ -2025,6 +2056,7 @@ int DetectGraphicsChartMode()
   else if (us.fAstroGraph)           nMode = gAstroGraph;
   else if (us.fCalendar)             nMode = gCalendar;
   else if (us.fEphemeris)            nMode = gEphemeris;
+  else if (us.fHorizonSearch)        nMode = gRising;
   else if (us.fAtlasNear)            nMode = gLocal;
   else if (us.fInDayGra)             nMode = gTraTraGra;
   else if (us.fTransitGra)           nMode = gTraNatGra;
@@ -2048,9 +2080,21 @@ flag FActionX()
 #ifdef PS
   gi.fEps = !gs.fPSComplete;
 #endif
-
   if (gi.nMode == 0)
     gi.nMode = DetectGraphicsChartMode();
+
+  gi.nScaleT = gs.ft == ftPS ? PSMUL : (gs.ft == ftWmf ? METAMUL :
+    (gs.ft == ftWire ? WIREMUL : 1));
+#ifdef WIN
+  if (wi.hdcPrint != hdcNil)
+    gi.nScaleT = METAMUL;
+#endif
+  gi.nScale = gs.nScale/100;
+  gi.nScaleText = gs.nScaleText/50;
+  if (gs.nFont/10000 == 0)
+    gi.nScaleText &= ~1;
+  gi.nScaleTextT2 = gi.nScaleText * gi.nScaleT;
+  gi.nScaleTextT = gi.nScaleTextT2 >> 1;
 
   // Determine the pixel size the graphics chart is to have.
 
@@ -2068,13 +2112,13 @@ flag FActionX()
 #ifdef WIN
     if (wi.hdcPrint == hdcNil) {
       if (fSidebar)
-        gs.xWin -= SIDESIZE * gi.nScaleText;
+        gs.xWin -= (SIDESIZE * gi.nScaleText) >> 1;
 #endif
       n = Min(gs.xWin, gs.yWin);
       gs.xWin = gs.yWin = n;
 #ifdef WIN
       if (fSidebar)
-        gs.xWin += SIDESIZE * gi.nScaleText;
+        gs.xWin += (SIDESIZE * gi.nScaleText) >> 1;
     }
 #endif
   } else if (fMap) {
@@ -2083,15 +2127,8 @@ flag FActionX()
   }
 #ifdef WIN
   if (fSidebar)
-    gs.xWin -= SIDESIZE;
+    gs.xWin -= (SIDESIZE * gi.nScaleText) >> 1;
 #endif
-  gi.nScaleT = gs.ft == ftPS ? PSMUL : (gs.ft == ftWmf ? METAMUL :
-    (gs.ft == ftWire ? WIREMUL : 1));
-#ifdef WIN
-  if (wi.hdcPrint != hdcNil)
-    gi.nScaleT = METAMUL;
-#endif
-  gi.nScaleTextT = gi.nScaleText * gi.nScaleT;
 
   if (gi.fFile) {
     if (!BeginFileX())
@@ -2104,7 +2141,7 @@ flag FActionX()
     if (gs.yWin == 0)
       gs.yWin = DEFAULTY;
     if (fSidebar)
-      gs.xWin += SIDESIZE;
+      gs.xWin += (SIDESIZE * gi.nScaleText) >> 1;
     if (gs.xWin > BITMAPX)
       gs.xWin = BITMAPX;
     if (gs.yWin > BITMAPY)
@@ -2163,7 +2200,7 @@ flag FActionX()
         gs.yWin = DEFAULTY;
       SquareX(&gs.xWin, &gs.yWin, fFalse);
     } else if (fSidebar)
-      gs.xWin += SIDESIZE;
+      gs.xWin += (SIDESIZE * gi.nScaleText) >> 1;
     BeginX();
   }
 #endif // ISG

@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.20) File: xcharts1.cpp
+** Astrolog (Version 7.30) File: xcharts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2021 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/11/2021.
+** Last code change made 9/10/2021.
 */
 
 #include "astrolog.h"
@@ -102,18 +102,14 @@ void XChartWheel()
 
   // Go draw the outer sign and house rings.
 
-  DrawWheel(xsign, xhouse, cx, cy, unitx, unity,
-    0.65, 0.70, 0.75, 0.80, 0.875);
-
-  for (i = 0; i <= is.nObj; i++)    // Figure out where to put planet glyphs.
-    symbol[i] = xplanet[i];
-  FillSymbolRing(symbol, 1.0);
+  DrawWheel(xsign, xhouse, cx, cy, unitx, unity, 0.65, 0.75, 0.80);
 
   // For each planet, draw a small dot indicating where it is, and then a
   // line from that point to the planet's glyph.
 
-  DrawSymbolRing(symbol, xplanet, ret, cx, cy, unitx, unity,
-    0.50, 0.52, 0.56, 0.60);
+  DrawRing(1, 1, xplanet, symbol, cx, cy, 0.0, 0.0, 0.0,
+    0.50, 0.52, 0.56, 0.60, 1.0);
+  FProcessCommandLine(szWheelX[0]);
 
   // Draw lines connecting planets which have aspects between them.
 
@@ -188,9 +184,8 @@ void XChartAstroGraph()
 
   // Calculate zenith locations of each planet.
 
-  j = Max(is.nObj, oMC);
-  for (i = 0; i <= j; i++) if (!ignore[i] || i == oMC) {
-    planet1[i] = Tropical(i == oMC ? is.MC : planet[i]);
+  for (i = 0; i <= is.nObj; i++) if (!ignore[i]) {
+    planet1[i] = Tropical(planet[i]);
     planet2[i] = planetalt[i];
     EclToEqu(&planet1[i], &planet2[i]);
   }
@@ -200,7 +195,7 @@ void XChartAstroGraph()
   if (lon < 0.0)
     lon += rDegMax;
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
-    x = planet1[oMC]-planet1[i];
+    x = is.lonMC - planet1[i];
     if (x < 0.0)
       x += rDegMax;
     if (x > rDegHalf)
@@ -238,7 +233,7 @@ void XChartAstroGraph()
   // Now, normally (unless are in bonus chart mode) will go on to draw the
   // the Ascendant and Descendant lines here.
 
-  longm = Mod(planet1[oMC] + lon);
+  longm = Mod(is.lonMC + lon);
   if (!gs.fAlt && (!ignorez[arAsc] || !ignorez[arDes]))
   for (i = 1; i <= is.nObj; i++) if (FProper(i)) {
     xold1 = xold2 = nNegative;
@@ -430,7 +425,7 @@ void XChartGrid()
 
   nScale = gi.nScale/gi.nScaleT;
   unit = CELLSIZE*gi.nScale; siz = gi.nGridCell*unit;
-  sprintf(szT, "");
+  *szT = chNull;
   i = us.fSmartCusp; us.fSmartCusp = fFalse;
   if (!FCreateGrid(gs.fAlt))
     return;
@@ -497,7 +492,7 @@ void XChartGrid()
               if (nScale == 3)
                 sz[7] = chNull;
             } else
-              sprintf(sz, "");
+              *sz = chNull;
 
           // For the midpoint portion, print the degrees and minutes.
           } else if (gs.fAlt ? x < y : x > y)
@@ -517,8 +512,9 @@ void XChartGrid()
 }
 
 
-// Translate zodiac position to chart pixel coordinates representing local
-// horizon position, for the rectangular -Z -X switch chart.
+// Translate zodiac position (or other type of coordinates) into chart pixel
+// coordinates representing local horizon position, for the rectangular
+// -Z -X switch chart.
 
 void PlotHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
   int *xp, int *yp)
@@ -568,6 +564,22 @@ void EclToHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
     PlotHorizon(lon, lat, x1, y1, xs, ys, xp, yp);
 }
 
+void PriToHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
+  int *xp, int *yp)
+{
+  lon = rDegMax - lon;
+  CoorXform(&lon, &lat, rDegQuad);
+  LocToHorizon(lon, lat, x1, y1, xs, ys, xp, yp);
+}
+
+void EarToHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
+  int *xp, int *yp)
+{
+  lon = Mod(lon + rDegHalf);
+  CoorXform(&lon, &lat, rDegQuad - Lat);
+  LocToHorizon(Mod(lon - rDegHalf), lat, x1, y1, xs, ys, xp, yp);
+}
+
 
 // Draw the local horizon, and draw in the planets where they are at the time
 // in question, as done when the -Z is combined with the -X switch.
@@ -575,10 +587,10 @@ void EclToHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
 void XChartHorizon()
 {
   int cx, cy, unit, x1, y1, x2, y2, xs, ys, xp, yp, i, j, k;
-  real lonM, latM, lonH, latH, rT;
+  real rT;
   ObjDraw rgod[objMax];
   char sz[cchSzDef];
-  flag fFlip = gs.fEcliptic && us.rHarmonic < 0.0;
+  flag fHouse3D = !us.fHouse3D, fFlip = gs.fEcliptic && us.rHarmonic < 0.0;
 #ifdef CONSTEL
   int m1, n1, m2, n2, xpT, ypT;
 #endif
@@ -595,10 +607,7 @@ void XChartHorizon()
   // Calculate the local horizon coordinates of each planet. First convert
   // zodiac position and declination to zenith longitude and latitude.
 
-  lonM = Tropical(is.MC); latM = 0.0;
-  EclToEqu(&lonM, &latM);
-  latM = Lat;
-  is.lonMC = lonM; is.latMC = latM;
+  is.latMC = Lat;
   ClearB((pbyte)rgod, sizeof(rgod));
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     EclToHorizon(planet[i], planetalt[i], x1, y1, xs, ys,
@@ -614,8 +623,7 @@ void XChartHorizon()
       rT = RObjDiam(i);
       if (rT <= 0.0)
         continue;
-      rT = RAtnD((rT / 2.0) /
-        (RLength3(space[i].x, space[i].y, space[i].z) * rAUToKm));
+      rT = RAtnD((rT / 2.0) / (PtLen(space[i]) * rAUToKm));
       j = (int)(rT * (real)xs / rDegMax);
       k = (int)(rT * (real)ys / rDegHalf);
       if (j > 1 || k > 1) {
@@ -688,23 +696,46 @@ void XChartHorizon()
   if (gs.fHouseExtra) {
     if (!gs.fColorHouse)
       DrawColor(kDkGreenB);
-    if (!us.fHouse3D) {
-      for (j = 1 + !gs.fEcliptic; j <= cSign;
-        j += (!gs.fEcliptic && j%3 == 0 ? 2 : 1)) {
+    if (fHouse3D) {
+      for (j = 1; j <= cSign; j++) {
+        if (!gs.fEcliptic) {
+          if ((j == sCap && FSameR(chouse[j], is.MC)) ||
+              (j == sCan && FSameR(chouse[j], Mod(is.MC  + rDegHalf))))
+            continue;
+          if (us.nHouse3D == hmPrime &&
+             ((j == sAri && FSameR(chouse[j], is.Asc)) ||
+              (j == sLib && FSameR(chouse[j], Mod(is.Asc + rDegHalf)))))
+            continue;
+          if (us.nHouse3D == hmHorizon &&
+             ((j == (Lat >= 0.0 ? sAri : sLib) &&
+                FSameR(chouse[j], Mod(is.Vtx + rDegHalf))) ||
+              (j == (Lat >= 0.0 ? sLib : sAri) && FSameR(chouse[j], is.Vtx))))
+            continue;
+        }
         if (gs.fColorHouse)
           DrawColor(kSignB(j));
-        for (i = 0; i < nDegHalf; i++) {
-          lonH = (real)(i + !FBetween(j, sCan, sSag)*180); latH = 0.0;
-          k = (j < sCan ? j-1 : (j < sCap ? j-7 : j-13))*30;
-          CoorXform(&lonH, &latH, (real)k);
-          LocToHorizon(Mod(lonH + rDegQuad), latH, x1, y1, xs, ys, &xp, &yp);
+        rT = chouse3[j];
+        if (us.nHouse3D == hmHorizon)
+          rT = (rT + rDegQuad) * (Lat < 0.0 ? -1.0 : 1.0) - rDegQuad;
+        for (i = -89; i < 90; i++) {
+          if (us.nHouse3D == hmPrime)
+            PriToHorizon(rT, i, x1, y1, xs, ys, &xp, &yp);
+          else if (us.nHouse3D == hmHorizon)
+            LocToHorizon(rT, i, x1, y1, xs, ys, &xp, &yp);
+          else
+            EarToHorizon(rT, i, x1, y1, xs, ys, &xp, &yp);
           DrawPoint(xp, yp);
         }
       }
       for (i = 1; i <= cSign; i++) {
-        xp = FBetween(i, sCan, sSag) * nDegHalf;
-        yp = i < sCan ? 15-30*i : (i < sCap ? 30*i-195 : 375-30*i);
-        LocToHorizon((real)xp, (real)yp, x1, y1, xs, ys, &xp, &yp);
+        rT = Midpoint(chouse3[i], chouse3[Mod12(i+1)]);
+        if (us.nHouse3D == hmPrime)
+          PriToHorizon(rT, 0.0, x1, y1, xs, ys, &xp, &yp);
+        else if (us.nHouse3D == hmHorizon) {
+          rT = (rT + rDegQuad) * (Lat < 0.0 ? -1.0 : 1.0) - rDegQuad;
+          LocToHorizon(rT, 0.0, x1, y1, xs, ys, &xp, &yp);
+        } else
+          EarToHorizon(rT, 0.0, x1, y1, xs, ys, &xp, &yp);
         if (gs.fColorHouse)
           DrawColor(kSignB(i));
         DrawHouse(i, xp, yp);
@@ -735,7 +766,7 @@ void XChartHorizon()
   // due east, the right line due west, and the edges due north. A fourth
   // horizontal line divides that which is above and below the horizon.
 
-  if (gs.fHouseExtra && !us.fHouse3D && !gs.fEcliptic) {
+  if (gs.fHouseExtra && fHouse3D && !gs.fEcliptic) {
     DrawColor(gs.fColorHouse ? kSignB(sCap) : kDkGreenB);
     DrawDash(cx, y1, cx, cy, 1);
     DrawColor(gs.fColorHouse ? kSignB(sCan) : kDkGreenB);
@@ -743,7 +774,7 @@ void XChartHorizon()
   }
   if (!(us.fVedic && gs.fEcliptic)) {
     DrawColor(gi.kiGray);
-    if (!(gs.fHouseExtra && !us.fHouse3D && !gs.fEcliptic))
+    if (!(gs.fHouseExtra && fHouse3D && !gs.fEcliptic))
       DrawDash(cx, y1, cx, y2, 1);
     DrawDash((cx+x1)/2, y1, (cx+x1)/2, y2, 1);
     DrawDash((cx+x2)/2, y1, (cx+x2)/2, y2, 1);
@@ -751,7 +782,7 @@ void XChartHorizon()
   DrawColor(gi.kiOn);
   DrawEdge(x1, y1, x2, y2);
   if (!(us.fVedic && gs.fEcliptic)) {
-    if (gs.fHouseExtra && !us.fHouse3D) {
+    if (gs.fHouseExtra && fHouse3D) {
       if (gs.fColorHouse)
         DrawColor(kSignB(sAri));
       DrawDash(x1, cy, cx, cy, 1);
@@ -829,8 +860,9 @@ void XChartHorizon()
 }
 
 
-// Translate zodiac position to chart pixel coordinates representing local
-// horizon position, for the circular -Z0 -X switch chart.
+// Translate zodiac position (or other type of coordinates) into chart pixel
+// coordinates representing local horizon position, for the circular -Z0 -X
+// switch chart.
 
 void PlotHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
 {
@@ -887,6 +919,20 @@ void EclToHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
     PlotHorizonSky(lon, lat, pcr, xp, yp);
 }
 
+void PriToHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
+{
+  lon = rDegMax - lon;
+  CoorXform(&lon, &lat, rDegQuad);
+  LocToHorizonSky(lon, lat, pcr, xp, yp);
+}
+
+void EarToHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
+{
+  lon = Mod(lon + rDegHalf);
+  CoorXform(&lon, &lat, rDegQuad - Lat);
+  LocToHorizonSky(Mod(lon - rDegHalf), lat, pcr, xp, yp);
+}
+
 
 // Draw the local horizon, and draw in the planets where they are at the time
 // time in question. This chart is done when the -Z0 is combined with the
@@ -898,9 +944,10 @@ void EclToHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
 void XChartHorizonSky()
 {
   int cx, cy, rx, ry, unit, x1, y1, x2, y2, xs, ys, xp, yp, i, j, k;
-  real lonM, latM, lonH, latH, s, rT;
+  real s, rT;
   CIRC cr;
   ObjDraw rgod[objMax];
+  flag fHouse3D = !us.fHouse3D;
 #ifdef CONSTEL
   int m1, n1, m2, n2, xpT, ypT;
 #endif
@@ -919,10 +966,7 @@ void XChartHorizonSky()
   // Calculate the local horizon coordinates of each planet. First convert
   // zodiac position and declination to zenith longitude and latitude.
 
-  lonM = Tropical(is.MC); latM = 0.0;
-  EclToEqu(&lonM, &latM);
-  latM = Lat;
-  is.lonMC = lonM; is.latMC = latM;
+  is.latMC = Lat;
   ClearB((pbyte)rgod, sizeof(rgod));
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     EclToHorizonSky(planet[i], planetalt[i], &cr, &rgod[i].x, &rgod[i].y);
@@ -937,8 +981,7 @@ void XChartHorizonSky()
       rT = RObjDiam(i);
       if (rT <= 0.0)
         continue;
-      rT = RAtnD((rT / 2.0) /
-        (RLength3(space[i].x, space[i].y, space[i].z) * rAUToKm));
+      rT = RAtnD((rT / 2.0) / (PtLen(space[i]) * rAUToKm));
       j = (int)(rT * (real)rx * 2.0 * rPi / rDegMax);
       k = (int)(rT * (real)ry * 2.0 * rPi / rDegMax);
       if (j > 1 || k > 1) {
@@ -1009,23 +1052,46 @@ void XChartHorizonSky()
   if (gs.fHouseExtra) {
     if (!gs.fColorHouse)
       DrawColor(kDkGreenB);
-    if (!us.fHouse3D) {
-      for (j = 1 + !gs.fEcliptic; j <= cSign;
-        j += (!gs.fEcliptic && j%3 == 0 ? 2 : 1)) {
+    if (fHouse3D) {
+      for (j = 1; j <= cSign; j++) {
+        if (!gs.fEcliptic) {
+          if ((j == sCap && FSameR(chouse[j], is.MC)) ||
+              (j == sCan && FSameR(chouse[j], Mod(is.MC  + rDegHalf))))
+            continue;
+          if (us.nHouse3D == hmPrime &&
+             ((j == sAri && FSameR(chouse[j], is.Asc)) ||
+              (j == sLib && FSameR(chouse[j], Mod(is.Asc + rDegHalf)))))
+            continue;
+          if (us.nHouse3D == hmHorizon &&
+             ((j == (Lat >= 0.0 ? sAri : sLib) &&
+                FSameR(chouse[j], Mod(is.Vtx + rDegHalf))) ||
+              (j == (Lat >= 0.0 ? sLib : sAri) && FSameR(chouse[j], is.Vtx))))
+            continue;
+        }
         if (gs.fColorHouse)
           DrawColor(kSignB(j));
-        for (i = 0; i < nDegHalf; i++) {
-          lonH = (real)(i + !FBetween(j, sCan, sSag)*180); latH = 0.0;
-          k = (j < sCan ? j-1 : (j < sCap ? j-7 : j-13))*30;
-          CoorXform(&lonH, &latH, (real)k);
-          LocToHorizonSky(Mod(lonH + rDegQuad), latH, &cr, &xp, &yp);
+        rT = chouse3[j];
+        if (us.nHouse3D == hmHorizon)
+          rT = (rT + rDegQuad) * (Lat < 0.0 ? -1.0 : 1.0) - rDegQuad;
+        for (i = -89; i < 90; i++) {
+          if (us.nHouse3D == hmPrime)
+            PriToHorizonSky(rT, i, &cr, &xp, &yp);
+          else if (us.nHouse3D == hmHorizon)
+            LocToHorizonSky(rT, i, &cr, &xp, &yp);
+          else
+            EarToHorizonSky(rT, i, &cr, &xp, &yp);
           DrawPoint(xp, yp);
         }
       }
       for (i = 1; i <= cSign; i++) {
-        xp = FBetween(i, sCan, sSag) * nDegHalf;
-        yp = i < sCan ? 15-30*i : (i < sCap ? 30*i-195 : 375-30*i);
-        LocToHorizonSky((real)xp, (real)yp, &cr, &xp, &yp);
+        rT = Midpoint(chouse3[i], chouse3[Mod12(i+1)]);
+        if (us.nHouse3D == hmPrime)
+          PriToHorizonSky(rT, 0.0, &cr, &xp, &yp);
+        else if (us.nHouse3D == hmHorizon) {
+          rT = (rT + rDegQuad) * (Lat < 0.0 ? -1.0 : 1.0) - rDegQuad;
+          LocToHorizonSky(rT, 0.0, &cr, &xp, &yp);
+        } else
+          EarToHorizonSky(rT, 0.0, &cr, &xp, &yp);
         if (gs.fColorHouse)
           DrawColor(kSignB(i));
         DrawHouse(i, xp, yp);
@@ -1186,6 +1252,21 @@ void EclToTelescope(real lon, real lat, TELE *pte,
     PlotTelescope(lon, lat, pte, xp, yp, xr, yr);
 }
 
+void PriToTelescope(real lon, real lat, TELE *pte,
+  int *xp, int *yp, real *xr, real *yr)
+{
+  lon = rDegMax - lon;
+  CoorXform(&lon, &lat, rDegQuad);
+  LocToTelescope(lon, lat, pte, xp, yp, xr, yr);
+}
+
+void EarToTelescope(real lon, real lat, TELE *pte,
+  int *xp, int *yp, real *xr, real *yr)
+{
+  CoorXform(&lon, &lat, rDegQuad - Lat);
+  LocToTelescope(lon, -lat, pte, xp, yp, xr, yr);
+}
+
 
 // Draw a chart depicting a telescope view of the sky, showing planetary disks
 // (including moon phases), as done with the -XZ switch. This is similar to a
@@ -1197,7 +1278,7 @@ void XChartTelescope()
   int rgobj[objMax+1], xunit, yunit, x1, y1, x2, y2, xs, ys, xc, yc, xp, yp,
     xT, yT, xd, yd, i, j, k, i0, i1, i2, iEar, iMoo, dx, dy = 0, nEclipse,
     zLimit, nSav;
-  real rglen[objMax+1], lonM, latM, lonH, latH, xBase, yBase, xScale, yScale,
+  real rglen[objMax+1], lonH, latH, xBase, yBase, xScale, yScale,
     xBase2, yBase2, xScale2, yScale2, xi, yi, diam, radi, rRatio, len, ang,
     xo, yo, xr, yr, zr, xrSun, yrSun, xrT, yrT,
     radiS, radiE, radiM, radiU, radiP, lenS, lenM, theta, rPct;
@@ -1212,20 +1293,24 @@ void XChartTelescope()
 #endif
   // Variables for Saturn's rings
   real radi2, len2, ang2, theta2, dRing, xr2, yr2, radi3;
-  int iSat, xT2, yT2, xd2, yd2, xp2, yp2, xT3, yT3, xd3, yd3;
+  int iSat, iUra, xT2, yT2, xd2, yd2, xp2, yp2, xT3, yT3, xd3, yd3;
   PT3R ptSat, ptCen, vS2C, vCross, vBest, vUp, vLeft;
 
   // Initialize variables.
-  lonM = Tropical(is.MC); latM = 0.0;
-  EclToEqu(&lonM, &latM);
-  latM = Lat;
-  is.lonMC = lonM; is.latMC = latM;
+  is.latMC = Lat;
   iSat = !ignore[oSaC] ? oSaC :
 #ifdef SWISS
     (!ignore[oVul] && rgTypSwiss[oVul - custLo] == 3 &&
     rgObjSwiss[oVul - custLo] == 699 ? oVul : oSat);
 #else
     oSat;
+#endif
+  iUra = !ignore[oUrC] ? oUrC :
+#ifdef SWISS
+    (!ignore[oVul] && rgTypSwiss[oVul - custLo] == 3 &&
+    rgObjSwiss[oVul - custLo] == 799 ? oVul : oUra);
+#else
+    oUra;
 #endif
   iEar = oEar; iMoo = oMoo; fShowUmbra = fFalse;
   if (us.objCenter == oEar) {
@@ -1377,15 +1462,22 @@ void XChartTelescope()
     if (!gs.fColorHouse)
       DrawColor(kDkGreenB);
     if (!us.fHouse3D) {
-      for (j = 1 + gs.fEquator; j <= cSign;
-        j += (gs.fEquator && j%6 == 0 ? 2 : 1)) {
+      // 3D house boundaries defined by prime vertical or other wedges.
+      k = (us.nHouse3D == hmPrime && gs.fEquator && FSameR(chouse[1], is.Asc));
+      for (j = 1 + k; j <= cSign; j += (k && j%6 == 0 ? 2 : 1)) {
         if (gs.fColorHouse)
           DrawColor(kSignB(j));
+        lonH = chouse3[j];
+        if (us.nHouse3D == hmHorizon)
+          lonH = (lonH + rDegQuad) * (Lat < 0.0 ? -1.0 : 1.0) - rDegQuad;
         for (i = 0; i <= nDegHalf; i++) {
-          lonH = (real)(i + !FBetween(j, sCan, sSag)*180); latH = 0.0;
-          k = (j < sCan ? j-1 : (j < sCap ? j-7 : j-13))*30;
-          CoorXform(&lonH, &latH, (real)k);
-          LocToTelescope(Mod(lonH + rDegQuad), latH, &te, &xp, &yp, &xr, &yr);
+          latH = (real)i - rDegQuad;
+          if (us.nHouse3D == hmPrime)
+            PriToTelescope(lonH, latH, &te, &xp, &yp, &xr, &yr);
+          else if (us.nHouse3D == hmHorizon)
+            LocToTelescope(lonH, latH, &te, &xp, &yp, &xr, &yr);
+          else
+            EarToTelescope(lonH, latH, &te, &xp, &yp, &xr, &yr);
           if (i > 0 && NAbs(xp - xT) < dx)
             if (FDrawClip(xT, yT, xp, yp, x1, y1, x2, y2, 0, &xd, &yd))
               DrawHouse(j, xd + ((xd == x1)-(xd == x2))*gi.nScale*6,
@@ -1394,6 +1486,7 @@ void XChartTelescope()
         }
       }
     } else {
+      // Standard 2D house boundaries defined by ecliptic wedges only.
       for (k = 1; k <= cSign; k++) {
         if (gs.fColorHouse)
           DrawColor(kSignB(SFromZ(chouse[k])));
@@ -1435,7 +1528,7 @@ void XChartTelescope()
         if (!(fShowUmbra && i == iEar)) {
           // Calculate object's radius and angular size in sky.
           radi /= 2.0;
-          len = RLength3(space[i].x, space[i].y, space[i].z) * rAUToKm;
+          len = PtLen(space[i]) * rAUToKm;
           ang = RAtnD(radi / len);
         } else {
           // Earth object in geocentric chart is Earth's shadow.
@@ -1444,8 +1537,8 @@ void XChartTelescope()
           radiS = rObjDiam[oSun] / 2.0;
           radiE = rObjDiam[iEar] / 2.0;
           radiM = rObjDiam[iMoo] / 2.0;
-          lenS = RLength3(space[oSun].x, space[oSun].y, space[oSun].z);
-          lenM = RLength3(space[iMoo].x, space[iMoo].y, space[iMoo].z);
+          lenS = PtLen(space[oSun]);
+          lenM = PtLen(space[iMoo]);
           lenS *= rAUToKm; lenM *= rAUToKm;
 
           theta = RAsinD((radiS - radiE) / lenS);
@@ -1488,9 +1581,17 @@ void XChartTelescope()
             SphRatio(te.lon, te.lat, xrSun, yrSun, 0.01, &xrT, &yrT);
             theta = RAngleD(MinDifference(te.lon, xrT), yrT - te.lat);
             // Determine phase of Moon, or how much it's covered in shadow.
-            ang = RAngleD(space[oSun].x-space[i].x, space[oSun].y-space[i].y);
-            len = RAngleD(space[i].x, space[i].y);
-            ang = rDegHalf - MinDistance(ang, len);
+            if (!us.fAspect3D) {
+              ang = RAngleD(space[oSun].x - space[i].x,
+                space[oSun].y - space[i].y);
+              len = RAngleD(space[i].x, space[i].y);
+              ang = rDegHalf - MinDistance(ang, len);
+            } else {
+              PT3R v1, v2;
+              PtVec(v1, space[oSun], space[i]);
+              PtVec(v2, space[iEar], space[i]);
+              ang = VAngleD(&v1, &v2);
+            }
             len = 1.0 - (RCosD(ang) / 2.0 + 0.5);
             // Display how full the Moon (or other planet) is.
             if (gs.fText && (i == gs.objTrack || ObjOrbit(i) <= oSun)) {
@@ -1504,23 +1605,32 @@ void XChartTelescope()
             }
 
             // Draw surrounding ellipse to indicate extent of Saturn's rings.
-            if (i == iSat) {
-              // Saturn's "A" ring has outer radius of 136K km.
-              radi2 = radi * (rSatRingA * 2.0) / diam;
-              xd2 = (int)(radi2 * 2.0); xT2 = (int)(xr - radi2 + rRound);
-              radi2 *= rRatio;
-              // Saturn's "B" ring has inner radius of 92K km.
-              radi3 = radi * (rSatRingB * 2.0) / diam;
-              xd3 = (int)(radi3 * 2.0); xT3 = (int)(xr - radi3 + rRound);
-              radi3 *= rRatio;
-              ptSat = space[iSat];
+            if (i == iSat || i == iUra) {
+              if (i == iSat) {
+                // Saturn's "A" ring has outer radius of 136K km.
+                radi2 = radi * (rSatRingA * 2.0) / diam;
+                xd2 = (int)(radi2 * 2.0); xT2 = (int)(xr - radi2 + rRound);
+                radi2 *= rRatio;
+                // Saturn's "B" ring has inner radius of 92K km.
+                radi3 = radi * (rSatRingB * 2.0) / diam;
+                xd3 = (int)(radi3 * 2.0); xT3 = (int)(xr - radi3 + rRound);
+                radi3 *= rRatio;
+                ptSat = space[iSat];
+              } else {
+                // Uranus' "E" ring has outer radius of 136K km.
+                radi2 = radi * (rUraRing * 2.0) / diam;
+                xd2 = (int)(radi2 * 2.0); xT2 = (int)(xr - radi2 + rRound);
+                radi2 *= rRatio;
+                ptSat = space[iUra];
+              }
 #if FALSE
-              // Calculate plane of Saturn's rings based on its moons.
+              // Calculate plane of Uranus' rings based on its moons.
+              static PT3R vSum = {0.0, 0.0, 0.0};
               PT3R v1, v2;
-              PtVec(v1, ptSat, space[uranLo+2]);
+              PtVec(v1, ptSat, space[moonsLo+15]);
               len2 = nDegHalf;
-              for (i2 = uranLo+4; i2 <= uranLo+6; i2++) {
-                PtVec(v2, ptSat, space[i2]);
+              for (i2 = moonsLo+16; i2 <= moonsLo+18; i2++) {
+                PtVec(v2, ptSat, space[i2 < moonsLo+18 ? i2 : moonsLo+14]);
                 ang = VAngleD(&v1, &v2);
                 ang = NAbs(ang - rDegQuad);
                 if (ang < len2) {
@@ -1532,15 +1642,29 @@ void XChartTelescope()
               }
               v2 = vBest;
               PtCross(vCross, v1, v2);
+              vCross.x = RAbs(vCross.x);
+              vCross.y = RAbs(vCross.y);
+              vCross.z = RAbs(vCross.z);
+              len2 = PtLen(vCross);
+              PtDiv(vCross, len2);
+              PtAdd2(vSum, vCross);
+              len2 = PtLen(vSum);
+              vCross = vSum;
+              PtDiv(vCross, len2);
 #endif
-              PtSet(vCross, -0.0833346, -0.4629964, -0.8824339);
+              if (i == iSat) {
+                PtSet(vCross, -0.0833346, -0.4629964, -0.8824339);
+              } else {
+                PtSet(vCross, 0.2059129, 0.9691102, -0.1357401);
+              }
               // Calculate tilt of Saturn's rings up or down.
               ptCen = space[us.objCenter];
               PtVec(vS2C, ptSat, ptCen);
               ang2 = VAngleD(&vCross, &vS2C);
               dRing = (ang2 >= 0.0 ? rDegHalf : 0.0);
               radi2 *= RCosD(ang2);
-              radi3 *= RCosD(ang2);
+              if (i == iSat)
+                radi3 *= RCosD(ang2);
               // Calculate rotation of Saturn's rings left or right.
               PtSet(vUp, 0.0, 0.0, 1.0);
               PtCross(vLeft, vS2C, vUp);
@@ -1558,24 +1682,27 @@ void XChartTelescope()
               }
               // Draw Saturn's rings.
               yd2 = (int)(radi2 * 2.0); yT2 = (int)(yr - radi2 + rRound);
-              yd3 = (int)(radi3 * 2.0); yT3 = (int)(yr - radi3 + rRound);
               DrawColor(kDkGreenB);
               DrawArc(xT2, yT2, xT2 + xd2, yT2 + yd2,
                 ang, rDegHalf - dRing, rDegMax - dRing);
-              DrawArc(xT3, yT3, xT3 + xd3, yT3 + yd3,
-                ang, rDegHalf - dRing, rDegMax - dRing);
+              if (i == iSat) {
+                yd3 = (int)(radi3 * 2.0); yT3 = (int)(yr - radi3 + rRound);
+                DrawArc(xT3, yT3, xT3 + xd3, yT3 + yd3,
+                  ang, rDegHalf - dRing, rDegMax - dRing);
+              }
               DrawColor(kObjB[i]);
             }
             // Draw planet's disk here.
             DrawCrescent(xT, yT, xT + xd, yT + yd, len, theta + rDegHalf,
               kDkBlueB, gi.kiCur);
             // Draw other half of Saturn's rings on top of planet's disk.
-            if (i == iSat) {
+            if (i == iSat || i == iUra) {
               DrawColor(kDkGreenB);
               DrawArc(xT2, yT2, xT2 + xd2, yT2 + yd2,
                 ang, dRing, dRing + rDegHalf);
-              DrawArc(xT3, yT3, xT3 + xd3, yT3 + yd3,
-                ang, dRing, dRing + rDegHalf);
+              if (i == iSat)
+                DrawArc(xT3, yT3, xT3 + xd3, yT3 + yd3,
+                  ang, dRing, dRing + rDegHalf);
               if (gs.fText) {
                 sprintf(szT, "%%s's rings: %%.%df%%%c Tilt, "
                   "%%.%df%%%c Rotation", us.fSeconds*2, chDeg2,
@@ -1687,8 +1814,8 @@ void XChartTelescope()
     if (!FBetween(yp, y1, y2))
       continue;
     fShowLabel = ((j % i) == 0);
-    DrawBlock(x1, yp, x1 + (3+fShowLabel*2)*gi.nScaleT, yp);
-    DrawBlock(x2 - (3+fShowLabel*2)*gi.nScaleT, yp, x2, yp);
+    DrawLineX(x1, x1 + (3+fShowLabel*2)*gi.nScaleT, yp);
+    DrawLineX(x2 - (3+fShowLabel*2)*gi.nScaleT, x2, yp);
     if (!fShowLabel)
       continue;
     if (!fShowMinute)
@@ -1711,8 +1838,8 @@ void XChartTelescope()
     if (!FBetween(xp, x1, x2))
       continue;
     fShowLabel = ((i % j) == 0);
-    DrawBlock(xp, y1, xp, y1 + (3+fShowLabel*2)*gi.nScaleT);
-    DrawBlock(xp, y2 - (3+fShowLabel*2)*gi.nScaleT, xp, y2);
+    DrawLineY(xp, y1, y1 + (3+fShowLabel*2)*gi.nScaleT);
+    DrawLineY(xp, y2 - (3+fShowLabel*2)*gi.nScaleT, y2);
     if (!fShowLabel)
       continue;
     fSav = is.fSeconds; nSav = us.nDegForm;
@@ -1760,17 +1887,14 @@ void XChartLocal()
   char sz[cchSzDef];
   int xunit, yunit, x1, y1, x2, y2, xs, ys, xc, yc, xp, yp, xp2, yp2,
     m1, n1, m2, n2, i, j, k, zLimit;
-  real lonMC, latMC, xBase, yBase, xScale, yScale,
-    xBase2, yBase2, xScale2, yScale2, xr, yr, xi, yi, lon, lat, len;
+  real xBase, yBase, xScale, yScale, xBase2, yBase2, xScale2, yScale2,
+    xr, yr, xi, yi, lon, lat, len;
   flag fShowMinute, fShowLabel, fDidBitmap;
   TELE te;
   static real lonPrev = rLarge, latPrev = rLarge;
   static int objPrev = nLarge;
 
   // Initialize variables.
-  lonMC = Tropical(is.MC); latMC = 0.0;
-  EclToEqu(&lonMC, &latMC);
-
   for (fShowMinute = 0; fShowMinute <= 1; fShowMinute++) {
     xunit = xFontT*(!fShowMinute ? 4 : 6);
     yunit = 12*gi.nScaleTextT;
@@ -1784,7 +1908,7 @@ void XChartLocal()
       objPrev = -1;
       xBase = planet[gs.objTrack], yBase = planetalt[gs.objTrack];
       EclToEqu(&xBase, &yBase);
-      xBase = Mod(xBase - lonMC - Lon + rDegHalf);
+      xBase = Mod(xBase - is.lonMC - Lon + rDegHalf);
     } else {
       if (Lon != lonPrev || Lat != latPrev) {
         lonPrev = Lon; latPrev = Lat;
@@ -1908,7 +2032,7 @@ void XChartLocal()
     lon = Tropical(planet[i]);
     lat = planetalt[i];
     EclToEqu(&lon, &lat);
-    lon = Mod(lon - lonMC - Lon + rDegHalf);
+    lon = Mod(lon - is.lonMC - Lon + rDegHalf);
     xr = MinDifference(xBase, lon); yr = lat - yBase;
     xp = xc + (int)(xr * xScale + rRound);
     yp = yc - (int)(yr * yScale + rRound);
@@ -1959,8 +2083,8 @@ void XChartLocal()
     if (!FBetween(yp, y1, y2))
       continue;
     fShowLabel = ((j % i) == 0);
-    DrawBlock(x1, yp, x1 + (3+fShowLabel*2)*gi.nScaleT, yp);
-    DrawBlock(x2 - (3+fShowLabel*2)*gi.nScaleT, yp, x2, yp);
+    DrawLineX(x1, x1 + (3+fShowLabel*2)*gi.nScaleT, yp);
+    DrawLineX(x2 - (3+fShowLabel*2)*gi.nScaleT, x2, yp);
     if (!fShowLabel)
       continue;
     if (!fShowMinute)
@@ -1979,8 +2103,8 @@ void XChartLocal()
     if (!FBetween(xp, x1, x2))
       continue;
     fShowLabel = ((i % j) == 0);
-    DrawBlock(xp, y1, xp, y1 + (3+fShowLabel*2)*gi.nScaleT);
-    DrawBlock(xp, y2 - (3+fShowLabel*2)*gi.nScaleT, xp, y2);
+    DrawLineY(xp, y1, y1 + (3+fShowLabel*2)*gi.nScaleT);
+    DrawLineY(xp, y2 - (3+fShowLabel*2)*gi.nScaleT, y2);
     if (!fShowLabel)
       continue;
     k = zLimit - i;
@@ -2035,14 +2159,20 @@ void OrbitPlot(real *pxp, real *pyp, real *pzp, real sz, int obj, PT3R *rgspc)
   rDist = (RLog(rDist / sz * 100.0 + 1.0) / rLog101) / (rDist / sz);
   xp *= rDist; yp *= rDist; zp *= rDist;
 
-  // Things orbiting planets will be scaled to be more distant from it.
+  // Scale things orbiting planets to be more distant from them.
   if (objCenter >= 0 && objCenter != oSun) {
-    rDist = (objCenter == oMar || objCenter == oPlu ? 5000.0 :
-      (objCenter == oJup ? 300.0 : (objCenter == oSat ? 150.0 :
-      (objCenter == oUra ? 1000.0 : 500.0))));
-    if (obj == moonsHi-5)          // Neptune's Nereid is highly elliptical
-      rDist = RLog(rDist) * 20.0;
-    rDist *= 2.0;
+    rDist = 1000.0 * (objCenter == oEar ? 1.0 : (objCenter == oMar ? 15.0 :
+      (objCenter == oJup ? 0.9 : (objCenter == oSat ? 0.7 :
+      (objCenter == oUra ? 4.0 : (objCenter == oNep ? 0.4 : 25.0))))));
+#if FALSE
+    // Modify radius with AstroExpression if one set.
+    if (!us.fExpOff && FSzSet(us.szExpOrbit)) {
+      ExpSetN(iLetterY, obj);
+      ExpSetR(iLetterZ, rDist);
+      ParseExpression(us.szExpOrbit);
+      rDist = RExpGet(iLetterZ);
+    }
+#endif
     xp += xd * rDist;
     yp += yd * rDist;
     zp += zd * rDist;
@@ -2101,7 +2231,7 @@ void XChartOrbit()
   int j2, k2;
 #endif
 
-  unit = Max(6*gi.nScale, gs.fText*Max(12, yFont*gi.nScaleText)*gi.nScaleT);
+  unit = Max(6*gi.nScale, gs.fText*Max(12, yFont*gi.nScaleText/2)*gi.nScaleT);
   x1 = unit; y1 = unit; x2 = gs.xWin-1-unit; y2 = gs.yWin-1-unit;
 
   // Determine the scale of the chart. For a scale size of 400, make the
@@ -2115,7 +2245,7 @@ void XChartOrbit()
 
   i = gi.nScale/gi.nScaleT;
   sz = gs.rspace > 0.0 ? gs.rspace : (i <= 1 ? 90.0 : (i == 2 ? 30.0 :
-    (i == 3 ? 6.0 : (gi.nScaleText <= 1 ? 1.0 : 0.006))));
+    (i == 3 ? 6.0 : (gi.nScaleText/2 <= 1 ? 1.0 : 0.006))));
   sx = (real)(cx-x1)/sz; sy = (real)(cy-y1)/sz;
   ClearB((pbyte)rgod, sizeof(rgod));
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
@@ -2310,13 +2440,14 @@ void XChartSector()
   real xplanet[objMax], symbol[objMax];
   byte ignoreSav[objMax], ignoreT[objMax];
   char sz[3];
-  int cx, cy, i, j, k;
+  int nTrans = (int)(gs.rBackPct * 256.0 / 100.0), cx, cy, yi, i, j, k;
   real unitx, unity, px, py, temp;
 
   if (gs.fText && !us.fVelocity)
     gs.xWin -= xSideT;
   cx = gs.xWin/2 - 1; cy = gs.yWin/2 - 1;
   unitx = (real)cx; unity = (real)cy;
+  yi = !us.fVedic ? 1 : -1;
 
   // Draw lines across the whole chart at the four angles.
   DrawColor(gi.kiLite);
@@ -2333,8 +2464,8 @@ void XChartSector()
   DrawColor(gi.kiOn);
   for (i = 0; i < nDegMax; i += 10) {
     px = PX((real)i); py = PY((real)i);
-    DrawLine(cx+POINT1(unitx, 0.81, px), cy+POINT1(unity, 0.81, py),
-      cx+POINT2(unitx, 0.95, px), cy+POINT2(unity, 0.95, py));
+    DrawLine(cx+POINT1(unitx, 0.81, px), cy+POINT1(unity, 0.81, py)*yi,
+      cx+POINT2(unitx, 0.95, px), cy+POINT2(unity, 0.95, py)*yi);
   }
   DrawCircle(cx, cy, (int)(unitx*0.95+rRound), (int)(unity*0.95+rRound));
   DrawCircle(cx, cy, (int)(unitx*0.81+rRound), (int)(unity*0.81+rRound));
@@ -2344,19 +2475,23 @@ void XChartSector()
   for (i = 1; i <= cSector; i++) {
     j = pluszone[i];
     DrawColor(j ? kRedB : kDkGreenB);
+    DrawFillWheel(cx+POINT1(unitx, 0.88, PX((real)(i*10+175))),
+      cy+POINT1(unity, 0.88, PY((real)(i*10+175)))*yi+gi.nScale, i, 2);
+    if (nTrans >= 128)
+      DrawColor(gi.kiOn);
     sprintf(sz, "%d", i);
     DrawSz(sz, cx+POINT1(unitx, 0.88, PX((real)(i*10+175)))+
-      (FBetween(i, 12, 19) ? -(gi.nScale/* *gi.nScaleT*/) : 0),
-      cy+POINT1(unity, 0.88, PY((real)(i*10+175)))+(gi.nScale/* *gi.nScaleT*/),
+      (FBetween(i, 12, 19) ? -gi.nScale : 0),
+      cy+POINT1(unity, 0.88, PY((real)(i*10+175)))*yi+gi.nScale,
       dtCent | dtScale);
     sprintf(sz, "%c", j ? '+' : '-');
     DrawSz(sz, cx+POINT1(unitx, 0.97, PX((real)(i*10+175))),
-      cy+POINT1(unity, 0.97, PY((real)(i*10+175)))+gi.nScaleText*2,
+      cy+POINT1(unity, 0.97, PY((real)(i*10+175)))*yi+gi.nScaleTextT*2,
       dtCent | dtScale2);
     if (j != k) {
       DrawColor(gi.kiGray);
       DrawDash(cx, cy, cx+POINT2(unitx, 0.81, PX((real)(i*10+170))),
-        cy+POINT2(unity, 0.81, PY((real)(i*10+170))), 1);
+        cy+POINT2(unity, 0.81, PY((real)(i*10+170)))*yi, 1);
     }
     k = j;
   }
@@ -2366,8 +2501,13 @@ void XChartSector()
   CastSectors();
 
   // Figure out where to put planet glyphs.
-  for (i = 0; i <= is.nObj; i++)
-    symbol[i] = xplanet[i] = Mod(rDegHalf - planet[i]);
+  for (i = 0; i <= is.nObj; i++) {
+    if (!us.fVedic)
+      temp = Mod(rDegHalf - planet[i]);
+    else
+      temp = Mod(rDegHalf + planet[i]);
+    symbol[i] = xplanet[i] = temp;
+  }
   FillSymbolRing(symbol, 1.0);
 
   // For each planet, draw a small dot indicating where it is, and then a line
@@ -2385,7 +2525,7 @@ void XChartSector()
         cy+POINT1(unity, 0.75, PY(temp)));
     } else
       DrawColor(kObjB[i]);
-    if (gs.fHouseExtra)
+    if (!gs.fHouseExtra)
       DrawSpot(cx+POINT1(unitx, 0.65, PX(xplanet[i])),
         cy+POINT1(unity, 0.65, PY(xplanet[i])));
     else
@@ -2611,8 +2751,8 @@ void XChartDispositor()
 
   if (gs.fBorder) {
     DrawColor(gi.kiLite);
-    DrawBlock(cx0, 0, cx0, gs.yWin-1);
-    DrawBlock(0, cy0, gs.xWin-1, cy0);
+    DrawLineY(cx0, 0, gs.yWin-1);
+    DrawLineX(0, gs.xWin-1, cy0);
   }
 }
 
@@ -2624,7 +2764,7 @@ void XChartDispositor()
 flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
 {
   int x1, y1, x2, y2, asp, x, y, z, s1, s2, s3, nT, k,
-    nScale = gi.nScaleTextT;
+    nScale = gi.nScaleTextT2;
   char sz[4], *szTime;
 
   // Get pixel coordinates of the calendar and pixel size of each box.
@@ -2632,12 +2772,12 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
   y1 = gi.rgzCalendar[pid->day*2 + 1];
   x2 = x1 + gi.rgzCalendar[0];
   y2 = y1 + gi.rgzCalendar[1];
-  z = nScale * 10;
-  y = y2 - z*(iMax-i) + nScale*3;
-  if (y - nScale*5 <= y1)
+  z = nScale * 5;
+  y = y2 - z*(iMax-i) + nScale*3/2;
+  if (y - nScale*5/2 <= y1)
     return fFalse;
-  x = x2 + nScale*3;
-  if (x - z*3 - nScale*5 <= x1)
+  x = x2 + nScale*3/2;
+  if (x - z*3 - nScale*5/2 <= x1)
     return fFalse;
 
   // Get aspect event and time that it takes place.
@@ -2682,14 +2822,14 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
 
   // Draw the time that the aspect event takes place (if room).
   szTime = SzTime(s1, s2, s3);
-  nT = x - z*4 - CchSz(szTime)*xFont*nScale;
+  nT = x - z*4 - CchSz(szTime)*xFont2*nScale;
   if (nT <= x1)
     return fTrue;
   DrawColor(gi.kiGray);
-  DrawSz(szTime, nT, y+nScale*2, dtLeft | dtScale2);
+  DrawSz(szTime, nT, y+nScale, dtLeft | dtScale2);
 
   // Draw extra information about the aspect event (if room).
-  nT -= 4*xFont*nScale;
+  nT -= 4*xFont2*nScale;
   if (nT <= x1)
     return fTrue;
   k = kSignB(SFromZ(planet[oMoo]));
@@ -2697,14 +2837,14 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
     (asp == aCon || asp == aOpp)) {
     DrawColor(k);
     DrawSz(asp == aCon ? (nVoid < 0 ? "NEW" : "N+v") :
-      (nVoid < 0 ? "FUL" : "F+v"), nT, y+nScale*2, dtLeft | dtScale2);
+      (nVoid < 0 ? "FUL" : "F+v"), nT, y+nScale, dtLeft | dtScale2);
   } else if (nVoid >= 0) {
     DrawColor(k);
-    DrawSz("v/c", nT, y+nScale*2, dtLeft | dtScale2);
+    DrawSz("v/c", nT, y+nScale, dtLeft | dtScale2);
   } else if (pid->source == oMoo && asp == aSig) {
     DrawColor(kSignB(pid->dest));
     sprintf(sz, "%.3s", szSignName[pid->dest]);
-    DrawSz(sz, nT, y+nScale*2, dtLeft | dtScale2);
+    DrawSz(sz, nT, y+nScale, dtLeft | dtScale2);
   }
   return fTrue;
 }
@@ -2736,6 +2876,7 @@ void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
   sprintf(sz, "%s, %d", szMonth[mon], Yea);
   s = gi.nScale;
   gi.nScale = Min((yunit*3/2-yFont*s) / yFont, xs/15/*CchSz(sz)*/ / xFont);
+  gi.nScale = (gi.nScale/s)*s;        // So scale is an even multiple of "s".
   gi.nScale = Max(gi.nScale-1, 1);
   DrawSz(sz, x1 + xs/2, y1 + (yunit*3/2-yFont*s)/2, dtCent | dtScale);
 
@@ -2883,7 +3024,7 @@ flag FSphereZodiac(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
 
 flag FSphereEarth(real azi, real alt, CONST CIRC *pcr, int *xp, int *yp)
 {
-  azi = Mod(azi + Lon + rDegQuad);
+  azi = Mod(-azi);
   CoorXform(&azi, &alt, rDegQuad - Lat);
   return FSphereLocal(azi + rDegQuad, -alt, pcr, xp, yp);
 }
@@ -2897,8 +3038,9 @@ void XChartSphere()
   char sz[cchSzDef];
   int zGlyph, zGlyph2, zGlyphS, cChart, iChart, xo = 0, yo = 0, xp, yp,
     i, j, k, k2, nSav;
-  flag fDir = !gs.fSouth, fAny = !gs.fAlt, fNoHorizon, f;
-  real lonMC, latMC, rT;
+  flag fHouse3D = !us.fHouse3D, fDir = !gs.fSouth, fAny = !gs.fAlt,
+    fNoHorizon, f;
+  real rT;
   CIRC cr, cr2;
   CONST CP *pcp;
   CP cpSav;
@@ -2913,7 +3055,7 @@ void XChartSphere()
 
   fNoHorizon = ignorez[0] && ignorez[1] && ignorez[2] && ignorez[3];
   zGlyph = Max(7*gi.nScale,
-    (gs.fText && us.fVelocity)*Max(12, yFont*gi.nScaleText)*gi.nScaleT);
+    (gs.fText && us.fVelocity)*Max(12, yFont*gi.nScaleText/2)*gi.nScaleT);
   zGlyph2 = 14*gi.nScale; zGlyphS = 9*gi.nScaleT;
   cr.xc = gs.xWin >> 1; cr.yc = gs.yWin >> 1;
   cr.xr = cr.xc - zGlyph; cr.yr = cr.yc - zGlyph;
@@ -2924,9 +3066,7 @@ void XChartSphere()
 
   if (us.nRel < rcNone)
     CastChart(1);
-  lonMC = Tropical(is.MC); latMC = 0.0;
-  EclToEqu(&lonMC, &latMC);
-  is.lonMC = lonMC; is.latMC = Lat;
+  is.latMC = Lat;
 
   // Avoid default alignments of sphere that don't look as good.
   if (us.fSmartSave && !gi.fDidSphere && gs.rRot == 0.0 && gs.rTilt == 0.0) {
@@ -2943,7 +3083,7 @@ void XChartSphere()
   }
 
   // Draw horizon.
-  if (!fNoHorizon || (!gs.fHouseExtra && !us.fHouse3D)) {
+  if (!fNoHorizon || (!gs.fHouseExtra && fHouse3D)) {
     if (!gs.fColorHouse)
       DrawColor(gi.kiOn);
     for (i = 0; i <= nDegMax; i++) {
@@ -3001,20 +3141,35 @@ void XChartSphere()
   if (!gs.fColorHouse)
     DrawColor(kDkGreenB);
   for (j = -1; j <= cSign; j++) {
-    if (!(!gs.fHouseExtra && !us.fHouse3D) && !(j <= 0 && !fNoHorizon))
+    if (!(!gs.fHouseExtra && fHouse3D) && !(j <= 0 && !fNoHorizon))
       continue;
-    if ((j == sAri && chouse[j] == is.Asc) ||
-        (j == sCap && chouse[j] == is.MC)  ||
-        (j == sLib && chouse[j] == Mod(is.Asc + rDegHalf)) ||
-        (j == sCan && chouse[j] == Mod(is.MC  + rDegHalf)))
+    if (fHouse3D &&
+      ((j == sCap && FSameR(chouse[j], is.MC)) ||
+       (j == sCan && FSameR(chouse[j], Mod(is.MC  + rDegHalf)))))
+      continue;
+    if (fHouse3D && us.nHouse3D == hmPrime &&
+      ((j == sAri && FSameR(chouse[j], is.Asc)) ||
+       (j == sLib && FSameR(chouse[j], Mod(is.Asc + rDegHalf)))))
+      continue;
+    if (fHouse3D && us.nHouse3D == hmHorizon &&
+      ((j == (Lat >= 0.0 ? sAri : sLib) &&
+        FSameR(chouse[j], Mod(is.Vtx + rDegHalf))) ||
+       (j == (Lat >= 0.0 ? sLib : sAri) && FSameR(chouse[j], is.Vtx))))
       continue;
     if (gs.fColorHouse) {
       k = j > 0 ? j : (j < 0 ? sCan : sCap);
       DrawColor(kSignB(k));
     }
     rT = j > 0 ? chouse3[j] : (j < 0 ? rDegQuad : 270.0);
+    if (j > 0 && us.nHouse3D == hmHorizon)
+      rT = (rDegQuad - rT) * (Lat < 0.0 ? -1.0 : 1.0);
     for (i = -90; i <= 90; i++) {
-      f = FSpherePrime(rT, (real)i, &cr, &xp, &yp) ^ fDir;
+      if (j <= 0 || us.nHouse3D == hmPrime)
+        f = FSpherePrime(rT, (real)i, &cr, &xp, &yp) ^ fDir;
+      else if (us.nHouse3D == hmHorizon)
+        f = FSphereLocal(rT, (real)i, &cr, &xp, &yp) ^ fDir;
+      else
+        f = FSphereEarth(rT, (real)i, &cr, &xp, &yp) ^ fDir;
       if (f && i > -90) {
         DrawLine(xo, yo, xp, yp);
         if (j <= 0) {
@@ -3032,7 +3187,7 @@ void XChartSphere()
   }
 
   // Draw 2D house wedges.
-  if (!gs.fHouseExtra && us.fHouse3D)
+  if (!gs.fHouseExtra && !fHouse3D)
     for (i = 1; i <= cSign; i++) {
       if (gs.fColorHouse)
         DrawColor(kSignB(i));
@@ -3090,7 +3245,7 @@ void XChartSphere()
   // Label signs.
   if (!us.fVedic) {
     nSav = gi.nScale;
-    gi.nScale = gi.nScaleText * gi.nScaleT;
+    gi.nScale = gi.nScaleTextT;
     for (j = 78; j >= -78; j -= 156)
       for (i = 1; i <= cSign; i++) {
         f = FSphereZodiac((real)(i*30-15), (real)j, &cr, &xp, &yp) ^ fDir;
@@ -3105,15 +3260,22 @@ void XChartSphere()
   // Label houses.
   if (!gs.fHouseExtra) {
     nSav = gi.nScale;
-    gi.nScale = gi.nScaleText * gi.nScaleT;
+    gi.nScale = gi.nScaleTextT;
     for (j = 82; j >= -82; j -= 164)
       for (i = 1; i <= cSign; i++) {
-        if (!us.fHouse3D)
-          f = FSpherePrime(Midpoint(chouse3[i], chouse3[Mod12(i+1)]), (real)j,
-            &cr, &xp, &yp) ^ fDir;
-        else
+        if (!fHouse3D)
           f = FSphereZodiac(Midpoint(chouse[i], chouse[Mod12(i+1)]), (real)j,
             &cr, &xp, &yp) ^ fDir;
+        else {
+          rT = Midpoint(chouse3[i], chouse3[Mod12(i+1)]);
+          if (us.nHouse3D == hmPrime)
+            f = FSpherePrime(rT, (real)j, &cr, &xp, &yp) ^ fDir;
+          else if (us.nHouse3D == hmHorizon) {
+            rT = (rDegQuad - rT) * (Lat < 0.0 ? -1.0 : 1.0);
+            f = FSphereLocal(rT, (real)j, &cr, &xp, &yp) ^ fDir;
+          } else
+            f = FSphereEarth(rT, (real)j, &cr, &xp, &yp) ^ fDir;
+        }
         if (f || fAny) {
           DrawColor(f ? (gs.fColorHouse ? kSignB(i) : kDkGreenB) : gi.kiGray);
           DrawHouse(i, xp, yp);
