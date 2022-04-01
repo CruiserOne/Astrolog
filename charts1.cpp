@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: charts1.cpp
+** Astrolog (Version 7.40) File: charts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -95,7 +95,27 @@ void PrintHeader(int nSpace)
       SzZone(Zon)); PrintSz(sz);
     sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ', ciMain.loc,
       fLoc ? " " : "", SzLocation(Lon, Lat)); PrintSz(sz);
+    if (us.fProgress) {
+      sprintf(sz, "Progressed To: %.3s %s %s (%cT Zone %s)\n", szDay[day],
+        SzDate(MonT, DayT, YeaT, 3), SzTim(TimT), ChDst(us.dstDef),
+        SzZone(us.zonDef)); PrintSz(sz);
+    }
   }
+
+  // Print second set of chart information.
+  if (us.nRel < rcNone || us.nRel == rcSynastry) {
+    AnsiColor(kDkGray);
+    fNam = *ciTwin.nam > chNull; fLoc = *ciTwin.loc > chNull;
+    sprintf(sz, "Chart %s %s%s", !is.fSeconds || fNam ? "#2 comparison for" :
+      "Number2:", ciTwin.nam, fNam ? "\n" : ""); PrintSz(sz);
+    day = DayOfWeek(Mon, Day, Yea);
+    sprintf(sz, "%.3s %s %s (%cT Zone %s)", szDay[day],
+      SzDate(ciTwin.mon, ciTwin.day, ciTwin.yea, 3), SzTim(ciTwin.tim),
+      ChDst(ciTwin.dst), SzZone(ciTwin.zon)); PrintSz(sz);
+    sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ', ciTwin.loc,
+      fLoc ? " " : "", SzLocation(ciTwin.lon, ciTwin.lat)); PrintSz(sz);
+  }
+
   AnsiColor(kDefault);
   if (nSpace > 0)
     PrintL();
@@ -284,7 +304,7 @@ void ChartGrid(void)
         if (ignore[x])
           continue;
         if (yc > 0 && xc > 0 && yc+r > 1)
-          PrintCh((char)(r > 1 ? chV : chC));
+          PrintCh2(r > 1 ? chV : chC);
         if (r > 1) {
           xg = x; yg = y;
           if ((x > y) != (x0 > y0))
@@ -303,9 +323,8 @@ void ChartGrid(void)
             else {
               if (r == 3) {
                 if (NAbs(grid->v[xg][yg]) < 6000*60)
-                  sprintf(sz, "%c%2d", us.fAppSep ?
-                    (grid->v[xg][yg] < 0 ? 'a' : 's') :
-                    (grid->v[xg][yg] < 0 ? '-' : '+'),
+                  sprintf(sz, "%c%2d",
+                    rgchAppSep[us.nAppSep*2 + (grid->v[xg][yg] >= 0)],
                     NAbs(grid->v[xg][yg])/3600);
                 else
                   sprintf(sz, "%3d", NAbs(grid->v[xg][yg])/3600);
@@ -353,7 +372,7 @@ void ChartGrid(void)
           AnsiColor(kDefault);
         } else
           if (yc > 0)
-            PrintTab(chH, 3);
+            PrintTab2(chH, 3);
         xc++;
       }
       if (yc+r > 1)
@@ -562,9 +581,13 @@ void PrintWheelCenter(int irow)
     sprintf(sz, "%s", ciMain.nam);
     break;
   case 2:
-    nT = DayOfWeek(Mon, Day, Yea);
-    sprintf(sz, "%.3s %s %s", szDay[nT], SzDate(Mon, Day, Yea, 2),
-      SzTim(Tim));
+    if (FNoTimeOrSpace(ciMain))
+      sprintf(sz, "(No time or space)");
+    else {
+      nT = DayOfWeek(Mon, Day, Yea);
+      sprintf(sz, "%.3s %s %s", szDay[nT], SzDate(Mon, Day, Yea, 2),
+        SzTim(Tim));
+    }
     break;
   case 3:
     sprintf(sz, "%s", ciMain.loc);
@@ -600,7 +623,7 @@ void PrintWheelCenter(int irow)
     *sz = chNull;
   }
 
-  cch = CchSz(sz);
+  cch = CwchSz(sz);
   nT = WHEELCOLS*2-1 + is.fSeconds*8;
   PrintTab(' ', (nT - cch) / 2);
   PrintSz(sz);
@@ -721,49 +744,49 @@ void ChartWheel(void)
 
   // Here we actually print the wheel and the objects in it.
 
-  PrintCh(chNW); PrintTab(chH, WHEELCOLS-8); PrintHouse(11, fTrue);
-  PrintTab(chH, WHEELCOLS-11+us.fVedic); PrintHouse(10, fTrue);
-  PrintTab(chH, WHEELCOLS-10+us.fVedic); PrintHouse(9, fTrue);
-  PrintTab(chH, wheelcols-4); PrintCh(chNE); PrintL();
+  PrintCh2(chNW); PrintTab2(chH, WHEELCOLS-8); PrintHouse(11, fTrue);
+  PrintTab2(chH, WHEELCOLS-11+us.fVedic); PrintHouse(10, fTrue);
+  PrintTab2(chH, WHEELCOLS-10+us.fVedic); PrintHouse(9, fTrue);
+  PrintTab2(chH, wheelcols-4); PrintCh2(chNE); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
     for (j = 10; j >= 7; j--) {
-      PrintCh(chV); PrintWheelSlot(wheel[j][i]);
+      PrintCh2(chV); PrintWheelSlot(wheel[j][i]);
     }
-    PrintCh(chV); PrintL();
+    PrintCh2(chV); PrintL();
   }
-  PrintHouse(12, fTrue); PrintTab(chH, WHEELCOLS-11);
-  PrintCh(chC); PrintTab(chH, wheelcols-1); PrintCh(chJN);
-  PrintTab(chH, wheelcols-1); PrintCh(chC); PrintTab(chH, WHEELCOLS-10);
+  PrintHouse(12, fTrue); PrintTab2(chH, WHEELCOLS-11);
+  PrintCh2(chC); PrintTab2(chH, wheelcols-1); PrintCh2(chJN);
+  PrintTab2(chH, wheelcols-1); PrintCh2(chC); PrintTab2(chH, WHEELCOLS-10);
   PrintHouse(8, fFalse); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
-    PrintCh(chV); PrintWheelSlot(wheel[11][i]); PrintCh(chV);
+    PrintCh2(chV); PrintWheelSlot(wheel[11][i]); PrintCh2(chV);
     PrintWheelCenter(i);
-    PrintCh(chV); PrintWheelSlot(wheel[6][i]);
-    PrintCh(chV); PrintL();
+    PrintCh2(chV); PrintWheelSlot(wheel[6][i]);
+    PrintCh2(chV); PrintL();
   }
-  PrintHouse(1, fTrue); PrintTab(chH, WHEELCOLS-10-us.fVedic);
-  PrintCh(chJW); PrintWheelCenter(is.nWheelRows); PrintCh(chJE);
-  PrintTab(chH, WHEELCOLS-10); PrintHouse(7, fFalse); PrintL();
+  PrintHouse(1, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fVedic);
+  PrintCh2(chJW); PrintWheelCenter(is.nWheelRows); PrintCh2(chJE);
+  PrintTab2(chH, WHEELCOLS-10); PrintHouse(7, fFalse); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
-    PrintCh(chV); PrintWheelSlot(wheel[0][i]); PrintCh(chV);
+    PrintCh2(chV); PrintWheelSlot(wheel[0][i]); PrintCh2(chV);
     PrintWheelCenter(is.nWheelRows+1 + i);
-    PrintCh(chV); PrintWheelSlot(wheel[5][i]);
-    PrintCh(chV); PrintL();
+    PrintCh2(chV); PrintWheelSlot(wheel[5][i]);
+    PrintCh2(chV); PrintL();
   }
-  PrintHouse(2, fTrue); PrintTab(chH, WHEELCOLS-10-us.fVedic);
-  PrintCh(chC); PrintTab(chH, wheelcols-1); PrintCh(chJS);
-  PrintTab(chH, wheelcols-1); PrintCh(chC);
-  PrintTab(chH, WHEELCOLS-10); PrintHouse(6, fFalse); PrintL();
+  PrintHouse(2, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fVedic);
+  PrintCh2(chC); PrintTab2(chH, wheelcols-1); PrintCh2(chJS);
+  PrintTab2(chH, wheelcols-1); PrintCh2(chC);
+  PrintTab2(chH, WHEELCOLS-10); PrintHouse(6, fFalse); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
     for (j = 1; j <= 4; j++) {
-      PrintCh(chV); PrintWheelSlot(wheel[j][i]);
+      PrintCh2(chV); PrintWheelSlot(wheel[j][i]);
     }
-    PrintCh(chV); PrintL();
+    PrintCh2(chV); PrintL();
   }
-  PrintCh(chSW); PrintTab(chH, wheelcols-4); PrintHouse(3, fFalse);
-  PrintTab(chH, WHEELCOLS-10); PrintHouse(4, fFalse);
-  PrintTab(chH, WHEELCOLS-10); PrintHouse(5, fFalse);
-  PrintTab(chH, WHEELCOLS-7); PrintCh(chSE); PrintL();
+  PrintCh2(chSW); PrintTab2(chH, wheelcols-4); PrintHouse(3, fFalse);
+  PrintTab2(chH, WHEELCOLS-10); PrintHouse(4, fFalse);
+  PrintTab2(chH, WHEELCOLS-10); PrintHouse(5, fFalse);
+  PrintTab2(chH, WHEELCOLS-7); PrintCh2(chSE); PrintL();
 }
 
 
@@ -891,16 +914,13 @@ void ChartAspect(void)
     }
 #endif
     sprintf(sz, "%3d: ", count); PrintSz(sz);
-    PrintAspect(jhi, planet[jhi], (int)RSgn(ret[jhi]), ahi,
-      ihi, planet[ihi], (int)RSgn(ret[ihi]), 'a');
+    PrintAspect(jhi, !us.fParallel ? planet[jhi] : planetalt[jhi],
+      (int)RSgn(ret[jhi]), ahi, ihi,
+      !us.fParallel ? planet[ihi] : planetalt[ihi], (int)RSgn(ret[ihi]), 'a');
     k = grid->v[jhi][ihi];
     AnsiColor(k < 0 ? kWhiteA : kLtGrayA);
-    sprintf(sz, " - orb: %c%d%c%02d'",
-      us.fAppSep ? (k < 0 ? 'a' : 's') : (k < 0 ? '-' : '+'),
-      NAbs(k)/3600, chDeg1, NAbs(k)%3600/60); PrintSz(sz);
-    if (is.fSeconds) {
-      sprintf(sz, "%02d\"", NAbs(k)%60); PrintSz(sz);
-    }
+    sprintf(sz, " - orb: %c%s", rgchAppSep[us.nAppSep*2 + (k >= 0)],
+      SzDegree2((real)NAbs(k)/3600.0)); PrintSz(sz);
     AnsiColor(kDkGreenA);
     sprintf(sz, " - power: %5.2f", (real)phi/1000.0); PrintSz(sz);
     PrintInDayEvent(jhi, ahi, ihi, -1);
@@ -938,8 +958,11 @@ void PrintAspectsToPoint(real deg, int obj, real rRet, char *szWhat)
         continue;
       rOrb = rAng - rAspAngle[asp];
       if (RAbs(rOrb) < GetOrb(i, obj >= 0 ? obj : i, asp)) {
-        if (us.fAppSep)
+        if (us.nAppSep == 1)
           rOrb *= RSgn2(rRet - ret[i]) * RSgn2(MinDifference(planet[i], deg));
+        else if (us.nAppSep == 2)
+          rOrb = RAbs(rOrb) *
+            RSgn2(ret[i] - rRet) * RSgn2(MinDifference(planet[i], deg));
 #ifdef EXPRESS
         // May want to skip current aspect if AstroExpression says to do so.
         if (!us.fExpOff && FSzSet(us.szExpMidAsp)) {
@@ -961,8 +984,7 @@ void PrintAspectsToPoint(real deg, int obj, real rRet, char *szWhat)
         PrintTab(' ', 10-CchSz(szObjDisp[i]));
         j = (int)(rOrb * 3600.0);
         AnsiColor(j < 0.0 ? kWhiteA : kLtGrayA);
-        sprintf(sz, "- orb: %c%d%c%02d'",
-          us.fAppSep ? (j < 0 ? 'a' : 's') : (j < 0 ? '-' : '+'),
+        sprintf(sz, "- orb: %c%d%c%02d'", rgchAppSep[us.nAppSep*2 + (j >= 0)],
           NAbs(j)/3600, chDeg1, NAbs(j)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(j)%60); PrintSz(sz);
@@ -1334,10 +1356,52 @@ void ChartOrbit(void)
     if (!is.fSeconds) {
       sprintf(sz, "  Star #%2d", i-oNorm); PrintSz(sz);
     }
-    sprintf(sz, " %5.2f", rStarBright[j-oNorm]); PrintSz(sz);
-    PrintL();
+    sprintf(sz, " %5.2f\n", rStarBright[j-oNorm]); PrintSz(sz);
   }
   AnsiColor(kDefault);
+
+#ifdef SWISSGRAPH
+  ES es;
+
+  // Print extra stars.
+  if (gs.fAllStar) {
+    PrintL();
+    SwissComputeStar(0.0, NULL);
+    for (i = 1; SwissComputeStar(is.T, &es); i++) {
+      AnsiColor(es.ki != kDefault ? es.ki : KStar2A(es.mag));
+      if (es.mag == rStarNot)
+        es.mag = 99.99;
+      sprintf(sz, "%4d %-8.8s ", i, es.pchDes); PrintSz(sz);
+      PrintZodiac(es.lon);
+      AnsiColor(es.ki != kDefault ? es.ki : KStar2A(es.mag));
+      x = es.space.x / rLYToAU;  // Distances here are in light years, not AU.
+      y = es.space.y / rLYToAU;
+      z = es.space.z / rLYToAU;
+      sprintf(sz, is.fSeconds ? " %12.7f %12.7f %12.7f %12.7f" :
+        " %8.3f %8.3f %8.3f %8.3f", x, y, z, RLength3(x, y, z)); PrintSz(sz);
+      sprintf(sz, " %5.2f%s%s\n", es.mag, *es.pchNam ? "  " : "", es.pchNam);
+      PrintSz(sz);
+    }
+  }
+
+  // Print extra asteroids.
+  if (gs.nAstLo > 0) {
+    PrintL();
+    SwissComputeAsteroid(0.0, NULL, fFalse);
+    for (i = gs.nAstLo; SwissComputeAsteroid(is.T, &es, fFalse); i++) {
+      AnsiColor(es.ki != kDefault ? es.ki : kDefault);
+      sprintf(sz, "%6d ", i); PrintSz(sz);
+      PrintZodiac(es.lon);
+      x = es.space.x;
+      y = es.space.y;
+      z = es.space.z;
+      sprintf(sz, is.fSeconds ? " %12.7f %12.7f %12.7f %12.7f" :
+        " %8.3f %8.3f %8.3f %8.3f", x, y, z, RLength3(x, y, z)); PrintSz(sz);
+      sprintf(sz, "  %s\n", es.sz); PrintSz(sz);
+    }
+  }
+  AnsiColor(kDefault);
+#endif
 }
 
 
@@ -1351,10 +1415,17 @@ void ChartEsoteric(void)
     rank[objMax], i, j, k, n, c, n1 = 0, n2 = 0;
   real power1[objMax], power2[objMax], rRay1[cRay+1], rRay2[cRay+1],
     power[objMax], r = 0.0, r1 = 0.0, r2 = 0.0;
-  flag fIgnore7Sav[5], fRayRuler;
+  flag fIgnore7Sav[rrMax], fRayRuler;
+
+  EnsureRay();
+#ifdef INTERPRET
+  if (us.fInterpret) {      // Print an interpretation if -I in effect.
+    InterpretEsoteric();
+    return;
+  }
+#endif
 
   // Calculate data.
-  EnsureRay();
   for (i = 0; i <= cRay; i++) {
     nRay1[i] = nRay2[i] = i ? 0   : -1;
     rRay1[i] = rRay2[i] = i ? 0.0 : -1.0;
@@ -1380,7 +1451,7 @@ void ChartEsoteric(void)
   SortRank(rRay1, rank1, cRay, fFalse); SortRank(rRay2, rank2, cRay, fFalse);
 
   // Print planet table.
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < rrMax; i++) {
     fIgnore7Sav[i] = ignore7[i];
     ignore7[i] = fFalse;
   }
@@ -1413,11 +1484,11 @@ void ChartEsoteric(void)
       c += !rgSignRay2[n][j];
     PrintTab(' ', c - 3);
     pch = Dignify(i, n)+1;
-    fRayRuler = (pch[4] == 'Y');
+    fRayRuler = (pch[rrRay] == 'Y');
     sprintf(sz, " %s", pch); PrintSz(sz);
     n = inhouse[i];
     pch = Dignify(i, n)+1;
-    fRayRuler &= (pch[4] == 'Y');
+    fRayRuler &= (pch[rrRay] == 'Y');
     PrintSz(fRayRuler ? "2" : " ");
     AnsiColor(kSignA(n));
     sprintf(sz, "%4d%s %s", n, szSuffix[n], pch);
@@ -1430,7 +1501,7 @@ void ChartEsoteric(void)
   AnsiColor(kDefault);
   sprintf(sz, "Total            RSHXY        RSHXY%7.1f       100.0%%\n", r);
   PrintSz(sz);
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < rrMax; i++)
     ignore7[i] = fIgnore7Sav[i];
 
   // Print Ray table.
@@ -1580,27 +1651,25 @@ void ChartSector(void)
 }
 
 
-#define FCrossAscMC(x, y, z) (RAbs(x-y) < rDegHalf && RSgn(z-x) != RSgn(z-y))
-#define FCrossAscAsc(w, x, y, z) \
-  (RAbs(x-y) + RAbs(w-z) < rDegHalf && RSgn(w-x) != RSgn(z-y))
-
 // Print the locations of the astro-graph lines on the Earth as specified
 // with the -L switch. This includes Midheaven and Nadir lines, zenith
 // positions, and locations of Ascendant and Descendant lines.
 
-void ChartAstroGraph(void)
+flag ChartAstroGraph(void)
 {
-  CrossInfo *c;
+  CrossInfo *rgcr, *pcr, crT;
   char sz[cchSzDef];
   real planet1[objMax], planet2[objMax], mc[objMax], ic[objMax],
-    asc[objMax], des[objMax], asc1[objMax], des1[objMax],
+    asc[objMax], des[objMax], asc1[objMax], des1[objMax], rgad[objMax],
     lo = Lon, longm, w, x, y, z, ww, xx, yy, zz, ad, oa, am, od, dm;
-  int cCross = 0, i, j, k, l, m, n;
+  int cCross = 0, i, j, k, l, m, n, o;
+  flag fEdge;
 
   if (us.fLatitudeCross) {
-    if ((c = (CrossInfo *)PAllocate(sizeof(CrossInfo),
+    if ((rgcr = (CrossInfo *)RgAllocate(MAXCROSS, CrossInfo,
       "crossing table")) == NULL)
-      return;
+      return fFalse;
+    pcr = rgcr;
   }
 
   for (i = 0; i <= is.nObj; i++) if (!ignore[i]) {
@@ -1614,7 +1683,7 @@ void ChartAstroGraph(void)
   PrintSz("Object :");
   for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
-    if (!ignore[i] && FThing(i)) {
+    if (!ignore[i] && FThing2(i)) {
       AnsiColor(kObjA[i]);
       if (is.fSeconds) {
         sprintf(sz, " %-10.10s", szObjDisp[i]);
@@ -1626,7 +1695,7 @@ void ChartAstroGraph(void)
   AnsiColor(kDefault);
   PrintSz("\n------ :");
   for (i = 0; i <= is.nObj; i++)
-    if (!ignore[i] && FThing(i)) {
+    if (!ignore[i] && FThing2(i)) {
       PrintSz(" ###");
       if (is.fSeconds)
         PrintSz("#######");
@@ -1639,7 +1708,7 @@ void ChartAstroGraph(void)
     lo += rDegMax;
   for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
-    if (!ignore[i] && FThing(i)) {
+    if (!ignore[i] && FThing2(i)) {
       AnsiColor(kObjA[i]);
       x = is.lonMC - planet1[i];
       if (x < 0.0)
@@ -1665,7 +1734,7 @@ void ChartAstroGraph(void)
   PrintSz("\nNadir  : ");
   for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
-    if (!ignore[i] && FThing(i)) {
+    if (!ignore[i] && FThing2(i)) {
       AnsiColor(kObjA[i]);
       z = mc[i] + rDegHalf;
       if (z > rDegHalf)
@@ -1686,7 +1755,7 @@ void ChartAstroGraph(void)
   PrintSz("\nZenith : ");
   for (k = 0; k <= is.nObj; k++) {
     i = rgobjList[k];
-    if (!ignore[i] && FThing(i)) {
+    if (!ignore[i] && FThing2(i)) {
       AnsiColor(kObjA[i]);
       y = planet2[i];
       if (is.fSeconds) {
@@ -1697,7 +1766,6 @@ void ChartAstroGraph(void)
         sprintf(sz, "%3.0f%c", RAbs(y), y < 0.0 ? 's' : 'n');
       }
       PrintSz(sz);
-      asc[i] = des[i] = asc1[i] = des1[i] = rLarge;
     }
   }
   PrintL2();
@@ -1707,21 +1775,32 @@ void ChartAstroGraph(void)
   // latitude, print the longitude location of the line in question.
 
   longm = Mod(is.lonMC + lo);
-  for (j = 89-(89 % us.nAstroGraphStep); j > -90; j -= us.nAstroGraphStep) {
-    AnsiColor(kDefault);
-    sprintf(sz, "Asc@%2d%c: ", j >= 0 ? j : -j, j < 0 ? 's' : 'n');
-    PrintSz(sz);
+  for (j = 90-(90 % us.nAstroGraphStep); j >= -90; j -= us.nAstroGraphStep) {
+    fEdge = (j >= 90 || j <= -90);
+    if (!fEdge) {
+      AnsiColor(kDefault);
+      sprintf(sz, "Asc@%2d%c: ", NAbs(j), j < 0 ? 's' : 'n');
+      PrintSz(sz);
+    }
+    for (k = 0; k <= is.nObj; k++)
+      asc[i] = des[i] = rgad[i] = rLarge;
     for (k = 0; k <= is.nObj; k++) {
       i = rgobjList[k];
-      if (!ignore[i] && FThing(i)) {
+      if (!ignore[i] && FThing2(i)) {
         AnsiColor(kObjA[i]);
-        ad = RTanD(planet2[i])*RTanD(j);
+        asc1[i] = asc[i];
+        if (fEdge)
+          ad = rLarge;
+        else
+          ad = RTanD(planet2[i])*RTanD((real)j);
         if (ad*ad > 1.0) {
+          asc[i] = rgad[i] = rLarge;
+          if (fEdge)
+            continue;
           PrintSz(" --");
           if (is.fSeconds)
             PrintSz("------ ");
           PrintCh(' ');
-          asc1[i] = des1[i] = cp2.dir[i] = rLarge;
         } else {
           ad = RAsin(ad);
           oa = planet1[i] - DFromR(ad);
@@ -1735,9 +1814,10 @@ void ChartAstroGraph(void)
             z += rDegMax;
           if (z > rDegHalf)
             z -= rDegMax;
-          asc1[i] = asc[i];
           asc[i] = z;
-          cp2.dir[i] = ad;
+          rgad[i] = ad;
+          if (fEdge)
+            continue;
           if (is.fSeconds) {
             sprintf(sz, "%s ", SzLocation(z, 0.0)); sz[11] = chNull;
           } else
@@ -1750,15 +1830,21 @@ void ChartAstroGraph(void)
     // Again, the Descendant position is related to the Ascendant's, being a
     // mirror image, so it can be calculated somewhat easier.
 
-    AnsiColor(kDefault);
-    sprintf(sz, "\nDsc@%2d%c: ", j >= 0 ? j : -j, j < 0 ? 's' : 'n');
-    PrintSz(sz);
+    if (!fEdge) {
+      AnsiColor(kDefault);
+      sprintf(sz, "\nDsc@%2d%c: ", NAbs(j), j < 0 ? 's' : 'n');
+      PrintSz(sz);
+    }
     for (k = 0; k <= is.nObj; k++) {
       i = rgobjList[k];
-      if (!ignore[i] && FThing(i)) {
+      if (!ignore[i] && FThing2(i)) {
         AnsiColor(kObjA[i]);
-        ad = cp2.dir[i];
+        des1[i] = des[i];
+        ad = rgad[i];
         if (ad == rLarge) {
+          des[i] = rLarge;
+          if (fEdge)
+            continue;
           PrintSz(" --");
           if (is.fSeconds)
             PrintSz("------ ");
@@ -1771,8 +1857,9 @@ void ChartAstroGraph(void)
             z += rDegMax;
           if (z > rDegHalf)
             z -= rDegMax;
-          des1[i] = des[i];
           des[i] = z;
+          if (fEdge)
+            continue;
           if (is.fSeconds) {
             sprintf(sz, "%s ", SzLocation(z, 0.0)); sz[11] = chNull;
           } else
@@ -1781,7 +1868,8 @@ void ChartAstroGraph(void)
         }
       }
     }
-    PrintL();
+    if (!fEdge)
+      PrintL();
 
     // Now, if the -L0 switch is in effect, then take these line positions,
     // which were saved in an array above as they were printed, and calculate
@@ -1790,37 +1878,53 @@ void ChartAstroGraph(void)
     if (!us.fLatitudeCross)
       continue;
     for (l = 0; l <= is.nObj; l++) {
-      if (ignore[l] || !FThing(l))
+      if (ignore[l] || !FThing2(l))
         continue;
       for (k = 0; k <= is.nObj; k++) {
-        if (ignore[k] || !FThing(k))
+        if (ignore[k] || !FThing2(k))
           continue;
         for (n = 0; n <= 1; n++) {
+          if (ignorez[n ? arDes : arAsc])
+            continue;
           x = n ? des1[l] : asc1[l];
           y = n ? des[l] : asc[l];
-          xx = (x >= 0 ? x : x + rDegMax); yy = (y >= 0 ? y : y + rDegMax);
+          // Make sure Asc/Des crossings in top/bottom lat bands are seen.
+          if ((x == rLarge) != (y == rLarge)) {
+            zz = (x == rLarge ? y : x);
+            z = MinDistance(Mod(zz), Mod(mc[l])) <
+              MinDistance(Mod(zz), Mod(ic[l])) ? mc[l] : ic[l];
+            if (x == rLarge)
+              x = z;
+            else
+              y = z;
+          }
+          // Second set of variables used to detect crossings near lon 180.
+          xx = (x >= 0.0 ? x : x + rDegMax);
+          yy = (y >= 0.0 ? y : y + rDegMax);
           for (m = 0; m <= 1; m++) {
 
             // Check if Ascendant/Descendant cross Midheaven/Nadir.
 
             z = m ? ic[k] : mc[k];
             zz = (z >= 0 ? z : z + rDegMax);
-            if (cCross < MAXCROSS && k != l &&
+            if (cCross < MAXCROSS && k != l && !ignorez[m ? arIC : arMC] &&
               (FCrossAscMC(x, y, z) || FCrossAscMC(xx, yy, zz))) {
-              c->obj1[cCross] = (n ? -(l+1) : l+1);
-              c->obj2[cCross] = (m ? -(k+1) : k+1);
-              c->lat[cCross] = (real)j+5.0*RAbs(z-y)/RAbs(x-y);
-              c->lon[cCross] = z;
-              cCross++;
+              pcr->obj1 = l;
+              pcr->ang1 = n ? oDes : oAsc;
+              pcr->obj2 = k;
+              pcr->ang2 = m ? oNad : oMC;
+              pcr->lon  = z;
+              pcr->lat  = (real)j+5.0*RAbs(z-y)/RAbs(x-y);
+              cCross++, pcr++;
 #ifdef EXPRESS
               // Skip current crossing if AstroExpression says to do so.
               if (!us.fExpOff && FSzSet(us.szExpCross)) {
-                ExpSetR(iLetterU, c->lon[cCross-1]);
-                ExpSetR(iLetterV, c->lat[cCross-1]);
+                ExpSetR(iLetterU, (pcr-1)->lon);
+                ExpSetR(iLetterV, (pcr-1)->lat);
                 ExpSetN(iLetterW, l);
-                ExpSetN(iLetterX, n ? oDes : oAsc);
+                ExpSetN(iLetterX, (pcr-1)->ang1);
                 ExpSetN(iLetterY, k);
-                ExpSetN(iLetterZ, m ? oNad : oMC);
+                ExpSetN(iLetterZ, (pcr-1)->ang2);
                 if (!NParseExpression(us.szExpCross))
                   cCross--;
               }
@@ -1831,25 +1935,50 @@ void ChartAstroGraph(void)
 
             w = m ? des1[k] : asc1[k];
             z = m ? des[k] : asc[k];
-            ww = (w >= 0 ? w : w + rDegMax); zz = (z >= 0 ? z : z + rDegMax);
+            // Make sure Asc/Des crossings in top/bottom lat bands are seen.
+            if ((w == rLarge) != (z == rLarge)) {
+              zz = (w == rLarge ? z : w);
+              ww = MinDistance(Mod(zz), Mod(mc[k])) <
+                MinDistance(Mod(zz), Mod(ic[k])) ? mc[k] : ic[k];
+              if (w == rLarge)
+                w = ww;
+              else
+                z = ww;
+            }
+            // Second set of variables used to detect crossings near lon 180.
+            ww = (w >= 0.0 ? w : w + rDegMax);
+            zz = (z >= 0.0 ? z : z + rDegMax);
             if (cCross < MAXCROSS && k > l && !(k == oSou && l == oNod) &&
+              !ignorez[m ? arDes : arAsc] &&
               (FCrossAscAsc(w, x, y, z) || FCrossAscAsc(ww, xx, yy, zz))) {
-              c->obj1[cCross] = (n ? -(l+1) : l+1);
-              c->obj2[cCross] = (m ? -(k+1) : k+1) + 400;
-              c->lat[cCross] = (real)j+5.0*
-                RAbs(y-z)/(RAbs(x-w)+RAbs(y-z));
-              c->lon[cCross] = Min(x, y)+RAbs(x-y)*
-                RAbs(y-z)/(RAbs(x-w)+RAbs(y-z));
-              cCross++;
+              pcr->obj1 = l;
+              pcr->ang1 = n ? oDes : oAsc;
+              pcr->obj2 = k;
+              pcr->ang2 = m ? oDes : oAsc;
+              pcr->lon = y + (x-y)*RAbs(y-z)/(RAbs(x-w)+RAbs(y-z));
+              pcr->lat = (real)j + 5.0*RAbs(y-z)/(RAbs(x-w)+RAbs(y-z));
+              // Ensure no duplicate event due to high lat band step rate
+              for (o = 0; o < cCross; o++)
+                if (rgcr[o].obj1 == pcr->obj1 && rgcr[o].obj2 == pcr->obj2 &&
+                  rgcr[o].ang1 == pcr->ang1 &&
+                  (rgcr[o].ang2 == oAsc || rgcr[o].ang2 == oDes)) {
+                  if (RAbs(rgcr[o].lat) > RAbs(pcr->lat)) {
+                    crT = rgcr[o]; rgcr[o] = *pcr; *pcr = crT;
+                  }
+                  break;
+                }
+              if (o < cCross)
+                continue;
+              cCross++, pcr++;
 #ifdef EXPRESS
               // Skip current crossing if AstroExpression says to do so.
               if (!us.fExpOff && FSzSet(us.szExpCross)) {
-                ExpSetR(iLetterU, c->lon[cCross-1]);
-                ExpSetR(iLetterV, c->lat[cCross-1]);
+                ExpSetR(iLetterU, (pcr-1)->lon);
+                ExpSetR(iLetterV, (pcr-1)->lat);
                 ExpSetN(iLetterW, l);
-                ExpSetN(iLetterX, n ? oDes : oAsc);
+                ExpSetN(iLetterX, (pcr-1)->ang1);
                 ExpSetN(iLetterY, k);
-                ExpSetN(iLetterZ, m ? oDes : oAsc);
+                ExpSetN(iLetterZ, (pcr-1)->ang2);
                 if (!NParseExpression(us.szExpCross))
                   cCross--;
               }
@@ -1859,9 +1988,9 @@ void ChartAstroGraph(void)
         } // n
       } // k
     } // l
-  }
+  } // j
   if (!us.fLatitudeCross)
-    return;
+    return fTrue;
   PrintL();
 
   // Now, print out all the latitude crossings found.
@@ -1869,51 +1998,56 @@ void ChartAstroGraph(void)
 
   for (i = 1; i < cCross; i++) {
     j = i-1;
-    while (j >= 0 && c->lat[j] < c->lat[j+1]) {
-      SwapN(c->obj1[j], c->obj1[j+1]); SwapN(c->obj2[j], c->obj2[j+1]);
-      SwapR(&c->lat[j], &c->lat[j+1]); SwapR(&c->lon[j], &c->lon[j+1]);
+    while (j >= 0 && rgcr[j].lat < rgcr[j+1].lat) {
+      crT = rgcr[j]; rgcr[j] = rgcr[j+1]; rgcr[j+1] = crT;
       j--;
     }
   }
   for (i = 0; i < cCross; i++) {
-    j = NAbs(c->obj1[i]) - 1;
+    pcr = rgcr + i;
+    j = pcr->obj1;
     AnsiColor(kObjA[j]);
     sprintf(sz, "%.3s ", szObjDisp[j]); PrintSz(sz);
-    k = c->obj1[i] > 0 ? oAsc : oDes;
+    k = pcr->ang1;
     AnsiColor(kObjA[k]);
     sprintf(sz, "%-10s", szObjName[k]);
     PrintSz(sz);
-    AnsiColor(kWhiteA);
+    AnsiColor(kDefault);
     PrintSz(" crosses ");
-    l = NAbs(c->obj2[i] - (c->obj2[i] < 200 ? 0 : 400)) - 1;
+    l = pcr->obj2;
     AnsiColor(kObjA[l]);
     sprintf(sz, "%.3s ", szObjDisp[l]); PrintSz(sz);
-    m = c->obj2[i] < 200 ? (c->obj2[i] > 0 ? oMC : oNad) :
-      (c->obj2[i] > 400 ? oAsc : oDes);
+    m = pcr->ang2;
     AnsiColor(kObjA[m]);
     sprintf(sz, "%-10s ", szObjName[m]);
     PrintSz(sz);
     AnsiColor(kDefault);
     PrintSz("at ");
-    PrintSz(SzLocation(c->lon[i], c->lat[i]));
+    PrintSz(SzLocation(pcr->lon, pcr->lat));
     PrintL();
 #ifdef INTERPRET
     if (us.fInterpret)                    // Interpret it if -I in effect.
       InterpretAstroGraph(j, k, l, m);
 #endif
 #ifdef ATLAS
-    DisplayAtlasNearby(c->lon[i], c->lat[i], 0, NULL, fTrue);
+    DisplayAtlasNearby(pcr->lon, pcr->lat, 0, NULL, fTrue);
 #endif
   }
-  DeallocateP(c);
+  DeallocateP(rgcr);
   if (cCross <= 0) {
     AnsiColor(kDefault);
     PrintSz("No latitude crossings.\n");
   }
+  return fTrue;
 }
 
 
-#define ObjCOB(i) (FBetween(i, oJup, oPlu) ? cobLo + ((i)-oJup) : (i))
+#ifdef INTERPRET
+CONST char *szMoonsAngle1[4] = {"Leading", "Distant", "Following", "Close"};
+CONST char *szMoonsAngle2[4] = {"emerging, increasing, or being developed",
+  "subtle, weak, or internal", "leaving, ignored, or being left behind",
+  "strong, obvious, or prominent"};
+#endif
 
 // Print a chart showing the locations and aspects involving planetary moons,
 // as specified with the -8 switch. This includes both standard geocentric as
@@ -2001,30 +2135,36 @@ flag ChartMoons()
       AnsiColor(kObjA[m]);
       sprintf(sz, "%9.9s: ", szObjDisp[m]); PrintSz(sz);
 
+      // Print geocentric positions
       PrintZodiac(rgcp[0].obj[m]);
       PrintCh(' ');
       PrintAltitude(rgcp[0].alt[m]);
-      rT = MinDistance(cp->obj[m], Mod(cp->obj[oEar] + rDegQuad));
+      rT = MinDistance(cp->obj[m], Mod(cp->obj[objCenterSav] + rDegQuad));
       rT = (rT / rDegQuad - 1.0)*100.0;
-      AnsiColor(rT >= 75.0 ? kObjA[oAsc] :
-        (rT <= -75.0 ? kObjA[oDes] : kDefault));
+      j = (rT >= 75.0 ? oAsc : (rT <= -75.0 ? oDes : 0));
+      AnsiColor(j != 0 ? kObjA[j] : kDefault);
       PrintCh(' ');
       sprintf(sz, !us.fSeconds ? "%4.0f" : "%7.2f", rT); PrintSz(sz);
-      rT = MinDistance(cp->obj[m], Mod(cp->obj[oEar] + rDegHalf));
+      rT = MinDistance(cp->obj[m], Mod(cp->obj[objCenterSav] + rDegHalf));
       rT = (rT / rDegQuad - 1.0)*100.0;
       PrintSz("% ");
+      if (j == 0)
+        j = (rT >= 75.0 ? oMC : (rT <= -75.0 ? oNad : 0));
       AnsiColor(rT >= 75.0 ? kObjA[oMC] :
         (rT <= -75.0 ? kObjA[oNad] : kDefault));
       sprintf(sz, !us.fSeconds ? "%4.0f" : "%6.2f", rT); PrintSz(sz);
       PrintSz("% ");
 
+      // Print planet-centric positions
       AnsiColor(kObjA[m]);
-      PrintCh(chV); PrintCh(' ');
+      PrintCh2(chV); PrintCh(' ');
       PrintZodiac(cp->obj[m]);
       PrintCh(' ');
       PrintAltitude(cp->alt[m]);
       rT = MinDistance(cp->obj[m], Mod(cp->obj[oSun] + rDegQuad));
       rT = (rT / rDegQuad - 1.0)*100.0;
+      if (j == 0)
+        j = (rT >= 75.0 ? oAsc : (rT <= -75.0 ? oDes : 0));
       AnsiColor(rT >= 75.0 ? kObjA[oAsc] :
         (rT <= -75.0 ? kObjA[oDes] : kDefault));
       PrintCh(' ');
@@ -2032,11 +2172,25 @@ flag ChartMoons()
       rT = MinDistance(cp->obj[m], Mod(cp->obj[oSun] + rDegHalf));
       rT = (rT / rDegQuad - 1.0)*100.0;
       PrintSz("% ");
+      if (j == 0)
+        j = (rT >= 75.0 ? oMC : (rT <= -75.0 ? oNad : 0));
       AnsiColor(rT >= 75.0 ? kObjA[oMC] :
         (rT <= -75.0 ? kObjA[oNad] : kDefault));
       sprintf(sz, !us.fSeconds ? "%4.0f" : "%6.2f", rT); PrintSz(sz);
       PrintSz("%\n");
       count++;
+#ifdef INTERPRET
+      if (us.fInterpret && j > 0 && FInterpretObj(i) && FInterpretObj(m)) {
+        AnsiColor(kObjA[j]);
+        j = (j - oAsc) / 3;
+        sprintf(sz, "%s %s:", szObjDisp[m], szMoonsAngle1[j]); FieldWord(sz);
+        sprintf(sz, "%s's %s is %s.", szPerson, szMindPart[m],
+          szMoonsAngle2[j]); FieldWord(sz);
+        j = SFromZ(cp->obj[m]);
+        sprintf(sz, "It is %s and %s.", szDesc[j], szDesire[j]); FieldWord(sz);
+        FieldWord(NULL);
+      }
+#endif
     }
     if (count > 0)
       PrintL();
@@ -2146,8 +2300,8 @@ flag ChartMoons()
         orb = grid->v[Min(j, m)][Max(m, j)];
         AnsiColor(orb < 0 ? kWhiteA : kLtGrayA);
         sprintf(sz, " - orb: %c%d%c%02d'",
-          us.fAppSep ? (orb < 0 ? 'a' : 's') : (orb < 0 ? '-' : '+'),
-          NAbs(orb)/3600, chDeg1, NAbs(orb)%3600/60); PrintSz(sz);
+          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDeg1,
+          NAbs(orb)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(orb)%60); PrintSz(sz);
         }
@@ -2205,8 +2359,8 @@ flag ChartMoons()
         orb = grid->v[Min(i, m)][Max(m, i)];
         AnsiColor(orb < 0 ? kWhiteA : kLtGrayA);
         sprintf(sz, " - orb: %c%d%c%02d'",
-          us.fAppSep ? (orb < 0 ? 'a' : 's') : (orb < 0 ? '-' : '+'),
-          NAbs(orb)/3600, chDeg1, NAbs(orb)%3600/60); PrintSz(sz);
+          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDeg1,
+          NAbs(orb)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(orb)%60); PrintSz(sz);
         }
@@ -2360,7 +2514,10 @@ void PrintChart(flag fProg)
   }
   if (us.fAstroGraph) {
     PrintHeader(is.fMult ? -1 : 1);
-    ChartAstroGraph();
+    if (us.nRel > rcDual)
+      ChartAstroGraph();
+    else
+      ChartAstroGraphRelation();
     is.fMult = fTrue;
   }
   if (us.fEphemeris) {
@@ -2396,12 +2553,13 @@ void PrintChart(flag fProg)
   if (us.fInDayGra) {
     if (is.fMult)
       PrintL2();
+    if (!is.fMult && fProg)
+      PrintHeader(1);
     ChartTransitGraph(fFalse, fProg);
     is.fMult = fTrue;
   }
   if (us.fTransit) {
-    if (is.fMult)
-      PrintL2();
+    PrintHeader(is.fMult ? -1 : 1);
     ChartTransitSearch(fProg);
     is.fMult = fTrue;
   }
@@ -2411,8 +2569,7 @@ void PrintChart(flag fProg)
     is.fMult = fTrue;
   }
   if (us.fTransitGra) {
-    if (is.fMult)
-      PrintL2();
+    PrintHeader(is.fMult ? -1 : 1);
     ChartTransitGraph(fTrue, fProg);
     is.fMult = fTrue;
   }

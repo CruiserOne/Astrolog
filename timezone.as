@@ -1,6 +1,6 @@
-@AZ730  ; Astrolog 7.30 time zone changes.
+@AZ740  ; Astrolog 7.40 time zone changes.
 
-; Time zone changes composed using data from TZ database version "2021a": https://data.iana.org/time-zones/tz-link.html
+; Time zone changes composed using data from TZ database version "2022a": https://data.iana.org/time-zones/tz-link.html
 ; From TZ database file LICENSE:
 ;   all files in the tz code and data are in the public domain.
 ; (Astrolog's processing and use of this data is still under Astrolog's GPL license.)
@@ -14,7 +14,7 @@
 ; Column 5: Hour a particular time zone change takes place (default = local time, s = standard time, u = UTC)
 ; Column 6: Hour offset of time zone change (0 = Daylight off, 1 = Daylight on)
 
--YY1 141 2167
+-YY1 141 2175
 Albania	25
 1940	only	Jun	16	0	1
 1942	only	Nov	2	3	0
@@ -213,7 +213,13 @@ Bahamas	7
 1945	only	Oct	17	24	0
 1964	1975	Apr	lastSun	2	1
 1964	1975	Oct	lastSun	2	0
-Barb	5
+Barb	11
+1942	only	Apr	19	5u	1
+1942	only	Aug	31	6u	0
+1943	only	May	2	5u	1
+1943	only	Sep	5	6u	0
+1944	only	Apr	10	5u	0:30
+1944	only	Sep	10	6u	0
 1977	only	Jun	12	2	1
 1977	1978	Oct	Sun>=1	2	0
 1978	1980	Apr	Sun>=15	2	1
@@ -635,7 +641,7 @@ Falk	12
 1986	2000	Apr	Sun>=16	0	0
 2001	2010	Apr	Sun>=15	2	0
 2001	2010	Sep	Sun>=1	2	1
-Fiji	13
+Fiji	14
 1998	1999	Nov	Sun>=1	2	1
 1999	2000	Feb	lastSun	3	0
 2009	only	Nov	29	2	1
@@ -645,10 +651,11 @@ Fiji	13
 2012	2013	Jan	Sun>=18	3	0
 2014	only	Jan	Sun>=18	2	0
 2014	2018	Nov	Sun>=1	2	1
-2015	max	Jan	Sun>=12	3	0
+2015	2021	Jan	Sun>=12	3	0
 2019	only	Nov	Sun>=8	2	1
 2020	only	Dec	20	2	1
-2021	max	Nov	Sun>=8	2	1
+2022	max	Nov	Sun>=8	2	1
+2023	max	Jan	Sun>=12	3	0
 Finland	4
 1942	only	Apr	2	24	1
 1942	only	Oct	4	1	0
@@ -1099,7 +1106,7 @@ Japan	4
 1948	1951	Sep	Sat>=8	25	0
 1949	only	Apr	Sat>=1	24	1
 1950	1951	May	Sat>=1	24	1
-Jordan	31
+Jordan	32
 1973	only	Jun	6	0	1
 1973	1975	Oct	1	0	0
 1974	1977	May	1	0	1
@@ -1129,8 +1136,9 @@ Jordan	31
 2005	only	Sep	lastFri	0s	0
 2006	2011	Oct	lastFri	0s	0
 2013	only	Dec	20	0	0
-2014	max	Mar	lastThu	24	1
+2014	2021	Mar	lastThu	24	1
 2014	max	Oct	lastFri	0s	0
+2022	max	Feb	lastThu	24	1
 Kyrgyz	4
 1992	1996	Apr	Sun>=7	0s	1
 1992	1996	Sep	lastSun	0	0
@@ -1598,7 +1606,7 @@ Pakistan	5
 2008	only	Jun	1	0	1
 2008	2009	Nov	1	0	0
 2009	only	Apr	15	0	1
-Palestine	28
+Palestine	30
 1999	2005	Apr	Fri>=15	0	1
 1999	2003	Oct	Fri>=15	0	0
 2004	only	Oct	1	1	0
@@ -1625,8 +1633,10 @@ Palestine	28
 2016	2018	Oct	Sat>=24	1	0
 2019	only	Mar	29	0	1
 2019	only	Oct	Sat>=24	0	0
-2020	max	Mar	Sat>=24	0	1
-2020	max	Oct	Sat>=24	1	0
+2020	2021	Mar	Sat>=24	0	1
+2020	only	Oct	24	1	0
+2021	max	Oct	Fri>=23	1	0
+2022	max	Mar	Sun>=25	0	1
 Para	22
 1975	1978	Mar	1	0	0
 1975	1988	Oct	1	0	1
@@ -1699,7 +1709,7 @@ Poland	20
 1960	only	Apr	3	1s	1
 1961	1964	May	lastSun	1s	1
 1962	1964	Sep	lastSun	1s	0
-Port	50
+Port	48
 1916	only	Jun	17	23	1
 1916	only	Nov	1	1	0
 1917	only	Feb	28	23s	1
@@ -1738,10 +1748,8 @@ Port	50
 1944	1945	Apr	Sat>=21	22s	2
 1946	only	Apr	Sat>=1	23s	1
 1946	only	Oct	Sat>=1	23s	0
-1947	1949	Apr	Sun>=1	2s	1
-1947	1949	Oct	Sun>=1	2s	0
-1951	1965	Apr	Sun>=1	2s	1
-1951	1965	Oct	Sun>=1	2s	0
+1947	1965	Apr	Sun>=1	2s	1
+1947	1965	Oct	Sun>=1	2s	0
 1977	only	Mar	27	0s	1
 1977	only	Sep	25	0s	0
 1978	1979	Apr	Sun>=1	0s	1
@@ -1850,10 +1858,10 @@ Shang	14
 1948	1949	May	1	0	1
 1948	1949	Sep	30	24	0
 SL	4
-1935	1942	Jun	1	0	0:40
-1935	1942	Oct	1	0	0
-1957	1962	Jun	1	0	1
-1957	1962	Sep	1	0	0
+1932	only	Dec	1	0	0:20
+1933	1938	Mar	31	24	0
+1933	1939	Aug	31	24	0:20
+1939	only	May	31	24	0
 SovietZone	3
 1945	only	May	24	2	2
 1945	only	Sep	24	3	1
@@ -2235,8 +2243,8 @@ WS	5
 2010	only	Sep	lastSun	0	1
 2011	only	Apr	Sat>=1	4	0
 2011	only	Sep	lastSat	3	1
-2012	max	Apr	Sun>=1	4	0
-2012	max	Sep	lastSun	3	1
+2012	2021	Apr	Sun>=1	4	0
+2012	2020	Sep	lastSun	3	1
 Zion	85
 1940	only	May	31	24u	1
 1940	only	Sep	30	24u	0
@@ -2332,7 +2340,7 @@ Zion	85
 ; Column 5: Day this time zone offset changes (absent = 1st of month)
 ; Column 6: Hour this time zone offset changes (absent = 0:00, default = local time, s = standard time, u = UTC)
 
--YY2 414 2286
+-YY2 414 2294
 Africa/Abidjan	2
 0:16:08	-	1912
 0	-
@@ -2371,15 +2379,17 @@ Africa/Bangui	2
 -1	-
 Africa/Banjul	4
 1:06:36	-	1912
-1:06:36	-	1935
-1	-	1964
+1:06:36	-	1933	Apr
+1	-	1942	Feb
 0	-
 Africa/Bissau	3
 1:02:20	-	1912	Jan	1	1u
 1	-	1975
 0	-
-Africa/Blantyre	2
--2:20	-	1903	Mar
+Africa/Blantyre	4
+-2:20	-	1911	Jul	24
+-2:21:10	-	1914	Jun	30
+-2:21	-	1925	Jul
 -2	-
 Africa/Brazzaville	2
 -1:01:08	-	1912
@@ -2431,10 +2441,11 @@ Africa/El_Aaiun	4
 1	-	1976	Apr	14
 0	Morocco	2018	Oct	28	3
 -1	Morocco
-Africa/Freetown	4
+Africa/Freetown	5
 0:53	-	1882
-0:53	-	1913	Jun
-1	SL	1957
+0:53	-	1913	Jul
+1	SL	1939	Sep	5
+1	-	1941	Dec	6	24
 0	SL
 Africa/Gaborone	5
 -1:43:40	-	1885
@@ -2487,8 +2498,9 @@ Africa/Luanda	3
 -0:52:56	-	1892
 -0:52:04	-	1911	Dec	31	23u
 -1	-
-Africa/Lubumbashi	2
+Africa/Lubumbashi	3
 -1:49:52	-	1897	Nov	9
+-1	-	1920	Apr	25
 -2	-
 Africa/Lusaka	2
 -1:53:08	-	1903	Mar
@@ -2792,9 +2804,10 @@ America/Bahia_Banderas	11
 8	-	1970
 7	Mexico	2010	Apr	4	2
 6	Mexico
-America/Barbados	3
-3:58:29	-	1924
-3:58:29	-	1932
+America/Barbados	4
+3:58:29	-	1911	Aug	28
+4	Barb	1944
+4	Barb	1945
 4	Barb
 America/Belem	3
 3:13:56	-	1914
@@ -3001,10 +3014,11 @@ America/Guayaquil	3
 5:19:20	-	1890
 5:14	-	1931
 5	Ecuador
-America/Guyana	4
-3:52:40	-	1915	Mar
-3:45	-	1975	Jul	31
-3	-	1991
+America/Guyana	5
+3:52:39	-	1911	Aug
+4	-	1915	Mar
+3:45	-	1975	Aug
+3	-	1992	Mar	29	1
 4	-
 America/Halifax	7
 4:14:24	-	1902	Jun	15
@@ -3376,11 +3390,11 @@ America/Puerto_Rico	4
 4	-
 America/Punta_Arenas	13
 4:43:40	-	1890
-4:42:46	-	1910	Jan	10
+4:42:45	-	1910	Jan	10
 5	-	1916	Jul
-4:42:46	-	1918	Sep	10
+4:42:45	-	1918	Sep	10
 4	-	1919	Jul
-4:42:46	-	1927	Sep
+4:42:45	-	1927	Sep
 5	Chile	1932	Sep
 4	-	1942	Jun
 5	-	1942	Aug
@@ -3429,12 +3443,12 @@ America/Santarem	4
 4	-	2008	Jun	24
 3	-
 America/Santiago	14
-4:42:46	-	1890
-4:42:46	-	1910	Jan	10
+4:42:45	-	1890
+4:42:45	-	1910	Jan	10
 5	-	1916	Jul
-4:42:46	-	1918	Sep	10
+4:42:45	-	1918	Sep	10
 4	-	1919	Jul
-4:42:46	-	1927	Sep
+4:42:45	-	1927	Sep
 5	Chile	1932	Sep
 4	-	1942	Jun
 5	-	1942	Aug
@@ -4499,7 +4513,7 @@ Europe/Kiev	9
 -1	C-Eur	1943	Nov	6
 -3	Russia	1990	Jul	1	2
 -2	1	1991	Sep	29	3
--2	E-Eur	1995
+-2	C-Eur	1996	May	13
 -2	EU
 Europe/Kirov	8
 -3:18:48	-	1919	Jul	1	0u
@@ -4659,8 +4673,8 @@ Europe/Simferopol	16
 -1	C-Eur	1944	Apr	13
 -3	Russia	1990
 -3	-	1990	Jul	1	2
--2	-	1992
--2	E-Eur	1994	May
+-2	-	1992	Mar	20
+-2	C-Eur	1994	May
 -3	E-Eur	1996	Mar	31	0s
 -3	1	1996	Oct	27	3s
 -3	Russia	1997
@@ -4731,8 +4745,8 @@ Europe/Uzhgorod	11
 -3	Russia	1990
 -3	-	1990	Jul	1	2
 -1	-	1991	Mar	31	3
--2	-	1992
--2	E-Eur	1995
+-2	-	1992	Mar	20
+-2	C-Eur	1996	May	13
 -2	EU
 Europe/Vaduz	3
 -0:38:04	-	1894	Jun
@@ -4792,14 +4806,15 @@ Europe/Zagreb	6
 -1	1	1945	Sep	16	2s
 -1	-	1982	Nov	27
 -1	EU
-Europe/Zaporozhye	8
+Europe/Zaporozhye	9
 -2:20:40	-	1880
 -2:20	-	1924	May	2
 -2	-	1930	Jun	21
 -3	-	1941	Aug	25
 -1	C-Eur	1943	Oct	25
 -3	Russia	1991	Mar	31	2
--2	E-Eur	1995
+-2	E-Eur	1992	Mar	20
+-2	C-Eur	1996	May	13
 -2	EU
 Europe/Zurich	4
 -0:34:08	-	1853	Jul	16
@@ -4880,11 +4895,12 @@ Pacific/Easter	4
 Pacific/Efate	2
 -11:13:16	-	1912	Jan	13
 -11	Vanuatu
-Pacific/Enderbury	4
-11:24:20	-	1901
-12	-	1979	Oct
-11	-	1994	Dec	31
--13	-
+Pacific/Enderbury	5
+0	-	1860
+11:24:20	-	1885
+0	-	1938	Mar	6
+12	-	1942	Feb	9
+0	-
 Pacific/Fakaofo	3
 11:24:56	-	1901
 11	-	2011	Dec	30
@@ -4965,10 +4981,9 @@ Pacific/Nauru	5
 -9	-	1945	Sep	8
 -11:30	-	1979	Feb	10	2
 -12	-
-Pacific/Niue	4
-11:19:40	-	1901
-11:20	-	1951
-11:30	-	1978	Oct
+Pacific/Niue	3
+11:19:40	-	1952	Oct	16
+11:20	-	1964	Jul
 11	-
 Pacific/Norfolk	7
 -11:11:52	-	1901
@@ -5006,8 +5021,9 @@ Pacific/Port_Moresby	3
 -9:48:40	-	1880
 -9:48:32	-	1895
 -10	-
-Pacific/Rarotonga	3
-10:39:04	-	1901
+Pacific/Rarotonga	4
+-13:20:56	-	1899	Dec	26
+10:39:04	-	1952	Oct	16
 10:30	-	1978	Nov	12
 10	Cook
 Pacific/Saipan	5
@@ -5023,8 +5039,8 @@ Pacific/Tarawa	2
 -11:32:04	-	1901
 -12	-
 Pacific/Tongatapu	4
--12:19:20	-	1901
--12:20	-	1941
+-12:19:12	-	1945	Sep	10
+-12:20	-	1961
 -13	-	1999
 -13	Tonga
 Pacific/Wake	2

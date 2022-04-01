@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: xcharts2.cpp
+** Astrolog (Version 7.40) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -73,9 +73,8 @@ flag FProper(int i)
   f = !ignore[i];
   if (gi.nMode == gOrbit)
     f &= FThing(i) && (us.fEphemFiles || !FGeo(i));
-  else if (gi.nMode == gSector ||
-    fMap || gi.nMode == gGlobe || gi.nMode == gPolar)
-    f &= FThing(i);
+  else if (fMap || gi.nMode == gGlobe || gi.nMode == gPolar)
+    f &= FThing2(i);
   else if (gi.nMode == gEphemeris)
     f &= !(gs.fAlt && (i == oMoo || i == oFor));
   else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
@@ -319,14 +318,14 @@ void XChartWheelRelation()
   // ring, and then draw another line from this point to a another dot at the
   // same position in the inner ring as well.
 
-  if (us.nRel == rcTransit)
+  if (us.nRel <= rcTransit)
     for (i = 0; i <= is.nObj; i++) {
       ignoreT[i] = ignore[i];
       ignore[i] = ignore2[i];
     }
   DrawRing(2, 2 /* so lines are dotted */ + 1, xplanet2, symbol, cx, cy,
     0.41, 0.43, 0.54, 0.56, 0.58, 0.61, 0.65, 1.0);
-  if (us.nRel == rcTransit)
+  if (us.nRel <= rcTransit)
     for (i = 0; i <= is.nObj; i++)
       ignore[i] = ignoreT[i];
 
@@ -627,8 +626,8 @@ void XChartGridRelation()
             // For aspect cells, print the orb in degrees and minutes.
             if (gs.fAlt == us.fGridMidpoint) {
               if (grid->n[i][j]) {
-                sprintf(sz, "%c%d%c%02d'%s", grid->v[i][j] < 0 ?
-                  (us.fAppSep ? 'a' : '-') : (us.fAppSep ? 's' : '+'),
+                sprintf(sz, "%c%d%c%02d'%s",
+                  rgchAppSep[us.nAppSep*2 + (grid->v[i][j] >= 0)],
                   k/60, chDeg2, k%60, szT);
                 if (nScale == 3)
                   sz[7] = chNull;
@@ -657,17 +656,23 @@ void XChartEphemeris()
   real symbol[cObj*2+2], objSav[objMax], rT;
   char sz[cchSzDef];
   int cYea, unit = 6*gi.nScale, daytot, d = 1, dd, day, mon, yea, monsiz,
-    x1, y1, x2, y2, xs, ys, m, n, u, v = 0, i, j, dx;
+    mon0, day0, yea0, x1, y1, x2, y2, xs, ys, m, n, u,
+    v = 0, vold = nNegative, i, j, dx;
   flag fSav;
 
-  cYea = us.nEphemYears;    // Is this -Ey -X or just -E -X?
+  cYea = us.nEphemYears;    // Is -EY on to do multiple years at once?
+  if (!us.fProgress) {
+    mon0 = Mon; day0 = Day; yea0 = Yea;
+  } else {
+    mon0 = MonT; day0 = DayT; yea0 = YeaT;
+  }
   if (cYea) {
     daytot = 0;
     for (i = 0; i < cYea; i++)
-      daytot += DayInYear(Yea + i);
-    day = 1; mon = 1; yea = Yea; monsiz = 31;
+      daytot += DayInYear(yea0 + i);
+    day = 1; mon = 1; yea = yea0; monsiz = 31;
   } else
-    daytot = DayInMonth(Mon, Yea);
+    daytot = DayInMonth(mon0, yea0);
   x1 = (3 + Min(cYea, 2))*xFontT; y1 = unit*2;
   x2 = gs.xWin - x1;
   y2 = gs.yWin - y1 - gs.fText*yFontT;
@@ -707,10 +712,10 @@ void XChartEphemeris()
   while (d <= daytot + 1) {
     n = v;
     if (gs.fLabel &&
-      (cYea ? (mon == Mon && day == 1 && yea == Yea) : (d == Day))) {
+      (cYea ? (mon == mon0 && day == 1 && yea == yea0) : (d == day0))) {
       // Marker line for specific day.
       if (cYea)
-        v = y1 + NMultDiv(ys, d-2+Day, daytot);
+        v = y1 + NMultDiv(ys, d-2+day0, daytot);
       else
         v = y1 + NMultDiv(ys, (d-1)*24 + (int)Tim, daytot*24);
       DrawColor(kDkGreenB);
@@ -730,6 +735,10 @@ void XChartEphemeris()
       MM = mon; DD = day; YY = yea;
     } else
       DD = d;
+    if (us.fProgress) {
+      is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
+      ciCore = ciMain;
+    }
     CastChart(-1);
     if (us.fParallel)
       for (i = 0; i <= is.nObj; i++) {
@@ -777,26 +786,28 @@ void XChartEphemeris()
       }
 
     // Label months or days in the month along the left and right edges.
-    if (d <= daytot && (!cYea || (day == 1 && (cYea <= 1 || mon == 1)))) {
+    if (d <= daytot && (!cYea || (day == 1 && (cYea <= 1 || mon == 1))) &&
+      v-vold > (yFont-2)*gi.nScaleTextT) {
       if (cYea) {
         if (cYea <= 1)
           sprintf(sz, "%.3s", szMonth[mon]);
         else
           sprintf(sz, "%4d", yea);
-        i = (cYea <= 1 ? mon == Mon : yea == Yea);
+        i = (cYea <= 1 ? mon == mon0 : yea == yea0);
       } else {
         sprintf(sz, "%2d", d);
-        i = (d == Day);
+        i = (d == day0);
       }
       DrawColor(gs.fLabel && i ? gi.kiOn : gi.kiLite);
       DrawSz(sz,      xFontT/2, v + (yFont-2)*gi.nScaleTextT,
         dtLeft | dtBottom | dtScale2);
       DrawSz(sz, x2 + xFontT/2, v + (yFont-2)*gi.nScaleTextT,
         dtLeft | dtBottom | dtScale2);
+      vold = v;
     }
 
-    // Now increment the day counter. For a month we always go up by one.
-    // For a year we go up by four or until the end of the month reached.
+    // Now increment the day counter. For a month always go up by one.
+    // For a year go up by four or until the end of the month reached.
     if (cYea) {
       day += dd;
       if (day > monsiz) {
@@ -832,20 +843,23 @@ void XChartEsoteric()
   real rRay[cRay+2], rRaySav[cRay+2], power1[objMax], power2[objMax],
     power[oNorm+1];
   char sz[cchSzDef];
-  int daytot, d = 1, day, mon, monsiz,
+  int cYea, daytot, d = 1, dd, day, mon, yea, monsiz,
     x1, y1, x2, y2, xs, ys, m, n, u, v = 0, i, j, k;
-  flag fYea;
 
   EnsureRay();
-  fYea = (us.nEphemYears > 0);    // Doing an entire year or just a month?
-  if (fYea) {
-    daytot = DayInYear(Yea);
-    day = 1; mon = 1; monsiz = 31;
+  cYea = us.nEphemYears;    // Is -EY on to do multiple years at once?
+  if (cYea) {
+    daytot = 0;
+    for (i = 0; i < cYea; i++)
+      daytot += DayInYear(Yea + i);
+    day = 1; mon = 1; yea = Yea; monsiz = 31;
   } else
     daytot = DayInMonth(Mon, Yea);
-  x1 = (3 + fYea) * xFontT; y1 = 12 * gi.nScaleTextT;
+  x1 = (3 + Min(cYea, 2))*xFontT; y1 = 12*gi.nScaleTextT;
   x2 = gs.xWin - x1; y2 = gs.yWin - y1;
   xs = x2 - x1; ys = y2 - y1;
+  dd = (daytot / ys + 1) * (2 - us.fSeconds);
+  dd = Min(dd, 28);
 
   // Label Rays along the top axis.
 
@@ -866,25 +880,28 @@ void XChartEsoteric()
 
   while (d <= daytot + 1) {
     n = v;
-    if (gs.fLabel && (fYea ? (mon == Mon && day == 1) : (d == Day))) {
-      if (fYea)
+    if (gs.fLabel &&
+      (cYea ? (mon == Mon && day == 1 && yea == Yea) : (d == Day))) {
+      // Marker line for specific day.
+      if (cYea)
         v = y1 + NMultDiv(ys, d-2+Day, daytot);
       else
         v = y1 + NMultDiv(ys, (d-1)*24 + (int)Tim, daytot*24);
       DrawColor(kDkCyanB);
-      DrawLine(x1, v, x2, v);       // Marker line for specific day.
+      DrawLine(x1, v, x2, v);
     }
     v = y1 + NMultDiv(ys, d-1, daytot);
-    if (!gs.fEquator && (!fYea || day == 1)) {
+    if (!gs.fEquator && (!cYea || day == 1)) {
+      // Marker line for day or month.
       DrawColor(gi.kiGray);
-      DrawDash(x1, v, x2, v, 1);    // Marker line for day or month.
+      DrawDash(x1, v, x2, v, cYea <= 1 || mon == 1 ? 1 : 3);
     }
     if (d > 1)
       for (i = 1; i <= cRay+1; i++)
         rRaySav[i] = rRay[i];
     ciCore = ciMain;
-    if (fYea) {
-      MM = mon; DD = day;
+    if (cYea) {
+      MM = mon; DD = day; YY = yea;
     } else
       DD = d;
     CastChart(-1);
@@ -920,34 +937,41 @@ void XChartEsoteric()
       }
 
     // Label months or days in the month along the left and right edges.
-    if (d <= daytot && (!fYea || day == 1)) {
-      if (fYea) {
-        sprintf(sz, "%.3s", szMonth[mon]);
-        i = (mon == Mon);
+    if (d <= daytot && (!cYea || (day == 1 && (cYea <= 1 || mon == 1)))) {
+      if (cYea) {
+        if (cYea <= 1)
+          sprintf(sz, "%.3s", szMonth[mon]);
+        else
+          sprintf(sz, "%4d", yea);
+        i = (cYea <= 1 ? mon == Mon : yea == Yea);
       } else {
         sprintf(sz, "%2d", d);
         i = (d == Day);
       }
       DrawColor(gs.fLabel && i ? gi.kiOn : gi.kiLite);
-      i = v + gi.nScaleT;
-      DrawSz(sz,      xFontT/2,              i, dtLeft | dtTop | dtScale2);
-      DrawSz(sz, x2 + xFontT/2, i, dtLeft | dtTop | dtScale2);
+      DrawSz(sz,      xFontT/2, v + (yFont-2)*gi.nScaleTextT,
+        dtLeft | dtBottom | dtScale2);
+      DrawSz(sz, x2 + xFontT/2, v + (yFont-2)*gi.nScaleTextT,
+        dtLeft | dtBottom | dtScale2);
     }
 
-    // Now increment the day counter. For a month we always go up by one.
-    // For a year we go up by four or until the end of the month reached.
-    if (fYea) {
-      i = us.fSeconds ? 1 : 4;
-      day += i;
+    // Now increment the day counter. For a month always go up by one.
+    // For a year go up by four or until the end of the month reached.
+    if (cYea) {
+      day += dd;
       if (day > monsiz) {
-        d += i-(day-monsiz-1);
+        d += dd - (day-monsiz-1);
         if (d <= daytot + 1) {
           mon++;
-          monsiz = DayInMonth(mon, Yea);
+          if (mon > cSign) {
+            yea++;
+            mon = 1;
+          }
+          monsiz = DayInMonth(mon, yea);
           day = 1;
         }
       } else
-        d += i;
+        d += dd;
     } else
       d++;
   }
@@ -1057,7 +1081,8 @@ void XChartTransit(flag fTrans, flag fProg)
     if (fTrans)
       for (obj = 0; obj <= oNorm; obj++)
         SwapN(ignore[obj], ignore2[obj]);
-    if (us.fProgress = fProg) {
+    us.fProgress = fProg;
+    if (fProg) {
       is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
       ciCore = ciMain;
     }
@@ -1105,11 +1130,7 @@ void XChartTransit(flag fTrans, flag fProg)
 
         // Check for and add eclipse information to array too.
         if (fEclipse) {
-          et = etNone;
-          if (asp == aCon)
-            et = NCheckEclipse(x, y, &rPct);
-          else if (asp == aOpp && x == oSun && ObjOrbit(y) == us.objCenter)
-            et = NCheckEclipseLunar(us.objCenter, y, &rPct);
+          et = NCheckEclipseAny(x, asp, y, &rPct);
           if (et > etNone) {
             ppw = &(*rgEph)[y][x][asp];
             if (*ppw == NULL) {
@@ -1216,8 +1237,14 @@ void XChartTransit(flag fTrans, flag fProg)
         xp += yRow/2;
         DrawObject(x, xp, yp2);
         xp += yRow;
-        DrawColor(kAspB[asp]);
-        DrawAspect(asp, xp, yp2);
+        n = asp;
+        DrawColor(kAspB[n]);
+        if (fEclipse && n <= aOpp) {
+          pw2 = (*rgEph)[y][x][n];
+          if (pw2 != NULL && pw2[iw] > 0)
+            n += cAspect2;
+        }
+        DrawAspect(n, xp, yp2);
         xp += yRow;
         if (fTrans) {
           DrawColor(kSignB(SFromZ(cp1.obj[y])));
@@ -1418,11 +1445,11 @@ flag XChartRising()
       for (x = 0; x <= dx; x++) {
         TT = (real)x * 24.0 / (real)dx;
         CastChart(-1);
-        mc = planet[oMC]; rT = planetalt[oMC];
+        mc = Tropical(planet[oMC]); rT = planetalt[oMC];
         EclToEqu(&mc, &rT);
         for (i = 0; i < imax; i++) {
           j = obj[i];
-          EclToHoriz(&azi, &alt, planet[j], planetalt[j], mc, AA);
+          EclToHoriz(&azi, &alt, Tropical(planet[j]), planetalt[j], mc, AA);
           rgalt[x][i][n] = alt;
         }
       }

@@ -1,5 +1,6 @@
-@AC730  ; Astrolog 7.30 city list atlas.
+@AC740  ; Astrolog 7.40 city list atlas.
 
+; This atlas contains all cities in the world with over 15000 population.
 ; Atlas composed using data from: https://www.geonames.org/
 ; From "Free Gazetteer Data" download Readme:
 ;   This work is licensed under a Creative Commons Attribution 4.0 License,

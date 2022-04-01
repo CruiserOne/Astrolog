@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: data.cpp
+** Astrolog (Version 7.40) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -59,10 +59,6 @@
 ** Global Variables.
 ******************************************************************************
 */
-
-#ifdef __TURBOC__
-extern unsigned _stklen = 0x4000;
-#endif
 
 US us = {
 
@@ -105,7 +101,7 @@ US us = {
 #else
   1,
 #endif
-  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0,
 
   // Obscure flags
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
@@ -129,10 +125,11 @@ US us = {
   0,
   -1,
   0,
-  0,
   ptCast,
   DIVISIONS,
   SCREENWIDTH,
+  0,
+  0,
   0.0,
   DEFAULT_ZONE,
   DEFAULT_LONG,
@@ -146,32 +143,33 @@ US us = {
   "",
 
   // Value subsettings
-  0, 5, 200, cPart, 22, 0.0, rDayInYear, 1.0, 1, 1, 24, 0, 0, rInvalid,
-  0.0, 0.0, oEar, oEar, 0, BIODAYS, 1,
+  0, 5, 200, cPart, 22, 0.0, 0.0, rDayInYear, 1.0, 1, 1, ccNone, ccNone,
+  24, 0, 0, rInvalid, 0.0, 0.0, oEar, oEar, 0, BIODAYS, 1,
 
   // AstroExpressions
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL};
 
 IS is = {
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
   fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
-  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0, 0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0, rInvalid, 0.0};
 
-CI ciCore = {11, 19, 1971, HM(11, 1),      0.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciMain = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),  0.0, 0.0, DEFAULT_LOC, "", ""};
-CI ciThre = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFour = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFive = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciHexa = {-1, 0,  0,    0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTran = {1,  1,  2021, 0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {9,  10, 2021, HMS(17, 0, 38), 1.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciGreg = {10, 15, 1582, 0.0,            0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciCore = {11, 19, 1971, HM(11, 1),       0.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciMain = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),   0.0, 0.0, DEFAULT_LOC, "", ""};
+CI ciThre = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFour = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFive = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciHexa = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTran = {1,  1,  2021, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciSave = {3,  31, 2022, HMS(23, 24, 25), 1.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciGreg = {10, 15, 1582, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
 CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 
 CI * CONST rgpci[cRing+1] = {&ciCore,
@@ -221,10 +219,13 @@ byte ignore2[objMax] = {1,
 // Restriction status of each aspect, as specified with -RA switch.
 
 byte ignorea[cAspect+1] = {0,
-  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
 byte ignorez[arMax] = {0, 0, 0, 0};     // Restrictions for -Zd chart events.
 byte ignore7[rrMax] = {0, 1, 1, 0, 1};  // Restrictions for rulership types.
+
+byte ignoreMem[objMax], ignore2Mem[objMax], ignoreaMem[cAspect+1],
+  ignorezMem[arMax], ignore7Mem[rrMax], ignorefMem[4];
 
 // Gauquelin sector plus zones, as specified with -Yl switch.
 
@@ -324,18 +325,22 @@ CONST StrLook rgSystem[] = {{"E-Asc", hsEqual}, {"E-MC", hsEqualMC},
 
 CONST char *szAspectName[cAspect2+1] = {"",
   "Conjunct", "Opposite", "Square", "Trine", "Sextile",
-  "Inconjunct", "Semisextile", "Semisquare", "Sesquiquadrate",
-  "Quintile", "Biquintile",
-  "Semiquintile", "Septile", "Novile",
-  "Binovile", "Biseptile", "Triseptile", "Quatronovile",
-  "Parallel", "Contraparallel"};
-CONST StrLook rgAspectName[] = {{"Quincunx", aInc}, {"", -1}};
+  "Inconjunct", "SemiSextile", "SemiSquare", "SesquiQuadrate",
+  "Quintile", "BiQuintile",
+  "SemiQuintile", "Septile", "Novile",
+  "BiNovile", "BiSeptile", "TriSeptile", "QuatroNovile",
+  "TreDecile",
+  "Undecile", "BiUndecile", "TriUndecile", "QuatroUndecile", "QuintUndecile",
+  "Parallel", "ContraParallel"};
+CONST StrLook rgAspectName[] =
+  {{"Quincunx", aInc}, {"Octile", aSSq}, {"", -1}};
 CONST char *szAspectDisp[cAspect2+1];
 
 CONST char *szAspectAbbrev[cAspect2+1] = {"",
   "Con", "Opp", "Squ", "Tri", "Sex",
   "Inc", "SSx", "SSq", "Ses", "Qui", "BQn",
   "SQn", "Sep", "Nov", "BNv", "BSp", "TSp", "QNv",
+  "TDc", "Un1", "Un2", "Un3", "Un4", "Un5",
   "Par", "CPr"};
 CONST char *szAspectAbbrevDisp[cAspect2+1];
 
@@ -346,6 +351,8 @@ CONST char *szAspectGlyph[cAspect2+1] = {"",
   "Square with extending lines", "Letter 'Q'", "'+' over '-'",
   "'-' over '+'", "Number '7'", "Number '9'", "'9' under Roman 'II'",
   "'7' under Roman 'II'", "'7' under Roman 'III'", "'9' under Roman 'IV'",
+  "'10' under Roman 'III'", "Number '11'", "'11' under Roman 'II'",
+  "'11' under Roman 'III'", "'11' under Roman 'IV'", "'11' under Roman 'V'",
   "Parallel lines", "Crossed parallel lines"};
 CONST char *szAspectGlyphDisp[cAspect2+1];
 
@@ -394,20 +401,28 @@ CONST char *szEphem[cmMax] = {
   "JPL Horizons Web Query", "None"};
 
 CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},
-  {"Lahiri", 0.883333}, {"Krishnamurti", 0.98}, {"Raman", 2.329444},
-  {"Djwhal Khul", -3.619166}, {"", 0.0}};
+  {"Lahiri", 0.883208}, {"Deluce", -3.075453}, {"Raman", 2.329509},
+  {"Usha-Shasi", 4.682759}, {"Krishnamurti", 0.98006},
+  {"Djwhal Khul", -3.619379}, {"Yukteshwar", 2.261497},
+  {"J.N. Bhasin", 1.978163}, {"Galactic Center", -2.105736}, {"", 0.0}};
 
 CONST char *szEclipse[etMax] =
   {"No", "Penumbral", "Total Penumbral", "Partial", "Annular", "Total"};
 CONST char rgchEclipse[etMax+1] = "9ppPAT";
 
+CONST char *szAppSep[6] = {"neg", "pos", "app", "sep", "wax", "wan"};
+CONST char rgchAppSep[6+1] = "-+asxn";
+
 real rAspAngle[cAspect+1] = {0,
   0.0, 180.0, 90.0, 120.0, 60.0, 150.0, 30.0, 45.0, 135.0, 72.0, 144.0,
-  36.0, rDegMax/7.0, 40.0, 80.0, 720.0/7.0, 1080.0/7.0, 160.0};
+  36.0, rDegMax/7.0, 40.0, 80.0, rDegMax*2.0/7.0, rDegMax*3.0/7.0, 160.0,
+  108.0, rDegMax/11.0, rDegMax*2.0/11.0, rDegMax*3.0/11.0, rDegMax*4.0/11.0,
+  rDegMax*5.0/11.0};
 
 real rAspOrb[cAspect+1] = {0,
   7.0, 7.0, 7.0, 7.0, 6.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0,
-  1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+  1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+  0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
 
 real rObjOrb[oNorm+2] = {360.0,
   360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0, 360.0,
@@ -459,8 +474,10 @@ int exalt[oNorm+1] = {sGem,
 
 // This array is the reverse of the ruler arrays.
 // Here, given a sign, return what planet rules it.
-int rules[cSign+1] = {0,
+int rules[cSign+1] = {-1,
   oMar, oVen, oMer, oMoo, oSun, oMer, oVen, oPlu, oJup, oSat, oUra, oNep};
+int rules2[cSign+1] = {-1,
+  -1, -1, -1, -1, -1, -1, -1, oMar, -1, -1, oSat, oJup};
 
 // Esoteric astrology tables
 int rgObjRay[oNorm+1] = {3,
@@ -506,14 +523,14 @@ int rgObjHie2[oNorm+1] = {0,
   0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int rgSignEso1[cSign+1] = {0,
+int rgSignEso1[cSign+1] = {-1,
   oMer, oVul, oVen, oNep, oSun, oMoo, oUra, oMar, oEar, oSat, oJup, oPlu};
-int rgSignEso2[cSign+1] = {0,
-  0, 0, 0, 0, oNep, 0, 0, 0, 0, 0, 0, 0};
-int rgSignHie1[cSign+1] = {0,
+int rgSignEso2[cSign+1] = {-1,
+  -1, -1, -1, -1, oNep, -1, -1, -1, -1, -1, -1, -1};
+int rgSignHie1[cSign+1] = {-1,
   oUra, oVul, oEar, oNep, oSun, oJup, oSat, oMer, oMar, oVen, oMoo, oPlu};
-int rgSignHie2[cSign+1] = {0,
-  0, 0, 0, 0, oUra, 0, 0, 0, 0, 0, oVul, 0};
+int rgSignHie2[cSign+1] = {-1,
+  -1, -1, -1, -1, oUra, -1, -1, -1, -1, -1, oVul, -1};
 int kRayA[cRay+2] = {kBlack,
   kRed, kBlue, kGreen, kYellow, kOrange, kMagenta, kPurple, kWhite};
 CONST char *szRayName[cRay+1] = {"",
@@ -539,7 +556,8 @@ int kElemA[cElem] = {kRed, kYellow, kGreen, kBlue};
 int kAspA[cAspect+1] = {kWhite,
   kYellow, kBlue, kRed, kGreen, kCyan,
   kMagenta, kMagenta, kOrange, kOrange, kDkCyan, kDkCyan,
-  kDkCyan, kMaroon, kPurple, kPurple, kMaroon, kMaroon, kPurple};
+  kDkCyan, kMaroon, kPurple, kPurple, kMaroon, kMaroon, kPurple,
+  kDkCyan, kDkGreen, kDkGreen, kDkGreen, kDkGreen, kDkGreen};
 int kObjU[oNorm+2] = {kYellow,
   kElement, kElement, kElement, kElement, kElement,
     kElement, kElement, kElement, kElement, kElement,
@@ -581,7 +599,8 @@ real rHouseInf[cSign+6]  = {0,
 // The inherent strength of each aspect
 real rAspInf[cAspect+1] = {0.0,
   1.0, 0.8, 0.8, 0.6, 0.6, 0.4, 0.4, 0.2, 0.2,
-  0.2, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+  0.2, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+  0.05, 0.05, 0.05, 0.05, 0.05, 0.05};
 
 // The inherent strength of each planet when transiting
 real rTransitInf[oNorm1+1] = {10,
@@ -1086,7 +1105,7 @@ char *szInteract[cAspect+1] = {"",
   "%screates internal agitation with",
   "%screatively relates externally with",
   "%screatively relates internally with",
-  "", "", "", "", "", "", ""};
+  "", "", "", "", "", "", "", "", "", "", "", "", ""};
 
 char *szTherefore[cAspect+1] = {"",
   "Both parts are prominent in their psyche", "Balance is needed",
@@ -1099,11 +1118,12 @@ char *szTherefore[cAspect+1] = {"",
 char *szModify[3][cAspect] =
   {{"always ", "always ", "irreconcilably ", "always ", "much ",
   "completely ", "often ", "often ", "often ", "often ", "often ",
-  "", "", "", "", "", "", ""},
-  {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""},
+  "", "", "", "", "", "", "", "", "", "", "", "", ""},
+  {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", ""},
   {"somewhat ", "somewhat ", "somewhat ", "somewhat ", "some ", "somewhat ",
   "sometimes ", "sometimes ", "sometimes ", "sometimes ", "sometimes ",
-  "", "", "", "", "", "", ""}};
+  "", "", "", "", "", "", "", "", "", "", "", "", ""}};
 #endif // INTERPRET
 
 /* data.cpp */

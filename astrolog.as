@@ -1,16 +1,19 @@
-@AD730  ; Astrolog 7.30 default settings file astrolog.as
+@AD740  ; Astrolog 7.40 default settings file astrolog.as
+
+; The contents of this file can be automatically generated with the
+; "File / Save Settings" menu command, or with the -od command switch.
 
 -z 8:00W                ; Default time zone     [hours W or E of UTC   ]
 -z0 Autodetect          ; Default Daylight time [0 standard, 1 daylight]
--zl 122W19:59 47N36:35  ; Default location      [longitude and latitude]
+-zl 122W19'59 47N36'35  ; Default location      [longitude and latitude]
 -zv 167ft               ; Default elevation     [in feet or meters     ]
 -zj "Current moment now" "Seattle, WA, USA" ; Default name and location
 
 -Yz 0   ; Time minute addition to be used if "now" charts are offset.
 ;-n      ; Comment out this line to not start with chart for "now".
 
-_s      ; Zodiac selection          ["_s" is tropical, "=s" is sidereal]
-:s 0.0  ; Zodiac offset value       [Change "0.0" to desired ayanamsa  ]
+_s      ; Which zodiac to use       ["_s" is tropical, "=s" is sidereal]
+:s 0.0  ; Sidereal zodiac offset    [Change "0.0" to desired ayanamsa  ]
 :sz     ; Zodiac display format     ["z" is sign, "d" is 0-360 deg, etc]
 -A 5    ; Number of aspects         [Change "5" to desired number      ]
 -c Plac ; House system              [Change "Plac" to desired system   ]
@@ -23,23 +26,28 @@ _b0     ; Print zodiac seconds      ["_b0" to minute, "=b0" to second  ]
 :I 80   ; Text screen columns       [Change "80" to desired columns    ]
 -YQ 0   ; Text screen scroll limit  [Change "24" or set to "0" for none]
 _Yn     ; Which Nodes and Lilith    ["_Yn" shows mean, "=Yn" shows true]
-_Yd     ; European date format      ["_Yd" is MDY, "=Yd" is DMY        ]
+_sr0    ; Latitudes or declinations ["_sr0" shows lat., "=sr0" declin. ]
+_Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
+_Yd     ; European date format      ["_Yd" is M/D/Y, "=Yd" is D-M-Y    ]
 _Yt     ; European time format      ["_Yt" is AM/PM, "=Yt" is 24 hour  ]
 _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
-_Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 =YC     ; Smart cusp displays       ["=YC" is smart, "_YC" is normal   ]
 =YO     ; Smart copy and printing   ["=YO" does it smart, "_YO" doesn't]
 =Y8     ; Clip text to end of line  ["=Y8" clips, "_Y8" doesn't clip   ]
+-Ya0    ; Input character encoding  [0-3 is Default, IBM, Latin-1, UTF8]
 -YP 0   ; Arabic part formula       ["1" is fixed, "0" checks if night ]
 =Yu0    ; Show eclipse information  ["=Yu0" shows, "_Yu0" doesn't show ]
 =0n     ; Internet Web queries      ["=0n" disables them, "_0n" allows ]
+
+:pd 365.24219 ; Progression degrees per day    [365 is secondary]
+:pC 1.0       ; Progressed cusp movement ratio [1.0 is quotidian]
 
 
 ; FILE PATHS (-Yi1 through -Yi9):
 ; For example, point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.
 
--Yi1 "C:\ASTROLOG\EPH"
--Yi2 "C:\ASTROLOG\DAT"
+-Yi1 "C:\ASTROLOG\EPHEM"
+-Yi2 "C:\ASTROLOG\CHARTS"
 
 
 ; DEFAULT RESTRICTIONS:
@@ -69,16 +77,19 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -YR1 1 1  ; Restrict latitude direction changes, distance direction changes
 
 -YR7 0 1 1 0 1  ; Restrict rulerships: std, esoteric, hierarch, exalt, ray
+-YRZ 0 0 0 0    ; Restrict angle events: rising, zenith, setting, nadir
 
 
 ; DEFAULT ASPECT ORBS:
 ;  1- 5: Con Opp Squ Tri Sex
 ;  6-11: Inc SSx SSq Ses Qui BQn
 ; 12-18: SQn Sep Nov BNv BSp TSp QNv
+; 19-24: TDc Un1 Un2 Un3 Un4 Un5
 
 -YAo 1 5     7 7 7 7 6      ; Major aspects
 -YAo 6 11    3 3 3 3 2 2    ; Minor aspects
 -YAo 12 18   1 1 1 1 1 1 1  ; Obscure aspects
+-YAo 19 24   0.5 0.5 0.5 0.5 0.5 0.5  ; Very obscure aspects
 
 ; DEFAULT MAX PLANET ASPECT ORBS:
 
@@ -158,6 +169,11 @@ _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 -Yk  0 8    Bla Whi LtG Gra Mar DkG DkC DkB Mag  ; Main colors
 
 
+; OBJECT CUSTOMIZATION:
+
+; [No objects are different from defaults]
+
+
 ; GRAPHICS DEFAULTS:
 
 =Xm              ; Color charts       ["=Xm" is color, "_Xm" is monochrome]
@@ -170,7 +186,7 @@ _Xr              ; Reverse background ["_Xr" is black, "=Xr" is white     ]
 :Xv 1            ; Wheel fill    ["0" for none, "1" for standard, "2" rainbow]
 _Xx              ; Thicker lines ["=Xx" is thicker, "_Xx" is thinner         ]
 :Xbw             ; Bitmap file type   ["Xbw" is Windows .bmp, "Xbn" is X11   ]
-:YXG 1111        ; Glyph selections   [Capricorn, Uranus, Pluto, Lilith]
+:YXG 11122       ; Glyph selections [Capricorn, Uranus, Pluto, Lilith, Vertex]
 :YXg 0           ; Aspect grid cells  ["0" for autodetect  ]
 :YXS 0.0         ; Orbit radius in AU ["0.0" for autodetect]
 :YXj 0           ; Orbit trail count

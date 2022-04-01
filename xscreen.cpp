@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: xscreen.cpp
+** Astrolog (Version 7.40) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -382,28 +382,6 @@ void BeginX()
   InitColorsX();
 #endif // WIN
 
-#ifdef MACG
-  MaxApplZone();
-  InitGraf(&thePort);
-  InitFonts();
-  FlushEvents(everyEvent, 0);
-  InitWindows();
-  InitMenus();
-  TEInit();
-  InitDialogs(0L);
-  InitCursor();
-
-  gi.rcDrag = screenBits.bounds;
-  gi.rcBounds.left = 20;
-  gi.rcBounds.top = 20 + GetMBarHeight();
-  gi.rcBounds.right = gi.rcBounds.left + gs.xWin;
-  gi.rcBounds.bottom = gi.rcBounds.top + gs.yWin;
-  gi.wpAst = NewCWindow(0L, &gi.rcBounds, "\p" szAppNameCore " "
-    szVersionCore, true, noGrowDocProc, (WindowPtr)-1L, true, 0);
-  SetPort(gi.wpAst);
-  InitColorsX();
-#endif // MACG
-
 #ifdef WCLI
   WNDCLASS wndclass;
   if (!wi.fWndclass) {
@@ -450,85 +428,6 @@ void BeginX()
   gi.xOffset = gi.yOffset = 0;
   InitColorsX();
 #endif // WCLI
-}
-
-
-// Add a certain amount of time to the hour/day/month/year quantity that
-// defines a particular chart. This is used by the chart animation feature.
-// This can add or subtract anywhere from 1 to 9 seconds, minutes, hours,
-// days, months, years, decades, centuries, or millenia in any one call.
-// This is mainly just addition to the appropriate quantity, but have to
-// check for overflows, e.g. Dec 30 + 3 days = Jan 2 of Current year + 1.
-
-void AddTime(CI *pci, int mode, int toadd)
-{
-  int d, h;
-  real m;
-
-  if (!FBetween(mode, 1, 9))
-    mode = 4;
-
-  h = (int)RFloor(pci->tim);
-  m = RFract(pci->tim)*60.0;
-  if (m < 60.0 && m + 1.0/rLarge >= 60.0)  // Avoid roundoff error.
-    m = 60.0;
-  if (mode == 1)
-    m += 1.0/60.0*(real)toadd;             // Add seconds.
-  else if (mode == 2)
-    m += (real)toadd;                      // Add minutes.
-
-  // Add hours, either naturally or if minute value overflowed.
-
-  if (m >= 60.0 || m < 0.0 || mode == 3) {
-    if (m >= 60.0) {
-      m -= 60.0; toadd = NSgn2(toadd);
-    } else if (m < 0.0) {
-      m += 60.0; toadd = NSgn2(toadd);
-    }
-    h += toadd;
-  }
-
-  // Add days, either naturally or if hour value overflowed.
-
-  if (h >= 24 || h < 0 || mode == 4) {
-    if (h >= 24) {
-      h -= 24; toadd = NSgn2(toadd);
-    } else if (h < 0) {
-      h += 24; toadd = NSgn2(toadd);
-    }
-    pci->day = AddDay(pci->mon, pci->day, pci->yea, toadd);
-  }
-
-  // Add months, either naturally or if day value overflowed.
-
-  d = DayInMonth(pci->mon, pci->yea);
-  if (pci->day > d || pci->day < 1 || mode == 5) {
-    if (pci->day > d) {
-      pci->day -= d; toadd = NSgn2(toadd);
-    } else if (pci->day < 1) {
-      pci->day += DayInMonth(Mod12(pci->mon - 1), pci->yea);
-      toadd = NSgn2(toadd);
-    }
-    pci->mon += toadd;
-  }
-
-  // Add years, either naturally or if month value overflowed.
-
-  if (pci->mon > 12 || pci->mon < 1 || mode == 6) {
-    if (pci->mon > 12) {
-      pci->mon -= 12; toadd = NSgn2(toadd);
-    } else if (pci->mon < 1) {
-      pci->mon += 12; toadd = NSgn2(toadd);
-    }
-    pci->yea += toadd;
-  }
-  if (mode == 7)
-    pci->yea += 10 * toadd;      // Add decades.
-  else if (mode == 8)
-    pci->yea += 100 * toadd;     // Add centuries.
-  else if (mode == 9)
-    pci->yea += 1000 * toadd;    // Add millenia.
-  pci->tim = (real)h + m/60.0;   // Recalibrate hour time.
 }
 
 
@@ -653,7 +552,6 @@ void ResizeWindowToChart()
 {
   HDC hdc;
   RECT rcOld, rcCli, rcNew;
-  POINT pt;
   int xScr, yScr;
 
   if (!us.fGraphics)
@@ -668,12 +566,10 @@ void ResizeWindowToChart()
   ReleaseDC(wi.hwnd, hdc);
   GetWindowRect(wi.hwnd, &rcOld);
   GetClientRect(wi.hwnd, &rcCli);
-  pt.x = pt.y = 0;
-  ClientToScreen(wi.hwnd, &pt);
   rcNew.left = rcOld.left + gi.xOffset;
   rcNew.top  = rcOld.top  + gi.yOffset;
-  rcNew.right = rcNew.left + gs.xWin + (gi.nMode == 0 ? SIDESIZE : 0) +
-    (rcOld.right - rcOld.left - rcCli.right);
+  rcNew.right = rcNew.left + gs.xWin + (gi.nMode == 0 ? (SIDESIZE *
+    gi.nScaleText) >> 1 : 0) + (rcOld.right - rcOld.left - rcCli.right);
   rcNew.bottom = rcNew.top + gs.yWin +
     (rcOld.bottom - rcOld.top - rcCli.bottom);
   if (rcNew.right > xScr)
@@ -702,11 +598,6 @@ void InteractX()
   XEvent xevent;
   KeySym keysym;
 #endif
-#ifdef MACG
-  EventRecord erCur;
-  WindowPtr wpCur;
-  int wc, fEvent;
-#endif
 #ifdef WCLI
   HBITMAP hbmp, hbmpOld;
   HDC hdcWin;
@@ -722,8 +613,6 @@ void InteractX()
   while (!fBreak) {
     gi.nScale = gs.nScale/100;
     gi.nScaleText = gs.nScaleText/50;
-    if (gs.nFont/10000 == 0)
-      gi.nScaleText &= ~1;
 #ifdef WCLI
     if (wi.fDoResize) {
       wi.fDoResize = fFalse;
@@ -809,9 +698,6 @@ void InteractX()
       XFreePixmap(gi.disp, gi.pmap);
       gi.pmap = XCreatePixmap(gi.disp, gi.wind, gs.xWin, gs.yWin, gi.depth);
 #endif
-#ifdef MACG
-      SizeWindow(gi.wpAst, gs.xWin, gs.yWin, fTrue);
-#endif
 #ifdef WCLI
       ResizeWindowToChart();
 #endif
@@ -846,12 +732,6 @@ void InteractX()
       if (!gs.fJetTrail)
         XFillRectangle(gi.disp, gi.pmap, gi.pmgc, 0, 0, gs.xWin, gs.yWin);
 #endif
-#ifdef MACG
-      SetPort(gi.wpAst);
-      InvalRect(&gi.wpAst->portRect);
-      BeginUpdate(gi.wpAst);
-      EraseRect(&gi.wpAst->portRect);
-#endif
 #ifdef WCLI
       InvalidateRect(wi.hwnd, NULL, fFalse);
       ClearB((pbyte)&ps, sizeof(PAINTSTRUCT));
@@ -880,9 +760,6 @@ void InteractX()
       XSync(gi.disp, 0);
       XCopyArea(gi.disp, gi.pmap, gi.wind, gi.gc,
         0, 0, gs.xWin, gs.yWin, 0, 0);
-#endif
-#ifdef MACG
-      EndUpdate(gi.wpAst);
 #endif
 #ifdef WCLI
       BitBlt(hdcWin, 0, 0, wi.xClient, wi.yClient,
@@ -959,43 +836,6 @@ void InteractX()
           key = xkey[0];
 #endif // X11
 
-#ifdef MACG
-      HiliteMenu(0);
-      SystemTask();
-      fEvent = GetNextEvent(everyEvent, &erCur);
-      if (fEvent) {
-        switch (erCur.what) {
-        case mouseDown:
-          wc = FindWindow(erCur.where, &wpCur);
-          switch (wc) {
-          case inSysWindow:
-            SystemClick(&erCur, wpCur);
-            break;
-          case inMenuBar:
-            MenuSelect(erCur.where);
-            break;
-          case inDrag:
-            if (wpCur == gi.wpAst)
-              DragWindow(gi.wpAst, erCur.where, &gi.rcDrag);
-            break;
-          case inContent:
-            if (wpCur == gi.wpAst && wpCur != FrontWindow())
-              SelectWindow(gi.wpAst);
-            break;
-          case inGoAway:
-            if (wpCur == gi.wpAst && TrackGoAway(gi.wpAst, erCur.where))
-              HideWindow(gi.wpAst);
-            break;
-          }
-          break;
-        case updateEvt:
-          //fRedraw = fTrue;
-          break;
-        case keyDown:
-        case autoKey:
-          key = (char)(erCur.message & charCodeMask);
-#endif // MACG
-
 #ifdef WCLI
       if (PeekMessage(&msg, (HWND)NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
@@ -1056,6 +896,10 @@ void InteractX()
             break;
           case 'b':
             inv(gs.fBorder);
+            fRedraw = fTrue;
+            break;
+          case 'q':
+            inv(gs.fThick);
             fRedraw = fTrue;
             break;
           case 'l':
@@ -1236,6 +1080,8 @@ void InteractX()
           case 'J': gi.nMode = gDisposit;   fRedraw = fTrue; break;
           case 'L': gi.nMode = gAstroGraph; fRedraw = fTrue; break;
           case 'E': gi.nMode = gEphemeris;  fRedraw = fTrue; break;
+          case 'I': gi.nMode = gRising;     fRedraw = fTrue; break;
+          case 'M': gi.nMode = gMoons;      fRedraw = fTrue; break;
           case 'X': gi.nMode = gSphere;     fRedraw = fTrue; break;
           case 'W': gi.nMode = gWorldMap;   fRedraw = fTrue; break;
           case 'G': gi.nMode = gGlobe;      fRedraw = fTrue; break;
@@ -1265,10 +1111,12 @@ void InteractX()
             inv(gs.fEquator);
             fRedraw = fTrue;
             break;
+#ifndef X11          // Astrolog can't draw 24 bit color bitmaps on X11.
           case 'w':
             inv(gi.fBmp);
             fRedraw = fTrue;
             break;
+#endif
           case '0':
             inv(us.fPrimeVert);
             inv(us.fCalendarYear);
@@ -1281,9 +1129,13 @@ void InteractX()
           case 'v': case '?':
             length = us.nScrollRow;
             us.nScrollRow = 0;
-            if (key == 'v')
-              ChartListing();
-            else
+            PrintL();
+            if (key == 'v') {
+              if (us.nRel < rcNone)
+                ChartListingRelation();
+              else
+                ChartListing();
+            } else
               DisplayKeysX();
             us.nScrollRow = length;
             break;
@@ -1336,9 +1188,6 @@ void InteractX()
       } // switch
     } // if
 #endif
-#ifdef MACG
-    } // if
-#endif
 #ifdef WCLI
     } // if
 #endif
@@ -1356,9 +1205,6 @@ void EndX()
   XFreePixmap(gi.disp, gi.pmap);
   XDestroyWindow(gi.disp, gi.wind);
   XCloseDisplay(gi.disp);
-#endif
-#ifdef MACG
-  DisposeWindow(gi.wpAst);
 #endif
 #ifdef WCLI
   UnregisterClass(szAppName, wi.hinst);
@@ -1549,8 +1395,6 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       return tcError;
     gs.nScaleText = i;
     gi.nScaleText = gs.nScaleText/50;    // Refresh so changing -XS works
-    if (gs.nFont/10000 == 0)
-      gi.nScaleText &= ~1;
     gi.nScaleTextT2 = gi.nScaleText * gi.nScaleT;
     gi.nScaleTextT = gi.nScaleTextT2 >> 1;
     darg++;
@@ -1789,6 +1633,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
 {
   int darg = 0, i;
+  real rT;
   char ch1, *pch = NULL;
 #ifdef SWISS
   flag fAdd;
@@ -1811,9 +1656,10 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     i = NFromSz(argv[1]);
     if (FErrorValN("YXG", !FValidGlyphs(i), i, 0))
       return tcError;
-    gs.nGlyphs = (FBetween(i/1000, 1, 2) ? i/1000 : gs.nGlyphs/1000)*1000 +
-      (FBetween(i/100%10, 1, 2) ? i/100%10 : gs.nGlyphs/100%10)*100 +
-      (FBetween(i/10%10, 1, 3) ? i/10%10 : gs.nGlyphs/10%10)*10 +
+    gs.nGlyphs = (FBetween(i/10000, 1, 2) ? i/10000 : gs.nGlyphs/10000)*10000 +
+      (FBetween(i/1000%10, 1, 2) ? i/1000%10 : gs.nGlyphs/1000%10)*1000 +
+      (FBetween(i/100%10, 1, 3) ? i/100%10 : gs.nGlyphs/100%10)*100 +
+      (FBetween(i/10%10, 1, 2) ? i/10%10 : gs.nGlyphs/10%10)*10 +
       (FBetween(i%10, 1, 2) ? i%10 : gs.nGlyphs%10);
     darg++;
     break;
@@ -1834,7 +1680,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (FErrorArgc("YXA", argc, 3 - (ch1 == '1')))
       return tcError;
     i = NParseSz(argv[1], pmAspect);
-    if (FErrorValN("YXA", !FAspect(i), i, 0))
+    if (FErrorValN("YXA", !FAspect3(i), i, 0))
       return tcError;
     szDrawAspect[i] = argv[2][0] ? SzPersist(argv[2]) : szDrawAspectDef[i];
     szDrawAspect2[i] = (ch1 == '1' ? "" : (argv[3][0] ? SzPersist(argv[3]) :
@@ -1886,7 +1732,10 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
   case 'S':
     if (FErrorArgc("YXS", argc, 1))
       return tcError;
-    gs.rspace = RFromSz(argv[1]);
+    rT = RFromSz(argv[1]);
+    if (FErrorValR("YXS", !FValidZoom(rT), rT, 0))
+      return tcError;
+    gs.rspace = rT;
     darg++;
     break;
 
@@ -2058,6 +1907,7 @@ int DetectGraphicsChartMode()
   else if (us.fEphemeris)            nMode = gEphemeris;
   else if (us.fHorizonSearch)        nMode = gRising;
   else if (us.fAtlasNear)            nMode = gLocal;
+  else if (us.fMoonChart)            nMode = gMoons;
   else if (us.fInDayGra)             nMode = gTraTraGra;
   else if (us.fTransitGra)           nMode = gTraNatGra;
   else if (us.nRel == rcBiorhythm)   nMode = gBiorhythm;
@@ -2091,8 +1941,6 @@ flag FActionX()
 #endif
   gi.nScale = gs.nScale/100;
   gi.nScaleText = gs.nScaleText/50;
-  if (gs.nFont/10000 == 0)
-    gi.nScaleText &= ~1;
   gi.nScaleTextT2 = gi.nScaleText * gi.nScaleT;
   gi.nScaleTextT = gi.nScaleTextT2 >> 1;
 

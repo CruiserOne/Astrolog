@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: io.cpp
+** Astrolog (Version 7.40) File: io.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,10 +48,15 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
+#ifdef PC
+#include <io.h>
+#else
+#include <dirent.h>
+#endif
 
 
 /*
@@ -230,15 +235,16 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
     PrintWarning(szLine);
     goto LDone;
   }
-
   loop {
-    while (!feof(file) && (ch = getc(file)) < ' ')
+    while (!feof(file) && (ch = getbyte()) < ' ')
       ;
     if (feof(file))
       break;
     for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file) &&
-      (uchar)(szLine[i] = getc(file)) >= ' '; i++)
-      ;
+      (uchar)(ch = getbyte()) >= ' '; i++)
+      szLine[i] = ch;
+    if (ch != '\n')
+      ch = getbyte();
     szLine[i] = chNull;
     argc = NParseCommandLine(szLine, argv);
     if (!FProcessSwitches(argc, argv))
@@ -265,20 +271,26 @@ flag FOutputData(void)
   int i, j, iMax;
   real dst, rT;
 
-  if (us.fWriteDef)                 // If -od switch in effect then write
-    return FOutputSettings();       // current program settings to file.
-  else if (us.fWriteAAF)            // If -oa switch in effect then write
-    return FOutputAAFFile();        // chart info to AAF format.
-
   if (us.fNoWrite)
     return fFalse;
+
+  // Write other file formats if -od, -ol, -oa, or -oq is in effect.
+  if (us.nWriteFormat == 'd')
+    return FOutputSettings();
+  else if (us.nWriteFormat == 'l')
+    return FOutputChartList();
+  else if (us.nWriteFormat == 'a')
+    return FOutputAAFFile();
+  else if (us.nWriteFormat == 'q')
+    return FOutputQuickFile();
+
   file = fopen(is.szFileOut, "w");  // Create and open the file for output.
   if (file == NULL) {
     sprintf(sz, "File '%s' can not be created.", is.szFileOut);
     PrintError(sz);
     return fFalse;
   }
-  if (!us.fWritePos) {
+  if (us.nWriteFormat != '0') {
 
     // Write the chart information to the file.
 
@@ -302,13 +314,13 @@ flag FOutputData(void)
         Dst == dstAuto ? "Autodetect" : SzZone(Dst)));
       fprintf(file, "%s %s\n", SzZone(Zon), SzLocation(Lon, Lat));
       // Don't want double quotes within double quoted string parameters.
+      fprintf(file, "%czi \"", chSwitch);
       for (pch = ciMain.nam; *pch; pch++)
-        if (*pch == '"')
-          *pch = '\'';
+        putc(*pch != '"' ? *pch : '\'', file);
+      fprintf(file, "\" \"");
       for (pch = ciMain.loc; *pch; pch++)
-        if (*pch == '"')
-          *pch = '\'';
-      fprintf(file, "%czi \"%s\" \"%s\"\n", chSwitch, ciMain.nam, ciMain.loc);
+        putc(*pch != '"' ? *pch : '\'', file);
+      fprintf(file, "\"\n");
       us.fAnsiChar = i;
     }
   } else {
@@ -386,7 +398,7 @@ flag FOutputData(void)
 flag FProcessAAFFile(CONST char *szFile, FILE *file)
 {
   char szLine[cchSzLine], sz[cchSzMax], *pch, *sz1, *sz2, ch;
-  int i;
+  int i, grf;
   flag fHaveFile, fRet = fFalse;
 
   fHaveFile = (file != NULL);
@@ -396,8 +408,10 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       goto LDone;
   }
   is.fileIn = file;
+  do {
 
-  loop {
+  grf = 0;
+  while (grf != 3) {
     while (!feof(file) && (ch = getc(file)) < ' ')
       ;
     if (feof(file))
@@ -406,6 +420,8 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       (uchar)(szLine[i] = getc(file)) >= ' '; i++)
       ;
     szLine[i] = chNull;
+    if (szLine[0] == chNull)
+      continue;
     if (szLine[0] != '#') {
       sprintf(szLine,
         "The AAF file '%s' has a line not starting with '#' (character %d).",
@@ -424,7 +440,7 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       sz2 = pch;
       AdvancePast(',');
       pch[-1] = chNull;
-      if (*sz1 && NCompareSz(sz1, "*") != 0)
+      if (*sz1 && !FEqSz(sz1, "*"))
         sprintf(sz, "%s %s", sz2, sz1);
       else
         sprintf(sz, "%s", sz2);
@@ -455,6 +471,7 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       else
         sprintf(sz, "%s", sz2);
       ciCore.loc = SzPersist(sz);
+      grf |= 1;
 
     // Input row #2.
     } else if (FEqRgch(szLine, "#B93:", 5, fFalse)) {
@@ -466,12 +483,13 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       AdvancePast(',');
       ZZ = RParseSz(pch, pmZon);
       AdvancePast(',');
-      if (*pch == 'D')
-        SS = 2.0;      // Double Daylight Saving time
-      else if (*pch == 'L')
+      if (*pch == 'D')         // Double Daylight Saving time
+        SS = 2.0;
+      else if (*pch == 'L')    // Local Mean Time
         SS = 0.0;
       else
         SS = RParseSz(pch, pmDst);
+      grf |= 2;
     } else {
       sprintf(szLine,
         "The AAF file '%s' has a line that can't be parsed.", szFile);
@@ -479,8 +497,16 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       goto LDone;
     }
   }
-  fRet = fTrue;
+  if (!FValidMon(MM) || !FValidDay(DD, MM, YY) || !FValidYea(YY) ||
+    !FValidTim(TT) || !FValidZon(ZZ) || !FValidLon(OO) || !FValidLat(AA)) {
+    PrintWarning("Values in AAF file are out of range.");
+    goto LDone;
+  }
+  if (!FAppendCIList(&ciCore))
+    goto LDone;
 
+  } while (!feof(file));
+  fRet = fTrue;
 LDone:
   is.fileIn = NULL;
   if (!fHaveFile)
@@ -552,7 +578,481 @@ flag FOutputAAFFile(void)
 }
 
 
+#define FZonDst(sz) ((sz)[1] == 'D' || (sz)[1] == 'W')
+
+// Load a Quick*Chart format file into the default set of chart information,
+// given a file name or a file handle.
+
+flag FProcessQuickFile(CONST char *szFile, FILE *file)
+{
+  char szLine[cchSzMax], sz[cchSzDef];
+  int i;
+  flag fHaveFile, fRet = fFalse;
+
+  fHaveFile = (file != NULL);
+  if (!fHaveFile) {
+    file = FileOpen(szFile, 0, NULL);
+    if (file == NULL)
+      goto LDone;
+  }
+  is.fileIn = file;
+  do {
+    fgets(szLine, cchSzMax, file);
+    if (feof(file)) {
+      fRet = fTrue;
+      goto LDone;
+    }
+
+    // Parse line of 100 characters.
+    CopyRgb((pbyte)szLine, (pbyte)sz, 23);
+    for (i = 23-1; i >= 0 && sz[i] <= ' '; i--)
+      ;
+    sz[i+1] = chNull;
+    ciCore.nam = SzPersist(sz);
+    CopyRgchToSz(szLine+23, 3, sz, cchSzDef);
+    MM = NParseSz(sz, pmMon);
+    DD = NParseSz(szLine+23+3, pmDay);
+    CopyRgchToSz(szLine+23+7, 5, sz, cchSzDef);
+    YY = NParseSz(sz, pmYea);
+    CopyRgchToSz(szLine+23+12, 24-12, sz, cchSzDef);
+    TT = RParseSz(sz, pmTim);
+    if (FEqRgch(&szLine[23+24], "LMT", 3, fTrue))
+      ZZ = zonLMT;
+    else {
+      CopyRgchToSz(szLine+23+24+3, 9-3, sz, cchSzDef);
+      ZZ = RParseSz(sz, pmZon);
+    }
+    CopyRgchToSz(szLine+23+24+9, 10, sz, cchSzDef);
+    OO = RParseSz(sz, pmLon);
+    CopyRgchToSz(szLine+23+24+9+10, 9, sz, cchSzDef);
+    AA = RParseSz(sz, pmLat);
+    CopyRgb((pbyte)(szLine+23+24+9+10+9), (pbyte)sz, 25);
+    for (i = 25-1; i >= 0 && sz[i] <= ' '; i--)
+      ;
+    sz[i+1] = chNull;
+    ciCore.loc = SzPersist(sz);
+    SS = 0.0;
+    if (FZonDst(&szLine[23+24])) {
+      ZZ += 1.0; SS += 1.0;
+    }
+    if (!FValidMon(MM) || !FValidDay(DD, MM, YY) || !FValidYea(YY) ||
+      !FValidTim(TT) || !FValidZon(ZZ) || !FValidLon(OO) || !FValidLat(AA)) {
+      PrintWarning("Values in Quick*Chart file are out of range.");
+      goto LDone;
+    }
+    if (!FAppendCIList(&ciCore))
+      goto LDone;
+  } while (!feof(file));
+
+  fRet = fTrue;
+LDone:
+  is.fileIn = NULL;
+  if (!fHaveFile)
+    fclose(file);
+  return fRet;
+}
+
+
+// Write the current chart information or current chart list to an Quick*Chart
+// format file, as indicated by the -oq switch.
+
+flag FOutputQuickFile(void)
+{
+  char sz[cchSzMax];
+  FILE *file = NULL;
+  real rOff, rDst;
+  int i, iMax, j, fSav1;
+  flag fRet = fFalse, fSav2;
+  CI *pci;
+
+  if (us.fNoWrite)
+    goto LDone;
+  file = fopen(is.szFileOut, "w");  // Create and open the file for output.
+  if (file == NULL) {
+    sprintf(sz, "Quick*Chart file '%s' can not be created.", is.szFileOut);
+    PrintError(sz);
+    goto LDone;
+  }
+
+  iMax = (is.cci > 1 ? is.cci : 1);
+  for (i = 0; i < iMax; i++) {
+    pci = iMax <= 1 ? &ciMain : &is.rgci[i];
+    if (!FBetween(pci->yea, -9999, 99999)) {
+      PrintWarning("Can't save this chart to Quick*Chart format because the "
+        "Year field is more than 5 characters long.");
+      goto LDone;
+    }
+
+    // Output line of 101 characters.
+    fprintf(file, "%-23.23s", pci->nam);
+    fprintf(file, "%c%c%c", szMonth[pci->mon][0],
+      ChCap(szMonth[pci->mon][1]), ChCap(szMonth[pci->mon][2]));
+    fSav1 = us.fAnsiChar; us.fAnsiChar = 4;
+    fSav2 = is.fSeconds; is.fSeconds = fTrue;
+    fprintf(file, "%3d,%5d%s", pci->day, pci->yea, SzTim(pci->tim));
+    us.fAnsiChar = fSav1; is.fSeconds = fSav2;
+    rDst = (pci->dst == dstAuto ? (real)is.fDst : pci->dst);
+    rOff = (pci->zon == zonLMT ? pci->lon / 15.0 : pci->zon) - rDst;
+    if (pci->zon == zonLMT)
+      sprintf(sz, "LMT");
+    else {
+      sprintf(sz, "   ");
+      // Search for the 3 character time zone string that best matches offset.
+      for (j = 0; j < cZone; j++)
+        if (FSameR(rZon[j], rOff) && CchSz(szZon[j]) == 3 &&
+          FZonDst(szZon[j]) == (rDst == 1.0)) {
+          sprintf(sz, "%s", szZon[j]);
+          break;
+        }
+    }
+    fprintf(file, " %s%c%02d:%02d", sz, rOff < 0.0 ? '-' : '+',
+      (int)RAbs(rOff), (int)(RFract(RAbs(rOff))*60.0+rRound/60.0));
+    fprintf(file, "%03d%c%02d'%02d", (int)RAbs(pci->lon), pci->lon < 0.0 ?
+      'E' : 'W', (int)(RFract(RAbs(pci->lon))*60.0+rRound/60.0), 0);
+    fprintf(file, " %02d%c%02d'%02d", (int)RAbs(pci->lat), pci->lat < 0.0 ?
+      'S' : 'N', (int)(RFract(RAbs(pci->lat))*60.0+rRound/60.0), 0);
+    fprintf(file, " %-25.25s \n", pci->loc);
+  }
+
+LDone:
+  if (file != NULL)
+    fclose(file);
+  return fRet;
+}
+
+
+// Load a Astrodatabank XML format file into the default set of chart
+// information, given a file name or a file handle.
+
+flag FProcessADBFile(CONST char *szFile, FILE *file)
+{
+  char szLine[cchSzLine], sz[cchSzDef], szLoc1[cchSzDef], szLoc2[cchSzDef],
+    ch, *pch, *pch2;
+  int i, grf, pm = 0;
+  flag fHaveFile, fDidOne = fFalse, fDidStart, fDidLon, fRet = fFalse;
+
+  fHaveFile = (file != NULL);
+  if (!fHaveFile) {
+    file = FileOpen(szFile, 0, NULL);
+    if (file == NULL)
+      goto LDone;
+  }
+  is.fileIn = file;
+  do {
+
+  fDidStart = fFalse;
+  grf = 0;
+  while (grf != 2047) {
+    while (!feof(file) && (ch = getc(file)) < ' ')
+      ;
+    if (feof(file))
+      break;
+    for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file) &&
+      (uchar)(szLine[i] = getc(file)) >= ' '; i++)
+      ;
+    szLine[i] = chNull;
+
+    fDidLon = fFalse;
+    for (pch = szLine; *pch; pch++) {
+      if (FEqRgch(pch, "<adb_entry", 10, fFalse))
+        fDidStart = fTrue;
+      else if (!fDidStart)
+        continue;
+      if ((grf & 1) == 0 && FEqRgch(pch, "imonth=\"", 8, fFalse)) {
+        MM = atoi(pch + 8);
+        grf |= 1;
+      }
+      if ((grf & 2) == 0 && FEqRgch(pch, "iday=\"", 6, fFalse)) {
+        DD = atoi(pch + 6);
+        grf |= 2;
+      }
+      if ((grf & 4) == 0 && FEqRgch(pch, "iyear=\"", 7, fFalse)) {
+        YY = atoi(pch + 7);
+        grf |= 4;
+      }
+      if ((grf & 8) == 0 && FEqRgch(pch, "sbtime_ampm=\"", 13, fFalse)) {
+        pch += 13;
+        for (pch2 = pch; *pch2 && *pch2 != '"'; pch2++)
+          ;
+        CopyRgchToSz(pch, pch2 - pch, sz, cchSzDef);
+        if (*sz)
+          TT = RParseSz(sz, pmTim);
+        else
+          TT = 12.0;  // Some records are "unknown, 12:00 used"
+        grf |= 8;
+      }
+      if ((grf & 16) == 0 && FEqRgch(pch, "ctimetype=\"", 11, fFalse)) {
+        if (pch[11] != 'l') {
+          SS = pch[11] == 'd' ? 1.0 : 0.0;
+          grf |= 16;
+        } else {
+          SS = 0.0; ZZ = zonLMT;
+          grf |= (16 | 32);
+        }
+      }
+      if ((grf & 32) == 0 && FEqRgch(pch, "stmerid=\"", 9, fFalse)) {
+        pch += 9;
+        for (pch2 = pch; *pch2 && *pch2 != '"'; pch2++)
+          ;
+        CopyRgchToSz(pch, pch2 - pch, sz, cchSzDef);
+        ZZ = RParseSz(sz, pmZon);
+        grf |= 32;
+      }
+      if ((grf & 64) == 0 && FEqRgch(pch, "slong=\"", 7, fFalse)) {
+        OO = RParseSz(pch + 7, pmLon);
+        grf |= 64;
+        fDidLon = fTrue;
+      }
+      if ((grf & 128) == 0 && FEqRgch(pch, "slati=\"", 7, fFalse)) {
+        AA = RParseSz(pch + 7, pmLat);
+        grf |= 128;
+      }
+      if ((grf & 256) == 0 && FEqRgch(pch, "<sflname>", 9, fFalse)) {
+        pch += 9;
+        while (*pch == ' ')
+          pch++;
+        for (pch2 = pch; *pch2 && *pch2 != '<'; pch2++)
+          ;
+        CopyRgchToSz(pch, pch2 - pch, sz, cchSzDef);
+        ConvertSzFromUTF8(sz);
+        ciCore.nam = SzPersist(sz);
+        grf |= 256;
+      }
+      if ((grf & 512) == 0 && fDidLon && FEqRgch(pch, "\">", 2, fFalse)) {
+        pch += 2;
+        for (pch2 = pch; *pch2 && *pch2 != '<'; pch2++)
+          ;
+        CopyRgchToSz(pch, pch2 - pch, szLoc1, cchSzDef);
+        grf |= 512;
+      }
+      if ((grf & 1024) == 0 && FEqRgch(pch, "<country", 8, fFalse)) {
+        for (pch2 = pch + 8; *pch2 && *pch2 != '>'; pch2++)
+          ;
+        pch = pch2 + (*pch2 == '>');
+        for (pch2 = pch; *pch2 && *pch2 != '<'; pch2++)
+          ;
+        CopyRgchToSz(pch, pch2 - pch, szLoc2, cchSzDef);
+        sprintf(sz, "%s, %s", szLoc1, szLoc2);
+        ConvertSzFromUTF8(sz);
+        ciCore.loc = SzPersist(sz);
+        grf |= 1024;
+      }
+    }
+  }
+
+  if (grf != 2047) {
+    if (grf == 0 && fDidOne) {
+      fRet = fTrue;
+      goto LDone;
+    }
+    PrintWarning("Couldn't detect all fields in Astrodatabank file.");
+    goto LDone;
+  }
+  ZZ += SS;
+  if (!FValidMon(MM) || !FValidDay(DD, MM, YY) || !FValidYea(YY) ||
+    !FValidTim(TT) || !FValidZon(ZZ) || !FValidLon(OO) || !FValidLat(AA)) {
+    PrintWarning("Values in Astrodatabank file are out of range.");
+    goto LDone;
+  }
+  if (!FAppendCIList(&ciCore))
+    goto LDone;
+  fDidOne = fTrue;
+
+  } while (!feof(file));
+  fRet = fTrue;
+
+LDone:
+  is.fileIn = NULL;
+  if (!fHaveFile)
+    fclose(file);
+  return fRet;
+}
+
+
+// Load a Solar Fire chart export text file into the default set of chart
+// information, given a file name or a file handle.
+
+flag FProcessSFTextFile(CONST char *szFile, FILE *file)
+{
+  char szLine[cchSzLine], *pch, *pch2;
+  int nState = -1, cch;
+  flag fHaveFile, fRet = fFalse;
+
+  fHaveFile = (file != NULL);
+  if (!fHaveFile) {
+    file = FileOpen(szFile, 0, NULL);
+    if (file == NULL)
+      goto LDone;
+  }
+  is.fileIn = file;
+  loop {
+
+  fgets(szLine, cchSzMax, file);
+  if (feof(file))
+    break;
+  for (pch = szLine; *pch; pch++)
+    ;
+  while (pch > szLine && pch[-1] <= ' ')
+    *(--pch) = chNull;
+
+  if (nState <= 0) {
+    if (*szLine == chNull)
+      continue;
+    if (nState < 0 && FMatchSz("Charts from Solar Fire", szLine))
+      continue;
+    if (nState < 0 && FMatchSz("Created by Esoteric Technologies", szLine)) {
+      nState = 0;
+      continue;
+    }
+    if (nState == 0)
+      nState = 1;
+    else
+      break;
+  }
+  if (nState == 1) {
+    for (pch = szLine; *pch; pch++)
+      ;
+    cch = pch - szLine;
+    if (cch > 14 && FEqRgch(pch - 14, " - Natal Chart", 14, fFalse))
+      pch[-14] = chNull;
+    else if (cch > 13 && FEqRgch(pch - 13, " - Male Chart", 13, fFalse))
+      pch[-13] = chNull;
+    else if (cch > 15 && FEqRgch(pch - 15, " - Female Chart", 15, fFalse))
+      pch[-15] = chNull;
+    ciCore.nam = SzPersist(szLine);
+    nState = 2;
+  } else if (nState == 2) {
+    for (pch = szLine; *pch && *pch <= ' '; pch++)
+      ;
+    while (*pch > ' ')
+      pch++;
+    if (*pch == ' ')
+      *pch++ = chNull;
+    MM = NParseSz(szLine, pmMon);
+    while (*pch && *pch <= ' ')
+      pch++;
+    DD = NParseSz(pch, pmDay);
+    while (*pch > ' ')
+      pch++;
+    while (*pch && *pch <= ' ')
+      pch++;
+    YY = NParseSz(pch, pmYea);
+    while (*pch && *pch != ',')
+      pch++;
+    while (*pch && (*pch == ',' || *pch == ' '))
+      pch++;
+    for (pch2 = pch; *pch && *pch != ','; pch++)
+      ;
+    if (*pch == ',')
+      *pch++ = chNull;
+    TT = RParseSz(pch2, pmTim);
+    while (*pch && *pch == ' ')
+      pch++;
+    if (FBetween(*pch, 'A', 'Z')) {
+      while (*pch > ' ')
+        pch++;
+      SS = pch[-2] == 'D' ? 1.0 : 0.0;
+    } else
+      SS = 0.0;
+    ZZ = RParseSz(pch, pmZon) + SS;
+    nState = 3;
+  } else if (nState == 3) {
+    for (pch2 = szLine; *pch2 <= ' '; pch2++)
+      ;
+    for (pch = pch2; *pch; pch++)
+      ;
+    while (pch > szLine && pch[-1] != ',')
+      pch--;
+    if (pch > szLine && pch[-1] == ',') {
+      pch--;
+      while (pch > szLine && pch[-1] != ',')
+        pch--;
+      if (pch > szLine && pch[-1] == ',')
+        pch[-1] = chNull;
+    }
+    ciCore.loc = SzPersist(pch2);
+    AA = RParseSz(pch, pmLat);
+    while (*pch && *pch != ',')
+      pch++;
+    while (*pch && (*pch == ',' || *pch == ' '))
+      pch++;
+    OO = RParseSz(pch, pmLon);
+    nState = 4;
+    if (!FValidMon(MM) || !FValidDay(DD, MM, YY) || !FValidYea(YY) ||
+      !FValidTim(TT) || !FValidZon(ZZ) || !FValidLon(OO) || !FValidLat(AA)) {
+      PrintWarning("Values in text file are out of range.");
+      goto LDone;
+    }
+    if (!FAppendCIList(&ciCore))
+      goto LDone;
+  } else if (nState == 4) {
+    if (*szLine == chNull)
+      nState = 0;
+  }
+
+  } // loop
+  if (nState < 0) {
+    PrintWarning("Couldn't detect chart information in text file.");
+    goto LDone;
+  }
+
+  fRet = fTrue;
+LDone:
+  is.fileIn = NULL;
+  if (!fHaveFile)
+    fclose(file);
+  return fRet;
+}
+
+
+// Output the chart list in memory to an Astrolog chart list file. (If the
+// chart list is empty, output a length 1 list consisting of the main chart.)
+
+flag FOutputChartList()
+{
+  char sz[cchSzDef], *pch;
+  FILE *file;
+  CI *pci;
+  int cci, i, nSav;
+
+  if (us.fNoWrite)
+    return fFalse;
+  file = fopen(is.szFileOut, "w");    // Create and open the file for output.
+  if (file == NULL) {
+    sprintf(sz, "Chart list file %s can not be created.", is.szFileOut);
+    PrintError(sz);
+    return fFalse;
+  }
+
+  sprintf(sz, "@AL%s  ; %s chart list.\n", szVerCore, szAppName); PrintFSz();
+  cci = is.cci <= 0 ? 1 : is.cci;
+  for (i = 0; i < cci; i++) {
+    pci = is.cci <= 0 ? &ciMain : &is.rgci[i];
+    nSav = us.fAnsiChar;
+    us.fAnsiChar = fFalse;
+    fprintf(file, "%cqcl %.3s %2d %d %s %s ",
+      chSwitch, szMonth[pci->mon], pci->day, pci->yea, SzTim(pci->tim),
+      pci->dst == 0.0 ? "ST" : (pci->dst == 1.0 ? "DT" :
+      SzZone(pci->dst == dstAuto ? (real)is.fDst : pci->dst)));
+    fprintf(file, "%s %s ", SzZone(pci->zon), SzLocation(pci->lon, pci->lat));
+    // Don't put double quotes within double quoted string parameters.
+    putc('"', file);
+    for (pch = pci->nam; *pch; pch++)
+      putc(*pch != '"' ? *pch : '\'', file);
+    fprintf(file, "\" \"");
+    for (pch = pci->loc; *pch; pch++)
+      putc(*pch != '"' ? *pch : '\'', file);
+    fprintf(file, "\"\n");
+    us.fAnsiChar = nSav;
+  }
+  fclose(file);
+  return fTrue;
+}
+
+
 CONST char *szDegForm = "zdhn";
+CONST char *szTypSwiss[] = {"", "b", "O", "m", "j"};
+CONST char *szPntSwiss[] = {"", "n", "s", "p", "a"};
 
 // Take many of the user visible settings, and write them out to a new command
 // switch file, which may be read in to restore those settings. Most often
@@ -565,6 +1065,10 @@ flag FOutputSettings()
   FILE *file;
   int i;
   flag f1, f2;
+#ifdef SWISS
+  int j;
+  flag fAny = fFalse;
+#endif
 
   if (us.fNoWrite)
     return fFalse;
@@ -577,6 +1081,10 @@ flag FOutputSettings()
 
   sprintf(sz, "@AD%s  ; %s %s default settings file %s\n\n",
     szVerCore, szAppName, szVersionCore, DEFAULT_INFOFILE); PrintFSz();
+  PrintF(
+    "; The contents of this file can be automatically generated with the\n"
+    "; \"File / Save Settings\" menu command, or with the -od command switch."
+    "\n\n");
 
   f1 = is.fSeconds; is.fSeconds = fTrue;
   sprintf(sz, "-z %s                ", SzZone(us.zonDef)); PrintFSz();
@@ -607,10 +1115,10 @@ flag FOutputSettings()
 
   sprintf(sz, "%cs      ", ChDashF(us.fSidereal)); PrintFSz();
   PrintF(
-    "; Zodiac selection          [\"_s\" is tropical, \"=s\" is sidereal]\n");
+    "; Which zodiac to use       [\"_s\" is tropical, \"=s\" is sidereal]\n");
   PrintF(":s "); FormatR(sz, us.rZodiacOffset, 6); PrintFSz();
   PrintF(
-    "  ; Zodiac offset value       [Change \"0.0\" to desired ayanamsa  ]\n");
+    "  ; Sidereal zodiac offset    [Change \"0.0\" to desired ayanamsa  ]\n");
   sprintf(sz, ":s%c     ", szDegForm[us.nDegForm]); PrintFSz();
   PrintF(
     "; Zodiac display format     [\"z\" is sign, \"d\" is 0-360 deg, etc]\n");
@@ -649,18 +1157,21 @@ flag FOutputSettings()
   sprintf(sz, "%cYn     ", ChDashF(us.fTrueNode)); PrintFSz();
   PrintF(
     "; Which Nodes and Lilith    [\"_Yn\" shows mean, \"=Yn\" shows true]\n");
+  sprintf(sz, "%csr0    ", ChDashF(us.fEquator2)); PrintFSz();
+  PrintF(
+    "; Latitudes or declinations [\"_sr0\" shows lat., \"=sr0\" declin. ]\n");
+  sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
+  PrintF(
+    "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
   sprintf(sz, "%cYd     ", ChDashF(us.fEuroDate)); PrintFSz();
   PrintF(
-    "; European date format      [\"_Yd\" is MDY, \"=Yd\" is DMY        ]\n");
+    "; European date format      [\"_Yd\" is M/D/Y, \"=Yd\" is D-M-Y    ]\n");
   sprintf(sz, "%cYt     ", ChDashF(us.fEuroTime)); PrintFSz();
   PrintF(
     "; European time format      [\"_Yt\" is AM/PM, \"=Yt\" is 24 hour  ]\n");
   sprintf(sz, "%cYv     ", ChDashF(us.fEuroDist)); PrintFSz();
   PrintF(
     "; European length units     [\"_Yv\" is imperial, \"=Yv\" is metric]\n");
-  sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
-  PrintF(
-    "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
   sprintf(sz, "%cYC     ", ChDashF(us.fSmartCusp)); PrintFSz();
   PrintF(
     "; Smart cusp displays       [\"=YC\" is smart, \"_YC\" is normal   ]\n");
@@ -670,6 +1181,9 @@ flag FOutputSettings()
   sprintf(sz, "%cY8     ", ChDashF(us.fClip80)); PrintFSz();
   PrintF(
     "; Clip text to end of line  [\"=Y8\" clips, \"_Y8\" doesn't clip   ]\n");
+  sprintf(sz, "-Ya%d    ", us.nCharset); PrintFSz();
+  PrintF(
+    "; Input character encoding  [0-3 is Default, IBM, Latin-1, UTF8]\n");
   sprintf(sz, "-YP %d   ", us.nArabicNight); PrintFSz();
   PrintF(
     "; Arabic part formula       [\"1\" is fixed, \"0\" checks if night ]\n");
@@ -680,6 +1194,12 @@ flag FOutputSettings()
   sprintf(sz, "%c0n     ", ChDashF(us.fNoNetwork)); PrintFSz();
   PrintF(
     "; Internet Web queries      [\"=0n\" disables them, \"_0n\" allows ]\n");
+
+  sprintf(sz,
+    "\n:pd %9.5f ; Progression degrees per day    [365 is secondary]\n",
+    us.rProgDay); PrintFSz();
+  PrintF(":pC "); FormatR(sz, us.rProgCusp, 5); PrintFSz();
+  PrintF("       ; Progressed cusp movement ratio [1.0 is quotidian]\n");
 
   PrintF("\n\n; FILE PATHS (-Yi1 through -Yi9):\n; For example, "
     "point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.\n\n");
@@ -726,19 +1246,24 @@ flag FOutputSettings()
     "Restrict latitude direction changes, distance direction changes\n\n",
     SzNumF(us.fIgnoreDiralt), SzNumF(us.fIgnoreDirlen)); PrintFSz();
   PrintF("-YR7 ");
-  for (i = 0; i < 5; i++) PrintF(SzNumF(ignore7[i]));
-  PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n\n\n");
+  for (i = 0; i < rrMax; i++) PrintF(SzNumF(ignore7[i]));
+  PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n-YRZ ");
+  for (i = 0; i < arMax; i++) PrintF(SzNumF(ignorez[i]));
+  PrintF("   ; Restrict angle events: rising, zenith, setting, nadir\n\n\n");
 
   PrintF("; DEFAULT ASPECT ORBS:\n"
     ";  1- 5: Con Opp Squ Tri Sex\n"
     ";  6-11: Inc SSx SSq Ses Qui BQn\n"
-    "; 12-18: SQn Sep Nov BNv BSp TSp QNv\n\n-YAo 1 5    ");
+    "; 12-18: SQn Sep Nov BNv BSp TSp QNv\n"
+    "; 19-24: TDc Un1 Un2 Un3 Un4 Un5\n\n-YAo 1 5    ");
   for (i = 1; i <= 5; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
   PrintF("      ; Major aspects\n-YAo 6 11   ");
   for (i = 6; i <= 11; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
   PrintF("    ; Minor aspects\n-YAo 12 18  ");
   for (i = 12; i <= 18; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
-  PrintF("  ; Obscure aspects\n\n");
+  PrintF("  ; Obscure aspects\n-YAo 19 24  ");
+  for (i = 19; i <= 24; i++) { sprintf(sz, " %.1f", rAspOrb[i]); PrintFSz(); }
+  PrintF("  ; Very obscure aspects\n\n");
 
   PrintF("; DEFAULT MAX PLANET ASPECT ORBS:\n\n-YAm 0 10   ");
   for (i = 0; i <= 10; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
@@ -894,13 +1419,40 @@ flag FOutputSettings()
     { sprintf(sz, " %.3s", szColor[kMainA[i]]); PrintFSz(); }
   PrintF("  ; Main colors\n\n\n");
 
+#ifdef SWISS
+  PrintF("; OBJECT CUSTOMIZATION:\n\n");
+  for (i = custLo; i <= custHi; i++) {
+    j = i - custLo;
+    f1 = (rgObjSwiss[j] != rgObjSwissDef[j] || rgTypSwiss[j] !=
+      rgTypSwissDef[j] || rgPntSwiss[j] != 0 || rgFlgSwiss[j] != 0);
+    f2 = (szObjDisp[i] != szObjName[i]);
+    if (!f1 && !f2)
+      continue;
+    fAny = fTrue;
+    if (f1) {
+      sprintf(sz, "-Ye%s%s%s%s%s%s%s%s %d %d%s",
+        szTypSwiss[rgTypSwiss[j]], szPntSwiss[rgPntSwiss[j]],
+        (rgFlgSwiss[j] & 1) ? "H" : "", (rgFlgSwiss[j] & 2) ? "S" : "",
+        (rgFlgSwiss[j] & 4) ? "B" : "", (rgFlgSwiss[j] & 8) ? "N" : "",
+        (rgFlgSwiss[j] & 16) ? "T" : "", (rgFlgSwiss[j] & 32) ? "V" : "",
+        i, rgObjSwiss[j], f2 ? " " : "\n"); PrintFSz();
+    }
+    if (f2) {
+      sprintf(sz, "-YD %d %s\n", i, szObjDisp[i]); PrintFSz();
+    }
+  }
+  if (!fAny)
+    PrintF("; [No objects are different from defaults]\n");
+  PrintF("\n\n");
+#endif
+
 #ifdef GRAPH
   PrintF("; GRAPHICS DEFAULTS:\n\n");
   sprintf(sz, "%cXm              ", ChDashF(gs.fColor)); PrintFSz();
   PrintF("; Color charts       [\"=Xm\" is color, \"_Xm\" is monochrome]\n");
   sprintf(sz, "%cXr              ", ChDashF(gs.fInverse)); PrintFSz();
   PrintF("; Reverse background [\"_Xr\" is black, \"=Xr\" is white     ]\n");
-  i = gs.xWin; if (fSidebar) i -= SIDESIZE;
+  i = gs.xWin; if (fSidebar) i -= (SIDESIZE * gi.nScaleText) >> 1;
   sprintf(sz, ":Xw %d %d      ", i, gs.yWin); PrintFSz();
   PrintF("; Default X and Y resolution (not including sidebar)\n");
   sprintf(sz, ":Xs %d          ", gs.nScale); PrintFSz();
@@ -923,8 +1475,8 @@ flag FOutputSettings()
   PrintFSz();
   PrintF(
     "; Bitmap file type   [\"Xbw\" is Windows .bmp, \"Xbn\" is X11   ]\n");
-  sprintf(sz, ":YXG %04d        ", gs.nGlyphs); PrintFSz();
-  PrintF("; Glyph selections   [Capricorn, Uranus, Pluto, Lilith]\n");
+  sprintf(sz, ":YXG %05d       ", gs.nGlyphs); PrintFSz();
+  PrintF("; Glyph selections [Capricorn, Uranus, Pluto, Lilith, Vertex]\n");
   sprintf(sz, ":YXg %d           ", gs.nGridCell); PrintFSz();
   PrintF("; Aspect grid cells  [\"0\" for autodetect  ]\n");
   sprintf(sz, ":YXS %.1f         ", gs.rspace); PrintFSz();
@@ -948,6 +1500,76 @@ flag FOutputSettings()
   sprintf(sz, "\n; %s\n", DEFAULT_INFOFILE); PrintFSz();
   fclose(file);
   return fTrue;
+}
+
+
+// Open all the Astrolog chart info files within the specified directory, and
+// append their chart information to the chart list.
+
+void OpenDir(CONST char *szDir)
+{
+#ifdef PC
+  char szPath[cchSzMax], szFile[cchSzMax];
+  struct _finddata_t fi;
+  long hFile;
+  flag fAll = us.fWriteOld, fHaveFile;
+
+  // Only look at *.as (or *.dat) extension files.
+  sprintf(szPath, "%s\\*.%s", szDir, !fAll ? "as" : "*");
+  hFile = _findfirst(szPath, &fi);
+  fHaveFile = (hFile != -1);
+  while (fHaveFile) {
+    if (fi.name[0] == '.')
+      goto LNext;
+    // Skip over astrolog.as, atlas.as, and timezone.as if present.
+    if (!fAll && (FEqSzI(fi.name, DEFAULT_INFOFILE) || FEqSzI(fi.name,
+      DEFAULT_ATLASFILE) || FEqSzI(fi.name, DEFAULT_TIMECHANGE)))
+      goto LNext;
+    sprintf(szFile, "%s\\%s", szDir, fi.name);
+    if (!FInputData(szFile))
+      break;
+    if (!FAppendCIList(&ciCore))
+      break;
+LNext:
+    fHaveFile = _findnext(hFile, &fi) == 0;
+  }
+  _findclose(hFile);
+#else
+  char szPath[cchSzMax], szFile[cchSzMax], *pchFile, *pch;
+  DIR *dir;
+  struct dirent *ent;
+  flag fAll = us.fWriteOld;
+
+  dir = opendir(szDir);
+  if (dir != NULL) {
+    loop {
+      ent = readdir(dir);
+      if (ent == NULL)
+        break;
+      pchFile = ent->d_name;
+      if (pchFile[0] == '.')
+        continue;
+      for (pch = pchFile; *pch; pch++)
+        ;
+      if (!fAll && !(pch - pchFile > 3 &&
+        pch[-3] == '.' && pch[-2] == 'a' && pch[-1] == 's'))
+        continue;
+      // Skip over astrolog.as, atlas.as, and timezone.as if present.
+      if (!fAll && (FEqSzI(pchFile, DEFAULT_INFOFILE) || FEqSzI(pchFile,
+        DEFAULT_ATLASFILE) || FEqSzI(pchFile, DEFAULT_TIMECHANGE)))
+        continue;
+      sprintf(szFile, "%s/%s", szDir, pchFile);
+      if (!FInputData(szFile))
+        break;
+      if (!FAppendCIList(&ciCore))
+        break;
+    }
+    closedir(dir);
+  } else {
+    sprintf(szFile, "Directory '%s' not found.", szDir);
+    PrintError(szFile);
+  }
+#endif
 }
 
 
@@ -1136,7 +1758,7 @@ real RParseSz(CONST char *szEntry, int pm)
 {
   char szLocal[cchSzMax], *sz, *pch, ch, chT;
   int cch, i, cColon = 0;
-  flag fNeg = fFalse;
+  flag fNeg = fFalse, fMeridian = fFalse;
   real r;
 
   // First strip off any leading or trailing spaces.
@@ -1175,10 +1797,11 @@ real RParseSz(CONST char *szEntry, int pm)
   } else if (pm == pmZon) {
     // For time zones, see if the abbrev is in a table, e.g. "EST" -> 5.
     for (i = 0; i < cZone; i++)
-      if (NCompareSz(sz, szZon[i]) == 0)
+      if (FEqSz(sz, szZon[i]))
         return rZon[i];
     // Allow "H" prefix for numeric zones, e.g. "H5W".
-    if (ch == 'H') {
+    if (ch == 'H' || ch == 'M') {
+      fMeridian = (ch == 'M');
       sz++, cch--;
       ch = sz[0];
     }
@@ -1229,13 +1852,15 @@ real RParseSz(CONST char *szEntry, int pm)
       r += (real)(i / 100) / 60.0 + (real)(i % 100) / 3600.0;
     } else
       r += atof(pch) / 60.0;
-    while (*pch && *pch != ':')
+    while (*pch && *pch != ':' && *pch != '\'')
       pch++;
-    if (*pch == ':')
+    if (*pch == ':' || *pch == '\'')
       r += atof(pch+1) / (60.0*60.0);
   }
   if (fNeg)
     neg(r);
+  if (fMeridian)
+    r /= 15.0;
 
   if (pm == pmTim) {
     // Backtrack over any time suffix, e.g. "AM", "p.m." and variations.
@@ -1348,20 +1973,20 @@ real RInputRange(CONST char *szPrompt, real low, real high, int pm)
 // pertinent chart information. This is more than just reading from a file.
 // The procedure also takes care of the cases of prompting the user for the
 // information and using the time functions to determine the date now. (The
-// program considers these cases "virtual" files.) Furthermore, when reading
-// from a real file, we have to check if it was written in the -o0 format.
+// program considers these cases "virtual" files.) Finally, when reading from
+// a real file, have to check if it was written in the -o0 or other formats.
 
 flag FInputData(CONST char *szFile)
 {
   FILE *file;
-  char sz[cchSzDef], ch;
+  char sz[cchSzMax], ch;
   int i, fT;
   real k, l, m;
 
   // If we are to read from the virtual file "nul" that means to leave the
   // chart information alone with whatever settings it may have already.
 
-  if (NCompareSz(szFile, szNulCore) == 0) {
+  if (FEqSz(szFile, szNulCore)) {
     is.fHaveInfo = fTrue;
     return fTrue;
   }
@@ -1369,17 +1994,17 @@ flag FInputData(CONST char *szFile)
   // If we are to read from the virtual file "set" then that means use a
   // particular set of chart information generated earlier in the program.
 
-  if (NCompareSz(szFile, szSetCore) == 0) {
+  if (FEqSz(szFile, szSetCore)) {
     is.fHaveInfo = fTrue;
     ciCore = ciSave;
     return fTrue;
   }
-  if (NCompareSz(szFile, "__t") == 0) {
+  if (FEqSz(szFile, "__t")) {
     is.fHaveInfo = fTrue;
     ciCore = ciTran;
     return fTrue;
   }
-  if (NCompareSz(szFile, "__g") == 0) {
+  if (FEqSz(szFile, "__g")) {
     is.fHaveInfo = fTrue;
     ciCore = ciGreg;
     return fTrue;
@@ -1388,42 +2013,20 @@ flag FInputData(CONST char *szFile)
   // If we are to read from the virtual file "__1" through "__6" then that
   // means copy the chart information from the specified chart slot.
 
-  if (NCompareSz(szFile, "__1") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciMain;
-    return fTrue;
-  }
-  if (NCompareSz(szFile, "__2") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciTwin;
-    return fTrue;
-  }
-  if (NCompareSz(szFile, "__3") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciThre;
-    return fTrue;
-  }
-  if (NCompareSz(szFile, "__4") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciFour;
-    return fTrue;
-  }
-  if (NCompareSz(szFile, "__5") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciFive;
-    return fTrue;
-  }
-  if (NCompareSz(szFile, "__6") == 0) {
-    is.fHaveInfo = fTrue;
-    ciCore = ciHexa;
-    return fTrue;
+  if (szFile[0] == '_' && szFile[1] == '_') {
+    ch = szFile[2];
+    if (FBetween(ch, '1', '6') && szFile[3] == chNull) {
+      is.fHaveInfo = fTrue;
+      ciCore = *rgpci[ch - '0'];
+      return fTrue;
+    }
   }
 
 #ifdef TIME
   // If we are to read from the file "now" then that means use the time
   // functions to calculate the present date and time.
 
-  if (NCompareSz(szFile, szNowCore) == 0) {
+  if (FEqSz(szFile, szNowCore)) {
     is.fHaveInfo = fTrue;
     SS = us.dstDef; ZZ = us.zonDef; OO = us.lonDef; AA = us.latDef;
     GetTimeNow(&MM, &DD, &YY, &TT, SS, ZZ);
@@ -1436,7 +2039,7 @@ flag FInputData(CONST char *szFile)
   // If we are to read from the file "tty" then that means prompt the user
   // for all the chart information.
 
-  if (NCompareSz(szFile, szTtyCore) == 0) {
+  if (FEqSz(szFile, szTtyCore)) {
     file = is.S; is.S = stdout;
     if (!us.fNoSwitches) {
       // Temporarily disable an internal redirection of output to a file
@@ -1451,11 +2054,11 @@ flag FInputData(CONST char *szFile)
         SzProcessProgname(is.szProgName), chSwitch); PrintSz(sz);
     }
 
-    MM = NInputRange("Enter month for chart (e.g. '9' 'Sep')",
+    MM = NInputRange("Enter month for chart (e.g. '3' 'Mar')",
       1, 12, pmMon);
     DD = NInputRange("Enter day   for chart (e.g. '1' '31') ",
       1, DayInMonth(MM, 0), pmDay);
-    YY = NInputRange("Enter year  for chart (e.g. '2020')   ",
+    YY = NInputRange("Enter year  for chart (e.g. '2022')   ",
       -32000, 32000, pmYea);
     if (FBetween(YY, 0, 99)) {
       sprintf(sz,
@@ -1501,14 +2104,21 @@ flag FInputData(CONST char *szFile)
   }
 #endif // WIN
 
-  // Now that the special cases are taken care of, we can assume we are to
-  // read from a real file.
+  // Now that the special cases are taken care of, can assume are to read from
+  // a real file.
 
   file = FileOpen(szFile, 1, NULL);
   if (file == NULL)
     return fFalse;
   is.fHaveInfo = fTrue;
-  ch = getc(file); ungetc(ch, file);
+  if (!fgets(sz, cchSzMax, file))
+    return fFalse;
+  ch = sz[0];
+  for (i = CchSz(sz); i > 0 && sz[i-1] < ' '; i--)
+    ;
+  if (i >= 0)
+    sz[i] = chNull;
+  fseek(file, 0, SEEK_SET);
 
   // Read the chart parameters from a standard command switch file.
 
@@ -1523,6 +2133,30 @@ flag FInputData(CONST char *szFile)
   } else if (ch == '#') {
     fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessAAFFile(szFile, file))
+      return fFalse;
+    is.fSzPersist = fT;
+
+  // Read the chart parameters from a Quick*Chart file.
+
+  } else if (i == 100 || i == 101) {
+    fT = is.fSzPersist; is.fSzPersist = fFalse;
+    if (!FProcessQuickFile(szFile, file))
+      return fFalse;
+    is.fSzPersist = fT;
+
+  // Read the chart parameters from a Astrodatabank file.
+
+  } else if (ch == '<') {
+    fT = is.fSzPersist; is.fSzPersist = fFalse;
+    if (!FProcessADBFile(szFile, file))
+      return fFalse;
+    is.fSzPersist = fT;
+
+  // Read the chart parameters from a Solar Fire export text file.
+
+  } else if (ch == '\n') {
+    fT = is.fSzPersist; is.fSzPersist = fFalse;
+    if (!FProcessSFTextFile(szFile, file))
       return fFalse;
     is.fSzPersist = fT;
 
@@ -1602,6 +2236,12 @@ flag FInputData(CONST char *szFile)
 
 
 #ifdef JPLWEB
+/*
+******************************************************************************
+** Network IO Routines.
+******************************************************************************
+*/
+
 #include <urlmon.h>  // For URLDownloadToFile()
 
 // Download a Web page from a URL to the specified file.
@@ -1635,17 +2275,19 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
   real sec[3], len[3], rT;
   int phase = -1, i;
 
-  if (us.fNoNetwork)    // Don't allow if -0n set.
+  if (us.fNoNetwork) {    // Don't allow if -0n set.
+    PrintWarning("Internet features are disabled.");
     return fFalse;
+  }
 
   // Determine time range to get ephemeris for.
   for (i = 0; i < 3; i++) {
     ci[i] = ciCore;
-    AddTime(&ci[i], 2, 0);
+    AddTime(&ci[i], 2, 0);     // Sanitize time if hour out of range
     if (i <= 0)
-      AddTime(&ci[i], 2, -5);
+      AddTime(&ci[i], 2, -5);  // Subtract 5 minutes
     else if (i >= 2)
-      AddTime(&ci[i], 2, 6);
+      AddTime(&ci[i], 2, 6);   // Add at least 5 minutes
     sprintf(szMon[i], "%.3s", szMonth[ci[i].mon]);
     for (pch = szMon[i]; *pch; pch++)
       *pch = ChCap(*pch);
@@ -1698,8 +2340,10 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
 
   // Process downloaded file.
   file = FileOpen(szFileJPLCore, 1, NULL);
-  if (file == NULL)
+  if (file == NULL) {
+    // Error message printed inside FileOpen().
     return fFalse;
+  }
   loop {
     while (!feof(file) && (ch = getc(file)) < ' ')
       ;
@@ -1732,8 +2376,10 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
   }
   fclose(file);
   _unlink(szFileJPLCore);
-  if (phase < 3)
+  if (phase < 3) {
+    PrintWarning("Failed to get positions from " szFileJPLCore);
     return fFalse;
+  }
 
   // Process planet data.
   for (i = 0; i < 3; i++) {

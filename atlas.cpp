@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: atlas.cpp
+** Astrolog (Version 7.40) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -916,9 +916,9 @@ flag FLoadAtlas(FILE *file, int cae)
   for (i = 0; i < iznMax-1; i++)
     Assert(NCompareSz(rgszzn[i], rgszzn[i+1]) < 0);
   // Ensure certain countries are located where expected
-  Assert(NCompareSz(rgcnew[icnUS].szAbb, "US") == 0);  // USA
-  Assert(NCompareSz(rgcnew[icnCA].szAbb, "CA") == 0);  // Canada
-  Assert(NCompareSz(rgcnew[icnFR].szAbb, "FR") == 0);  // France
+  Assert(FEqSz(rgcnew[icnUS].szAbb, "US"));  // USA
+  Assert(FEqSz(rgcnew[icnCA].szAbb, "CA"));  // Canada
+  Assert(FEqSz(rgcnew[icnFR].szAbb, "FR"));  // France
 #endif
 
   // Free previous city list if present, and allocate new list.
@@ -990,7 +990,7 @@ flag FLoadAtlas(FILE *file, int cae)
         ;
       pch[j] = chNull;
       for (j = 0; j < iznMax; j++)
-        if (NCompareSz(pch, rgszzn[j]) == 0)
+        if (FEqSz(pch, rgszzn[j]))
           break;
     }
     if (j >= iznMax) {
@@ -1243,7 +1243,7 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
     if (*pch)
       *pch++ = chNull;
     for (izn = 0; izn < iznMax; izn++) {
-      if (NCompareSz(szLine, rgszzn[izn]) == 0)
+      if (FEqSz(szLine, rgszzn[izn]))
         break;
     }
     if (izn >= iznMax) {
@@ -1284,7 +1284,7 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
       pzc->irun = -1;
       pzc->dst = nLarge;
       for (n = 0; n < is.crun; n++)
-        if (NCompareSz(pchT, is.rgrun[n].szNam) == 0) {
+        if (FEqSz(pchT, is.rgrun[n].szNam)) {
           pzc->irun = n;
           rgfUsed[n] = fTrue;
           break;
@@ -1405,7 +1405,7 @@ flag FLoadZoneLinks(FILE *file, int czl)
 
     // Ensure "from" string is a valid time zone from atlas.as
     for (iznFrom = 0; iznFrom < iznMax; iznFrom++) {
-      if (NCompareSz(szFrom, rgszzn[iznFrom]) == 0)
+      if (FEqSz(szFrom, rgszzn[iznFrom]))
         break;
     }
     if (iznFrom >= iznMax) {
@@ -1417,7 +1417,7 @@ flag FLoadZoneLinks(FILE *file, int czl)
 
     // Ensure "to" string is a valid time zone from atlas.as
     for (iznTo = 0; iznTo < iznMax; iznTo++) {
-      if (NCompareSz(szTo, rgszzn[iznTo]) == 0)
+      if (FEqSz(szTo, rgszzn[iznTo]))
         break;
     }
     if (iznTo >= iznMax) {
@@ -1513,8 +1513,7 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
   icn = istateUS = istateCA = -1;
   if (*pch2) {
     for (j = 0; j < icnewMax; j++)
-      if (NCompareSzI(pch2, rgcnew[j].szAbb) == 0 ||
-          NCompareSzI(pch2, rgcnew[j].szNam) == 0) {
+      if (FEqSzI(pch2, rgcnew[j].szAbb) || FEqSzI(pch2, rgcnew[j].szNam)) {
         icn = j;
         break;
       }
@@ -1522,18 +1521,16 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
       pch1 = pch2;
   }
   // Allow "USA" in addition to just country/region abbreviation "US".
-  if (icn == -1 && NCompareSzI(pch2, "USA") == 0)
+  if (icn == -1 && FEqSzI(pch2, "USA"))
     icn = icnUS;
   if (*pch1) {
     for (j = 0; j < icnusMax; j++)
-      if (NCompareSzI(pch1, rgcnus[j].szAbb) == 0 ||
-          NCompareSzI(pch1, rgcnus[j].szNam) == 0) {
+      if (FEqSzI(pch1, rgcnus[j].szAbb) || FEqSzI(pch1, rgcnus[j].szNam)) {
         istateUS = j;
         break;
       }
     if (istateUS < 0) for (j = 0; j < icncaMax; j++)
-      if (NCompareSzI(pch1, rgcnca[j].szAbb) == 0 ||
-          NCompareSzI(pch1, rgcnca[j].szNam) == 0) {
+      if (FEqSzI(pch1, rgcnca[j].szAbb) || FEqSzI(pch1, rgcnca[j].szNam)) {
         istateCA = j;
         break;
       }
@@ -1543,12 +1540,12 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
   for (iae = 0; iae < is.cae; iae++) {
     pae = &is.rgae[iae];
     nPower = 0;
-    if (NCompareSzI(szCity, pae->szNam) == 0) {
+    if (FEqSzI(szCity, pae->szNam)) {
       // Exact match of entire name = 10 points.
       nPower = 10;
     } else {
       for (j = 0; pae->szNam[j]; j++)
-        if (FCompareSzSubI(szCity, &pae->szNam[j]))
+        if (FEqSzSubI(szCity, &pae->szNam[j]))
           break;
       // Substring match = 1 point.
       // Substring match at start and/or end of word = +1 point each.
@@ -1748,7 +1745,7 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
 
 
 // Sanitize a time, in which the individual parameters may be out of range.
-// For example, 25:00 on 32 Dec 2020 gets converted to 1:00 on 2 Jan 2021.
+// For example, 25:00 on 32 Dec 2021 gets converted to 1:00 on 2 Jan 2022.
 
 void AdjustTime(int *mon, int *day, int *yea, int *tim)
 {

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: calc.cpp
+** Astrolog (Version 7.40) File: calc.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -128,7 +128,7 @@ void JulianToMdy(real JD, int *mon, int *day, int *yea)
     return;
   }
 #endif
-  *mon = mJan; *day = 1; *yea = 2021;
+  *mon = mJan; *day = 1; *yea = 2022;
 }
 
 
@@ -858,6 +858,9 @@ void ProcessPlanet(int ind, real aber)
 CONST int rgObjJPL[cThing+1] = {0/*399*/, 10, 301,
   199, 299, 499, 599, 699, 799, 899, 999, nMillion + 2060,
   nMillion + 1, nMillion + 2, nMillion + 3, nMillion + 4, 0, 0, 0};
+#define FJPL(f) (f)
+#else
+#define FJPL(f) fFalse
 #endif
 
 // Compute the positions of the planets at a certain time using the Swiss
@@ -869,14 +872,11 @@ CONST int rgObjJPL[cThing+1] = {0/*399*/, 10, 301,
 
 void ComputeEphem(real t)
 {
-  int objCentCalc, imax, i, j;
+  int objCentCalc, objOrbit, imax, i, j;
   real r1, r2, r3, r4, r5, r6, dist1, dist2, objPla, altPla, objEar, altEar,
     rT;
   flag fSwiss = !us.fPlacalcPla, fJPLPla, fJPL, fRet;
   PT3R ptPla, ptEar, vEar;
-#ifdef SWISS
-  int objOrbit;
-#endif
 #ifdef JPLWEB
   flag fSav;
 #endif
@@ -903,11 +903,9 @@ void ComputeEphem(real t)
 
     // Calculate planet using Swiss Ephemeris, Placalc, or JPL Horizons
     fRet = fFalse;
-#ifndef JPLWEB
-    fJPL = fFalse;
-#else
-    fJPL = (FCust(i) && rgTypSwiss[i - custLo] == 4) ||
-      (fJPLPla && FBetween(i, 0, cThing) && rgObjJPL[i] > 0);
+    fJPL = FJPL((FCust(i) && rgTypSwiss[i - custLo] == 4) ||
+      (fJPLPla && FBetween(i, 0, cThing) && rgObjJPL[i] > 0));
+#ifdef JPLWEB
     if (fJPL) {
       fSav = us.fTruePos;
       if (us.objCenter != oEar)
@@ -1040,12 +1038,8 @@ void ComputeEphem(real t)
   // If other planet centered, shift all positions by central planet.
   if (us.objCenter > oSun) {
     for (i = 0; i <= is.nObj; i++) {
-#ifdef JPLWEB
-      fJPL = (FCust(i) && rgTypSwiss[i - custLo] == 4) || (fJPLPla &&
-        (i == oEar || (FBetween(i, 0, cThing) && rgObjJPL[i] > 0)));
-#else
-      fJPL = fFalse;
-#endif
+      fJPL = FJPL((FCust(i) && rgTypSwiss[i - custLo] == 4) || (fJPLPla &&
+        (i == oEar || (FBetween(i, 0, cThing) && rgObjJPL[i] > 0))));
       // Don't shift if Swiss Ephemeris already shifted for us.
       if (fSwiss && !fJPL && !FNodal(i) && !FNodal(us.objCenter) &&
         us.objCenter <= oNorm)
@@ -1070,11 +1064,17 @@ void ComputeEphem(real t)
   space[us.objCenter].x = space[us.objCenter].y = space[us.objCenter].z = 0.0;
 
   // Potentially relocate objects so they orbit the central planet.
-  if (!us.fMoonMove || (fSwiss && us.objCenter <= oNorm))
+  if (!us.fMoonMove)
     return;
   for (i = oMoo; i <= oNorm; i++) {
     if (ignore[i])
       continue;
+    // Don't relocate if Swiss Ephemeris already relocated earlier.
+    fJPL = FJPL((FCust(i) && rgTypSwiss[i - custLo] == 4) || (fJPLPla &&
+      (i == oEar || (FBetween(i, 0, cThing) && rgObjJPL[i] > 0))));
+    if (fSwiss && us.objCenter <= oNorm && !fJPL)
+      continue;
+    // Don't relocate if object already orbits Sun or central planet.
     j = ObjOrbit(i);
     if (j < 0 || j == us.objCenter || (j == oSun && us.objCenter <= oNorm))
       continue;
@@ -1198,7 +1198,8 @@ real CastChart(int nContext)
   // Go calculate star positions if -U switch in effect.
 
   if (us.nStar || FStar(us.objCenter))
-    ComputeStars(is.T, (us.fSidereal ? 0.0 : -is.rOff) + us.rZodiacOffset);
+    ComputeStars(is.T, (us.fSidereal ? us.rZodiacOffset : -is.rOff) +
+      us.rZodiacOffsetAll);
 
 #ifdef EPHEM
   // Compute more accurate ephemeris positions for certain objects.
@@ -1329,7 +1330,7 @@ real CastChart(int nContext)
       if (force[i] > 0.0) {
         // Force to a specific zodiac position.
         planet[i] = force[i]-rDegMax;
-        planetalt[i] = ret[i] = 0.0;
+        planetalt[i] = ret[i] = retalt[i] = retlen[i] = 0.0;
       } else {
         // Force to a midpoint of two other positions.
         k = (-(int)force[i])-1;
@@ -1337,6 +1338,8 @@ real CastChart(int nContext)
         planet[i] = Midpoint(planet[k], planet[k2]);
         planetalt[i] = (planetalt[k] + planetalt[k2]) / 2.0;
         ret[i] = (ret[k] + ret[k2]) / 2.0;
+        retalt[i] = (retalt[k] + retalt[k2]) / 2.0;
+        retlen[i] = (retlen[k] + retlen[k2]) / 2.0;
       }
     }
 
@@ -1399,8 +1402,9 @@ real CastChart(int nContext)
   // Adjust final planet and house positions with AstroExpressions.
 
   if (!us.fExpOff) {
-    if (FSzSet(us.szExpObj))
-      for (i = 0; i <= is.nObj; i++) if (!ignore[i] || FCusp(i)) {
+    if (FSzSet(us.szExpObj)) {
+      k = Max(is.nObj, o12h);
+      for (i = 0; i <= k; i++) if (!ignore[i] || FCusp(i)) {
         ExpSetN(iLetterV, i);
         ExpSetR(iLetterW, planet[i]);
         ExpSetR(iLetterX, planetalt[i]);
@@ -1409,9 +1413,12 @@ real CastChart(int nContext)
         ParseExpression(us.szExpObj);
         planet[i]    = Mod(RExpGet(iLetterW));
         planetalt[i] = RExpGet(iLetterX);
+        planetalt[i] = Min(planetalt[i], rDegQuad);
+        planetalt[i] = Max(planetalt[i], -rDegQuad);
         ret[i]       = RExpGet(iLetterY);
         retalt[i]    = RExpGet(iLetterZ);
       }
+    }
     if (FSzSet(us.szExpHou))
       for (i = 1; i <= cSign; i++) {
         ExpSetN(iLetterX, i);
@@ -1506,7 +1513,7 @@ void CastSectors()
 
     // During our segment, check to see if each planet rises or sets.
 
-    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i) && FThing(i)) {
+    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i)) {
       EclToHoriz(&azi1, &alt1, cp1.obj[i], rgalt1[i], mc1, Lat);
       EclToHoriz(&azi2, &alt2, cp2.obj[i], rgalt2[i], mc2, Lat);
       j = 0;
@@ -1538,7 +1545,7 @@ void CastSectors()
 
   // Now fill out the planet array with the appropriate sector location.
 
-  for (i = 0; i <= is.nObj; i++) if (!ignore[i] && FThing(i)) {
+  for (i = 0; i <= is.nObj; i++) if (!ignore[i]) {
     planet[i] = 0.0;
     // Search for the first rising or setting event of our planet.
     for (s2 = 0; s2 < occurcount && source[s2] != i; s2++)
@@ -1692,10 +1699,14 @@ int GetAspect(CONST real *planet1, CONST real *planet2,
     // velocity vectors to see if the planets are moving toward, away, or are
     // overtaking each other.
 
-    if (us.fAppSep) {
+    if (us.nAppSep == 1) {
       ret1a = us.nRel > rcTransit ? ret1[j] : 0.0;
       rDiff *= RSgn2(ret1a-ret2[i]) * RSgn2(MinDifference(planet2[i],
         planet1[j]));
+    } else if (us.nAppSep == 2) {
+      ret1a = us.nRel > rcTransit ? ret1[j] : 0.0;
+      rDiff = RAbs(rDiff) * RSgn2(ret2[i]-ret1a) *
+        RSgn2(MinDifference(planet2[i], planet1[j]));
     }
 
 #ifdef EXPRESS
@@ -1761,7 +1772,7 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
       continue;
     rDiff = (asp == aCon ? alt1 - alt2 : alt1 + alt2);
     rOrb = GetOrb(i, j, asp);
-    if (us.fAppSep) {
+    if (us.nAppSep == 1) {
       if (FCmSwissAny()) {
         retalt1a = us.nRel > rcTransit ? retalt1[j] : 0.0;
         rDiff *= RSgn2(retalt1a - retalt2[i]);
@@ -2056,6 +2067,26 @@ int NCheckEclipseLunar(int iEar, int iMoo, real *prPct)
 }
 
 
+// Check whether an aspect between two objects is also an eclipse. Basically
+// a wrapper around NCheckEclipse() and NCheckEclipseLunar().
+
+int NCheckEclipseAny(int obj1, int asp, int obj2, real *prEclipse)
+{
+  int nEclipse = etUndefined;
+  real rEclipse = 0.0;
+
+  if (us.fEclipse && !us.fParallel) {
+    if (asp == aCon)
+      nEclipse = NCheckEclipse(obj1, obj2, &rEclipse);
+    else if (asp == aOpp && obj1 == oSun && ObjOrbit(obj2) == us.objCenter)
+      nEclipse = NCheckEclipseLunar(us.objCenter, obj2, &rEclipse);
+  }
+  if (prEclipse != NULL)
+    *prEclipse = rEclipse;
+  return nEclipse;
+}
+
+
 /*
 ******************************************************************************
 ** Other Calculations.
@@ -2104,8 +2135,11 @@ void CreateElemTable(ET *pet)
 */
 
 #ifdef SWISS
+// On some systems "ret" is defined within system headers.
+#undef ret
 #include "swephexp.h"
 #include "swephlib.h"
+#define ret cp0.dir
 
 // Set up path for Swiss Ephemeris to search in for ephemeris files.
 
@@ -2153,7 +2187,7 @@ void SwissEnsurePath()
 }
 
 
-int rgObjSwiss[cCust] = {SE_VULCAN - SE_FICT_OFFSET_1,
+CONST int rgObjSwissDef[cCust] = {SE_VULCAN - SE_FICT_OFFSET_1,
   SE_CUPIDO   - SE_FICT_OFFSET_1, SE_HADES    - SE_FICT_OFFSET_1,
   SE_ZEUS     - SE_FICT_OFFSET_1, SE_KRONOS   - SE_FICT_OFFSET_1,
   SE_APOLLON  - SE_FICT_OFFSET_1, SE_ADMETOS  - SE_FICT_OFFSET_1,
@@ -2168,10 +2202,12 @@ int rgObjSwiss[cCust] = {SE_VULCAN - SE_FICT_OFFSET_1,
   801, 808, 802,
   901, 903, 902, 904, 905,
   599, 699, 799, 899, 999};
-int rgTypSwiss[cCust] = {
+CONST int rgTypSwissDef[cCust] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0,
   1, 2, 1, 1, 1, 1, 1, 1, 1,
   3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3};
+int rgObjSwiss[cCust];
+int rgTypSwiss[cCust];
 int rgPntSwiss[cCust];
 int rgFlgSwiss[cCust];
 
@@ -2357,7 +2393,8 @@ flag FSwissPlanet(int ind, real jd, int indCent,
     }
     return fFalse;
   }
-  *obj    = xx[0] - is.rSid + us.rZodiacOffset;
+  *obj    = xx[0] - is.rSid + (us.fSidereal ? us.rZodiacOffset : 0.0) +
+    us.rZodiacOffsetAll;
   *objalt = xx[1];
   *space  = xx[2];
   *dir    = xx[3];
@@ -2379,7 +2416,7 @@ flag FSwissPlanet(int ind, real jd, int indCent,
 void SwissHouse(real jd, real lon, real lat, int housesystem, real *asc,
   real *mc, real *ra, real *vtx, real *ep, real *ob, real *off, real *nut)
 {
-  double cusp[cSign+1], ascmc[11], cuspr[cSign+1], ascmcr[11];
+  double cusp[cSign+1], ascmc[11], cuspr[cSign+1], ascmcr[11], rSid;
   int i;
   char serr[AS_MAXCH], ch;
 
@@ -2440,17 +2477,18 @@ void SwissHouse(real jd, real lon, real lat, int housesystem, real *asc,
 
   // Fill out return parameters for cusp array, Ascendant, etc.
   *off = -swe_get_ayanamsa(tjde);
-  is.rSid = us.rZodiacOffset + (us.fSidereal ? *off : 0.0);
-
-  *asc = Mod(ascmc[SE_ASC] + is.rSid);
-  *mc  = Mod(ascmc[SE_MC]  + is.rSid);
-  *ra  = Mod(ascmc[SE_ARMC] + is.rSid);
-  *vtx = Mod(ascmc[SE_VERTEX] + is.rSid);
-  *ep  = Mod(ascmc[SE_EQUASC] + is.rSid);
+  is.rSid = (us.fSidereal ? *off + us.rZodiacOffset : 0.0) +
+    us.rZodiacOffsetAll;
+  rSid = us.fSidereal ? is.rSid - nutlo[0] : is.rSid;
+  *asc = Mod(ascmc[SE_ASC]    + rSid);
+  *mc  = Mod(ascmc[SE_MC]     + rSid);
+  *ra  = Mod(ascmc[SE_ARMC]   + rSid);
+  *vtx = Mod(ascmc[SE_VERTEX] + rSid);
+  *ep  = Mod(ascmc[SE_EQUASC] + rSid);
   *ob  = eps;
   *nut = nutlo[0];
   for (i = 1; i <= cSign; i++) {
-    chouse[i] = Mod(cusp[i] + is.rSid);
+    chouse[i] = Mod(cusp[i] + rSid);
     ret[cuspLo-1+i] = cuspr[i];
   }
   ret[oFor] = ascmcr[SE_ASC];
@@ -2529,7 +2567,8 @@ void SwissComputeStars(real jd, flag fInitBright)
     // Compute the star location or get the star's brightness.
     swe_fixstar2(sz, jd, iflag, xx, serr);
     if (!fInitBright) {
-      planet[oNorm+i] = Mod(xx[0] + us.rZodiacOffset);
+      planet[oNorm+i] = Mod(xx[0] + (us.fSidereal ? us.rZodiacOffset : 0.0) +
+        us.rZodiacOffsetAll);
       planetalt[oNorm+i] = xx[1];
       ret[oNorm+i] = xx[3];
       if (!us.fSidereal && us.fVelocity)
@@ -2602,7 +2641,8 @@ LNext:
   }
   if (swe_fixstar2(pes->sz, jd, iflag, xx, serr) < 0)
     return fFalse;
-  pes->lon = Mod(xx[0] + us.rZodiacOffset);
+  pes->lon = Mod(xx[0] + (us.fSidereal ? us.rZodiacOffset : 0.0) +
+    us.rZodiacOffsetAll);
   pes->lat = xx[1];
   if (us.fStarMagDist)
     dist2 = xx[2];

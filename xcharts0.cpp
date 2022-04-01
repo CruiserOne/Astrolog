@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: xcharts0.cpp
+** Astrolog (Version 7.40) File: xcharts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -81,7 +81,7 @@ int DrawPrint(CONST char *sz, int m, int n)
   if (y >= gs.yWin-1)     // Don't draw if have scrolled off the chart bottom.
     return y;
   DrawColor(m);
-  if (CchSz(sz) > 25)     // Adjust slightly to fit in 26 character strings.
+  if (CwchSz(sz) > 25)     // Adjust slightly to fit in 26 character strings.
     x -= xFont2*gi.nScaleText/2;
   DrawSz(sz, x, y, dtLeft | dtBottom | dtScale2);
 
@@ -297,7 +297,8 @@ void DrawSidebar()
   if (!gs.fText || us.fVelocity)    // Don't draw sidebar if -v0 flag is set.
     return;
   a = us.fAnsiChar;
-  us.fAnsiChar = (gs.nFont == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
+  us.fAnsiChar =
+    (gs.nFont/10000 == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
   DrawColor(gi.kiLite);
   i = gs.xWin-1;
   gs.xWin += xSideT;
@@ -376,19 +377,21 @@ void DrawSidebar()
 
   // Print house cusp positions.
 
-  DrawPrint("", gi.kiLite, fFalse);
-  for (i = 1; i <= cSign; i++) {
-    sprintf(sz, "%2d%s house: ", i, szSuffix[i]);
-    y = DrawPrint(sz, kSignB(i), fTrue);
-    if (!is.fSeconds && (gs.nScale == 100 ||
-      gs.nFont == 0 || !gi.fFile || gs.ft == ftBmp) && y < gs.yWin-1) {
-      s = gi.nScale;
-      gi.nScale = gi.nScaleTextT;
-      DrawSign(SFromZ(chouse[i]),
-        gs.xWin-12*gi.nScale, y-(yFont/2-1)*gi.nScale);
-      gi.nScale = s;
+  if (us.nHouseSystem != hsNull) {
+    DrawPrint("", gi.kiLite, fFalse);
+    for (i = 1; i <= cSign; i++) {
+      sprintf(sz, "%2d%s house: ", i, szSuffix[i]);
+      y = DrawPrint(sz, kSignB(i), fTrue);
+      if (!is.fSeconds && (gs.nScale == 100 ||
+        gs.nFont == 0 || !gi.fFile || gs.ft == ftBmp) && y < gs.yWin-1) {
+        s = gi.nScale;
+        gi.nScale = gi.nScaleTextT;
+        DrawSign(SFromZ(chouse[i]),
+          gs.xWin-12*gi.nScale, y-(yFont/2-1)*gi.nScale);
+        gi.nScale = s;
+      }
+      DrawZodiac(chouse[i], fFalse);
     }
-    DrawZodiac(chouse[i], fFalse);
   }
 
   // Print planet positions.
@@ -742,7 +745,7 @@ void DrawRing(int iRing, int iRingMax,
   real xplanet[objMax], real symbol[objMax], int cx, int cy, real base,
   real ri1, real ri2, real rp, real rl1, real rl2, real rg, real rGlyph)
 {
-  CP *pcp = rgpcp[iRing];
+  CP *pcp = rgpcp[iRingMax > 1 ? iRing : 0];
   real unitx = (real)cx, unity = (real)cy;
   int i;
 
@@ -792,7 +795,7 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
   // Assume glyph is positioned below actual point, unless say otherwise.
   for (i = 0; i < cod; i++) if (rgod[i].f) {
     obj = rgod[i].obj;
-    rgod[i].yg = rgod[i].y + (obj < starLo ? zGlyph : zGlyphS);
+    rgod[i].yg = rgod[i].y + (obj < moonsLo ? zGlyph : zGlyphS);
   }
 
   // Determine where to draw the glyphs in relation to the actual points,
@@ -814,7 +817,7 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
     // another planet is close enough to have their glyphs overlap, and the
     // above location is better, then will draw the glyph above instead.
     if ((k < zGlyph2 || k2 < zGlyph2) && k < k2)
-      rgod[i].yg -= (obj < starLo ? zGlyph2 : zGlyphS2);
+      rgod[i].yg -= (obj < moonsLo ? zGlyph2 : zGlyphS2);
   }
 
   // Draw planet glyphs.
@@ -840,7 +843,7 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
     DrawColor(rgod[i].kv != ~0 ? rgod[i].kv : kObjB[obj]);
     // Draw small or large dot near glyph indicating exact object location.
     if ((gi.nMode == gHorizon && (gs.fAlt || obj > oNorm)) ||
-      (gi.nMode == gOrbit && gs.fAlt))
+      ((gi.nMode == gOrbit || gi.nMode == gMoons) && gs.fAlt))
       DrawPoint(rgod[i].x, rgod[i].y);
     else
       DrawSpot(rgod[i].x, rgod[i].y);
@@ -878,7 +881,7 @@ void DrawAspectLine(int obj1, int obj2, int cx, int cy,
   x2 = cx + POINT1(rx, rz, PX(deg2));
   y2 = cy + POINT1(ry, rz, PY(deg2));
   if ((gs.nDashMax >= 0) != gs.fAlt)
-    nDash = NAbs(orb / (60*60*2));
+    nDash = NAbs(orb) / (60*60*2);
   else
     nDash = NAbs(orb) * NAbs(gs.nDashMax) /
       (int)(GetOrb(obj1, obj2, asp)*3600.0);
@@ -1064,7 +1067,8 @@ LNext:
       chCmd = *pch++;
 
       // Get the next direction and distance from constellation string.
-      if (fBlank = (chCmd == 'b'))
+      fBlank = (chCmd == 'b');
+      if (fBlank)
         chCmd = *pch++;
       xDelta = yDelta = 0;
       switch (chCmd) {
@@ -1261,6 +1265,9 @@ void DrawMapLine(real lon1, real lat1, real lon2, real lat2,
 {
   int x1, y1, x2, y2;
   real lon3, lat3;
+#ifdef WIRE
+  int z1, z2;
+#endif
 
   // Recursive case: Draw each half of the line separately.
   if (SphDistance(lon1, lat1, lon2, lat2) > 10.0) {
@@ -1273,6 +1280,14 @@ void DrawMapLine(real lon1, real lat1, real lon2, real lat2,
   // Base case: Draw a single line segment.
   lat1 = rDegQuad - lat1;
   lat2 = rDegQuad - lat2;
+#ifdef WIRE
+  if (gs.ft == ftWire) {
+    WireGlobeCalc(lon1, lat1, &x1, &y1, &z1, nScl, deg);
+    WireGlobeCalc(lon2, lat2, &x2, &y2, &z2, nScl, deg);
+    WireLine(x1, y1, z1, x2, y2, z2);
+    return;
+  }
+#endif
   if (!FMapCalc(lon1, lat1, &x1, &y1, fGlobe, -1, 0.0, nScl, pcr, deg) &&
     !FMapCalc(lon2, lat2, &x2, &y2, fGlobe, -1, 0.0, nScl, pcr, deg)) {
     if (gi.nMode != gWorldMap || gs.fMollewide) {
@@ -1374,6 +1389,41 @@ void DrawMapSquare(real lon1, real lat1, real lon2, real lat2,
     DrawMapLine(lon3, lat3, lon4, lat4, fGlobe, nScl, pcr, deg);
   if (grf & 8)
     DrawMapLine(lon4, lat4, lon1, lat1, fGlobe, nScl, pcr, deg);
+}
+
+
+// Draw a grid of triangles or squares over the surface of the planet.
+
+void DrawMapTriangles(flag fGlobe, int nScl, CIRC *pcr, real deg)
+{
+  real x1, y1;
+  int i;
+
+  if (gs.nTriangles > 0) {
+    DrawColor(kCyanB);
+    y1 = RAsinD(1.0/(rPhi*2.0-1.0));    // Icosahedron constant.
+    i = gs.nTriangles - 1;
+    for (x1 = 0.0; x1 < rDegMax; x1 += 72.0) {
+      DrawMapTriangle(x1,       y1, x1+72.0,   y1, x1+36.0,  90.0,
+        fGlobe, nScl, pcr, deg, i, 5);
+      DrawMapTriangle(x1,       y1, x1+72.0,   y1, x1+36.0, -y1,
+        fGlobe, nScl, pcr, deg, i, 4);
+      DrawMapTriangle(x1+36.0, -y1, x1+108.0, -y1, x1+72,   -90.0,
+        fGlobe, nScl, pcr, deg, i, 5);
+      DrawMapTriangle(x1+36.0, -y1, x1+108.0, -y1, x1+72,    y1,
+        fGlobe, nScl, pcr, deg, i, 4);
+    }
+  } else if (gs.nTriangles < 0) {
+    DrawColor(kRedB);
+    y1 = RAsinD(1.0/rSqr3);             // Cube constant.
+    i = -gs.nTriangles - 1;
+    for (x1 = 0.0; x1 < rDegMax; x1 += rDegQuad)
+      DrawMapSquare(x1, y1, x1, -y1, x1+90.0, -y1, x1+90.0, y1,
+        fGlobe, nScl, pcr, deg, i, 11);
+    for (x1 = -y1; x1 <= y1; x1 += y1*2.0)
+      DrawMapSquare(0.0, x1, 90.0, x1, 180.0, x1, 270.0, x1,
+        fGlobe, nScl, pcr, deg, i, 0);
+  }
 }
 
 
@@ -1575,31 +1625,7 @@ LAfter:
 
   // Draw grid of triangles or squares over the planet.
 
-  if (gs.nTriangles > 0) {
-    DrawColor(kCyanB);
-    y1 = RAsinD(1.0/(rPhi*2.0-1.0));    // Icosahedron constant.
-    i = gs.nTriangles - 1;
-    for (x1 = 0.0; x1 < rDegMax; x1 += 72.0) {
-      DrawMapTriangle(x1,       y1, x1+72.0,   y1, x1+36.0,  90.0,
-        fGlobe, nScl, &cr, deg, i, 5);
-      DrawMapTriangle(x1,       y1, x1+72.0,   y1, x1+36.0, -y1,
-        fGlobe, nScl, &cr, deg, i, 4);
-      DrawMapTriangle(x1+36.0, -y1, x1+108.0, -y1, x1+72,   -90.0,
-        fGlobe, nScl, &cr, deg, i, 5);
-      DrawMapTriangle(x1+36.0, -y1, x1+108.0, -y1, x1+72,    y1,
-        fGlobe, nScl, &cr, deg, i, 4);
-    }
-  } else if (gs.nTriangles < 0) {
-    DrawColor(kRedB);
-    y1 = RAsinD(1.0/rSqr3);             // Cube constant.
-    i = -gs.nTriangles - 1;
-    for (x1 = 0.0; x1 < rDegMax; x1 += rDegQuad)
-      DrawMapSquare(x1, y1, x1, -y1, x1+90.0, -y1, x1+90.0, y1,
-        fGlobe, nScl, &cr, deg, i, 11);
-    for (x1 = -y1; x1 <= y1; x1 += y1*2.0)
-      DrawMapSquare(0.0, x1, 90.0, x1, 180.0, x1, 270.0, x1,
-        fGlobe, nScl, &cr, deg, i, 0);
-  }
+  DrawMapTriangles(fGlobe, nScl, &cr, deg);
 
 #ifdef ATLAS
   // Draw locations of cities from atlas.
@@ -1943,6 +1969,9 @@ void DrawChartX()
   case gLocal:
     XChartLocal();
     break;
+  case gMoons:
+    XChartMoons();
+    break;
 #ifdef WIN
   case gTraTraTim:
   case gTraTraInf:
@@ -2004,7 +2033,8 @@ void DrawChartX()
       sprintf(sz, "(Composite)");
     else {
       fSav = us.fAnsiChar;
-      us.fAnsiChar = (gs.nFont == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
+      us.fAnsiChar =
+        (gs.nFont/10000 == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
       i = DayOfWeek(Mon, Day, Yea);
       sprintf(sz, "%s%s%.3s %s %s (%cT Zone %s) %s%s%s",
         FSzSet(ciCore.nam) ? ciCore.nam : "", FSzSet(ciCore.nam) ? ", " : "",
@@ -2013,8 +2043,11 @@ void DrawChartX()
         FSzSet(ciCore.loc) ? " " : "", SzLocation(Lon, Lat));
       us.fAnsiChar = fSav;
     }
-    DrawSz(sz, gs.xWin/2, gs.yWin - gi.nScaleT - gi.nScaleTextT2,
-      dtBottom | dtErase | dtScale2);
+    i = dtBottom | dtScale2;
+    if (gi.nMode == gGrid || gi.nMode == gLocal || gi.nMode == gTraTraGra ||
+      gi.nMode == gTraNatGra || fMap || FBetween(gi.nMode, gGlobe, gPolar))
+      i |= dtErase;
+    DrawSz(sz, gs.xWin/2, gs.yWin - gi.nScaleT - gi.nScaleTextT2, i);
   }
 
   // Draw a border around the chart if the mode is set and appropriate.

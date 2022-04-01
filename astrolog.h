@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: astrolog.h
+** Astrolog (Version 7.40) File: astrolog.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/8/2021.
+** Last code change made 3/24/2022.
 */
 
 /*
@@ -66,9 +66,6 @@
 //#define PC /* Comment out this #define if you have a Unix, Mac, or other */
            /* system that isn't a generic PC running DOS or MS Windows.  */
 
-//#define MACOLD /* Comment out this #define if you're not compiling for an  */
-               /* old pre-OSX Mac. Modern Mac systems should not use this. */
-
 #define X11 /* Comment out this #define if you don't have X windows, or */
             /* else have them and don't wish to compile in X graphics.  */
 
@@ -77,10 +74,6 @@
 
 //#define WCLI /* Comment out this #define if you don't want to compile a    */
              /* command line Windows version that can still popup windows. */
-
-//#define MACG /* Comment out this #define if you don't have a Mac, or else  */
-             /* have one and don't wish to compile in Mac screen graphics. */
-             /* Note modern Mac's may be able to compile with X11 instead. */
 
 #define TIME /* Comment out this #define if your compiler can't take the  */
              /* calls to the 'time' or 'localtime' functions as in time.h */
@@ -286,6 +279,7 @@
 #define chJE   (char)(us.fAnsiChar ? 195 : '|')
 #define chDeg0 (char)(us.fAnsiChar ? 248 : ' ')
 #define chDeg1 (char)(us.fAnsiChar ? 248 : ':')
+#define chDeg3 (char)(us.nCharset == ccIBM ? 248 : chDeg2)
 
 
 /*
@@ -340,9 +334,6 @@
 #include <shlwapi.h>
 #include "resource.h"
 #endif
-#ifdef MACG
-#define ISG
-#endif
 #ifdef WCLI
 #define ISG
 #define WINANY
@@ -385,24 +376,12 @@
 #endif
 #endif // PLACALC
 
-#ifdef MACOLD
-#ifdef SWITCHES
-#error "If 'MACOLD' is defined 'SWITCHES' must not be as well"
-#endif
-#ifdef ENVIRON
-#error "If 'MACOLD' is defined 'ENVIRON' must not be as well"
-#endif
-#endif // MACOLD
-
 #ifdef X11
 #ifndef GRAPH
 #error "If 'X11' is defined 'GRAPH' must be too"
 #endif
 #ifdef WIN
 #error "If 'X11' is defined 'WIN' must not be as well"
-#endif
-#ifdef MACG
-#error "If 'X11' is defined 'MACG' must not be as well"
 #endif
 #ifdef WCLI
 #error "If 'X11' is defined 'WCLI' must not be as well"
@@ -419,9 +398,6 @@
 #ifdef X11
 #error "If 'WIN' is defined 'X11' must not be as well"
 #endif
-#ifdef MACG
-#error "If 'WIN' is defined 'MACG' must not be as well"
-#endif
 #ifdef WCLI
 #error "If 'WIN' is defined 'WCLI' must not be as well"
 #endif
@@ -429,24 +405,6 @@
 #error "If 'WIN' is defined 'PC' must be too"
 #endif
 #endif // WIN
-
-#ifdef MACG
-#ifndef GRAPH
-#error "If 'MACG' is defined 'GRAPH' must be too"
-#endif
-#ifdef X11
-#error "If 'MACG' is defined 'X11' must not be as well"
-#endif
-#ifdef WIN
-#error "If 'MACG' is defined 'WIN' must not be as well"
-#endif
-#ifdef WCLI
-#error "If 'MACG' is defined 'WCLI' must not be as well"
-#endif
-#ifdef PC
-#error "If 'MACG' is defined 'PC' must not be as well"
-#endif
-#endif // MACG
 
 #ifdef WCLI
 #ifndef GRAPH
@@ -457,9 +415,6 @@
 #endif
 #ifdef WIN
 #error "If 'WCLI' is defined 'WIN' must not be as well"
-#endif
-#ifdef MACG
-#error "If 'WCLI' is defined 'MACG' must not be as well"
 #endif
 #ifndef PC
 #error "If 'WCLI' is defined 'PC' must be too"
@@ -501,9 +456,9 @@
 #define fTrue  TRUE
 
 #define szAppNameCore "Astrolog"
-#define szVersionCore "7.30"
-#define szVerCore     "730"
-#define szDateCore    "September 2021"
+#define szVersionCore "7.40"
+#define szVerCore     "740"
+#define szDateCore    "March 2022"
 #define szAddressCore \
   "Astara@msn.com - http://www.astrolog.org/astrolog.htm"
 #define szNowCore     "now"
@@ -563,13 +518,13 @@
 #define rRound     0.5
 
 #define chNull     '\0'
-#define chEscape   '\33'
+#define chEscape   '\33' // 27
 #define chBell     '\7'
 #define chReturn   '\r'
 #define chTab      '\t'
 #define chDelete   '\b'
 #define chBreak    '\3'
-#define chDeg2     '\260'
+#define chDeg2     '\260' // 176
 #define chRet      'R'
 #define chRet2     'r'
 #define chSep      ','
@@ -578,6 +533,7 @@
 // Array index limits
 
 #define objMax     (cObj+1)
+#define objMaxG    (objMax+10)
 #define cCnstl     88
 #define cZone      72
 #define cSector    36
@@ -720,26 +676,26 @@ enum _objects {
   oMC  = (cuspLo-1 + 10),
   o11h = (cuspLo-1 + 11),
   o12h = (cuspLo-1 + 12),
-  oVul = (uranLo + 0),
-  oVlk = (uranLo + 7),
-  oHyg = (dwarfLo + 0),
-  oPho = (dwarfLo + 1),
-  oEri = (dwarfLo + 2),
-  oHau = (dwarfLo + 3),
-  oMak = (dwarfLo + 4),
-  oGon = (dwarfLo + 5),
-  oQua = (dwarfLo + 6),
-  oSed = (dwarfLo + 7),
-  oOrc = (dwarfLo + 8),
-  oUrT = (moonsLo + 14),
-  oJuC = (cobLo + 0),
-  oSaC = (cobLo + 1),
-  oUrC = (cobLo + 2),
-  oNeC = (cobLo + 3),
-  oPlC = (cobLo + 4),
-  oOri = (starLo-1 + 10),
-  oAlr = (starLo-1 + 45),
-  oAnd = (starLo-1 + 47),
+  oVul = (uranLo + 0),    // Vulcan
+  oVlk = (uranLo + 7),    // Vulkanus
+  oHyg = (dwarfLo + 0),   // Hygiea
+  oPho = (dwarfLo + 1),   // Pholus
+  oEri = (dwarfLo + 2),   // Eris
+  oHau = (dwarfLo + 3),   // Haumea
+  oMak = (dwarfLo + 4),   // Makemake
+  oGon = (dwarfLo + 5),   // Gonggong
+  oQua = (dwarfLo + 6),   // Quaoar
+  oSed = (dwarfLo + 7),   // Sedna
+  oOrc = (dwarfLo + 8),   // Orcus
+  oUrT = (moonsLo + 14),  // Uranus' Titania
+  oJuC = (cobLo + 0),     // Jupiter COB
+  oSaC = (cobLo + 1),     // Saturn COB
+  oUrC = (cobLo + 2),     // Uranus COB
+  oNeC = (cobLo + 3),     // Neptune COB
+  oPlC = (cobLo + 4),     // Pluto COB
+  oOri = (starLo-1 + 10), // Orion (Alnilam)
+  oAlr = (starLo-1 + 45), // Alnair
+  oAnd = (starLo-1 + 47), // Andromeda
   cObj = 130,
 };
 
@@ -770,8 +726,15 @@ enum _aspects {
   aBSp = 16,
   aTSp = 17,
   aQNv = 18,
-  cAspect = 18,
+  aDc3 = 19,
+  aUd1 = 20,
+  aUd2 = 21,
+  aUd3 = 22,
+  aUd4 = 23,
+  aUd5 = 24,
+  cAspect = 24,
   cAspect2 = cAspect + aOpp,
+  cAspect3 = cAspect2 + aOpp,
 };
 
 // House systems
@@ -883,6 +846,7 @@ enum _aspectsorting {
   asC = 6,  // By 1st object position
   asD = 7,  // By 2nd object position
   asM = 8,  // By midpoint
+  asMax = 9,
 };
 
 // Angle restrictions
@@ -937,17 +901,17 @@ enum _graphicschart {
   gLocal      = 13,
   gTraTraGra  = 14,
   gTraNatGra  = 15,
-  gSphere     = 16,
-  gWorldMap   = 17,
-  gGlobe      = 18,
-  gPolar      = 19,
-  gTelescope  = 20,
-  gBiorhythm  = 21,
+  gMoons      = 16,
+  gSphere     = 17,
+  gWorldMap   = 18,
+  gGlobe      = 19,
+  gPolar      = 20,
+  gTelescope  = 21,
+  gBiorhythm  = 22,
 #ifdef WIN
-  gAspect     = 22,
-  gMidpoint   = 23,
-  gArabic     = 24,
-  gMoons      = 25,
+  gAspect     = 23,
+  gMidpoint   = 24,
+  gArabic     = 25,
   gTraTraTim  = 26,
   gTraTraInf  = 27,
   gTraNatTim  = 28,
@@ -998,20 +962,20 @@ enum _colors {
 // Arabic parts
 
 enum _arabicparts {
-  apFor = 0,
-  apSpi = 1,
+  apFor = 0,  // Part of Fortune
+  apSpi = 1,  // Part of Spirit
 };
 
 // Calculation methods
 
 enum _calculationmethod {
-  cmSwiss   = 0,
-  cmMoshier = 1,
-  cmJPL     = 2,
-  cmPlacalc = 3,
-  cmMatrix  = 4,
-  cmJPLWeb  = 5,
-  cmNone    = 6,
+  cmSwiss   = 0,  // Swiss Ephemeris (standard ephemeris files)
+  cmMoshier = 1,  // Swiss Ephemeris (Moshier formulas)
+  cmJPL     = 2,  // Swiss Ephemeris (JPL ephemeris file)
+  cmPlacalc = 3,  // Old Placalc ephemeris
+  cmMatrix  = 4,  // Very old Matrix formulas
+  cmJPLWeb  = 5,  // JPL Horizons internet Web query
+  cmNone    = 6,  // No calculation method
   cmMax     = 7,
 };
 
@@ -1030,48 +994,57 @@ enum _drawtext {
 // User string parse modes
 
 enum _parsemode {
-  pmMon    = 1,
-  pmDay    = 2,
-  pmYea    = 3,
-  pmTim    = 4,
-  pmDst    = 5,
-  pmZon    = 6,
-  pmLon    = 7,
-  pmLat    = 8,
-  pmDist   = 9,
-  pmElv    = 10,
-  pmLength = 11,
-  pmObject = 12,
-  pmAspect = 13,
-  pmSystem = 14,
-  pmSign   = 15,
-  pmColor  = 16,
-  pmRGB    = 17,
-  pmWeek   = 18,
+  pmMon    = 1,   // Month
+  pmDay    = 2,   // Day
+  pmYea    = 3,   // Year
+  pmTim    = 4,   // Time
+  pmDst    = 5,   // Daylight Saving offset
+  pmZon    = 6,   // Time zone
+  pmLon    = 7,   // Longitude
+  pmLat    = 8,   // Latitude
+  pmDist   = 9,   // Distance (in km or miles)
+  pmElv    = 10,  // Elevation above sea level (in m or feet)
+  pmLength = 11,  // Length (in cm or inches)
+  pmObject = 12,  // Planet or other object
+  pmAspect = 13,  // Aspect
+  pmSystem = 14,  // House system
+  pmSign   = 15,  // Sign of the zodiac
+  pmColor  = 16,  // Color index
+  pmRGB    = 17,  // RGB color value
+  pmWeek   = 18,  // Day of week
 };
 
 // File types
 
 enum _filetype {
-  ftNone = 0,
-  ftBmp  = 1,
-  ftPS   = 2,
-  ftWmf  = 3,
-  ftWire = 4,
+  ftNone = 0,  // Not creating a file
+  ftBmp  = 1,  // Windows bitmap file (.bmp)
+  ftPS   = 2,  // PostScript file (.ps)
+  ftWmf  = 3,  // Windows metafile file (.wmf)
+  ftWire = 4,  // Daedalus wireframe file (.dw)
+};
+
+// File codepage
+
+enum _charactercodepage {
+  ccNone  = 0,  // Unknown (don't ever convert)
+  ccIBM   = 1,  // Codepage 437 (IBM/DOS/OEM)
+  ccLatin = 2,  // Codepage ISO-8859-1 (Latin-1 or Windows-1252)
+  ccUTF8  = 3,  // Codepage UTF8 (up to 3 bytes per character)
 };
 
 // Font index
 
 enum _fontindex {
-  fiAstrolog = 0,
-  fiWingding = 1,
-  fiAstro    = 2,
-  fiEnigma   = 3,
-  fiHamburg  = 4,
-  fiAstronom = 5,
-  fiCourier  = 6,
-  fiConsolas = 7,
-  fiArial    = 8,
+  fiAstrolog = 0,  // Astrolog's internal vector drawn characters
+  fiWingding = 1,  // Windows Wingdings font
+  fiAstro    = 2,  // Astro astrology font
+  fiEnigma   = 3,  // EnigmaAstrology astrology font
+  fiHamburg  = 4,  // HamburgSymbols astrology font
+  fiAstronom = 5,  // Astronomicon astrology font
+  fiCourier  = 6,  // Courier (New) text font
+  fiConsolas = 7,  // Consolas text font
+  fiArial    = 8,  // Arial text font
   cFont = 9,
 };
 
@@ -1188,11 +1161,13 @@ enum _terminationcode {
 #define FStar(obj)    FBetween(obj, starLo, starHi)
 #define FObject(obj)  ((obj) <= cPlanet || (obj) >= uranLo)
 #define FThing(obj)   ((obj) <= cThing || (obj) >= uranLo)
+#define FThing2(obj)  (FThing(obj) || (obj) == oFor)
 #define FHelio(obj)   (FNorm(obj) && FObject(obj) && !FGeo(obj))
 #define FNodal(obj)   FBetween(obj, oNod, oLil)
 #define FGeo(obj)     ((obj) == oMoo || FNodal(obj))
 #define FAspect(asp)  FBetween(asp, 1, cAspect)
 #define FAspect2(asp) FBetween(asp, 1, cAspect2)
+#define FAspect3(asp) FBetween(asp, 1, cAspect3)
 #define FSector(s)    FBetween(s, 1, cSector)
 #define ChDashF(f)    (f ? '=' : '_')
 #define SzNumF(f)     (f ? "1 " : "0 ")
@@ -1208,7 +1183,7 @@ enum _terminationcode {
 #define FValidTim(tim) ((tim) > -2.0 && (tim) < 24.0)
 #define FValidDst(dst) FValidZon(dst)
 #define FValidZon(zon) FBetween(zon, -24.0, 24.0)
-#define FValidLon(lon) FBetween(lon, -rDegHalf, rDegHalf)
+#define FValidLon(lon) FBetween(lon, -rDegMax, rDegMax)
 #define FValidLat(lat) FBetween(lat, -rDegQuad, rDegQuad)
 #define FValidWeek(day) FBetween(day, 0, cWeek-1)
 #define FValidObj(obj) FBetween(obj, 0, cObj)
@@ -1228,7 +1203,8 @@ enum _terminationcode {
 #define FValidBioday(n) FBetween(n, 1, 199)
 #define FValidScreen(n) FBetween(n, 20, 200)
 #define FValidMacro(n) FBetween(n, 1, 48)
-#define FValidGlyphs(n) FBetween(n, 0, 2232)
+#define FValidList(n) FBetween(n, 0, is.cci-1)
+#define FValidGlyphs(n) FBetween(n, 0, 22322)
 #define FValidDecaType(n) FBetween(n, 0, 2)
 #define FValidDecaSize(n) FBetween(n, 0, 100)
 #define FValidDecaLine(n) FBetween(n, 1, 1000)
@@ -1238,6 +1214,7 @@ enum _terminationcode {
 #define FValidScaleText(n) (FBetween(n, 100, MAXSCALE) && (n)%50 == 0)
 #define FValidBackPct(r) FBetween(r, 0.0, 100.0)
 #define FValidBackOrient(n) FBetween(n, -1, 1)
+#define FValidZoom(r) (FBetween(r, 0.0001, rDegHalf) || (r) == 0.0)
 #define FValidGraphX(x) (FBetween(x, BITMAPX1, BITMAPX) || (x) == 0)
 #define FValidGraphY(y) (FBetween(y, BITMAPY1, BITMAPY) || (y) == 0)
 #define FValidRotation(n) FBetween(n, 0, rDegMax-rSmall)
@@ -1271,7 +1248,7 @@ enum _terminationcode {
 #define FIgnore(i) ignore[i]
 #define FIgnore2(i) ignore2[i]
 #define FAllow(i) (us.objRequire < 0 || (i) == us.objRequire)
-#define FNoTimeOrSpace(ci) ((ci).mon == -1)
+#define FNoTimeOrSpace(ci) ((ci).mon < mJan)
 
 #define loop for (;;)
 #define inv(v) v = !(v)
@@ -1292,18 +1269,13 @@ enum _terminationcode {
 #define CONST const
 #define PAllocateCore(cb) malloc(cb)
 #define DeallocatePCore(p) free(p)
+#define ldTime 2440588L
 #ifndef PC
 #define chDirSep '/'
 #define chSwitch '-'
-#ifndef MACOLD
-#define ldTime 2440588L
-#else
-#define ldTime 2416481L
-#endif
 #else // PC
 #define chDirSep '\\'
 #define chSwitch '/'
-#define ldTime 2440588L
 #endif // PC
 
 #ifdef GRAPH
@@ -1317,6 +1289,9 @@ enum _terminationcode {
 #define SetWindowPosition(xo, yo, xs, ys) SetWindowPos(wi.hwnd, \
   wi.fWindowFull ? GetTopWindow(NULL) : HWND_NOTOPMOST, xo, yo, xs, ys, 0)
 #define MoveTo(hdc, x, y) MoveToEx(hdc, x, y, NULL)
+#define HourglassOn \
+  if (wi.fHourglass) hcurPrev = SetCursor(LoadCursor(NULL, IDC_WAIT))
+#define HourglassOff if (hcurPrev != NULL) SetCursor(hcurPrev)
 #endif
 
 // Should an object in the outer wheel be restricted?
@@ -1350,8 +1325,8 @@ enum _terminationcode {
 #define fSquare \
   (gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gGrid || \
   (gi.nMode == gHorizon && us.fPrimeVert) || gi.nMode == gDisposit || \
-  gi.nMode == gOrbit || gi.nMode == gSector || gi.nMode == gSphere || \
-  gi.nMode == gGlobe || gi.nMode == gPolar)
+  gi.nMode == gOrbit || gi.nMode == gSector || gi.nMode == gMoons || \
+  gi.nMode == gSphere || gi.nMode == gGlobe || gi.nMode == gPolar)
 
 // Does the current chart have to be displayed in a map rectangle?
 #define fMap \
@@ -1365,10 +1340,12 @@ enum _terminationcode {
 
 // Do settings indicate current chart should have chart info at its bottom?
 #define fDrawText \
-  (gs.fText && gi.nMode != gCalendar && !((gi.nMode == gWorldMap || \
-  gi.nMode == gGlobe || gi.nMode == gPolar) && (gs.fAlt || gs.fConstel)) && \
+  (gs.fText && \
+  (gi.nMode != gCalendar || (gs.fLabelAsp && us.nRel < rcNone)) && \
+  !((gi.nMode == gWorldMap || gi.nMode == gGlobe || gi.nMode == gPolar) && \
+    (gs.fAlt || gs.fConstel)) && \
   !((gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gSector || \
-  gi.nMode == gSphere) && !us.fVelocity))
+    gi.nMode == gSphere) && !us.fVelocity))
 #endif // GRAPH
 
 
@@ -1384,14 +1361,13 @@ typedef unsigned long dword;
 typedef long word4;
 typedef double real;
 typedef unsigned char uchar;
+typedef unsigned short wchar;
 typedef unsigned int uint;
 typedef int flag;
 typedef byte * pbyte;
 
 typedef int KI;
-#ifdef GRAPH
 typedef unsigned long KV;
-#endif // GRAPH
 typedef short * TRIE;
 
 typedef struct _StrLook {
@@ -1439,10 +1415,12 @@ typedef struct _GridInfo {
 } GridInfo;
 
 typedef struct _CrossInfo {
-  real lat[MAXCROSS];
-  real lon[MAXCROSS];
-  int obj1[MAXCROSS];
-  int obj2[MAXCROSS];
+  short obj1;  // First planet making crossing
+  short ang1;  // Angle in question of first planet
+  short obj2;  // Second planet making crossing
+  short ang2;  // Angle in question of second planet
+  real lon;    // Longitude of crossing location
+  real lat;    // Latitude of crossing location
 } CrossInfo;
 
 typedef struct _InDayInfo {
@@ -1458,6 +1436,16 @@ typedef struct _InDayInfo {
   char ret1;     // Sign of first planet's velocity
   char ret2;     // Sign of second planet's velocity
 } InDayInfo;
+
+typedef struct _TransInfo {
+  short source;  // Transiting planet
+  short aspect;  // The aspect transiting planet makes to natal planet
+  short dest;    // Natal planet
+  short isret;   // Sign of transiting planet's velocity
+  real time;     // Time of transit in minutes
+  real posT;     // Zodiac position of transiting planet
+  real posN;     // Zodiac position of natal planet
+} TransInfo;
 
 typedef struct _AtlasEntry {
   real lon;              // Longitude of city
@@ -1495,6 +1483,30 @@ typedef struct _TimezoneRuleEntry {
   int timtype;   // Type of time (0=local, 1=standard, 2=UTC)
   int dst;       // Rule applies this Daylight offset (in seconds before UTC)
 } RuleEntry;
+
+typedef struct _ChartInfo {
+  int mon;    // Month
+  int day;    // Day
+  int yea;    // Year
+  real tim;   // Time in hours
+  real dst;   // Daylight offset
+  real zon;   // Time zone
+  real lon;   // Longitude
+  real lat;   // Latitude
+  char *nam;  // Name for chart
+  char *loc;  // Name of location
+} CI;
+
+typedef struct _ChartPositions {
+  real obj[objMax];     // The zodiac positions
+  real alt[objMax];     // Ecliptic declination
+  real dir[objMax];     // Retrogradation velocity
+  real diralt[objMax];  // Latitude velocity
+  real dirlen[objMax];  // Distance velocity
+  real cusp[cSign+1];   // House cusp positions
+  real cusp3[cSign+1];  // 3D house cusp positions
+  int house[objMax];    // House each object is in
+} CP;
 
 #ifdef GRAPH
 typedef struct _ObjDraw {
@@ -1543,7 +1555,7 @@ typedef struct _UserSettings {
   flag fWheelReverse;   // -w0
   flag fGridConfig;     // -g0
   flag fGridMidpoint;   // -gm
-  flag fAppSep;         // -ga
+  flag nAppSep;         // -ga
   flag fParallel;       // -gp
   flag fAspSummary;     // -a0
   flag fMidSummary;     // -m0
@@ -1605,12 +1617,10 @@ typedef struct _UserSettings {
   flag fMatrixStar;  // -bU
   flag fEquator;     // -sr
   flag fEquator2;    // -sr0
-  flag fWritePos;    // -o0
-  flag fWriteDef;    // -od
-  flag fWriteAAF;    // -oa
   flag fAnsiChar;    // -k0
   flag fTextHTML;    // -kh
   flag fSolarWhole;  // -10
+  flag fListAuto;    // -5
 
   // Obscure flags
   flag fTruePos;      // -YT
@@ -1666,11 +1676,12 @@ typedef struct _UserSettings {
   real  rHarmonic;     // Harmonic chart value passed to -x switch.
   int   objOnAsc;      // Planet value passed to -1 or -2 switch.
   int   objRequire;    // Required object passed to -RO switch.
-  int   dayDelta;      // -+, --
   int   nDegForm;      // -s
   int   nProgress;     // -p0
   int   nDivision;     // -d
   int   nScreenWidth;  // -I
+  int   nWriteFormat;  // -o
+  int   nListAll;      // -5e
   real  dstDef;        // -z0
   real  zonDef;        // -z
   real  lonDef;        // -zl
@@ -1690,10 +1701,13 @@ typedef struct _UserSettings {
   int   nArabicParts;     // Arabic parts to include value passed to -P.
   int   nAtlasList;       // Number of rows to display value passed to -N.
   real  rZodiacOffset;    // Position shifting value passed to -s switch.
+  real  rZodiacOffsetAll; // Position shifting value passed to -Ys switch.
   real  rProgDay;         // Progression day value passed to -pd switch.
   real  rProgCusp;        // Progression cusp ratio value passed to -pC.
   int   nRatio1;          // Chart ratio factors passed to -rc or -rm.
   int   nRatio2;
+  int   nCharset;         // -Ya
+  int   nCharsetOut;      // -Yao
   int   nScrollRow;       // -YQ
   int   cSequenceLine;    // -Yq
   long  lTimeAddition;    // -Yz
@@ -1714,8 +1728,10 @@ typedef struct _UserSettings {
   char *szExpMidAsp;      // -~ma
   char *szExpInf;         // -~j
   char *szExpInf0;        // -~j0
+  char *szExpEso;         // -~7
   char *szExpCross;       // -~L
   char *szExpEph;         // -~E
+  char *szExpRis;         // -~Zd
   char *szExpDay;         // -~d
   char *szExpVoid;        // -~dv
   char *szExpTra;         // -~t
@@ -1741,6 +1757,9 @@ typedef struct _UserSettings {
   char *szExpCast2;       // -~q2
   char *szExpDisp1;       // -~Q1
   char *szExpDisp2;       // -~Q2
+  char *szExpListS;       // -~5s
+  char *szExpListF;       // -~5f
+  char *szExpListY;       // -~5Y
 } US;
 
 typedef struct _InternalSettings {
@@ -1773,6 +1792,11 @@ typedef struct _InternalSettings {
   int czce;            // Total number of change entries in all zone areas.
   int crun;            // Number of time zone Daylight rule categories.
   int crue;            // Total number of rule entries in all categories.
+  int cci;             // Number of user visible charts in chart list.
+  int cciAlloc;        // Number of allocated positions in chart list.
+  int iciCur;          // Index of most recently used chart in chart list.
+  int iciIndex1;       // Index into chart list used for chart #1 with -5e.
+  int iciIndex2;       // Index into chart list used for chart #2 with -5e3.
   int cAlloc;          // Number of memory allocations currently allocated.
   int cAllocTotal;     // Total memory allocations allocated this session.
   int cbAllocSize;     // Total bytes in all memory allocations allocated.
@@ -1789,6 +1813,7 @@ typedef struct _InternalSettings {
   RuleName *rgrun;     // List of Daylight Saving change rule names.
   RuleEntry *rgrue;    // List of all Daylight Saving change rule entries.
   real *rgzonCol;      // Cache of time zone offsets for each zone area.
+  CI *rgci;            // List of chart information records for chart list.
   FILE *fileIn;        // The switch file currently being read from.
   FILE *S;             // File to write text to.
   real T;              // Julian time for chart.
@@ -1802,30 +1827,6 @@ typedef struct _InternalSettings {
   real jdDeltaT;       // JD for cached Delta-T offset above.
   real rNut;           // Nutation offset.
 } IS;
-
-typedef struct _ChartInfo {
-  int mon;    // Month
-  int day;    // Day
-  int yea;    // Year
-  real tim;   // Time in hours
-  real dst;   // Daylight offset
-  real zon;   // Time zone
-  real lon;   // Longitude
-  real lat;   // Latitude
-  char *nam;  // Name for chart
-  char *loc;  // Name of location
-} CI;
-
-typedef struct _ChartPositions {
-  real obj[objMax];     // The zodiac positions.
-  real alt[objMax];     // Ecliptic declination.
-  real dir[objMax];     // Retrogradation velocity.
-  real diralt[objMax];  // Latitude velocity.
-  real dirlen[objMax];  // Distance velocity.
-  real cusp[cSign+1];   // House cusp positions.
-  real cusp3[cSign+1];  // 3D house cusp positions.
-  int house[objMax];    // House each object is in.
-} CP;
 
 #ifdef SWISS
 typedef struct _ExtraStar {
@@ -1998,11 +1999,6 @@ typedef struct _GraphicsInternal {
   int cWire;          // Number of lines in wireframe file.
   KI kiInFile;        // Actual line color currently in file.
   int zDefault;       // Default elevation for 2D drawing.
-#endif
-#ifdef MACG
-  WindowPtr wpAst;
-  Rect rcDrag;
-  Rect rcBounds;
 #endif
 } GI;
 #endif // GRAPH

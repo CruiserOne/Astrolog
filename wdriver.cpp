@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: wdriver.cpp
+** Astrolog (Version 7.40) File: wdriver.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -278,12 +278,13 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     break;
   case menuA:
     CheckPopup(cmdParallel,       us.fParallel);
-    CheckPopup(cmdApplying,       us.fAppSep);
+    CheckPopup(cmdApplying,       us.nAppSep == 1);
     CheckPopup(cmdGraphicsAspect, gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify, gs.fAlt);
     break;
   case menuZ:
     CheckPopup(cmdChartModify,     us.fPrimeVert);
+    CheckPopup(cmdGraphicsAxis,    gs.fEcliptic);
     CheckPopup(cmdConstellation,   gs.fConstel);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
@@ -292,7 +293,8 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsLabel,   gs.fLabel);
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
-    CheckPopup(cmdGraphicsAxis,    gs.fEcliptic);
+    CheckPopup(cmdGraphicsCity,    gs.fLabelCity);
+    CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     break;
   case menuS:
     CheckPopup(cmdHouseSet3D,      us.fHouse3D);
@@ -314,6 +316,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
   case menuK:
     CheckPopup(cmdChartModify,    us.fCalendarYear);
     CheckPopup(cmdGraphicsAspect, gs.fLabelAsp);
+    CheckPopup(cmdRelComparison,  us.nRel < rcNone);
     CheckPopup(cmdGraphicsModify, gs.fAlt);
     CheckPopup(cmdGraphicsText,   !gs.fText);
     CheckPopup(cmdGraphicsLabel,  gs.fLabel);
@@ -356,6 +359,14 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsCity,    !gs.fLabelCity);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
+    break;
+  case menuM:
+    CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
+    CheckPopup(cmdGraphicsEquator, !gs.fEquator);
+    CheckPopup(cmdGraphicsLabel,   gs.fLabel);
+    CheckPopup(cmdGraphicsModify,  !gs.fAlt);
+    CheckPopup(cmdGraphicsCity,    gs.fLabelCity);
+    CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     break;
   case menuD:
     CheckPopup(cmdChartModify,    us.fGraphAll);
@@ -798,6 +809,8 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
           DoPopup(menuE, hwnd, lParam);
         else if (gi.nMode == gRising)
           DoPopup(menuZd, hwnd, lParam);
+        else if (gi.nMode == gMoons)
+          DoPopup(menuM, hwnd, lParam);
         else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
           DoPopup(menuD, hwnd, lParam);
         else if (gi.nMode == gBiorhythm)
@@ -1067,8 +1080,10 @@ int NWmCommand(WORD wCmd)
 
   case cmdSaveChart:
   case cmdSavePositions:
-  case cmdSaveAAF:
   case cmdSaveSettings:
+  case cmdSaveList:
+  case cmdSaveAAF:
+  case cmdSaveQuick:
   case cmdSaveText:
   case cmdSaveBitmap:
 #ifdef META
@@ -1086,6 +1101,10 @@ int NWmCommand(WORD wCmd)
   case cmdSaveWallFit:
   case cmdSaveWallFill:
     DlgSaveChart();
+    break;
+
+  case cmdOpenDir:
+    DlgOpenDir();
     break;
 
   case cmdOpenBackground:
@@ -1264,7 +1283,8 @@ int NWmCommand(WORD wCmd)
     break;
 
   case cmdScrollEnd:
-    PostMessage(wi.hwnd, WM_HSCROLL, LFromWW(SB_THUMBPOSITION, nScrollDiv), 0);
+    PostMessage(wi.hwnd, WM_HSCROLL, LFromWW(SB_THUMBPOSITION,
+      us.fGraphics ? nScrollDiv: 0), 0);
     PostMessage(wi.hwnd, WM_VSCROLL, LFromWW(SB_THUMBPOSITION, nScrollDiv), 0);
     break;
 
@@ -1291,8 +1311,8 @@ int NWmCommand(WORD wCmd)
     break;
 
   case cmdApplying:
-    inv(us.fAppSep);
-    WiCheckMenu(cmdApplying, us.fAppSep);
+    inv(us.nAppSep);
+    WiCheckMenu(cmdApplying, us.nAppSep == 1);
     wi.fRedraw = fTrue;
     break;
 
@@ -1321,6 +1341,31 @@ int NWmCommand(WORD wCmd)
 
   case cmdSetInfoAll:
     WiDoDialog(DlgInfoAll, dlgInfoAll);
+    break;
+
+  case cmdList:
+    WiDoDialog(DlgList, dlgList);
+    break;
+
+  case cmdListPrev:
+  case cmdListNext:
+  case cmdListFirst:
+  case cmdListLast:
+    if (is.cci <= 0) {
+      PrintWarning("There is no chart list in memory.");
+      break;
+    }
+    i = (wCmd == cmdListFirst ? 0 : (wCmd == cmdListLast ? is.cci-1 :
+      is.iciCur + (wCmd == cmdListPrev ? -1 : 1)));
+    if (i < 0)
+      i = 0;
+    else if (i >= is.cci)
+      i = is.cci-1;
+    if (i != is.iciCur) {
+      is.iciCur = i;
+      ciCore = is.rgci[i];
+      wi.fCast = fTrue;
+    }
     break;
 
   case cmdRelNo:
@@ -1412,16 +1457,6 @@ int NWmCommand(WORD wCmd)
   case cmdHouseSet3D:
     inv(us.fHouse3D);
     WiCheckMenu(cmdHouseSet3D, us.fHouse3D);
-    if (us.fGraphics) {
-      if (gi.nMode == gAstroGraph) {
-        wi.nMode = gGlobe;
-        if (gs.fAlt) {
-          gs.fAlt = fFalse;
-          WiCheckMenu(cmdGraphicsModify, fFalse);
-        }
-      } else if (gi.nMode == gGlobe && !gs.fAlt)
-        wi.nMode = gAstroGraph;
-    }
     wi.fCast = fTrue;
     break;
 
@@ -1484,7 +1519,6 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartMoons:
     wi.nMode = gMoons;
-    us.fGraphics = fFalse;
     break;
 
   case cmdMoons:
@@ -1889,16 +1923,17 @@ int NWmCommand(WORD wCmd)
   case cmdZoomIn:
     if (gi.nMode != gOrbit && gi.nMode != gLocal && gi.nMode != gTelescope)
       wi.nMode = gOrbit;
-    if (gs.rspace < rSmall)
-      gs.rspace = (real)(1 << (4-gi.nScale/gi.nScaleT));
-    if (wCmd == cmdZoomIn) {
-      if (gs.rspace > 0.0001)
-        gs.rspace /= 2.0;
-    } else {
-      if (gs.rspace < rDegQuad)
-        gs.rspace *= 2.0;
+    r = gs.rspace;
+    if (r < rSmall)
+      r = (real)(1 << (4-gi.nScale/gi.nScaleT));
+    if (wCmd == cmdZoomIn)
+      r /= 2.0;
+    else
+      r *= 2.0;
+    if (FValidZoom(r)) {
+      gs.rspace = r;
+      us.fGraphics = wi.fRedraw = fTrue;
     }
-    us.fGraphics = wi.fRedraw = fTrue;
     break;
 
   case cmdGraphicsModify:
@@ -2199,7 +2234,7 @@ void API RedoMenu()
   CheckMenu(cmdInterpret, us.fInterpret);
 #endif
   CheckMenu(cmdSecond, us.fSeconds);
-  CheckMenu(cmdApplying, us.fAppSep);
+  CheckMenu(cmdApplying, us.nAppSep == 1);
   CheckMenu(cmdParallel, us.fParallel);
   RadioMenu(cmdRelBiorhythm, cmdRelTransit, CmdFromRc(us.nRel));
   CheckMenu(cmdSidereal, us.fSidereal);
@@ -2342,7 +2377,7 @@ flag FFilePaste(void)
   else if (IsClipboardFormatAvailable(CF_TEXT))
     fText = fTrue;
   else {
-    PrintWarning("There is nothing on the clipboard to paste.\n");
+    PrintWarning("There is nothing on the clipboard to paste.");
     return fFalse;
   }
 
@@ -2383,7 +2418,7 @@ flag API FRedraw(void)
   // Local variables used in drawing on the screen.
   PAINTSTRUCT ps;
   HDC hdcWin;
-  HCURSOR hcurOld;
+  HCURSOR hcurPrev = NULL;
   HBITMAP hbmp, hbmpOld;
   HFONT hfontOld = NULL;
   char szFile[cchSzDef];
@@ -2407,8 +2442,7 @@ flag API FRedraw(void)
     else
       fSmartHTML = fTrue;
   }
-  if (wi.fHourglass)
-    hcurOld = SetCursor(LoadCursor((HINSTANCE)NULL, IDC_WAIT));
+  HourglassOn;
   ClearB((pbyte)&ps, sizeof(PAINTSTRUCT));
   if (wi.hdcPrint != hdcNil)
     wi.hdc = wi.hdcPrint;
@@ -2431,8 +2465,6 @@ flag API FRedraw(void)
     }
     gi.nScale = gs.nScale/100;
     gi.nScaleText = gs.nScaleText/50;
-    if (gs.nFont/10000 == 0)
-      gi.nScaleText &= ~1;
     gi.kiCur = -1;
   } else {
     // Set up a text chart.
@@ -2518,8 +2550,7 @@ flag API FRedraw(void)
     }
     EndPaint(wi.hwnd, &ps);
   }
-  if (wi.fHourglass)
-    SetCursor(hcurOld);
+  HourglassOff;
 
   // If all text was scrolled off the top of the screen, scroll up.
   // If all text was scrolled off the left of the screen, scroll left.
@@ -2583,7 +2614,8 @@ flag API FRedraw(void)
       EmptyClipboard();
       if (l == 0) {
         if (!us.fTextHTML)
-          SetClipboardData(CF_TEXT, hglobal);
+          SetClipboardData(us.nCharsetOut == ccIBM ? CF_OEMTEXT : CF_TEXT,
+            hglobal);
         else {
           cfid = RegisterClipboardFormat("HTML Format");
           if (cfid != 0)
@@ -2756,6 +2788,7 @@ flag FCreateProgramGroup(flag fAll)
   DeleteShortcut(szDir, "Astrolog 7.00");
   DeleteShortcut(szDir, "Astrolog 7.10");
   DeleteShortcut(szDir, "Astrolog 7.20");
+  DeleteShortcut(szDir, "Astrolog 7.30");
 
   // Add main shortcuts in folder.
   sprintf(szName, "%s %s", szAppName, szVersionCore);

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: matrix.cpp
+** Astrolog (Version 7.40) File: matrix.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -223,7 +223,8 @@ real ProcessInput(void)
   Off = 17.23*RSin(RFromD(Ln)) + 1.27*RSin(RFromD(Off)) -
     (5025.64+1.11*is.T)*is.T;
   Off = (Off-84038.27)/3600.0;
-  is.rSid = (us.fSidereal ? Off : 0.0) + us.rZodiacOffset;
+  is.rSid = (us.fSidereal ? Off + us.rZodiacOffset : 0.0) +
+    us.rZodiacOffsetAll;
   return Off;
 }
 

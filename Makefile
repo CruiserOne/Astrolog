@@ -1,7 +1,7 @@
-# Astrolog (Version 7.30) File: Makefile (Unix version)
+# Astrolog (Version 7.40) File: Makefile (Unix version)
 #
 # IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-# not enumerated elsewhere in this program are Copyright (C) 1991-2020 by
+# not enumerated elsewhere in this program are Copyright (C) 1991-2022 by
 # Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 # Permission is granted to freely use, modify, and distribute these
 # routines provided these credits and notices remain unmodified with any

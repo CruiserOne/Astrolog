@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{CEF86845-ADDB-4E8D-8586-2BDFB2F31698}</ProjectGuid>
+    <RootNamespace>Astrolog</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>16.0.29124.152</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\</OutDir>
+    <IntDir>.\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\</OutDir>
+    <IntDir>.\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>shlwapi.lib urlmon.lib %(AdditionalOptions)</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>shlwapi.lib urlmon.lib %(AdditionalOptions)</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <EntryPointSymbol />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="astrolog.h" />
+    <ClInclude Include="extern.h" />
+    <ClInclude Include="placalc.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="swehouse.h" />
+    <ClInclude Include="swejpl.h" />
+    <ClInclude Include="swenut2a.h" />
+    <ClInclude Include="sweodef.h" />
+    <ClInclude Include="sweph.h" />
+    <ClInclude Include="swephexp.h" />
+    <ClInclude Include="swephlib.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="astrlog1.ico" />
+    <Image Include="astrlog2.ico" />
+    <Image Include="astrlog3.ico" />
+    <Image Include="astrlog4.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="astrolog.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="astrolog.cpp" />
+    <ClCompile Include="atlas.cpp" />
+    <ClCompile Include="calc.cpp" />
+    <ClCompile Include="charts0.cpp" />
+    <ClCompile Include="charts1.cpp" />
+    <ClCompile Include="charts2.cpp" />
+    <ClCompile Include="charts3.cpp" />
+    <ClCompile Include="data.cpp" />
+    <ClCompile Include="express.cpp" />
+    <ClCompile Include="general.cpp" />
+    <ClCompile Include="intrpret.cpp" />
+    <ClCompile Include="io.cpp" />
+    <ClCompile Include="matrix.cpp" />
+    <ClCompile Include="placalc.cpp" />
+    <ClCompile Include="placalc2.cpp" />
+    <ClCompile Include="swecl.cpp" />
+    <ClCompile Include="swedate.cpp" />
+    <ClCompile Include="swehouse.cpp" />
+    <ClCompile Include="swejpl.cpp" />
+    <ClCompile Include="swemmoon.cpp" />
+    <ClCompile Include="swemplan.cpp" />
+    <ClCompile Include="sweph.cpp" />
+    <ClCompile Include="swephlib.cpp" />
+    <ClCompile Include="wdialog.cpp" />
+    <ClCompile Include="wdriver.cpp" />
+    <ClCompile Include="xcharts0.cpp" />
+    <ClCompile Include="xcharts1.cpp" />
+    <ClCompile Include="xcharts2.cpp" />
+    <ClCompile Include="xdata.cpp" />
+    <ClCompile Include="xdevice.cpp" />
+    <ClCompile Include="xgeneral.cpp" />
+    <ClCompile Include="xscreen.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

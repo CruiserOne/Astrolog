@@ -2,8 +2,7 @@
 
 <head>
 <meta http-equiv=Content-Type content="text/html; charset=windows-1252">
-<meta name=Generator content="Microsoft Word 12 (filtered)">
-<title>Astrolog 7.30 Changes</title>
+<title>Astrolog 7.40 Changes</title>
 <style>
 <!--
  /* Font Definitions */
@@ -11,8 +10,8 @@
 	{font-family:Wingdings;
 	panose-1:5 0 0 0 0 0 0 0 0 0;}
 @font-face
-	{font-family:"Cambria Math";
-	panose-1:2 4 5 3 5 4 6 3 2 4;}
+	{font-family:Wingdings;
+	panose-1:5 0 0 0 0 0 0 0 0 0;}
  /* Style Definitions */
  p.MsoNormal, li.MsoNormal, div.MsoNormal
 	{margin:0in;
@@ -196,18 +195,17 @@ style='background:silver'>A</span>   <span style='background:silver'>SSSSS</span
 
 <p class=FA>&nbsp;</p>
 
-<p class=FA>                         **  VERSION 7.30  **</p>
+<p class=FA>                         **  VERSION 7.40  **</p>
 
 <p class=FA>&nbsp;</p>
 
-<p class=A>Release notes for Astrolog version 7.30 (September 2021):</p>
+<p class=A>Release notes for Astrolog version 7.40 (March 2022):</p>
 
-<p class=A>Happy 30th birthday Astrolog! :) The very first version of Astrolog
-was released in September 1991, 30 years ago. This file describes the freeware
-astrology software program Astrolog version 7.30 and the additions and fixes
-made to it, over the previous version 7.20 which was released five months ago in
-April 2021. The main things in this update are improved wheel charts, a new
-planet visibility chart, additional font support, and multiple 3D house models.</p>
+<p class=A>This file describes the freeware astrology software program Astrolog
+version 7.40 and the additions and fixes made to it, over the previous version 7.30
+which was released six months ago in September 2021. The main things in this
+update are chart lists, more file formats, Unicode character support, and improved
+planetary moon and Esoteric Astrology analysis.</p>
 
 <p class=A>&nbsp;</p>
 
@@ -217,259 +215,405 @@ planet visibility chart, additional font support, and multiple 3D house models.<
 
 </div>
 
-<p class=A>Here are new additions to version 7.30 that weren't in previous
+<p class=A>Here are new additions to version 7.40 that weren't in previous
 versions:</p>
 
-<p class=A><span class=V>1. Filled wheels:</span> Astrolog’s wheel charts can
-now be filled in with color, which generally looks better and has more
-contrast. This affects the outer sign and house wedge areas in wheel charts,
-and sectors in the Gauquelin sector chart. The default fill used for wheels is
-a darker version of the color of the object (e.g. the color of the sign) which
-is darkened by the background transparency percentage value (-XI switch). If
-this percentage is set to over 50%, then the glyphs will be drawn in black or
-white instead, to be more visible on the more brightly colored background.
-Wheels can also be filled in with colors around the rainbow, starting with
-Aries or the 1st house being red. The new -Xv switch sets which type of wheel
-fill to use, in which 0 is turned off (if you want the old behavior of outlines
-only), 1 is standard fill, and 2 is rainbow fill. In the Windows version, the
-new “Wheel Fill” field in the Graphics Settings dialog allows one to select
-among these three options. Note that filled wheels are only impended in bitmap
-files, in Windows metafile files, and on the Windows screen. They won’t appear
-in PostScript files, on X11 windows, or when printing from Windows.</p>
+<p class=A><span class=V>1. Chart lists:</span> Astrolog 7.40 introduces the
+major new feature area of “chart lists”. This means being able to store an
+arbitrary length list of sets of chart information. (This list is separate from
+Astrolog’s standard chart slots which are used to display wheels, bi-wheels,
+and so on.) Once loaded into the program, a chart list can be inspected,
+edited, displayed, and more. Here are various features that work with
+Astrolog’s chart list:</p>
 
-<p class=A><span class=V>2. Quin and Hexa wheels:</span> Astrolog now supports
-quin-wheels and hexa-wheels, or wheel charts with 5 and 6 different rings of
-planets. On the command line, the -r5 and -r6 switches display this many
-charts, and the -i5 and -i6 switches will load chart information into chart
-slots #5 and #6. In the Windows version, the “Info / Charts #3 through #6” menu
-command allows one to enter data into or open files into these charts.</p>
+<p class=B><span class=Z>Open chart list:</span> The easiest way to get a chart
+list is to load one from file. Astrolog’s “File / Open Chart” menu command (and
+-i switch on the command line) can accept various file formats containing chart
+lists. They include Quick*Chart format files, Astrodatabank format XML files,
+Solar Fire text export format files, and AstroExchange (AAF) files when
+multiple charts are present in sequence. These formats are described in more
+detail below at the start of the “Extended and Improved Features” section.
+Astrolog also has its own chart list format which can be loaded, described
+below. All these formats can also be pasted into the Windows version from the
+Windows clipboard using the “Edit / Paste” command.</p>
 
-<p class=A><span class=V>3. Windows text fonts:</span> In the Windows version, system
-fonts can be used for text displayed on screen. The new “Text” dropdown in the
-Graphics Settings dialog allows one to select which font to use for text.
-Options are “Astrolog” for Astrolog’s internal vector drawing (old behavior),
-as well as the fixed width fonts “Courier New” and “Consolas”. I find Consolas
-looks the best, although that font may not be available on older versions of
-Windows. The -YXf switch has been extended to take 5 digits instead of just 4,
-in which the 10000’s place digit indicates which font to use for text
-(0=Astrolog, 6=Courier, 7=Consolas).</p>
+<p class=B><span class=Z>Open chart directory:</span> Before version 7.40,
+Astrolog always stored every set of chart information in a separate file. Some
+may have directories containing hundreds of Astrolog chart information files!
+Astrolog can read a directory, and open every *.as extension file within it
+into the program’s chart list. (This will automatically skip the special
+Astrolog files astrolog.as, atlas.as, and timezone.as if present.) Select a
+directory with the “File / Other Formats / Open Charts in Folder” menu command,
+or on the command line with the new -id &lt;directory&gt; switch. If the -Yo old
+file format switch is in effect, then Astrolog will open every single file in
+the directory (which should be used with care, since it will produce errors if
+files other than Astrolog chart information files are present in that directory).</p>
 
-<p class=A><span class=V>4. Planet visibility chart:</span> Astrolog has a new
-planet visibility chart which maps planet visibility for a year, showing when
-it’s above the horizon. In this chart, the horizontal axis is time of day, and
-the vertical axis is day within the year. Pixels are plotted if the planet is
-above the horizon at the date/time, allowing one to see at a glance when a
-planet is visible, and how those times change during the year. Up to three
-planets (the first three unrestricted objects) will be included, in which the
-first object is red, the second green, and the third blue. Points where
-multiple planets are visible are given the combination of those colors, e.g.
-times when the red and blue planets are both above the horizon will be magenta.
-A key showing which planets or planet combinations are which colors is placed
-below the graph. For example, if you want to check times for when both Mars and
-Jupiter are visible at night, restrict everything but Sun (red), Mars (green),
-and Jupiter (blue), and check the date/time areas that are cyan (in which red
-is off, and green and blue are on). This chart is the graphics version of
-Astrolog’s rising and setting times chart, so can be selected with the -Zd -X switches,
-or the “Rising and Setting” command in the Windows version.</p>
+<p class=B><span class=Z>Save chart list:</span> Charts lists in memory can be
+saved to several different formats. The new “File / Other Formats / Save Quick*Chart”
+menu command (and the new -oq switch on the command line) will save the list to
+Quick*Chart format. The “File / Other Formats / Save Chart Exchange” menu
+command (-oa switch on the command line) will save the chart list to a sequence
+of AstroExchange format (AAF) records. The new “File / Other Formats / Save
+Chart List” menu command (and the new -ol switch on the command line) will save
+to Astrolog’s own chart list format. If the chart list is empty, then these
+commands will save a length 1 list consisting of the chart in standard slot #1.</p>
 
-<p class=A><span class=V>5. Savard-A houses:</span> Astrolog now supports the Savard-A
-system of house division. This system is named after John Savard, and uses his
-description of what he calls Albategnus houses. However, research into
-Albategnius' writings shows that he never mentioned this particular house
-system, which is why it's called “Savard-A” instead of “Albategnius”. In the
-Windows version this system can be selected with a new command on the “House
-System” submenu. On the command line, Savard-A houses can be accessed with “-c
-21”. Astrolog now supports 23 house systems total (along with 11 additional
-experimental systems, and 3D house variations of all of them).</p>
+<p class=B><span class=Z>Iterate chart list:</span> In the Windows version, one
+can easily display the different charts in the chart list with the commands on
+the new “Info / Chart List” submenu. The “Previous Chart” and “Next Chart”
+commands (accessible via the Shift+Up and Shift+Down hotkeys) will display the previous
+or next chart in the list, which means the appropriate chart from the chart
+list will be copied into main chart slot #1, and be displayed in the wheel or
+other chart context. (The program will remember the index of the most recent
+chart list entry displayed.) Also, the “First Chart” and “Last Chart” menu
+commands (accessible via the Ctrl+Up and Ctrl+Down hotkeys) will jump to
+showing the first or last charts in the chart list.</p>
 
-<p class=A><span class=V>6. 3D house models:</span> Astrolog now supports three
-different models of 3D houses, in which a planet’s vertical latitude as well as
-zodiac position longitude affects which house a planet lies within. To select
-the model, pass an optional numeric argument to the -c3 switch, or in the
-Windows version select the desired “3D Houses Plane” in the Calculation
-Settings dialog. The 3D boundaries of the different 3D house models can be seen
-in Astrolog’s graphic local horizon, chart sphere, and telescope charts. The 3D
-house models supported are:</p>
+<p class=B><span class=Z>Chart list dialog:</span> In the Windows version, the
+new “Info / Chart List / Chart List” menu command will bring up a dialog
+showing the current chart list. In this dialog, one can see the list of sets of
+chart information, and the number of entries in the list. One may select a
+chart and click OK to copy that chart list entry into Astrolog’s chart slot #1
+and display it. One may also select a chart slot, and use the “Set To Slot”
+button to copy the chart list entry to that slot, or use the “Copy From” button
+to append the chart information in that slot to the end of the chart list
+(which will do nothing if the charts are the same, to prevent duplicates). One
+can also select a chart slot, and use the “Edit Chart” button to view and
+change the information using the “Set Chart Info” dialog, or use the “Delete
+Chart” button to delete it from the chart list. The “Delete All” button will empty
+the entire chart list, such that the list size will be 0. Note that opening
+chart list files will not delete the existing chart list first (to allow one to
+append lists together) so deleting the list is necessary if one wants to start
+from a clean slate. Finally, the “Sort By” and “Filtering” sections allow one
+to sort the list, or filter the list to only display certain charts, as
+described in more detail below.</p>
 
-<p class=B><span class=W>1) Prime Vertical:</span> Houses are arranged along
-the prime vertical, and have their poles (where the 12 houses meet) at the
-North and South points on the local horizon. Note that Campanus houses combined
-with this 3D model is a “3D Equal system”, in which all houses are equal sized
-30 degree wedges of the celestial sphere. As with 2D Campanus houses, the Ascendant
-will always be on the 1st house boundary line, and the MC on the 10th house
-boundary line. This is the preferred model for 3D houses (and was the only model
-available in versions before 7.30) since for quadrant systems it ensures that
-all parts of houses 1-6 are below the horizon, and all parts of houses 7-12 are
-above the horizon.</p>
+<p class=B><span class=Z>Sort chart list:</span> The chart list can be sorted
+in five different ways: By date (earliest to latest), by longitude (from
+farthest West to farthest East), by latitude (from North to South), by name
+string alphabetically, and by location string. In the Windows version, the
+chart list can be sorted in the Chart List dialog by selecting the method and
+then pressing the “Sort List” button. On the command line, the five sorting methods
+can be selected with the new -5d, -5x, -5y, -5n, and -5l command switches. Note
+that sorting will affect the list in memory, and therefore remain in effect if
+the chart list is subsequently saved to file. There’s also a user customizable
+method of sorting, accessible via the -5s command switch, which will call the
+~5s AstroExpression (described later) to decide how to sort.</p>
 
-<p class=B><span class=W>2) Local horizon:</span> Houses are arranged along the
-local horizon, and have their poles at the Zenith and Nadir points straight up
-and down on the local horizon. Note that Horizon houses combined with this 3D
-model is a “3D Equal system”, in which all houses are equal sized 30 degree
-wedges of the celestial sphere. As with 2D Horizon houses, the Ascendant won’t necessarily
-be on 1st house boundary line, but the Vertex will always be on the 7th house
-boundary line. As with Horizon houses themselves, stepping across the equator
-will flip all houses 180 degrees.</p>
+<p class=B><span class=Z>Filter chart list:</span> The chart list can be
+filtered, to display a subset of the charts in it. This is useful to focus upon
+a set of charts in long lists. In the Windows version, the chart list can be
+filtered in the Chart List dialog, by entering Name and/or Location strings
+which must be present in the chart, and then pressing the “Filter” or “Remove
+Filter” buttons. On the command line, filtering can be done with the new -5f command
+switch, which takes name and location string parameters. In both scenarios, the
+name or location strings can be empty, in which case filtering is only done
+upon the other parameter. The command line will always affect and reduce the
+number of charts in the list in memory, however in the Windows version
+filtering won’t affect the list in memory if the dialog is OK’ed with a filter
+active (which means filtering to select the chart you want won’t affect the
+chart list, however OK’ing the dialog with a filter on but no chart selected is
+a way to permanently affect the chart list). There’s also a user customizable
+method of filtering, accessible via the ~5f AstroExpression (described later),
+which (similar to the name and location fields) will also set a condition that
+must be met by charts in order to be present post-filtering.</p>
 
-<p class=B><span class=W>3) Celestial Equator:</span> Houses are arranged along
-the celestial equator, and have their poles at the celestial poles or the
-points directly above Earth’s North and South poles. Note that Meridian houses
-combined with this 3D model is a “3D Equal system”, in which all houses are
-equal sized 30 degree wedges of the celestial sphere. As with 2D Meridian
-houses, the Ascendant won’t necessarily be on 1st house boundary line, but the
-East Point will always be on this boundary.</p>
+<p class=B><span class=Z>Command lines:</span> Chart lists can also be composed
+and worked with from the command line. The new -il subswitch is like -i, except
+the file loaded will have its chart information appended to the chart list.
+Similarly, the new -ql switch is like -q, except the chart information
+specified will be appended to the chart list. The new -qL switch will do the
+reverse, and cast a chart based on the specified index in the chart list (chart
+indexes start with 0). The new -qc switch takes 10 parameters to fill out all
+fields of chart information, including name and location strings. (It’s like a
+combination of -qb which sets the eight pieces of data, and -zl which sets name
+and location.) When saving a chart list to Astrolog’s own chart list format,
+the file will consist of a sequence of -qcl switches, which when loaded back in
+will define the complete sets of chart information and append them to the chart
+list. The new -50 command switch will delete the entire chart list, such that
+the list size will be 0.</p>
 
-<p class=B><span class=W>0) Ecliptic:</span> Houses are arranged along the
-ecliptic, and have their poles (where the 12 houses meet) at the North and
-South ecliptic poles. This is classic 2D houses, because signs are also
-arranged along the ecliptic and use the ecliptic poles, which means only zodiac
-position longitude is used to determine house placement. Passing 0 to the -c3
-switch turns 3D houses off, although it doesn’t change which of 1-3 is the
-default 3D house model used when the -c3 switch (specified without an argument)
-turns 3D houses on. An image of all four house models side by side on the
-celestial sphere can be seen at: <a
-href="http://www.astrolog.org/astrolog/pic/sphere3d.gif">http://www.astrolog.org/astrolog/pic/sphere3d.gif</a></p>
+<p class=B><span class=Z>Display all charts in list:</span> The new -5e switch
+will display all charts in the chart list in sequence, in text mode. This will produce
+one stream of text, in which the display options selected will be done for each
+chart, e.g. “-g -a -5e” will display the -g aspect grid and -a aspect list for
+each chart in the list. Beware that combining -5e with -e will produce a huge
+amount of output, e.g. “-5e -e” on the entire Astrodatabank will produce 5
+gigabytes of output. The new -5e2 switch is similar, except it will set chart
+slot #2 to each chart in the list, instead of just the main slot like -5e does.
+For example, “-5e -rt” will display each chart in the list transited to the
+time in slot #2, while “-5e2 -rt” will display the main chart transited to each
+time in the chart list. The -5e3 switch will do a grid of charts, and cover
+every combination of different charts, such that each chart is matched with
+each other chart exactly once, e.g. “-g -5e3” will display aspect grids for
+each combination of charts. Finally, -5e4 is like -5e3 but will do each
+combination period (which will include each chart being compared with itself, and
+each pair of charts will be matched with each other twice in different orders).
+Beware that -5e4 can produce an enormous amount of output, e.g. “-5e4 -r0 -g”
+on the entire Astrodatabank will produce over 4 billion different aspect grids!</p>
 
-<p class=A><span class=V>7. Thick lines:</span> Graphics charts may be drawn
-with thicker lines, in which all lines will be two pixels instead of just one
-pixel wide. This setting will also cause system font characters on graphics
-charts to be drawn in boldface. To do this, turn on the new -Xx switch, or
-select the new “Thicker Lines” command on the “Graphics / Chart Effects” submenu.
-Note when using Astrolog’s default vector glyphs and text, the character and
-text scales should be at least 200%, because otherwise the two pixel wide lines
-will be too thick to look good with such small characters.</p>
+<p class=B><span class=Z>Autocreate chart list:</span> The new “Times Populate
+Chart List” checkbox in the Transits dialog (-5 switch on the command line)
+will set a special mode such that any chart that produces a list of times will
+automatically populate the chart list with those events (replacing the existing
+list if already present). This includes the -d transit to transit times, -t
+transit to natal times, and -Zd rising and setting charts. This useful feature
+allows one to produce things such as a list of Full Moons during the year, or
+one’s solar returns for the next decade, and then use the arrow keys to display
+and navigate through all these different calculated charts in the chart list.</p>
 
-<p class=A><span class=V>8. Astro-graph nearest cities:</span> The text mode
-astro-graph chart will now display a list of cities from the atlas closest to
-each latitude crossing. A second optional parameter to the -L0 switch specifies
-the maximum distance allowed from the crossing point to a city, in default
-distance units (miles or kilometers). In the Windows version, the new “Latitude
-Crossings Show Cities Within” field in the Chart Settings dialog sets this
-distance. The maximum number of cities allowed to be listed for each crossing
-(which means the N closest cities to it that are within the distance limit) is
-specified with the -Nl switch parameter. In the Windows version, the new
-“Nearest Cities List This Many Cities” field in Chart Settings sets this
-distance.</p>
+<p class=B><span class=Z>Enumerate all charts in list:</span> For technical
+users who work with AstroExpressions, there’s a quick way to automatically loop
+over all charts in the chart list. The obscure -Y5 switch (which can also be
+invoked as -5Y which does the same thing) will loop over all charts in the
+chart list in sequence. It’s very similar to -5e in that it can be invoked as
+-Y5, -Y52, -Y53, and -Y54 to loop in different manners, except it won’t display
+the charts cast. This switch only has effect when the ~5Y AstroExpression has
+been defined to look at the charts. See the ~5Y switch description for more
+details. This is designed to analyze the chart list, to perhaps determine data
+to use for later filtering via -5f and ~5f, and then displaying via -5e. For
+example, if you want to display all charts in the chart list with the most
+number of Trines to your natal chart, you first need to determine the most
+number of Trines any chart has (which can be counted using -Y5 and ~Y5), and
+the filter the chart list to those chart(s) containing that many Trines (using
+-5f and ~5f), and then the filtered chart list can be displayed with -5e.</p>
 
-<p class=A><span class=V>9. JPL Horizons custom bodies:</span> Astrolog can
-compute planet positions using direct online queries to the JPL Horizons Web
-site. The new -Yej switch allows customizing an object slot to be the index of
-a JPL Horizons computable body. This feature is designed for objects not yet
-supported by Swiss Ephemeris, such as less common planetary moons or space
-probes. To determine the JPL Horizons index number for a body, visit <a
-href="https://ssd.jpl.nasa.gov/horizons.cgi">https://ssd.jpl.nasa.gov/horizons.cgi</a>,
-change the “Target Body” to what you’re interested in by looking up its name,
-then click “show ‘batch-file’ data” at the bottom, and finally look at the “COMMAND=”
-line to see the number. Note if the number ends in a semicolon (which is true
-for asteroids and other minor bodies) then you should add one million to the
-number passed to Astrolog. For example, “-Yej Vul 505” will customize Vulcan’s
-object slot to be Jupiter’s moon Amalthea, however “-Yej Vul 1000505” will
-customize Vulcan to be asteroid “505 Cava”. In the Windows version, in the
-“Object Customization” dialog, an object may be given the definition starting
-with “j” to refer to the relevant JPL Horizons object. Because every planet
-calculation involves an online Web query, this switch results in a noticeable
-slowdown of the program, so shouldn’t be used with transit searches or places
-that internally cast many charts. Note also that (due to the Windows API’s used
-to download Web URL’s) this feature is for now only available in Windows
-versions of Astrolog.</p>
+<p class=A><span class=V>2. Graphic planetary Moons chart:</span> Astrolog’s
+planetary moons chart can now be displayed in graphical form. Select “Setting /
+Planetary Moons / Moons Chart” with “View / Show Graphics” on (or use the -8 -X
+command switch combination). The graphic planetary moons chart shows planetary
+moon placement and aspects in graphical form. Like the text mode planetary
+moons chart, this will show the positions of unrestricted moons, or all moons
+if all moon objects are restricted. The chart itself is divided into four circular
+parts, and shows top and side views from both geocentric and heliocentric
+perspectives. Front views are like Astrolog’s telescope chart viewing the
+planet from the perspective of the current central body, and show prominence
+zones making it easy to see whether a moon is leading, following, above, or
+below its planet. Top down views are like Astrolog’s solar system orbit chart
+looking down upon the ecliptic plane, and show prominence zones making it easy
+to see whether a moon is leading, following, close to, or distant from its planet.
+All views have a central circle which indicates the planet itself, in which a
+moon will only be displayed within the circle if it’s actually eclipsing
+(transiting over or occulted by) the planet from the perspective in question.
+If the chart includes moons from multiple planets, they will be overlayed
+within each area.</p>
 
-<p class=A><span class=V>10. JPL Horizons planets:</span> Since Astrolog can
-use JPL Horizons to compute special bodies, it can also do so for the standard
-planets. The new -bj switch is a calculation mode that will use JPL Horizons
-Web queries to calculate the main planets and asteroids. In the Windows
-version, there’s a new “JPL Horizons Web Query” option in the “Calculation
-Method” dropdown. Since Swiss Ephemeris is a compressed version of JPL Horizons
-data, this method can be considered the most accurate astrology calculation
-available anywhere, although it will only be very slightly different from Swiss
-Ephemeris results themselves. Using this calculation method has the same
-performance issues as using JPL Horizons for custom objects. To avoid
-accidental usage and unexpected long waits, JPL Horizons Web query features can
-be permanently turned off within a session of Astrolog with the new -0n switch.</p>
+<p class=A><span class=V>3. More aspects:</span> Astrolog has added six new
+aspects, increasing its total number of supported aspects from 18 to 24. The
+new aspects are the TriDecile (108 degrees, or 3/10 of a circle) and all the
+11th harmonic aspects (Undecile, BiUndecile, TriUndecile, QuatroUndecile, and QuintUndecile,
+for 1/11, 2/11, 3/11, 4/11, and 5/11 of a circle). These aspects have glyphs
+similar to those for Septiles and Noviles, which in this case is the number 10
+or 11, with a Roman numeral two through five over it if appropriate. With these
+additions, Astrolog supports all aspects up through the 12th harmonic, or all
+possible aspect combinations that are x/y of a circle, where y is 12 or less.
+These new aspects can be turned on or off or customized in the Aspect Settings
+dialog, or through existing command switches.</p>
 
-<p class=A><span class=V>11. Decans in wheels:</span> Astrolog’s graphic wheel
-charts will display decan boundaries around the wheel, if the new -v3 switch
-setting is set. Each sign will have its three 10 degree sections marked out,
-and labeled with the planet that rules the sign associated with that section
-(based on which rulership set is active).</p>
+<p class=A><span class=V>4. Waxing/waning aspects:</span> Astrolog now supports
+displaying aspect orbs as waxing or waning. Waxing means the overall difference
+between the two planets is increasing, while waning means the difference is decreasing.
+(Compare waxing/waning to applying/separating orbs in which the exact aspect is
+about to happen or has just happened, or to positive/negative in which the
+current angle is greater than or less than the aspect’s angle.) Waxing/waxing
+can be selected via a new radio button group in the Display Settings dialog, or
+else on the command line by the -gx or -ax subswitches when selecting the -g
+and -a switch aspect charts. All three types of orbs can be seen in the -g
+aspect grid chart, the -a and -D aspect list charts, and the -t and -T transit
+to natal charts.</p>
 
-<p class=A><span class=V>12. Open data files:</span> In the Windows version,
-the new “Open Data Files” submenu on the Help menu contains four new commands
-to provide access Astrolog’s various editable data files. “Open Atlas” opens
-the atlas or city database file “atlas.as”. “Open Time Zone Changes” opens the
-time zone definitions and time changes file “timezone.as”. “Open Star List”
-opens the Swiss Ephemeris fixed star file “sefstars.txt”. “Open Orbital
-Elements” opens the Swiss Ephemeris definitions for hypothetical planets file
-“seorbel.txt”.</p>
+<p class=A><span class=V>5. Character encoding:</span> Astrolog now allows one
+to specify the character encoding or codepage of text strings that are read
+into the program and stored internally. There are multiple methods to store
+special characters other than low-Ascii text, and in previous versions this could
+sometimes cause special characters to display incorrectly in Astrolog text mode
+or graphics mode charts. The character encoding can be selected in the Display
+Settings dialog, or with the numeric digit subswitch to the new -Ya switch
+(i.e. -Ya0 through -Ya3). This can be an important issue because chart
+information files or even content within strings on the command line needs to specify
+how to handle high Ascii bytes that are present. The four options are:</p>
 
-<p class=A><span class=V>13. Window title:</span> In the Windows version, the
-title bar text to use for the window can be set with the new -WT switch. This
-can be used to mark specific windows or help distinguish a large number of
-Astrolog windows from each other.</p>
+<p class=B><span class=Z>0) Default:</span> This means don’t treat content as
+in any particular encoding, never do any character translation, and treat
+things the same way as in previous versions of the program. In previous versions,
+there was no character encoding anywhere. For example, Astrolog graphics charts
+would assume characters were in the common Latin-1 codepage, however Astrolog
+text mode charts emulate a command prompt and display using an old IBM
+codepage, so special characters that display right one in one context wouldn’t
+in the other. This setting will still do translation in places where it’s
+absolutely required, such as when reading in Astrodatabank XML files which are
+known to be encoded in UTF8.</p>
 
-<p class=A><span class=V>14. Sidebar annotations:</span> The sidebar area to
-the right of graphic wheel charts can have custom text appended to it. The new -YXt
-switch takes a string parameter, which if non-empty gets displayed at the
-bottom of the first section of the sidebar. This can for example be used to
-indicate who prepared the chart. If the sequence “\n” appears in the string, it
-will be treated as a line break. For example -YXt &quot;Compliments of John Doe\nhttp://www.myssite.com&quot;
-will show those two lines in the chart. Also, if a sequence like “\A” appears
-in the string (or “\” plus any other capital letter) it will be expanded into
-the current value of that custom AstroExpression variable. Finally, two
-backslashes in a row will be converted to a single one. See the ~Xt switch for
-an example of how to use this switch to display the chart time’s obliquity of
-the ecliptic and the right ascension of the MC (which normally isn’t present in
-the sidebar).</p>
+<p class=B><span class=Z>1) IBM / DOS:</span> This means the encoding used by
+old IBM and DOS computers, sometimes called the OEM codepage or codepage 437,
+which is still used today within most Windows command prompts. Unix users and
+even most Windows users should avoid this, however this option is still present
+because those who primarily run the Windows command line version of Astrolog
+from command prompts (which use this codepage by default) may have old chart
+information files that store special strings in this manner.</p>
+
+<p class=B><span class=Z>2) Latin-1:</span> This means the common encoding used
+by most of the Western world, called Codepage ISO-8859-1 or Latin-1 (or more
+technically Windows-1252, which is a superset of it which also defines
+characters in the 128-159 byte range). For example, this is used when viewing
+plain Ascii text files in Windows Notepad, or characters in classic Unix
+command prompts (that don’t already support UTF8). Therefore, this is the
+generally the simplest option that will work in most cases. Like #1, this is a
+single byte codepage, so only covers 256 possible Unicode characters, which
+means other characters will be displayed as “?” if necessary. Some file formats
+are always saved in this format, such as PostScript and Windows metafiles.</p>
+
+<p class=B><span class=Z>3) UTF8 Unicode:</span> Unlike #1 and #2, this is a
+multibyte codepage, which uses two or three bytes to encode high-Ascii and high
+Unicode characters greater than 127. Because this can cover the entire Unicode
+range, this option can display East Asian and other special characters. These special
+characters are available when saving to HTML output, and for graphics charts on
+the Windows screen when using system fonts. When Astrolog saves text chart in
+UTF8, the first three bytes in the file will be the special UTF8 byte order
+mark (BOM) which indicates the file is in that format (which most text readers
+that understand UTF8 will automatically skip over).</p>
+
+<p class=B><span class=Z>Output encoding:</span> The setting above will not
+internally change the byte content of strings, but rather it affects how
+they’re displayed. (That means if special characters ever display incorrectly
+or as garbage character sequences, changing the character encoding setting will
+likely fix it.) There’s a parallel setting defined by the new -Yao switch used
+to set the encoding for how strings should be output to file (i.e. -Yao0
+through -Yao3). Combined with the input encoding defined by -Ya, this can allow
+one to do codepage conversions, for example if they want to convert an Astrolog
+chart information file known to be in one encoding, into a different encoding.</p>
+
+<p class=A><span class=V>6. Store/Recall restrictions:</span> The new -YRo switch
+will store and remember a copy of all restrictions. The new -YRi switch will do
+the reverse and recall and restore the most recent set of restrictions saved
+with -YRo. This includes object restrictions, transiting object restrictions,
+aspect restrictions, sign and direction restrictions, rising/setting angle
+restrictions, and rulership set restrictions. This is useful for scenarios such
+as automatically finding the time of and displaying the chart for an event, in
+which one first restricts all objects to the set necessary to find the event,
+and then later restores the original set for displaying the chart. For example,
+to display the chart for the Full Moon this month, do: astrolog -Yq2 &quot;-n
+_e =dm -YRo -R0 Sun Moo -RA0 Opp -YR0 1 1&quot; &quot;-i set _e -YRi&quot;</p>
+
+<p class=A><span class=V>7. Add hours:</span> The new -+t and --t switches will
+add or subtract the specified number of hours to the chart being cast. Decimal
+numbers are accepted for partial hours. They work similarly to the existing -+m
+and -+y switches which adjust a chart by the given number of months or years.</p>
+
+<p class=A><span class=V>8. New dialog fields:</span> In the Windows version,
+several new fields have been added to dialogs for easier access to certain
+settings that were already in the program, but only accessible before using the
+command line. In the Calculation Settings dialog, there’s a dropdown for the
+current house system (which is equivalent to the Setting / House System
+submenu, but also contains additional experimental systems). In the Chart
+Settings dialog, there’s a checkbox for whether the standard radix chart shows
+decan positions (-v3 switch), and a dropdown for what to sort the aspect list
+chart by (-a subswitches). In the Graphics Settings dialog, there’s a field for
+the solar system orbit trail length (-YXj switch), a field for the solar system
+orbit and telescope zoom scale (-YXS switch), checkboxes for whether the
+display of the full star list includes bigger dots and name labels (-XU
+subswitches), and a dropdown for how to color cities from the atlas (-XL
+subswitches).</p>
 
 <p class=A>-</p>
 
-<p class=A>Here's a summary of the 10 new command switches in Astrolog 7.30
+<p class=A>Here's a summary of the 24 new command switches in Astrolog 7.40
 that weren't in previous versions:</p>
 
-<p class=N><span class=Z>-v3:</span> Like -v but display decan information
-alongside positions.</p>
+<p class=N><span class=Z>-gx:</span> Like -g but generate waxing/waxing instead
+of offset orbs.</p>
 
-<p class=N><span class=Z>-bJ:</span> Use most accurate JPL Web query instead of
-Swiss Ephemeris.</p>
+<p class=N><span class=Z>-ax:</span> Like -a but generate waxing/waxing instead
+of offset orbs.</p>
 
-<p class=N><span class=Z>-Yej &lt;obj&gt; &lt;index&gt;:</span> Change orbit of
-Uranian to JPL Horizons Web query.</p>
+<p class=N><span class=Z>-qc &lt;mon&gt; &lt;day&gt; &lt;year&gt; &lt;time&gt;
+&lt;dst&gt; &lt;zone&gt; &lt;long&gt; &lt;lat&gt; &lt;name&gt; &lt;city&gt;:</span>
+Like -qb but takes additional parameters for name and city.</p>
 
-<p class=N><span class=Z>-Xx:</span> Draw thicker lines in graphics charts.</p>
+<p class=N><span class=Z>-qL &lt;index&gt;:</span> Compute chart based on index
+within chart list.</p>
 
-<p class=N><span class=Z>-Xv &lt;0-2&gt;:</span> Set fill style for wedge areas
-in wheel charts.</p>
+<p class=N><span class=Z>-ql [..]:</span> Like -q but also append chart info to
+chart list in memory.</p>
 
-<p class=N><span class=Z>-YXt &lt;string&gt;:</span> Display extra text in
-wheel chart sidebar.</p>
+<p class=N><span class=Z>-il &lt;file&gt;:</span> Like -i but also append chart
+info to chart list.</p>
 
-<p class=N><span class=Z>-WT &lt;string&gt;</span>: Set title bar text of
-Astrolog window.</p>
+<p class=N><span class=Z>-id &lt;dir&gt;:</span> Open all chart files in
+directory into chart list.</p>
 
-<p class=N><span class=Z>-~kv &lt;string&gt;:</span> Set adjustment for wheel
-chart fill colors.</p>
+<p class=N><span class=Z>-ol &lt;file&gt;:</span> Write current chart list to
+Astrolog chart list file.</p>
 
-<p class=N><span class=Z>-~v3 &lt;string&gt;:</span> Set adjustment for wheel
-chart decan markings.</p>
+<p class=N><span class=Z>-oq &lt;file&gt;:</span> Write current chart list to
+Quick*Chart format file.</p>
 
-<p class=N><span class=Z>-~Xt &lt;string&gt;:</span> Set notification before
-sidebar drawn.</p>
+<p class=N><span class=Z>-5:</span> Set whether transit event charts
+autopopulate chart list.</p>
 
-<p class=A>Here's a summary of the 6 new menu commands in the Windows version
-of Astrolog 7.30 that weren't in previous versions:</p>
+<p class=N><span class=Z>-5e[2-4]:</span> Display text charts for all charts in
+chart list.</p>
 
-<p class=N>Setting / House System / Savard-A</p>
+<p class=N><span class=Z>-5[dxynls]:</span> Sort chart list by date, lon, lat,
+name, or city.</p>
 
-<p class=N>Graphics / Chart Effects / Thicker Lines</p>
+<p class=N><span class=Z>-5f &lt;name&gt; &lt;city&gt;:</span> Filter chart
+list to charts containing substring.</p>
 
-<p class=N>Help / Open Data Files / Open Atlas</p>
+<p class=N><span class=Z>-50:</span> Delete all charts in chart list, leaving
+an empty list.</p>
 
-<p class=N>Help / Open Data Files / Open Time Zone Changes</p>
+<p class=N><span class=Z>-+[t,m,y] [&lt;num&gt;]:</span> Cast chart for num of
+hours/months/years in future.</p>
 
-<p class=N>Help / Open Data Files / Open Star List</p>
+<p class=N><span class=Z>-Ya[0-3]:</span> Set text input encoding to none, IBM,
+Latin-1, or UTF8.</p>
 
-<p class=N>Help / Open Data Files / Open Orbital Elements</p>
+<p class=N><span class=Z>-Yao[0-3]:</span> Set output encoding to none, IBM,
+Latin-1, or UTF8.</p>
 
-<p class=B style='margin-left:0in'>&nbsp;</p>
+<p class=N><span class=Z>-YR[oi]:</span> Store or recall all object, aspect,
+and other restrictions.</p>
+
+<p class=N><span class=Z>-Y5[2-4]:</span> Enumerate all charts in chart list
+via ~5Y AstroExpression.</p>
+
+<p class=N><span class=Z>-~7 &lt;string&gt;:</span> Set notification for
+esoteric interpretation Rays.</p>
+
+<p class=N><span class=Z>-~Zd &lt;string&gt;:</span> Set filter for rising and
+setting events.</p>
+
+<p class=N><span class=Z>-~5s &lt;string&gt;:</span> Set sort order method for
+charts in chart list.</p>
+
+<p class=N><span class=Z>-~5f &lt;string&gt;:</span> Set filter for charts in
+chart list.</p>
+
+<p class=N><span class=Z>-~5Y &lt;string&gt;:</span> Set notification for chart
+enumeration via -Y5.</p>
+
+<p class=A>Here's a summary of the 8 new menu commands in the Windows version
+of Astrolog 7.40 that weren't in previous versions:</p>
+
+<p class=N>File / Other Formats / Open Charts in Folder...</p>
+
+<p class=N>File / Other Formats / Save Chart List...</p>
+
+<p class=N>File / Other Formats / Save Chart Quick*Chart...</p>
+
+<p class=N>Info / Chart List / Chart List...</p>
+
+<p class=N>Info / Chart List / Previous Chart</p>
+
+<p class=N>Info / Chart List / Next Chart</p>
+
+<p class=N>Info / Chart List / First Chart</p>
+
+<p class=N>Info / Chart List / Last Chart</p>
+
+<p class=N>&nbsp;</p>
 
 <div style='border:none;border-top:solid windowtext 4.5pt;padding:1.0pt 0in 0in 0in'>
 
@@ -477,83 +621,275 @@ of Astrolog 7.30 that weren't in previous versions:</p>
 
 </div>
 
-<p class=A>A list of improvements to existing features in Astrolog 7.30, such
+<p class=A>A list of improvements to existing features in Astrolog 7.40, such
 as new things you can now do with old features that you couldn’t do before, or
 ways that existing features work better than before:</p>
 
-<p class=A><span class=W>1. More Unicode fonts:</span> There are three
-additional font options for signs, houses, objects, and aspects: Courier New,
-Consolas, and Arial. These are different Unicode fonts (and are extensions of
-the “Unicode” font option that was available before) in which the appropriate
-Unicode characters are chosen. For houses, the Arial font means to use Ascii
-digits to draw the numbers, instead of single Unicode characters. The -YXf switch
-has been extended to accept these fonts (in which digit #6 is Courier New, #7
-is Consolas, and #8 is Arial) and in the Windows version these fonts have been
-added to the dropdowns in the Graphics Settings dialog.</p>
+<p class=A><span class=W>1. Quick*Chart import:</span> Astrolog can import Quick*Chart
+format files. Such files can be selected with the -i switch, selected in the
+Windows version Open Chart dialog, or even be pasted in from the Windows
+clipboard. This format stores multiple charts, and so will populate Astrolog’s
+chart list (and the last chart read will be put into chart slot #1, so a file
+containing just one chart is immediately displayed). This file format usually
+has the “.qck” extension, and contains a simple text list of charts in fixed
+width fields, with each line containing 100 characters. Files are recognized as
+Quick*Chart format because their lines are always 100 (or sometimes 101)
+characters long.</p>
 
-<p class=A><span class=W>2. More text scales:</span> Scales of 150%, 250%, and
-350% are now valid options for the text scale setting (-XS switch, or the “Text
-Scale” dropdown in the Graphics Settings dialog in the Windows version). The
-150% scale is perhaps most useful, if one finds the default of 100% too small
-and 200% too large. Note that the 50% offsets only have an extra effect if an
-actual system font is chosen for text (as opposed to Astrolog’s internal vector
-drawing).</p>
+<p class=A><span class=W>2. Astrodatabank import:</span> Astrolog can import
+Astrodatabank format files. Such files can be selected with the -i switch,
+selected in the Windows version Open Chart dialog, or even be pasted in from
+the Windows clipboard. This format stores multiple charts, and so will populate
+Astrolog’s chart list (and the last chart read will be put into chart slot #1,
+so a file containing just one chart is immediately displayed). These are XML
+format files with an advanced schema containing records for a variety of
+astrological data, although only fields corresponding to Astrolog’s chart
+information fields will actually be read in. Files are recognized as
+Astrodatabank format because their first character is “&lt;” for a HTML-like
+tag. The Astrodatabank can be viewed online at <a
+href="https://www.astro.com/astro-databank/">https://www.astro.com/astro-databank/</a>
+and the actual Astrodatabank XML itself (of which the full database currently
+contains 65258 charts in a large 187MB file) can be downloaded from: <a
+href="http://www.astro.com/adbexport/">http://www.astro.com/adbexport/</a></p>
 
-<p class=A><span class=W>3. More fonts in files</span>: Metafile and PostScript
-files now support all of Astrolog’s fonts for glyphs, instead of just the Astro
-font like before. For PostScript files, the fonts will be “Courier” instead of
-“Courier New”, and “Times Roman” instead of “Consola”, to avoid Windows
-specific fonts that may not be available in other environments, and to be
-compatible with the behavior of older versions.</p>
+<p class=A><span class=W>3. Solar File import:</span> Astrolog can import text
+files created by astrology program Solar Fire. Such files can be selected with
+the -i switch, selected in the Windows version Open Chart dialog, or even be
+pasted in from the Windows clipboard. This format stores multiple charts, and
+so will populate Astrolog’s chart list (and the last chart read will be put
+into chart slot #1, so a file containing just one chart is immediately displayed).
+This doesn’t mean the actual Solar Fire file binary format which has the “.SFcht”
+extension. Instead, Astrolog can import Solar File’s text file export, which is
+created in Solar File by doing “File / Open / Chart Database / Send/Add / Email
+All Charts”. Make sure “Attach chart file to email” and “Text File” are turned on,
+and “Include chart comments” and “Include life events” are off. The human
+readable “charts.txt” attachment produced is what can be loaded in to Astrolog,
+which is a quick way to transfer a Solar File chart database into Astrolog.
+Files are recognized as Solar Fire export format because their first line is
+blank, followed by records for each chart which are lines for name, time, and
+location, separated by blank lines.</p>
 
-<p class=A><span class=W>4. Planet brightness:</span> The text mode local
-horizon chart (-Z switch) will include columns for the planet’s brightness in
-magnitude, its phase (both as a percentage of disk area covered, and percentage
-of time to fullness), and the angular diameter that its disk covers in the sky.
-The Sun Vector and Moon Vector columns (which aren’t that useful anymore given
-that Astrolog supports actual eclipse detection) are no longer displayed by
-default in this chart, but will still be included if the -v3 switch setting is
-on.</p>
+<p class=A><span class=W>4. AstroExchange list import:</span> Astrolog can
+import multiple charts at once that are stored in the AstroExchange (AAF)
+format. Astrolog could open AAF format files in previous versions, but would only
+read a single chart. Now, a sequence of AAF records in the same file will be
+loaded into the chart list (and the last chart read will be put into chart slot
+#1, so a file containing just one chart will still be immediately displayed). For
+example, the <a href="http://www.astro.com">http://www.astro.com</a> site can
+show saved charts in AAF format, if you click the “aaf” button in the “Stored
+Astro Data” section of your profile. Once there, you can simply select the
+lines of AAF text for one or more charts, copy it to the clipboard, then do
+“Edit / Paste” in Astrolog for a quick way to transfer your Astro.com profile
+charts into Astrolog.</p>
 
-<p class=A><span class=W>5. 3D house display:</span> In the graphic local
-horizon chart (-Z -X switches) 3D house boundaries would only be drawn for 3D
-Campanus houses. Now they’ll be the 3D version of whichever house system is
-active. (The chart sphere and telescope charts already supported this.)</p>
+<p class=A><span class=W>5. Graphic transit calendar:</span> Astrolog’s graphic
+calendar when showing aspects within each day box (-K -XA switches) will show
+transit to natal aspects when in a comparison chart mode, showing aspects
+between the transiting date (such as set in the Transits dialog) and the natal
+chart. For example, turn on the “Info / Comparison Chart” menu command (-r0
+switch) to show it. This will do progressed to natal instead if in “Progressed
+to Natal” node (-rp switch). To distinguish this from standard transit to
+transit calendar aspects, transiting planets will be flagged with a “T” prefix,
+and progressed planets with a “P” prefix.</p>
 
-<p class=A><span class=W>6. Rings of Uranus:</span> The telescope chart (-XZ
-switch) will now display rings around Uranus, tilted and rotated appropriately,
-when the view is zoomed in enough. An ellipse will be drawn at the most visible
-point of Uranus’ rings, specifically at the point of its “E” ring.</p>
+<p class=A><span class=W>6. House influences:</span> Astrolog’s influence chart
+(-j0 switch) now includes house influences in addition to sign influences. A
+list of houses ranked by influence will be displayed separately from the
+existing list of signs ranked by influence. This will also include summaries
+for the four house “elements” (called Dharma, Artha, Kama, and Moksha houses in
+Vedic astrology), and the three house “modes” (Angular, Succedent, and Cadent).
+Each house has a base influence, and houses also receive influence based in the
+influence of the planets within them. Because house influences are now tracked
+separately, sign influences no longer receive influence if a planet is in the
+corresponding house (e.g. a planet in the 10th house no longer adds influence
+to Capricorn). The old behavior of only tracking sign influences is still
+available if the -l0 switch is in effect. Also, sign influences now have the
+option to add influence to the decanate sign placements of each planet, if the
+-v3 switch is in effect.</p>
 
-<p class=A><span class=W>7. Transit declination display:</span> When doing a
-transit search of declinations (-d or -t with -gp switches), it will now show
-the planet’s declination value at that time in parentheses (instead of just the
-zodiac position longitude, which is less useful). Transit events for latitude
-direction changes will also now show the latitude instead of zodiac position.</p>
+<p class=A><span class=W>7. Esoteric interpretation:</span> Astrolog’s Esoteric
+Astrology chart (-7 switch) will display a special Esoteric Astrology interpretation
+when interpretations are turned on. For each planet in sign placement, Astrolog
+will display the esoteric meaning of the planet, the Ray of the planet and its
+meaning, the esoteric lesson of the sign, the mundane and esoteric mantras of the
+sign, the spiritual type of Light of the sign, the sign’s associated Labor of
+Hercules, the mundane/exoteric and esoteric ruler(s) of the sign, along with
+the sign’s Ray(s), and any standard, esoteric, or Ray rulerships. If the “text
+influence chart shows sign influences too” setting (-j0 switch) is on, then
+house placement will be esoterically interpreted too. Astrolog will display the
+esoteric meaning of the house, the Ray(s) of the sign corresponding to the
+house, and any house Ray rulerships.</p>
 
-<p class=A><span class=W>8. More display settings:</span> In the Windows
-version, the Display Settings dialog has been extended to have checkboxes for
-having transit search charts show latitude direction changes, and distance
-direction changes (e.g. apogee and perigee points) as defined by the -YR1
-switch. Also, there’s a checkbox for whether eclipse detection only checks for
-an eclipse visible from your location, or checks whether there’s an eclipse
-taking place anywhere on the planet, as defined by the -Yu0 switch. Finally,
-the Calculation Settings dialog has been extended to have a checkbox for not
-applying tropical nutation to charts, as defined by the -Yn0 switch.</p>
+<p class=B>Also included is an esoteric “Ray chart” for the person or time in
+question. A true Ray chart can’t be determined objectively, but it’s possible
+to give clues or hints to a Ray chart based on astrological influences.
+Displayed will be the potential Rays for soul, personality, mental vehicle,
+astral vehicle, and physical vehicle. For each vehicle, each of the Seven Rays
+is given a score, and these Rays and their percentages are displayed in order.
+Each vehicle focuses upon two or three planets that align with it, which may
+include Earth and Vulcan, so for best results these objects should be
+unrestricted. For the planets in question, the Ray vehicle score calculating process
+looks at the Rays of the planet’s sign, along with the Rays of the exoteric and
+esoteric rulers of the sign (and the Rays of their dispositors or planets which
+rule those signs). Some signs have multiple or veiled exoteric or esoteric
+rulers, in which case both lines are considered. If the “standard radix chart
+shows decan positions” setting (-v3 switch) is on, then also considered will be
+the sign based decanates. (This means looking at four things: Standard sign
+placement and ruler, along with 1/3 score for the decanate placement of the
+sign ruler, 1/3 score for the sign of the ruler of the decanate, and 1/9 score
+for the decanate placement of the decanate ruler.) Finally, for the three
+vehicles, Rays are proportioned to align with the common distribution of Rays
+for those vehicles: Physical Ray is usually 7, 3, or 1. Astral Ray is usually
+6, 2, or 1. Mental Ray is usually 5, 3, 4, or 1.</p>
 
-<p class=A><span class=W>9. Planet table distance format:</span> In the planet
-information table (-HS switch) planet diameters will be displayed in kilometers
-(instead of the default in Earth radiuses) if the metric lengths setting (-Yv
-switch) is on.</p>
+<p class=B>The text used for the mantras, spiritual Light, and Herculean Labors
+is from the book “Esoteric Astrology” by Alice A. Bailey. The text used for
+esoteric planet meanings, esoteric sign lessons, and esoteric house meanings,
+along with the main design logic of the astrological influences Ray chart
+itself, is by Esoteric Astrologer BL Allison.</p>
 
-<p class=A><span class=W>10. Flipped sectors:</span> The graphic Gauquelin
-sector chart (-l -X switches) will flip the chart and display sectors in
-reverse order around the wheel, if the Vedic chart setting is active. This is
-similar to existing behavior for standard wheel charts.</p>
+<p class=A><span class=W>8. Esoteric years graph:</span> The Ray ephemeris
+(i.e. the graphics version of the esoteric chart, or the -7 -X switches) can
+now display multiple years instead of just one. Similar to the graphic standard
+ephemeris, the Ray ephemeris will look at the “Years to Span” field in the
+Transits dialog (or the -EY switch setting on the command line).</p>
 
-<p class=A><span class=W>11. Swiss Ephemeris updated:</span> Astrolog now uses
-Swiss Ephemeris version 2.10.02, which includes support for the new Savard-A
-house system along with other fixes and improvements.</p>
+<p class=A><span class=W>9. Planetary moons interpretation:</span> Interpretation
+of the planetary moons chart (-8 -I switches) now will include interpretations
+for the meanings of moons in prominence zones, i.e. moons that are leading,
+following, close, or distant from their planet.</p>
+
+<p class=A><span class=W>10. Progressed ephemeris improved:</span> The text and
+graphics mode ephemeris charts (-E switch) now work better with progressions, when
+displayed with progressed mode on. The ephemeris will now show a progression of
+the fixed natal chart to the span of dates covered in the ephemeris, instead of
+just graphing a changing natal chart to a single fixed progression date.</p>
+
+<p class=A><span class=W>11. Transit influence orb options:</span> The transit
+influence charts (-D and -T switches) can now display aspect orbs in terms of
+positive/negative difference, applying/separating in time, or waxing/waning in
+offset, based on the value of the -aa and -ax switch settings. Before, these
+charts always only displayed applying/separating. Positive/negative orbs will
+be prefixed with “pos” or “neg”, applying/separating will be prefixed with
+“app” or “sep”, and waxing/waning with “wax” or “wan”.</p>
+
+<p class=A><span class=W>12. Astro-graph transits:</span> The text mode
+astrocartography chart (-L -r0 switches) now has a version that displays when
+in relationship comparison mode. This relationship astrocartography chart will
+map the lines of both sets of planets separately, and indicate latitude
+crossings or parans where one chart’s lines crosses the other chart’s lines.
+For example, this can do a relationship comparison between two people and see
+where their lines cross, or compare between transit and natal charts to see how
+current energies are affecting one’s natal energies. Each line will be marked
+with “#1” or “#2” to indicate the two chart slots, or else be marked with “T.”
+or “P.” or “N.” to indicate transiting, progressed, or natal.</p>
+
+<p class=A><span class=W>13. Astro-graph angle restrictions:</span> The text
+mode astrocartography chart (-L switch) will now respect the rising and setting
+restrictions, which when set will prevent the display of latitude crossings
+involving the Ascendant, Midheaven, Descendant, or Nadir.</p>
+
+<p class=A><span class=W>14. Astro-graph Fortune:</span> The Part of Fortune
+will now appear in the text and graphics mode astrocartography charts, as well
+as in the world map and globe charts. This object used to always be prevented
+from appearing, however it can be plotted in the sky since it has a definite
+longitude and latitude. (The Part of Fortune’s latitude is normally 0, but if
+the 3D houses setting is on it will have its latitude also set using the Part
+of Fortune’s formula.)</p>
+
+<p class=A><span class=W>15. Telescope labeling:</span> The graphic telescope
+chart (-XZ switch) and local space chart (-Nl -X switches) will label the axes
+on the edges of the chart to the nearest arcsecond, if the chart is zoomed in
+enough. Before, the edges would only display markings to the nearest arcminute,
+which might not show anything at high zooms.</p>
+
+<p class=A><span class=W>16. Aspect table ordering:</span> The list aspects
+help table (-HA switch) will now also include a list of all aspects in order of
+their angle in degrees. This will list the number of degrees covered by each
+aspect based on the aspect’s orb, along with the number of degrees covered by
+the gaps between aspects. If any aspects are defined with wide enough orbs so
+that their areas overlap, this condition and the amount of overlap will be
+indicated. (When overlap causes more than one aspect to be valid, Astrolog will
+choose the aspect with the earlier index to be in effect.)</p>
+
+<p class=A><span class=W>17. More headers:</span> Text mode charts now include
+more informative headers. For example, relationship modes of charts such as the
+aspect grid and aspect list will display header information for both charts,
+instead of just the first chart. The text mode relationship list (-v -r0 _X
+switches) will include header lines for the cities and longitude/latitudes, in
+addition to just the names and dates. Also, when progressed mode is on, the date
+being progressed to will be included.</p>
+
+<p class=A><span class=W>18. Larger internal font:</span> Astrolog’s internal
+vector graphics text can now be displayed at odd text scales such as 150%.
+Before, the 50% offsets only had a different effect if an actual system font was
+chosen for text. To support this, Astrolog has a new internal font 150% size of
+its standard font, which it uses for this scale.</p>
+
+<p class=A><span class=W>19. New Vertex glyph:</span> Astrolog can display a
+new Vertex glyph, which is the abbreviation “Vx”, which in current years in the
+most common form of this glyph. Astrolog can still do its classic Vertex glyph
+of a cross with split ends. Either glyph can be selected with a new option in
+the Graphics Settings dialog, or with the -YXG switch (in which the Vertex
+glyph is selected by the 1’s place digit, which means the other glyphs have all
+been moved “left” one digit). For example, -YXG 1 will be the classic Vertex
+glyph, while -YXG 2 will be the new “Vx” glyph.</p>
+
+<p class=A><span class=W>20. Eclipse aspect glyphs:</span> Astrolog can display
+special aspect glyphs indicating eclipses, in which a filled in Conjunction
+glyph indicates a solar eclipse or occultation, and a filled in Opposition
+glyph indicates a lunar eclipse. These glyphs are available in Astrolog’s
+default font, and the filled in Conjunction is available in the Hamburg font. Eclipse
+glyphs can be seen in Astrolog’s aspect graphic grid, calendar, and transit graph
+charts (-g, -K, and -B switches).</p>
+
+<p class=A><span class=W>21. More Astro glyphs:</span> The Astro font will now
+display glyphs for the objects Chiron and Lilith. The Astro font has always contained
+these glyphs, but Astrolog used to always display its own default glyphs for
+these characters instead.</p>
+
+<p class=A><span class=W>22. No sidebar houses:</span> The graphic sidebar for
+wheel charts won’t list the 12 house cusp positions when the house system is
+set to Null. That’s because the Null system has the 1st house always at 0Aries,
+so its position and that of the other cusps is obvious. This can be used as a
+way to remove listing the cusp positions, if one wants more room to list the
+planets below them.</p>
+
+<p class=A><span class=W>23. More ayanamsas:</span> In the Windows version, the
+“Zodiac Setting / Ayanamsa” dropdown has been populated with five additional
+sidereal zodiac ayanamsas: Deluce, Usha-Shasi, Yukteshwar, J.N. Bhasin, and
+Galactic Center (in which the Galactic Center is at 0Sag). The offsets of existing
+ayanamsas have been adjusted slightly to more accurately reflect how Swiss
+Ephemeris computes them, although they’ve changed less than an arcsecond in all
+cases.</p>
+
+<p class=A><span class=W>24. Generic zodiac offset:</span> The standard zodiac
+offset setting (the optional ayanamsa parameter to the -s switch) is now only
+applied when the sidereal zodiac is active. This makes it easier to switch back
+and forth between the standard tropical zodiac, and the sidereal zodiac with an
+ayanamsa set. There’s a new separate setting which is always applied to all
+charts (both tropical and sidereal). It’s set by a new optional parameter to
+the -Ys switch. For example, to invert all zodiac positions 180 degrees for charts
+in the southern hemisphere, set this parameter to 180 when the chart latitude
+is below 0 degrees South.</p>
+
+<p class=A><span class=W>25. Hotkey extended:</span> In non-GUI graphics
+versions of Astrolog such as X-Windows, pressing the &quot;v&quot; key will display
+the standard listing of chart positions in the console (-v switch). Now, if in
+relationship comparison mode, it will output the relationship comparison
+version of the text listing.</p>
+
+<p class=A><span class=W>26. Degree time zones:</span> Time zones may
+optionally be specified as a degree value to use instead of hours. Treat this
+like a longitude value, but with the prefix “m”. For example “m90e00” means 90
+degrees East, which is interpreted the same as “6:00E” for 6 hours East. This
+was added to support Astrodatabank files, which sometimes specify time zones in
+this manner.</p>
+
+<p class=A><span class=W>27. TZ database updated:</span> Astrolog’s time zone
+change information has been updated to use TZ database version “2022a” (instead
+of “2021a” which was used before). This new version has a few subtle
+corrections and improvements to various areas in the world.</p>
 
 <p class=A>&nbsp;</p>
 
@@ -563,34 +899,62 @@ house system along with other fixes and improvements.</p>
 
 </div>
 
-<p class=A>A few changes that aren't new feature additions or bug fixes have
-been made to Astrolog 7.30, which means certain old assumptions are no longer
-valid. Most can be considered improvements, but they still change existing
-behavior. A list of these follows (which aren't useful to be aware of unless
-you have used previous versions of the program):</p>
+<p class=A>A few changes that aren't new feature additions or bug fixes have been
+made to Astrolog 7.40, which means certain old assumptions are no longer valid.
+Most can be considered improvements, but they still change existing behavior. A
+list of these follows (which aren't useful to be aware of unless you have used
+previous versions of the program):</p>
 
-<p class=A><span class=X>1. Unicode font removed:</span> Font #4 as passed to
-the -YXf switch has been removed (which means the Hamburg and Astronomicon
-fonts have had their index numbers moved back by one, and are now fonts #4 and
-#5). Similarly, in the Windows version the Graphics Setting dialog dropdowns now
-longer contain the “Unicode” option. This has been replaced with several
-different specific Unicode fonts one may select: Courier New, Consolas, and Arial
-(which are fonts #6, #7, and #8 when passed to the -YXf switch).</p>
+<p class=A><span class=X>1. Lilith glyph changed:</span> Astrolog’s “European”
+glyph for Lilith has been modified to have a cross below the backwards facing
+crescent, which in current years is the most common form of this glyph. This
+glyph has also been made the default, over Astrolog’s “Classic” glyph of a
+circle with a slash through it. The classic Lilith glyph is still an option in
+the Graphics Settings dialog (-YXf switch). </p>
 
-<p class=A><span class=X>2. Text decan interface:</span> In the standard text
-mode listing when “Print Nearest Second” is on, showing decan positions for
-each object (instead of latitude velocity) is now set with the new -v3 switch (instead
-of with the -gp parallel aspects setting as before).</p>
+<p class=A><span class=X>2. Vertex glyph changed:</span> Astrolog’s default
+glyph for the Vertex has been changed to a “Vx” abbreviation, which in current
+years in the most common form of this glyph. The classic Vertex glyph of a
+cross with split ends can still be selected using a new option in the Graphics
+Settings dialog (-YXf switch).</p>
 
-<p class=A><span class=X>3. Hyperion moved:</span> Saturn’s moon Hyperion has
-been moved two slots later in the object index order since it’s Saturn’s
-smallest major moon, and therefore should be at the end of the list of Saturn’s
-moons. This also moves moons Enceladus and Mimas back one object slot.</p>
+<p class=A><span class=X>3. Transit event restrictions moved:</span> In the
+Windows version, the transit time event restriction settings (for sign,
+direction, latitude, and distance changes) have been moved from the Setting /
+Display Settings dialog to the Chart / Transits dialog, which makes them easier
+to notice and change when doing transit charts.</p>
 
-<p class=A><span class=X>4. Open Defaults moved:</span> In the Windows version,
-the “Help / More Documentation / Open Defaults” menu command has been moved to
-a new and different submenu. It’s now the “Help / Open Data Files / Open
-Default Settings” menu command.</p>
+<p class=A><span class=X>4. Previous button renamed:</span> In the Windows
+version, the “Previous” button in the Chart Info dialogs has been renamed to “Recall”.
+This aligns better with the Animate / Recall Chart Info menu command, and is
+better named too since it recalls a particular chart that was set before, which
+isn’t necessarily the immediately previous chart that one worked with.</p>
+
+<p class=A><span class=X>5. Sidereal offset differentiated:</span> The zodiac
+offset / ayanamsa setting (in the Setting / Calculation Settings dialog, as well
+as set with the parameter to the -s switch) now only applies when the sidereal
+zodiac is on, and doesn’t also apply to tropical zodiac charts. This is more
+intuitive and allows one to easily switch between standard tropical charts, and
+sidereal zodiac charts with any particular ayanamsa. There’s a new separate
+setting (the optional parameter to the -Ys switch) that gets applied to all
+charts, and can be used to cover obscure scenarios such as adding 180 degrees
+to all charts in the Southern hemisphere.</p>
+
+<p class=A><span class=X>6. Monthly offset changed:</span> The -+m and -+y switches
+will now add the specified number of calendar months or years to the chart,
+instead of exactly 30 or 360 days. That’s more intuitive and useful behavior.</p>
+
+<p class=A><span class=X>7. Thicker lines display:</span> When the thicker
+lines graphics setting is on, it will no longer apply to text and glyphs drawn
+at the smallest scale. At the smallest scale, text and glyphs with thick lines
+were hard to read, since their lines were overlapping.</p>
+
+<p class=A><span class=X>8. MAC graphics dropped:</span> The #ifdef MAC and
+#ifdef MACOLD compile time options have been removed. The old Macintosh
+libraries they referenced no longer exist, and were only used for ancient
+Macintoshes with non-Intel chips. Modern Macs are effectively Unix boxes, and
+Astrolog can be compiled on them using the Unix settings (including with X11
+graphics).</p>
 
 <p class=A>&nbsp;</p>
 
@@ -600,105 +964,120 @@ Default Settings” menu command.</p>
 
 </div>
 
-<p class=A>Here are bugs or other issues with version 7.20, all of which have
-been corrected in 7.30:</p>
+<p class=A>Here are bugs or other issues with version 7.30, all of which have
+been corrected in 7.40:</p>
 
-<p class=A><span class=Y>1. Save Settings corruption:</span> In the Windows
-version, the &quot;Save Settings&quot; command would create a malformed file which
-when loaded back in would produce an error message saying, &quot;Too few
-options to switch /F (1 given, 3 required)&quot;. Also, because of the error,
-settings after the error point in the file wouldn’t be read in.</p>
+<p class=A><span class=Y>1. Sidereal nutation inaccuracy:</span> Sidereal zodiac
+positions included nutation for house cusps and related objects like the Vertex
+and East Point. Normally, nutation (which can cause an offset of up to 18
+arcseconds) is only added to tropical zodiac positions.</p>
 
-<p class=A><span class=Y>2. X bitmap crash:</span> The X Windows version of
-Astrolog would crash if directed to draw a 24 bit bitmap on the screen, such as
-the detailed world maps in the -L or -XG switch charts. Detailed bitmaps aren’t
-supported on the screen in this environment, but can still be saved to file.
-Now, if directed to do so, Astrolog will automatically fall back to old style
-16 color charts for the screen.</p>
+<p class=A><span class=Y>2. Wheel chart coloring:</span> In graphic wheel
+charts, the short line segment between a planet glyph and the point along the
+ring where the planet actually lies is a gray color for retrograde planets.
+This coloring wasn’t always applied correctly for single ring wheels.                                                                                                                                         </p>
 
-<p class=A><span class=Y>3. Astro font bug:</span> In the Windows version, the
-“Astro” font couldn’t be selected in the dropdowns of the Graphics setting
-dialog. Attempting to do so would always result in the internal vector font
-“Astrolog” instead.</p>
+<p class=A><span class=Y>3. Sector placement inaccuracy:</span> The Gauquelin
+sector charts would include house cusp and related objects like the Vertex and
+East Point that shouldn’t ever be present (even if unrestricted). House cusps
+don’t rise or set like planets do, and therefore don’t have proper timings to
+produce Gauquelin sector positions, and so the positions presented were
+inaccurate.</p>
 
-<p class=A><span class=Y>4. Metafile font corruption:</span> Saving a Windows
-metafile format file with system fonts on, would produce a bad file that wouldn’t
-display in any environment.</p>
+<p class=A><span class=Y>4. Rising and Setting display:</span> Text mode rising
+and setting times charts covering more than a day (such as produced by the -Zdm
+or -ZdY switches) would label the day of the week incorrectly, and always show
+the day of the week for the current chart.</p>
 
-<p class=A><span class=Y>5. Metafile text scale limitation:</span> System font
-text in metafiles wouldn’t respect the text scale setting (-XS switch) which
-would result in small text in files that would always be at just 100% scale.
-Also, non-Windows versions wouldn’t apply changes made to the text scale via
-the -XS switch correctly.</p>
+<p class=A><span class=Y>5. Rising and Setting sidereal:</span> The graphics
+rising and setting chart (-Zd -X switches) would produce inaccurate timings if
+the sidereal zodiac were in effect.</p>
 
-<p class=A><span class=Y>6. Metafile display glitch:</span> Wheel charts in Windows
-metafile format files wouldn’t have spokes line up perfectly with circles,
-which could be seen in the lower right quadrant of the chart at high zoom.</p>
+<p class=A><span class=Y>6. Progressed times inaccuracy:</span> Showing exact
+times of progressed to natal aspects (-tp switch) would produce somewhat inaccurate
+times. This was especially visible when doing progression times for a single
+day (-tpd switch) which would always produce times late in the day near
+midnight.</p>
 
-<p class=A><span class=Y>7. Declination transit bug:</span> Doing a transit to
-natal search of declinations (-t -gp switches) would only look at ecliptic
-latitudes and not equatorial declinations, the latter of which is the standard
-for parallel and contraparallel aspects. Also, doing a transit to transit
-search of declinations (-d -gp switches) would produce malformed results if the
-Equatorial Latitudes setting (-sr0 switch) was on, and convert from ecliptic to
-equatorial coordinates twice. Both switches also have the option to check
-ecliptic instead of equatorial coordinates, if the -AP switch setting is on.</p>
+<p class=A><span class=Y>7. Transit influence positions:</span> The transit
+influence charts (-D and -T switches) wouldn’t display the positions of each
+body in parentheses correctly, for parallel aspects when that setting was on.
+These positions will now show the proper vertical position of each body. They
+will also now respect the -sd display format switch, allowing positions to be displayed
+as decimals.</p>
 
-<p class=A><span class=Y>8. Now LMT bug:</span> Current moment now charts
-wouldn’t produce the right chart when the default time zone was set to LMT
-(Local Mean Time).</p>
+<p class=A><span class=Y>8. Calendar year glitch:</span> Showing the graphic
+calendar chart for an entire year, with daily aspects included and visible (-Ky
+-XA switches) would change the current chart month to December.</p>
 
-<p class=A><span class=Y>9. AAF LMT bug:</span> Astrological Exchange (AAF)
-format files wouldn’t be imported properly if the time zone was set to Local
-Mean Time (LMT), which is indicated by an “L” at the end of the first line of
-data. The chart’s Daylight Saving field would be set to 10000 instead of 0, making
-the chart off by that many hours.</p>
+<p class=A><span class=Y>9. Calendar monthless bug:</span> Showing the calendar
+chart for a saved chart which has no time or space, would show garbage text for
+the month and potentially crash. The same issue would happen for the text mode
+wheel chart (-w -X switches) for the chart date in the middle of the wheel.</p>
 
-<p class=A><span class=Y>10. Apply Info omission:</span> In the Windows
-version, in the “Default Chart Info” dialog, the “Apply Info” button would only
-update the “Location” text field, and wouldn’t update the time zone and
-coordinate fields.</p>
+<p class=A><span class=Y>10. Calendar parallel aspects display:</span> Showing
+the graphic calendar chart with daily aspects included, and the parallel
+aspects setting on, would incorrectly mark Sun/Moon (contra)parallel aspects as
+New or Full Moons.</p>
 
-<p class=A><span class=Y>11. Rising &amp; Setting bug:</span> In the text mode
-rising and setting chart (-Zd switch) crossings of the meridian would sometimes
-be labeled in reverse (i.e. as a zenith crossing even if below the horizon, and
-as a nadir crossing even if above the horizon). This would happen for locations
-South of or near the equator, and in the polar zones.</p>
+<p class=A><span class=Y>11. Astro-graph omission:</span> Text mode
+astrocartography charts wouldn’t include all possible latitude crossings in the
+list of parans, and would sometime miss seeing Ascendant/Descendant crossings
+near the poles. For any astrocartography chart with a given number of uniquely
+positioned objects, with any orientation of its lines there should always be
+the same number of crossings total.</p>
 
-<p class=A><span class=Y>12. Average velocity inaccuracy:</span> The -v0 switch
-setting to display planet velocities relative to their average speed should
-compare to the speed of the Sun for inner planets (which orbit closer to the
-Sun than the central object) as well as for moons or nodal objects orbiting
-those planets. Not doing this would result in permanently slow average velocities
-less than 1.0.</p>
+<p class=A><span class=Y>12. Local space display typo:</span> In the graphic
+local space chart (-Nl -X switches), zooming in enough to show latitudes to the
+nearest minute along the left/right edges would display them as “W/E” instead
+of “N/S”.</p>
 
-<p class=A><span class=Y>13. Uranian display glitch:</span> In the text mode
-local horizon chart (-Z switch), dwarf planet and planetary moon objects would
-be incorrectly labeled as in the Uranian object category. In the text mode
-solar system orbit chart (-S switch), dwarf planet and planetary moon objects
-would be incorrectly labeled as in the fixed stars object category.</p>
+<p class=A><span class=Y>13. Local space zoom bug:</span> In the graphic local
+space chart (-Nl -X switches), zooming in too much would distort the lines so
+they only display at 90 degree angles.</p>
 
-<p class=A><span class=Y>14. Aspect customization limitation:</span> The -YAD
-switch wouldn’t change the three letter abbreviation used for the aspect. Also,
-the -HA switch to list aspect information wouldn’t show customizations made to
-aspect names.</p>
+<p class=A><span class=Y>14. Planetary moons chart limitation:</span> In the
+text mode planetary moons chart (-8 switch) the left hand Lead/Close columns
+would always show percentages from the geocentric perspective, even if set for
+heliocentric or some other central body.</p>
 
-<p class=A><span class=Y>15. Position file limitation:</span> Astrolog’s chart
-position files (as created with the -o0 switch, or the “Save Chart Positions”
-command in the Windows version) would save fixed stars by their object index
-instead of their names. That made version 7.20 files incompatible with previous
-versions, since the insertion of Dwarf planet and planetary moon objects in
-version 7.20 changed the index numbers for fixed stars.</p>
+<p class=A><span class=Y>15. Planetary moons custom limitation:</span> When
+customizing an object slot to be a planetary moon computed by a JPL Horizons
+Web query (-Yej switch) the resulting object would be computed correctly,
+however it wouldn’t be treated as a planetary moon. For example, it wouldn’t
+appear in the planetary moons chart, it wouldn’t be automatically colored based
+on the planet it orbits, and so on.</p>
 
-<p class=A><span class=Y>16. Text scrolling glitch:</span> In the Windows
-version, scrolling the window to the right and/or down, and then switching to
-text mode, would wrongly offset the text by that amount and leave a void area
-at the top/left of the window not drawn.</p>
+<p class=A><span class=Y>16. Telescope glitch:</span> In the graphic telescope
+chart (-XZ switch), Uranus’ rings would sometimes be displayed as having a
+rotation of greater than 360 degrees. Ring rotations should always be between
+-180 and 180 degrees.</p>
 
-<p class=A><span class=Y>17. Missing file crash:</span> Astrolog would crash on
-program startup if the data files astrolog.as, atlas.as, or timezone.as couldn’t
-be found. Usually these files are present, but the bug would still happen if
-one deleted them or renamed them to a location not on Astrolog’s search path.</p>
+<p class=A><span class=Y>17. Timeless relationship limitation:</span> Charts
+with no time or space (such as composite) wouldn’t work right when used as
+inputs into other relationship charts, such as composite or synastry.  </p>
+
+<p class=A><span class=Y>18. Progressed and natal limitation:</span> The
+progressed and natal comparison chart (-rp switch) would use the normal set of
+object restrictions for the progressed planets, instead of the alternate set of
+transit restrictions.</p>
+
+<p class=A><span class=Y>19. Chart sphere limitation:</span> Chart spheres in
+relationship comparison modes would only display up to the first four chart
+slots, and not include chart slots #5 or #6.</p>
+
+<p class=A><span class=Y>20. General meaning crash:</span> The list of general
+meanings (-HI switch) would crash when star objects were unrestricted.</p>
+
+<p class=A><span class=Y>21. File import limitation:</span> Astrolog would fail
+to parse command lines in files, specifically the very last line in a file, if
+those files didn’t end with a CR or LF character.</p>
+
+<p class=A><span class=Y>22. Compiler error:</span> Compiling Astrolog would
+give an error about the function AddTime() not being found, if Astrolog were
+compiled with &quot;#ifdef GRAPH&quot; on, and also if all of the interactive
+screen graphics options like &quot;#ifdef X11&quot; and &quot;#ifdef WIN&quot; were
+off.</p>
 
 <p class=A>&nbsp;</p>
 
@@ -711,7 +1090,7 @@ one deleted them or renamed them to a location not on Astrolog’s search path.</p
 <p class=A>AstroExpressions or “Astrolog Expressions” are programmable
 customizations that don’t require recompiling the program, and can be
 considered an extended form of command switches. AstroExpression functions and
-related command switches have been updated in version 7.30. This section can be
+related command switches have been updated in version 7.40. This section can be
 ignored if one doesn’t use this feature area.</p>
 
 <p class=A>The following lists all new AstroExpression functions. The name of
@@ -719,118 +1098,134 @@ each function is listed, followed by the type of its return value and the
 expected types of its parameters (if any). Numbers will automatically be
 converted to Integer or Real as needed.</p>
 
-<p class=B><span class=W>Rgb:</span> Int(IntR, IntG, IntB). RGB color. Returns
-an RGB color value, given red, green, and blue color components in the range of
-0-255.</p>
+<p class=B><span class=W>MonL, DayL, YeaL, TimL, DstL, ZonL, LonL, LatL:</span>
+Int(Int) or Real(Int): Chart list indexed chart. Like the functions used to
+access chart information in specific slots, but returns chart info for the
+referenced chart index in the chart list.</p>
 
-<p class=B><span class=W>RgbR, RgbG, RgbB:</span> Int(Int): Extract color
-component. Returns the red, green, or blue color component of an RGB color
-value.</p>
+<p class=B><span class=W>ListCnt:</span> Int. List count. Returns the size of
+the chart list in memory.</p>
 
-<p class=B><span class=W>Blend:</span> Int(Int1, Int2, Real): Blend colors.
-Returns an RGB color value, given two RGB color values to blend together, and a
-real number indicating the proportion between them, in which 0.0 is fully color
-#1, and 1.0 is fully color #2.</p>
+<p class=B><span class=W>ListCur:</span> Int. List current position. Returns
+the index of the most recent chart list entry displayed with the commands on
+the “Info / Chart List” submenu.</p>
 
-<p class=B><span class=W>Hue:</span> Int(Real). Rainbow color. Returns an RGB
-color of rainbow. The hue number should range from 0-360, in which 0 is red,
-120 is green, and so on around the circle.</p>
+<p class=B><span class=W>List1:</span> Int. List index #1. Returns the index
+into the chart list used for chart slot #1 when using any of the -5e switches.</p>
 
-<p class=B><span class=W>MonN, DayN, YeaN, TimN, DstN, ZonN, LonN, LatN:</span>
-Int(Int) or Real(Int): Indexed chart. Like the functions used to access chart information
-in specific slots, but returns chart info for the referenced chart slot in the
-range 0-6.</p>
+<p class=B><span class=W>List2:</span> Int. List index #2. Returns the index
+into the chart list used for chart slot #2 when using the -5e3 or -5e4
+switches.</p>
 
-<p class=B><span class=W>MonS, DayS, YeaS, TimS, DstS, ZonS, LonS, LatS: Int or
-Real:</span> Saved chart. Like the functions used to access chart slots, but
-returns chart info for the saved or previous chart.</p>
+<p class=B><span class=W>TiltXY:</span> Real(Int, Real). Coordinate
+transformation. Tilts the longitude and latitude coordinates referenced by
+custom variables Int and Int+1, by Real degrees. Returns the adjusted
+longitude. For example, “TiltXY %x Oblique” will translate between ecliptic and
+equatorial coordinates (effectively doing the same as the -sr switch) assuming
+longitude and latitude are stored in @x and @y.</p>
 
-<p class=B><span class=W>MonG, DayG, YeaG:</span> Int: Gregorian chart. Like
-above but returns the date info currently being used for the Julian to
-Gregorian calendar crossover, which by default is October 15, 1582.</p>
+<p class=B><span class=W>=Obj:</span> Int(Int1, Int2, Int3, Int4). Copy object.
+Copies the contents of object Int2 in chart slot Int1, to object Int4 in chart
+slot Int3. This includes the object’s longitude and latitude position,
+horizontal and vertical and distance velocity, and its house position. Returns
+the longitude position.</p>
 
-<p class=B><span class=W>ObjDirL:</span> Real(Int): Object direction Z. Returns
-the velocity of an object along the distance axis. There are similar functions
-with digit suffixes for chart slots #1 through #6.</p>
+<p class=B><span class=W>=Hou:</span> Int(Int1, Int2, Int3, Int4). Copy house
+cusp. Copies the contents of house cusp Int2 in chart slot Int1, to cusp Int4
+in chart slot Int3. Returns the house cusp longitude.</p>
 
-<p class=B><span class=W>PlusZone:</span> Bool(Int): Gauquelin plus zone.
-Returns whether the specified Gauquelin sector from 1-36 is a plus zone.</p>
+<p class=B><span class=W>DCol:</span> Int(Int). Set draw color. Sets the color
+to use for the other D-prefix drawing functions, and returns that color.</p>
 
-<p class=B><span class=W>Nutation:</span> Real: Nutation. Returns the tropical
-nutation longitude offset for the most recently cast chart.</p>
+<p class=B><span class=W>DDot:</span> Int(IntX, IntY). Draw pixel. Sets a pixel
+in the current draw color at a coordinate. Returns the drawing color used.
+Functions like this can be called in contexts such as the ~Q2 AstroExpression
+to add additional content to a graphics chart after it’s been drawn.</p>
 
-<p class=B><span class=W>Mouse:</span> Int(Int): Mouse coordinates. In the
-Windows version, takes the current pixel coordinates of the mouse pointer
-(relative to the upper left corner of the Astrolog window) and assigns it to
-the two custom variables pointed to by the parameter. Also returns these two
-numbers combined together using the formula (Y * 65536 + X). Note the parameter
-is usually a static index of a variable, instead of variable value, so should
-be in the form %a instead of @a, in order to assign X coordinate to @a and Y
-coordinate to @b.</p>
+<p class=B><span class=W>DSpot:</span> Int(IntX, IntY). Draw spot. Sets a small
+cluster of five pixels in the current draw color at a coordinate. Returns the
+drawing color used.</p>
 
-<p class=B><span class=W>_w1, _aj, _L1, _L2, _d1, _EY, _E01, _E02, _P1, _N1, _I1,
-_c31, _s0:</span> Int: Program setting. This list of functions queries the
-Astrolog setting that’s set with the identically named command switch. There are
-only a few exceptions or alternate behaviors: Functions ending with “1” or “2”
-access the first or second arguments passed to the switch without that digit.
-Function _aj accesses the -a switch sort order, with integers 0-8 referencing
-the “jonOPACDm” subswitches. Functions _E01 and _E02 both reference the step
-parameter to the -E0 switch, in which _E01 is the rate (0=days, 1=months,
-2=years) and _E02 is the factor. Function _s0 accesses the -s switch display
-format, with integers 0-3 referencing the “zhdn” subswitches.</p>
+<p class=B><span class=W>DLine:</span> Int(IntX1, IntY1, IntX2, IntY2). Draw
+line. Draws a line in the current draw color from a start coordinate to an end
+coordinate. Returns the drawing color used.</p>
 
-<p class=B><span class=W>_Xx, _Xv, _YXK:</span> Bool or Int or Int(Int): Program
-graphics setting. This list of functions queries the Astrolog graphics setting
-that’s set with the identically named command switch. The _YXK function takes
-one parameter indicating which palette slot to return the RGB color of.</p>
+<p class=B><span class=W>DBox:</span> Int(IntX1, IntY1, IntX2, IntY2). Draw
+box. Draws a rectangle outline in the current draw color between two opposite
+corner coordinates. Returns the drawing color used.</p>
 
-<p class=B><span class=W>_WN,  _Wnn, _Wh, _Wt, _Wo, _Wo0, _Wo3, _Wz:</span> Bool
-or Int: Program Windows setting. This list of functions queries the Astrolog
-Windows version setting that’s set with the identically named command switch. There
-is one exception: Function _Wnn accesses the -Wn switch setting, and repeats
-the letter of the command switch in its name to avoid a case insensitive name
-conflict with _WN.</p>
+<p class=B><span class=W>DBlock:</span> Int(IntX1, IntY1, IntX2, IntY2). Draw
+block. Draws a filled in rectangle in the current draw color between two
+opposite corner coordinates. Returns the drawing color used.</p>
+
+<p class=B><span class=W>DCirc:</span> Int(IntX1, IntY1, IntX2, IntY2). Draw
+circle. Draws an ellipse outline in the current draw color between two opposite
+corner coordinates. Returns the drawing color used.</p>
+
+<p class=B><span class=W>DDisk:</span> Int(IntX1, IntY1, IntX2, IntY2). Draw
+disk. Draws a filled in ellipse in the current draw color between two opposite
+corner coordinates. Returns the drawing color used.</p>
+
+<p class=B><span class=W>_Ys, _Ys1, _Y8, _Ya, _Yao, _Yoo, _Yb, _YXa, _YXW:</span>
+Bool or Int. Program setting. This list of functions queries the Astrolog
+setting that’s set with the identically named command switch. There are only a
+few exceptions or alternate behaviors: Functions ending with “1” access the
+first argument passed to the switch without that digit. Function _Yoo is a
+Boolean for the -Yo switch setting, and includes a extra “o” in its name to
+avoid a case insensitive name conflict with _YO.</p>
 
 <p class=A>There are several new command switches which allow one to define
 AstroExpression “hooks” into areas of chart calculation or display, to modify
 or filter their results. All AstroExpression related command switches start
 with the tilde (~) character:</p>
 
-<p class=B><span class=V>1. ~kv &lt;string&gt;:</span> Adjust wheel section
-color. On entry, @x contains the section type (0 = sign, 1 = house, 2 =
-Gauquelin sector), @y contains the index (i.e. which sign, house, or sector),
-and @z contains the RGB color to use for it based on the -Xv switch setting. Return
-value is ignored, although if @z is changed it will be used instead. For
-example, to give signs colors of the rainbow, but with red starting at the
-Sun’s position in the zodiac, do: <span class=Y>~kv &quot;If Equ @x 0 =z Blend
-_YXk ?: _Xr K_White K_Black Hue Sub Mul Dec @y 30 ObjLon O_Sun Div _XI1 100.0&quot;</span></p>
+<p class=B><span class=V>1. ~7 &lt;string&gt;:</span> Notify Ray chart. This is
+called when the esoteric chart is being interpreted (-7 -I switches) and allows
+tracking Ray charts. On entry, @v through @z contain the top percentage Rays
+for physical, astral, mental, personality, and soul. Return value is ignored.
+For example, to track the count of each possible personality Ray in custom
+variables @a through @g, do: <span class=Y>~7 &quot;</span> <span class=Y>=u %y
+= Var @u Inc Var Var @u&quot;</span></p>
 
-<p class=B><span class=V>2. ~v3 &lt;string&gt;:</span> Adjust decan glyph.
-Called when a decan marking is about to be drawn in a wheel chart, as done with
-the -v3 switch is on. On entry, @x is the sign from 1-12, @y is the decan
-within the sign from 0-2, and @z is the object index to be drawn. Return value
-is ignored, although if @z is changed it will be used instead. If @z is
-negative, then a sign will be drawn instead of an object. For example, to mark
-decans with the signs themselves, as opposed to the planets which primarily
-rule the sign, do: <span class=Y>~v3 &quot;=z Dec Neg Mod Add Dec @x Mul @y 4
-12&quot;</span> For another example, to mark decans using the Chaldean method,
-by repeating the seven visible planets, do: <span class=Y>~v3 &quot;=z Mod Add
-Mul Dec @x 3 @y 7 IfElse Equ @z 5 =z 7 IfElse Lt @z 1 =z 5 If Or Equ @z 2 Equ
-@z 4 =z Sub 6 @z&quot;</span></p>
+<p class=B><span class=V>2. ~Zd &lt;string&gt;:</span> Filter rising and
+setting times. On entry, @x is the planet, @y is the event (0=rises, 1=zeniths,
+2=sets, 3=nadirs), and @z is the azimuth in degrees (0 = due East, 90 = due
+North). Return value is whether to display the event. For example, to only show
+rising events within 10 degrees of due East, do: <span class=Y>~Zd &quot;And
+Equ @y 0 Lt LonDist @z 0.0 10.0&quot;</span></p>
 
-<p class=B><span class=V>3. ~Xt &lt;string&gt;:</span> Notify sidebar. Called
-when the wheel chart sidebar is about to be drawn. This works well with the
--YXt switch to add computed numeric values to the sidebar. For example, if you
-want the current obliquity of the ecliptic and the right ascension of the MC to
-always be displayed in the sidebar, do: <span class=Y>-YXt &quot;Obliquity:
-\A\nRAMC: \B&quot; ~Xt &quot;=a Oblique =b RAMC&quot;</span></p>
+<p class=B><span class=V>3. ~5s &lt;string&gt;:</span> Adjust chart list custom
+sort order. This is called when the -5s switch is invoked. For each chart in
+the chart list, the chart will be cast, and then the AstroExpression called. On
+entry, @z is the current chart’s index within the chart list. The return value
+is the weight to give this chart, to be used when sorting. (After all charts
+have been given weights, the chart list will be sorted from lowest to highest
+weight.) For example, to sort by Sun/Moon angle (which will place New Moon
+charts first in the list and Full Moon charts last) do: <span class=Y>~5s
+&quot;LonDist ObjLon O_Sun ObjLon O_Moo&quot; -5s</span></p>
 
-<p class=A>A few improvements, changes, or bug fixes have also been made in the
-AstroExpression area:</p>
+<p class=B><span class=V>4. ~5f &lt;string&gt;:</span> Adjust chart list custom
+filter. This is called when the -5f switch is invoked (and also in the Windows
+version in the Chart List dialog when the “Filter” button is pressed). For each
+chart in the chart list, the chart will be cast, and then the AstroExpression
+called. On entry, @z is the current chart’s index within the chart list. The
+return value is whether to keep the chart in the list (in which zero means
+delete). For example, to only show charts from the chart list which have the
+“Moon in the 7th house and Jupiter aligned [Conjunct] with Mars”, do: <span
+class=Y>~5f &quot;And Equ ObjHouse O_Moo 7 Equ AspLon O_Jup O_Mar -1 A_Con&quot;
+-5f &quot;&quot; &quot;&quot;</span></p>
 
-<p class=B><span class=Y>Aspect reordering:</span> The aspect list chart (-a
-switch) didn’t display right when object ordering was changed with the ~v
-switch AstroExpression.</p>
+<p class=B><span class=V>5. ~5Y &lt;string&gt;:</span> Notify chart list enumeration.
+This is called when the -Y5 switch is invoked. For each chart or chart pair in
+the chart list, the chart(s) will be cast, and then the AstroExpression called.
+On entry, no custom variables are set, and return value is ignored too. However
+AstroExpression variables List1 (and List2) will be the index of the current
+chart(s) being considered. For example, to check which chart in the chart list
+forms the most Trine aspects to a natal chart (i.e. to transfer that chart to
+slot #2), first load the natal chart in slot #1, then do: <span class=Y>~5Y
+&quot;DoGrid2 =c 0 For %i 0 Objs If ObjOn @i For %j 0 Objs If ObjOn @j Do =e
+GridNam @i @j If Equ @e A_Tri =c Inc @c If Gt @c @d Do =d @c =a List1&quot; ~1
+&quot;=d 0&quot; -5Y2 -qL2 ~@a</span></p>
 
 <p class=B style='margin-left:0in'>&nbsp;</p>
 
@@ -841,7 +1236,7 @@ switch AstroExpression.</p>
 </div>
 
 <p class=A>IMPORTANT NOTICE: Astrolog and all chart display routines and
-anything not enumerated below used in this program are Copyright (C) 1991-2021
+anything not enumerated below used in this program are Copyright (C) 1991-2022
 by Walter D. Pullen (<a href="mailto:Astara@msn.com">Astara@msn.com</a>, <a
 href="http://www.astrolog.org/astrolog.htm">http://www.astrolog.org/astrolog.htm</a>).
 Permission is granted to freely use, modify, and distribute these routines
@@ -856,11 +1251,12 @@ This copyright notice must not be changed or removed by any user of this
 program.</p>
 
 <p class=A>Additional ephemeris databases and formulas are from the calculation
-routines in the program PLACALC and are programmed and Copyright (C) 1989,1991,1993
-by Astrodienst AG and Alois Treindl (<a href="mailto:alois@astro.ch">alois@astro.ch</a>).
-The use of that source code is subject to regulations made by Astrodienst
-Zurich, and the code is not in the public domain. This copyright notice must
-not be changed or removed by any user of this program.</p>
+routines in the program PLACALC and are programmed and Copyright (C)
+1989,1991,1993 by Astrodienst AG and Alois Treindl (<a
+href="mailto:alois@astro.ch">alois@astro.ch</a>). The use of that source code
+is subject to regulations made by Astrodienst Zurich, and the code is not in
+the public domain. This copyright notice must not be changed or removed by any
+user of this program.</p>
 
 <p class=A>The original planetary calculation routines used in this program
 have been copyrighted and the initial core of this program was mostly a
@@ -892,7 +1288,7 @@ LICENSE.HTM file included with Astrolog, and at <a href="http://www.gnu.org/">ht
 &quot;Cruiser1&quot; Pullen :)       !       <a href="mailto:Astara@msn.com">Astara@msn.com</a>      
 <span style='background:silver'>*</span></p>
 
-<p class=FA><span style='background:silver'>O</span>  Astrolog 7.30 Web site: <a
+<p class=FA><span style='background:silver'>O</span>  Astrolog 7.40 Web site: <a
 href="http://www.magitech.com/astrolog/astrolog.htm">http://www.magitech.com/astrolog/astrolog.htm</a>
  <span style='background:silver'>O</span></p>
 

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: xcharts1.cpp
+** Astrolog (Version 7.40) File: xcharts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -73,7 +73,7 @@ void XChartWheel()
   real unitx, unity;
 
   // Set up variables and temporarily automatically decrease the horizontal
-  // chart size to leave room for the sidebar if that mode is in effect.
+  // chart size to leave room for the sidebar, if that mode is in effect.
 
   if (gs.fText && !us.fVelocity)
     gs.xWin -= xSideT;
@@ -238,7 +238,7 @@ void XChartAstroGraph()
   for (i = 1; i <= is.nObj; i++) if (FProper(i)) {
     xold1 = xold2 = nNegative;
 
-    // Hack: Normally the Ascendant and Descendant line segments are drawn
+    // Normally the Ascendant and Descendant line segments are drawn
     // simultaneously. However, for the PostScript and metafile vector
     // graphics, that would cause the file to get inordinately large due
     // to the constant thrashing between the Asc and Desc colors. Hence
@@ -458,7 +458,8 @@ void XChartGrid()
         if (gs.fAlt ? x > y : x < y) {
           if (k) {
             DrawColor(c = kAspB[k]);
-            DrawAspect(k, gi.xTurtle, gi.yTurtle);
+            DrawAspect(k + (NCheckEclipseAny(ig, k, jg, NULL) > 0)*cAspect2,
+              gi.xTurtle, gi.yTurtle);
           }
 
         // If this is a midpoint cell, draw glyph of sign of midpoint.
@@ -486,8 +487,8 @@ void XChartGrid()
           // For the aspect portion, print the orb in degrees and minutes.
           if (gs.fAlt ? x > y : x < y) {
             if (grid->n[ig][jg]) {
-              sprintf(sz, "%c%d%c%02d'%s", grid->v[ig][jg] < 0 ?
-                (us.fAppSep ? 'a' : '-') : (us.fAppSep ? 's' : '+'),
+              sprintf(sz, "%c%d%c%02d'%s",
+                rgchAppSep[us.nAppSep*2 + (grid->v[ig][jg] >= 0)],
                 k/60, chDeg2, k%60, szT);
               if (nScale == 3)
                 sz[7] = chNull;
@@ -580,6 +581,10 @@ void EarToHorizon(real lon, real lat, int x1, int y1, int xs, int ys,
   LocToHorizon(Mod(lon - rDegHalf), lat, x1, y1, xs, ys, xp, yp);
 }
 
+
+#define NDashAspect(i, j, asp, orb) (gs.nDashMax >= 0 ? \
+  NAbs(orb) / (60*60*2) : \
+  NAbs(orb) * NAbs(gs.nDashMax) / (int)(GetOrb(i, j, asp)*3600.0))
 
 // Draw the local horizon, and draw in the planets where they are at the time
 // in question, as done when the -Z is combined with the -X switch.
@@ -854,6 +859,25 @@ void XChartHorizon()
     }
   }
 #endif
+
+  // Draw lines connecting planets which have aspects between them.
+  if (gs.fLabelCity) {
+    if (!FCreateGrid(fFalse))
+      return;
+    k = gi.nScale;
+    gi.nScale = gi.nScaleTextT;
+    for (j = is.nObj; j >= 1; j--)
+      for (i = j-1; i >= 0; i--)
+        if (grid->n[i][j] && FProper(i) && FProper(j)) {
+          DrawColor(kAspB[grid->n[i][j]]);
+          DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
+            NDashAspect(i, j, grid->n[i][j], grid->v[i][j]));
+          if (gs.fLabelAsp)
+            DrawAspect(grid->n[i][j],
+              (rgod[i].x + rgod[j].x) >> 1, (rgod[i].y + rgod[j].y) >> 1);
+        }
+    gi.nScale = k;
+  }
 
   // Draw planet glyphs, and spots for actual planet locations.
   DrawObjects(rgod, is.nObj+1, 0);
@@ -1146,13 +1170,18 @@ void XChartHorizonSky()
     DrawLine(x1+j, y2, x1+j, y2-k);
     DrawLine(x2-j, y2, x2-j, y2-k);
   }
-  if (!gs.fEcliptic) {
-    DrawSz("N", cx, y1-2*gi.nScaleT, dtBottom | dtScale2);
-    DrawSz("E", x1/2, cy+2*gi.nScaleT, dtCent | dtScale2);
-    DrawSz("W", (gs.xWin+x2)/2, cy+2*gi.nScaleT, dtCent | dtScale2);
-    if (!gs.fText)
-      DrawSz("S", cx, gs.yWin-3*gi.nScaleT, dtBottom | dtScale2);
+  i = gi.nScaleT;
+  DrawSz(!gs.fEcliptic ? "N" : "Can", cx, y1-2*i, dtBottom | dtScale2);
+  DrawSz(!gs.fEcliptic ? "E" : "r", x1/2, cy+2*i, dtCent | dtScale2);
+  DrawSz(!gs.fEcliptic ? "W" : "i", (gs.xWin+x2)/2, cy+2*i, dtCent | dtScale2);
+  if (gs.fEcliptic) {
+    DrawSz("A", x1/2, cy+2*i-yFontT, dtCent | dtScale2);
+    DrawSz("i", x1/2, cy+2*i+yFontT, dtCent | dtScale2);
+    DrawSz("L", (gs.xWin+x2)/2, cy+2*i-yFontT, dtCent | dtScale2);
+    DrawSz("b", (gs.xWin+x2)/2, cy+2*i+yFontT, dtCent | dtScale2);
   }
+  if (!gs.fText)
+    DrawSz(!gs.fEcliptic ? "S" : "Cap", cx, gs.yWin-3*i, dtBottom | dtScale2);
   DrawColor(gi.kiOn);
   DrawEdge(x1, y1, x2, y2);
   DrawCircle(cx, cy, rx, ry);
@@ -1192,6 +1221,25 @@ void XChartHorizonSky()
     }
   }
 #endif
+
+  // Draw lines connecting planets which have aspects between them.
+  if (gs.fLabelCity) {
+    if (!FCreateGrid(fFalse))
+      return;
+    k = gi.nScale;
+    gi.nScale = gi.nScaleTextT;
+    for (j = is.nObj; j >= 1; j--)
+      for (i = j-1; i >= 0; i--)
+        if (grid->n[i][j] && FProper(i) && FProper(j)) {
+          DrawColor(kAspB[grid->n[i][j]]);
+          DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
+            NDashAspect(i, j, grid->n[i][j], grid->v[i][j]));
+          if (gs.fLabelAsp)
+            DrawAspect(grid->n[i][j],
+              (rgod[i].x + rgod[j].x) >> 1, (rgod[i].y + rgod[j].y) >> 1);
+        }
+    gi.nScale = k;
+  }
 
   // Draw planet glyphs, and spots for actual planet locations.
   DrawObjects(rgod, is.nObj+1, 0);
@@ -1268,22 +1316,24 @@ void EarToTelescope(real lon, real lat, TELE *pte,
 }
 
 
+#define N012(n, n0, n1, n2) ((n) <= 0 ? (n0) : ((n) == 1 ? (n1) : (n2)))
+
 // Draw a chart depicting a telescope view of the sky, showing planetary disks
-// (including moon phases), as done with the -XZ switch. This is similar to a
-// zoomed in version of the -Z -X switch local horizon chart.
+// (including moon phases and rings), as done with the -XZ switch. This is
+// similar to a zoomed in version of the -Z -X switch local horizon chart.
 
 void XChartTelescope()
 {
   char sz[cchSzDef], szT[cchSzDef], *pch;
   int rgobj[objMax+1], xunit, yunit, x1, y1, x2, y2, xs, ys, xc, yc, xp, yp,
     xT, yT, xd, yd, i, j, k, i0, i1, i2, iEar, iMoo, dx, dy = 0, nEclipse,
-    zLimit, nSav;
+    zLimit, nShowMinute, nSav;
   real rglen[objMax+1], lonH, latH, xBase, yBase, xScale, yScale,
     xBase2, yBase2, xScale2, yScale2, xi, yi, diam, radi, rRatio, len, ang,
     xo, yo, xr, yr, zr, xrSun, yrSun, xrT, yrT,
     radiS, radiE, radiM, radiU, radiP, lenS, lenM, theta, rPct;
-  flag fFlip = gs.fEcliptic && us.rHarmonic < 0.0,
-    fShowMinute, fShowLabel, fShowUmbra, fSav;
+  flag fFlip = gs.fEcliptic && us.rHarmonic < 0.0, fShowLabel, fShowUmbra,
+    fSav;
   TELE te;
 #ifdef CONSTEL
   int m1, n1, m2, n2;
@@ -1319,9 +1369,9 @@ void XChartTelescope()
     iEar = us.objCenter; iMoo = gs.objTrack; fShowUmbra = fTrue;
   }
 
-  for (fShowMinute = 0; fShowMinute <= 1; fShowMinute++) {
-    xunit = xFontT*(!fShowMinute ? 4 : 7);
-    yunit = 12*gi.nScaleTextT;
+  for (nShowMinute = 0; nShowMinute <= 2; nShowMinute++) {
+    xunit = xFontT * N012(nShowMinute, 4, 7, 10);
+    yunit = 6*gi.nScaleTextT2;
     x1 = xunit; y1 = yunit; x2 = gs.xWin-1-xunit; y2 = gs.yWin-1-yunit;
     xs = x2-x1; ys = y2-y1; xc = (x1+x2)/2; yc = (y1+y2)/2;
 
@@ -1356,7 +1406,8 @@ void XChartTelescope()
     gi.zViewRatio = (xi + yi) / 128.0;
     if (gi.zViewRatio > 1.0)
       gi.zViewRatio = 1.0;
-    if (xi >= 2.0 || yi >= 2.0)
+    if (N012(nShowMinute,
+      xi >= 2.0 || yi >= 2.0, xi >= 2.0/60.0 || yi >= 2.0/60.0, fTrue))
       break;
   }
 
@@ -1388,16 +1439,16 @@ void XChartTelescope()
 
   // Draw grid of degree points.
   xBase2 = xBase; yBase2 = yBase; xScale2 = xScale; yScale2 = yScale;
-  if (fShowMinute) {
+  for (i = 0; i < nShowMinute; i++) {
     xi      *= 60.0; yi      *= 60.0;
     xBase2  *= 60.0; yBase2  *= 60.0;
     xScale2 /= 60.0; yScale2 /= 60.0;
   }
-  if (gs.fLabelCity && (fShowMinute || (yScale >= 1.0 && xScale >= 1.0))) {
+  zLimit = N012(nShowMinute, 90, 90*60, 90*60*60);
+  if (gs.fLabelCity && (nShowMinute || (yScale >= 1.0 && xScale >= 1.0))) {
     DrawColor(gi.kiGray);
-    k = !fShowMinute ? 90 : 90*60;
     for (j = (int)(yBase2 - yi); j <= (int)(yBase2 + yi); j++) {
-      if (!FBetween(j, -k, k))
+      if (!FBetween(j, -zLimit, zLimit))
         continue;
       yp = yc - (int)(((real)j - yBase2) * yScale2);
       if (!FBetween(yp, y1, y2))
@@ -1679,6 +1730,8 @@ void XChartTelescope()
                 EclToTelescope(xo - 0.01, yo, &te, &xp2, &yp2, &xr2, &yr2);
                 theta2 = RAngleD(xr2 - xr, yr2 - yr);
                 ang = theta2 - ang;
+                if (ang > rDegHalf)
+                  ang -= rDegMax;
               }
               // Draw Saturn's rings.
               yd2 = (int)(radi2 * 2.0); yT2 = (int)(yr - radi2 + rRound);
@@ -1804,8 +1857,7 @@ void XChartTelescope()
 
   // Label degree points on vertical axis.
   DrawColor(gi.kiLite);
-  zLimit = !fShowMinute ? 90 : 90*60;
-  k = xFontT*(!fShowMinute ? 4 : 7) >> 1;
+  k = (xFontT * N012(nShowMinute, 4, 7, 10)) >> 1;
   i = (yFont-2)*gi.nScaleTextT / Max((int)yScale2, 1) + 1;
   for (j = (int)(yBase2 - yi); j <= (int)(yBase2 + yi); j++) {
     if (!FBetween(j, -zLimit, zLimit))
@@ -1818,20 +1870,24 @@ void XChartTelescope()
     DrawLineX(x2 - (3+fShowLabel*2)*gi.nScaleT, x2, yp);
     if (!fShowLabel)
       continue;
-    if (!fShowMinute)
+    if (nShowMinute <= 0)
       sprintf(sz, "%s%d", j > 0 ? "+" : "", j);
-    else
+    else if (nShowMinute == 1)
       sprintf(sz, "%c%d%c%02d", j > 0 ? '+' : '-', NAbs(j)/60, chDeg2,
         NAbs(j)%60);
+    else
+      sprintf(sz, "%c%d%c%02d'%02d", j > 0 ? '+' : '-', NAbs(j)/3600, chDeg2,
+        NAbs(j)/60%60, NAbs(j)%60);
     DrawSz(sz, k, yp + 2*gi.nScaleTextT, dtCent | dtScale2);
     DrawSz(sz, gs.xWin-gi.nScaleT - k, yp + 2*gi.nScaleTextT,
       dtCent | dtScale2);
   }
 
   // Label degree points on horizontal axis.
-  j = us.nDegForm == 3 ? 8 + fShowMinute*2 :
-    ((!fShowMinute ? (us.nDegForm == 0 ? 5 : (us.nDegForm == 1 ? 7 : 4)) :
-    (us.nDegForm == 0 ? 7 : (us.nDegForm == 1 ? 11 : 6))));
+  j = us.nDegForm == 3 ? 8 + (nShowMinute > 0)*2 : N012(nShowMinute,
+    (us.nDegForm == 0 ? 5 : (us.nDegForm == 1 ? 7 : 4)),
+    (us.nDegForm == 0 ? 7 : (us.nDegForm == 1 ? 11 : 6)),
+    (us.nDegForm == 0 ? 10 : (us.nDegForm == 1 ? 11 : 9)));
   j = j*xFontT / Max((int)xScale2, 1) + 1;
   for (i = (int)(xBase2 - xi); i <= (int)(xBase2 + xi); i++) {
     xp = xc + (int)(((real)i - xBase2) * xScale2);
@@ -1843,33 +1899,39 @@ void XChartTelescope()
     if (!fShowLabel)
       continue;
     fSav = is.fSeconds; nSav = us.nDegForm;
-    is.fSeconds = ((us.nDegForm == 1 || us.nDegForm == 3) && fShowMinute);
+    is.fSeconds =
+      ((us.nDegForm == 1 || us.nDegForm == 3) && nShowMinute > 0) ||
+      ((us.nDegForm == 0 || us.nDegForm == 2) && nShowMinute > 1);
     us.nDegForm = (gs.fEcliptic ? us.nDegForm : 2);
-    ang = (gs.fEcliptic ? (!fShowMinute ? (real)i : (real)i/60.0) :
-      (!fShowMinute ? (real)(90-i) : rDegQuad-(real)i/60.0));
+    ang = (gs.fEcliptic ? (real)i / N012(nShowMinute, 1.0, 60.0, 3600.0) :
+      rDegQuad - (real)i / N012(nShowMinute, 1.0, 60.0, 3600.0));
     if (fFlip)
       ang = rDegMax - ang;
     ang = Mod(ang + rSmall);
-    if (us.nDegForm != 2)
+    if (us.nDegForm != 2) {
+      if (gs.fColorSign)
+        DrawColor(kSignB(SFromZ(ang)));
       sprintf(sz, "%s", SzZodiac(ang));
-    else {
+    } else {
       us.nDegForm = 0;
       sprintf(sz, "%s", SzDegree(ang));
       us.nDegForm = 2;
     }
     if (us.nDegForm == 0)
-      sz[!fShowMinute ? 5 : 7] = chNull;
+      sz[N012(nShowMinute, 5, 7, 10)] = chNull;
     else if (us.nDegForm == 2) {
       sz[3] = chDeg2;
-      sz[!fShowMinute ? 4 : 6] = chNull;
+      sz[N012(nShowMinute, 4, 6, 9)] = chNull;
     } else if (us.nDegForm == 3)
-      sz[!fShowMinute ? 7 : 9] = chNull;
+      sz[nShowMinute <= 0 ? 7 : 9] = chNull;
     us.nDegForm = nSav; is.fSeconds = fSav;
     pch = sz + (sz[0] == ' ');
     DrawSz(pch, xp, 2*gi.nScaleTextT, dtCent | dtTop | dtScale2);
     if (!gs.fText)
       DrawSz(pch, xp, gs.yWin - gi.nScaleT - 2*gi.nScaleTextT,
         dtCent | dtBottom | dtScale2);
+    if (gs.fColorSign)
+      DrawColor(gi.kiLite);
   }
 
   // Draw boundary of chart area.
@@ -1886,17 +1948,17 @@ void XChartLocal()
 {
   char sz[cchSzDef];
   int xunit, yunit, x1, y1, x2, y2, xs, ys, xc, yc, xp, yp, xp2, yp2,
-    m1, n1, m2, n2, i, j, k, zLimit;
+    m1, n1, m2, n2, i, j, k, zLimit, nShowMinute;
   real xBase, yBase, xScale, yScale, xBase2, yBase2, xScale2, yScale2,
     xr, yr, xi, yi, lon, lat, len;
-  flag fShowMinute, fShowLabel, fDidBitmap;
+  flag fShowLabel, fDidBitmap;
   TELE te;
   static real lonPrev = rLarge, latPrev = rLarge;
   static int objPrev = nLarge;
 
   // Initialize variables.
-  for (fShowMinute = 0; fShowMinute <= 1; fShowMinute++) {
-    xunit = xFontT*(!fShowMinute ? 4 : 6);
+  for (nShowMinute = 0; nShowMinute <= 2; nShowMinute++) {
+    xunit = xFontT * N012(nShowMinute, 4, 6, 9);
     yunit = 12*gi.nScaleTextT;
     x1 = xunit; y1 = yunit; x2 = gs.xWin-1-xunit; y2 = gs.yWin-1-yunit;
     xs = x2-x1; ys = y2-y1; xc = (x1+x2)/2; yc = (y1+y2)/2;
@@ -1919,7 +1981,7 @@ void XChartLocal()
 
     // Determine degrees the chart area covers.
     len = (real)Min(xs, ys);
-    yScale = gs.rspace > 0.0 ? len / Min(gs.rspace, 90.0) :
+    yScale = gs.rspace > 0.0 ? len / Max(Min(gs.rspace, 90.0), 1.0/60.0) :
       len / (real)(1 << (4-gi.nScale/gi.nScaleT));
     len = (real)ys/yScale/2.0;
     if (yBase - len < -89.0)
@@ -1933,7 +1995,8 @@ void XChartLocal()
     gi.zViewRatio = (xi + yi) / 128.0;
     if (gi.zViewRatio > 1.0)
       gi.zViewRatio = 1.0;
-    if (xi >= 2.0 || yi >= 2.0)
+    if (N012(nShowMinute,
+      xi >= 2.0 || yi >= 2.0, xi >= 2.0/60.0 || yi >= 2.0/60.0, fTrue))
       break;
   }
 
@@ -1948,16 +2011,16 @@ void XChartLocal()
 
   // Draw grid of degree points.
   xBase2 = xBase; yBase2 = yBase; xScale2 = xScale; yScale2 = yScale;
-  if (fShowMinute) {
+  for (i = 0; i < nShowMinute; i++) {
     xi      *= 60.0; yi      *= 60.0;
     xBase2  *= 60.0; yBase2  *= 60.0;
     xScale2 /= 60.0; yScale2 /= 60.0;
   }
-  if (gs.fHouseExtra && (fShowMinute || (yScale2 >= 1.0 && xScale2 >= 1.0))) {
+  zLimit = N012(nShowMinute, 90, 90*60, 90*60*60);
+  if (gs.fHouseExtra && (nShowMinute || (yScale2 >= 1.0 && xScale2 >= 1.0))) {
     DrawColor(gi.kiGray);
-    k = !fShowMinute ? 90 : 90*60;
     for (j = (int)(yBase2 - yi); j <= (int)(yBase2 + yi); j++) {
-      if (!FBetween(j, -k, k))
+      if (!FBetween(j, -zLimit, zLimit))
         continue;
       yp = yc - (int)(((real)j - yBase2) * yScale2 + rRound);
       if (!FBetween(yp, y1, y2))
@@ -2073,8 +2136,7 @@ void XChartLocal()
 
   // Label degree points on vertical axis.
   DrawColor(gi.kiLite);
-  zLimit = !fShowMinute ? 90 : 90*60;
-  k = xFontT*(!fShowMinute ? 2 : 3);
+  k = (xFontT * N012(nShowMinute, 4, 6, 9)) >> 1;
   i = (yFont-2)*gi.nScaleTextT / Max((int)yScale2, 1) + 1;
   for (j = (int)(yBase2 - yi); j <= (int)(yBase2 + yi); j++) {
     if (!FBetween(j, -zLimit, zLimit))
@@ -2087,17 +2149,20 @@ void XChartLocal()
     DrawLineX(x2 - (3+fShowLabel*2)*gi.nScaleT, x2, yp);
     if (!fShowLabel)
       continue;
-    if (!fShowMinute)
+    if (nShowMinute <= 0)
       sprintf(sz, "%d%c", NAbs(j), j >= 0 ? 'N' : 'S');
+    else if (nShowMinute == 1)
+      sprintf(sz, "%d%c%02d", NAbs(j)/60, j >= 0 ? 'N' : 'S', NAbs(j)%60);
     else
-      sprintf(sz, "%d%c%02d", NAbs(j)/60, j >= 0 ? 'W' : 'E', NAbs(j)%60);
+      sprintf(sz, "%d%c%02d'%02d", NAbs(j)/3600, j >= 0 ? 'N' : 'S',
+        NAbs(j)/60%60, NAbs(j)%60);
     DrawSz(sz, k, yp + 2*gi.nScaleTextT, dtCent | dtScale2);
     DrawSz(sz, gs.xWin-1 - k, yp + 2*gi.nScaleTextT, dtCent | dtScale2);
   }
 
   // Label degree points on horizontal axis.
-  zLimit = !fShowMinute ? nDegHalf : nDegHalf*60;
-  j = (!fShowMinute ? 5 : 7)*xFontT / Max((int)xScale2, 1) + 1;
+  zLimit = nDegHalf * N012(nShowMinute, 1, 60, 60*60);
+  j = N012(nShowMinute, 5, 7, 9) * xFontT / Max((int)xScale2, 1) + 1;
   for (i = (int)(xBase2 - xi); i <= (int)(xBase2 + xi); i++) {
     xp = xc + (int)(((real)i - xBase2) * xScale2 + rRound);
     if (!FBetween(xp, x1, x2))
@@ -2112,10 +2177,13 @@ void XChartLocal()
       k -= (zLimit << 1);
     while (k <= -zLimit)
       k += (zLimit << 1);
-    if (!fShowMinute)
+    if (nShowMinute <= 0)
       sprintf(sz, "%d%c", NAbs(k), k >= 0 ? 'W' : 'E');
-    else
+    else if (nShowMinute == 1)
       sprintf(sz, "%d%c%02d", NAbs(k)/60, k >= 0 ? 'W' : 'E', NAbs(k)%60);
+    else
+      sprintf(sz, "%d%c%02d'%02d", NAbs(k)/3600, k >= 0 ? 'W' : 'E',
+        NAbs(k)/60%60, NAbs(k)%60);
     DrawSz(sz, xp, 2*gi.nScaleTextT, dtCent | dtTop | dtScale2);
     if (!gs.fText)
       DrawSz(sz, xp, gs.yWin-1 - 2*gi.nScaleTextT,
@@ -2369,7 +2437,7 @@ void XChartOrbit()
         if (grid->n[i][j] && FProper(i) && FProper(j)) {
           DrawColor(kAspB[grid->n[i][j]]);
           DrawClip(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y, x1, y1, x2, y2,
-            NAbs(grid->v[i][j]/(60*60*2)));
+            NDashAspect(i, j, grid->n[i][j], grid->v[i][j]));
           if (gs.fLabelAsp) {
             k = (rgod[i].x + rgod[j].x) >> 1;
             l = (rgod[i].y + rgod[j].y) >> 1;
@@ -2506,32 +2574,14 @@ void XChartSector()
       temp = Mod(rDegHalf - planet[i]);
     else
       temp = Mod(rDegHalf + planet[i]);
-    symbol[i] = xplanet[i] = temp;
+    xplanet[i] = temp;
   }
-  FillSymbolRing(symbol, 1.0);
 
   // For each planet, draw a small dot indicating where it is, and then a line
   // from that point to the planet's glyph.
-  for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
-    if (gs.fLabel) {
-      temp = symbol[i];
-      DrawColor(ret[i] < 0.0 ? gi.kiGray : gi.kiOn);
-      DrawDash(cx+POINT1(unitx, 0.67, PX(xplanet[i])),
-        cy+POINT1(unity, 0.67, PY(xplanet[i])),
-        cx+POINT1(unitx, 0.71, PX(temp)),
-        cy+POINT1(unity, 0.71, PY(temp)),
-        (ret[i] < 0.0 ? 1 : 0) - gs.fColor);
-      DrawObject(i, cx+POINT1(unitx, 0.75, PX(temp)),
-        cy+POINT1(unity, 0.75, PY(temp)));
-    } else
-      DrawColor(kObjB[i]);
-    if (!gs.fHouseExtra)
-      DrawSpot(cx+POINT1(unitx, 0.65, PX(xplanet[i])),
-        cy+POINT1(unity, 0.65, PY(xplanet[i])));
-    else
-      DrawPoint(cx+POINT1(unitx, 0.65, PX(xplanet[i])),
-        cy+POINT1(unity, 0.65, PY(xplanet[i])));
-  }
+  DrawRing(1, 1, xplanet, symbol, cx, cy, 0.0, 0.0, 0.0,
+    0.65, 0.67, 0.71, 0.75, 1.0);
+  FProcessCommandLine(szWheelX[0]);
 
   // Draw lines connecting planets which have aspects between them.
   if (!gs.fEquator) {            // Don't draw aspects in equator mode.
@@ -2608,7 +2658,7 @@ void XChartDispositor()
 
   // Set up screen positions of the 10 planets for the wheel graphs.
 
-  cx0 = gs.xWin / 2; cy0 = gs.yWin / 2;
+  cx0 = gs.xWin >> 1; cy0 = gs.yWin >> 1;
   for (i = 1; i <= oNum; i++) {
     j = (gs.fHouseExtra ? 270 : 180) - (i-1)*(us.fVedic ? -360 : 360)/oNum;
     xCirc[i] = (real)cx0*0.4*RCosD((real)j);
@@ -2618,7 +2668,7 @@ void XChartDispositor()
   // Loop over the two basic dispositor types: sign based and house based.
 
   for (xSub = 0; xSub <= 1; xSub++) {
-    cx = xSub * cx0 + cx0 / 2;
+    cx = xSub * cx0 + (cx0 >> 1);
 
     // For each planet, get its dispositor planet for current graph type.
     for (i = 1; i <= oNum; i++) {
@@ -2678,7 +2728,7 @@ void XChartDispositor()
 
     // Loop over our two dispositor display formats: hierarchy and wheel.
     for (ySub = 0; ySub <= 1; ySub++) {
-      cy = ySub * cy0 + cy0 / 2;
+      cy = ySub * cy0 + (cy0 >> 1);
       sprintf(sz, "%s dispositor %s", xSub ? "House" : "Sign",
         ySub ? "wheel" : "hierarchy");
       DrawColor(gi.kiLite);
@@ -2761,11 +2811,13 @@ void XChartDispositor()
 // ChartInDaySearch() which computes aspect events, which is in turn
 // called from XChartCalendar() which draws the graphic calendar chart.
 
-flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
+flag DrawCalendarAspect(CONST InDayInfo *pid, int i, int iMax, int nVoid,
+  int nEclipse)
 {
   int x1, y1, x2, y2, asp, x, y, z, s1, s2, s3, nT, k,
     nScale = gi.nScaleTextT2;
   char sz[4], *szTime;
+  flag fTrans = (pid->mon < 0);
 
   // Get pixel coordinates of the calendar and pixel size of each box.
   x1 = gi.rgzCalendar[pid->day*2];
@@ -2777,7 +2829,7 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
   if (y - nScale*5/2 <= y1)
     return fFalse;
   x = x2 + nScale*3/2;
-  if (x - z*3 - nScale*5/2 <= x1)
+  if (x - z*(3+fTrans) - nScale*5/2 <= x1)
     return fFalse;
 
   // Get aspect event and time that it takes place.
@@ -2791,10 +2843,10 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
   DrawObject(pid->source, x - z*3, y);
   if (asp >= aCon) {
     DrawColor(kAspB[asp]);
-    DrawAspect(pid->aspect, x - z*2, y);
+    DrawAspect(asp + (nEclipse > etNone)*cAspect2, x - z*2, y);
   } else if (asp == aSig || asp == aHou) {
     DrawColor(gi.kiOn);
-    DrawTurtle("NL4R4NG4H4", x - z*2, y);
+    DrawTurtle(pid->ret1 >= 0 ? "NL4R4NG4H4" : "NR4L4NF4E4", x - z*2, y);
   } else if (asp == aDir) {
     DrawColor(gi.kiOn);
     DrawTurtle("NR3L3HU2ER6FBD4NHD2GL6H", x - z*2, y);
@@ -2818,11 +2870,22 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
     nT = asp == aSig ? pid->dest : pid->dest / us.nSignDiv + 1;
     DrawColor(kSignB(nT));
     DrawSign(nT, x - z, y);
+  } else if (asp == aHou) {
+    DrawColor(kSignB(pid->dest));
+    nT = us.fHouseAngle; us.fHouseAngle = fTrue;
+    DrawObject(cuspLo-1 + pid->dest, x - z, y);
+    us.fHouseAngle = nT;
+  }
+
+  // Transit to natal events are prefixed with a "T" or "P".
+  if (fTrans) {
+    DrawColor(gi.kiLite);
+    DrawTurtle(us.fProgress ? "NL4R3EU2HL7D8" : "ND4U4NL4R4", x - z*4, y);
   }
 
   // Draw the time that the aspect event takes place (if room).
   szTime = SzTime(s1, s2, s3);
-  nT = x - z*4 - CchSz(szTime)*xFont2*nScale;
+  nT = x - z*(4+fTrans) - CchSz(szTime)*xFont2*nScale;
   if (nT <= x1)
     return fTrue;
   DrawColor(gi.kiGray);
@@ -2832,9 +2895,16 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
   nT -= 4*xFont2*nScale;
   if (nT <= x1)
     return fTrue;
+  if (fTrans) {
+    if (pid->source == pid->dest && asp == aCon) {
+      DrawColor(gi.kiOn);
+      DrawSz("RET", nT, y+nScale, dtLeft | dtScale2);
+    }
+    return fTrue;
+  }
   k = kSignB(SFromZ(planet[oMoo]));
   if (pid->source == oSun && pid->dest == oMoo &&
-    (asp == aCon || asp == aOpp)) {
+    (asp == aCon || asp == aOpp) && !us.fParallel) {
     DrawColor(k);
     DrawSz(asp == aCon ? (nVoid < 0 ? "NEW" : "N+v") :
       (nVoid < 0 ? "FUL" : "F+v"), nT, y+nScale, dtLeft | dtScale2);
@@ -2854,17 +2924,19 @@ flag DrawCalendarAspect(InDayInfo *pid, int i, int iMax, int nVoid)
 // scaled to fit within the given bounds. This is used for single month
 // -K switch images and is called 12 times for a full year -Ky image.
 
-void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
+void DrawCalendar(int mon, int yea, int x1, int y1, int x2, int y2)
 {
   char sz[cchSzDef];
   int rgz[(31+1)*2], day, cday, dayHi, cweek, xunit, yunit, xs, ys, x0, y0,
     x, y, s, nSav;
   flag fSav;
 
+  if (mon < mJan)
+    mon = mJan;
   xs = x2 - x1; ys = y2 - y1;
-  day = DayOfWeek(mon, 1, Yea);    // Day of week of 1st of month.
-  cday = DaysInMonth(mon, Yea);    // Count of days in the month.
-  dayHi = DayInMonth(mon, Yea);    // Number of last day in the month.
+  day = DayOfWeek(mon, 1, yea);    // Day of week of 1st of month.
+  cday = DaysInMonth(mon, yea);    // Count of days in the month.
+  dayHi = DayInMonth(mon, yea);    // Number of last day in the month.
   cweek = us.fCalendarYear ? 6 : (day + cday + 6) / 7;   // Week rows.
   xunit = xs/8;                    // Hor. pixel size of each day box.
   yunit = ys/(cweek+2);            // Ver. pixel size of each day box.
@@ -2873,7 +2945,7 @@ void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
 
   // Print the month and year in big letters at top of chart.
   DrawColor(gi.kiOn);
-  sprintf(sz, "%s, %d", szMonth[mon], Yea);
+  sprintf(sz, "%s, %d", szMonth[mon], yea);
   s = gi.nScale;
   gi.nScale = Min((yunit*3/2-yFont*s) / yFont, xs/15/*CchSz(sz)*/ / xFont);
   gi.nScale = (gi.nScale/s)*s;        // So scale is an even multiple of "s".
@@ -2903,7 +2975,7 @@ void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
 
   // Actually draw the day numbers in their appropriate boxes.
   x = day; y = 0;
-  for (day = 1; day <= dayHi; day = AddDay(mon, day, Yea, 1)) {
+  for (day = 1; day <= dayHi; day = AddDay(mon, day, yea, 1)) {
     rgz[day*2] = x0 + x*xunit;
     rgz[day*2+1] = y0 + y*yunit;
     sprintf(sz, gs.fText ? "%2d" : "%d", day);
@@ -2927,10 +2999,17 @@ void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
     rgz[0] = xunit; rgz[1] = yunit;
     gi.rgzCalendar = rgz;
     us.fInDayMonth = fTrue; us.fInDayYear = fFalse;
-    nSav = Mon; Mon = mon;
     fSav = gs.fLabel; gs.fLabel = fTrue;
-    ChartInDaySearch(is.fProgress);
-    Mon = nSav; gs.fLabel = fSav;
+    if (us.nRel >= rcNone) {
+      nSav = Mon; Mon = mon;
+      ChartInDaySearch(us.fProgress);
+      Mon = MM = nSav;
+    } else {
+      nSav = MonT; MonT = mon; cp0 = cp1;
+      ChartTransitSearch(us.nRel == rcProgress);
+      MonT = nSav; MM = Mon;
+    }
+    gs.fLabel = fSav;
     gi.rgzCalendar = NULL;
   }
   gi.nScale = s;
@@ -2943,9 +3022,11 @@ void DrawCalendar(int mon, int x1, int y1, int x2, int y2)
 void XChartCalendar()
 {
   int xs, ys, xunit, yunit, x1, y1, x, y;
+  flag fTransit = gs.fLabelAsp && us.nRel < rcNone;
 
   if (!us.fCalendarYear) {
-    DrawCalendar(Mon, 0, 0, gs.xWin, gs.yWin);
+    DrawCalendar(!fTransit ? Mon : MonT, !fTransit ? Yea : YeaT,
+      0, 0, gs.xWin, gs.yWin);
     return;
   }
 
@@ -2970,9 +3051,265 @@ void XChartCalendar()
   y1 = (gs.yWin - yunit*ys) / 2;
   for (y = 0; y < ys; y++)
     for (x = 0; x < xs; x++) {
-      DrawCalendar(y * xs + x + 1, x1 + x*xunit, y1 + y*yunit,
-        x1 + (x+1)*xunit, y1 + (y+1)*yunit);
+      DrawCalendar(y * xs + x + 1, !fTransit ? Yea : YeaT, x1 + x*xunit,
+        y1 + y*yunit, x1 + (x+1)*xunit, y1 + (y+1)*yunit);
     }
+}
+
+
+// Draw a chart showing the locations of planetary moons, showing geocentric
+// and heliocentric views of moons from the front and from above, as done when
+// the -8 is combined with the -X switch.
+
+void XChartMoons()
+{
+  CP rgcp[8], *cp;
+  ObjDraw rgod[cMoons];
+  char sz[cchSzDef], szCh[2];
+  int objCenterSav = us.objCenter, cx0, cy0, xSub, ySub, cx, cy, xs, ys,
+    m, i, j, k, x, y, count, countOld;
+  real rgrLenM[cMoons], rgrLenP[2][moonsHi+1], rgrLenZ[cMoons],
+    rgrAngZ[cMoons], rRatio = 1.0/3.0, rRadi, rLenMax, radi1, radi2,
+    len1, len2, ang1, ang2, ang, rx, ry, rT;
+  byte ignoreSav[objMax];
+  flag fMoonSav = us.fMoonMove;
+  KI kiP = -1;
+
+  // If no moons unrestricted, temporarily unrestrict them all.
+  Assert(sizeof(ignore) == sizeof(ignoreSav));
+  CopyRgb(ignore, ignoreSav, sizeof(ignore));
+  count = 0;
+  for (m = moonsLo; m <= moonsHi; m++) {
+    rgrLenM[m - moonsLo] = 0.0;
+    if (ignore[m])
+      continue;
+    count++;
+    k = kObjB[ObjOrbit(m)];
+    if (kiP < 0)
+      kiP = k;
+    else if (kiP != k)
+      kiP = gi.kiLite;
+  }
+  if (count == 0)
+    for (m = moonsLo; m <= moonsHi; m++)
+      ignore[m] = fFalse;
+  AdjustRestrictions();
+
+  // Cast charts.
+  us.fMoonMove = fFalse;
+  for (i = oPlu; i >= oMer; i--) {
+    if (i > oVen && ignore[i])
+      continue;
+    j = ObjCOB(i);
+    us.objCenter = i <= oMer ? objCenterSav :
+      (i == oVen ? oSun : (ignore[j] ? i : j));
+    CastChart(-1);
+    rgcp[i - oMer] = cp0;
+    if (i >= oMar) {
+      for (m = moonsLo; m <= moonsHi; m++)
+        if (!ignore[m] && ObjOrbit(m) == i)
+          rgrLenM[m - moonsLo] = RLength2(space[m].x, space[m].y);
+    } else {
+      for (j = oMar; j <= oPlu; j++)
+        rgrLenP[i - oMer][j] = RLength2(space[j].x, space[j].y);
+      for (j = moonsLo; j <= moonsHi; j++)
+        rgrLenP[i - oMer][j] = PtLen(space[j]);
+    }
+  }
+  us.fMoonMove = fTrue;
+  CastChart(0);
+
+  cx0 = gs.xWin >> 1; cy0 = gs.yWin >> 1;
+  for (xSub = 0; xSub <= 1; xSub++) {
+    cx = xSub * cx0 + (cx0 >> 1);
+  for (ySub = 0; ySub <= 1; ySub++) {
+    cy = ySub * cy0 + (cy0 >> 1);
+
+    // Draw section markers
+    i = yFontT*2 + gi.nScaleT*3;
+    xs = (cx0 >> 1) - i; ys = (cy0 >> 1) - i;
+    if (!gs.fHouseExtra)
+      for (i = 0; i < 16; i++) {
+        if ((i & 3) == 3)
+          continue;
+        rT = (real)(i-1) * 22.5;
+        x = cx + (int)((real)xs * RCosD(rT));
+        y = cy + (int)((real)ys * RSinD(rT));
+        k = (i >> 2);
+        if (FOdd(i))
+          k = gi.kiGray;
+        else if (ySub <= 0 && FOdd(k))
+          k = kRainbowB[k > 1 ? 7 : 2];
+        else
+          k = kElemB[k];
+        DrawColor(k);
+        DrawDash(cx, cy, x, y, 1 + 2*FOdd(i));
+      }
+    if (!gs.fEquator) {
+      DrawColor(gi.kiOn);
+      DrawCircle(cx, cy, xs, ys);
+    }
+    DrawColor(kiP < 0 ? gi.kiLite : kiP);
+    DrawCircle(cx, cy, (int)((real)xs * rRatio), (int)((real)ys * rRatio));
+
+    // Label quadrants
+    sprintf(sz, "%scentric %s view", xSub ? "Helio" : (objCenterSav == oEar ?
+      "Geo" : szObjDisp[objCenterSav]), ySub ? "top" : "front");
+    DrawColor(gi.kiLite);
+    DrawSz(sz, cx, ySub * cy0 + 3*gi.nScaleT, dtTop);
+    if (ySub <= 0) {
+      DrawColor(kRainbowB[7]);
+      DrawSz("Above", cx, cy - ys - 3*gi.nScaleT, dtBottom);
+      DrawColor(kRainbowB[2]);
+      DrawSz("Below", cx, cy + ys + 3*gi.nScaleT, dtTop);
+    } else {
+      DrawColor(kObjB[oNad]);
+      if (xSub <= 0)
+        sprintf(sz, "Distant (Opp %s)", szObjDisp[objCenterSav]);
+      else
+        sprintf(sz, "Distant (Full Moon)");
+      DrawSz(sz, cx, cy - ys - 3*gi.nScaleT, dtBottom);
+      DrawColor(kObjB[oMC]);
+      if (xSub <= 0)
+        sprintf(sz, "Close (Con %s)", szObjDisp[objCenterSav]);
+      else
+        sprintf(sz, "Close (New Moon)");
+      DrawSz(sz, cx, cy + ys + 3*gi.nScaleT, dtTop);
+    }
+    x = xs+(xFont2+4)*gi.nScaleT; y = cy+6*gi.nScaleT;
+    for (i = -1; i <= 1; i += 2) {
+      sprintf(sz, "%s", i < 0 ? "Lead" : "Follow");
+      DrawColor(kObjB[i < 0 ? oAsc : oDes]);
+      k = CchSz(sz);
+      for (j = 0; j < k; j++) {
+        sprintf(szCh, "%c", sz[j]);
+        DrawSz(szCh, cx-i*x, y+(j*yFont-k*yFont2)*gi.nScaleT, dtCent);
+      }
+    }
+
+    // Place moons
+    count = 0;
+    for (i = oMar; i <= oPlu; i++) {
+      countOld = count;
+      rLenMax = 0.0;
+      for (m = moonsLo; m <= moonsHi; m++) {
+        if (ignore[m] || ObjOrbit(m) != i)
+          continue;
+        j = ObjCOB(i);
+        j = ignore[j] ? i : j;
+        if (ignore[j])
+          continue;
+        if (ySub <= 0) {
+          cp = &rgcp[xSub];
+          rx = MinDifference(cp->obj[j], cp->obj[m]);
+          ry = cp->alt[j] - cp->alt[m];
+          rgrLenZ[m - moonsLo] = RLength2(rx, ry);
+          rgrAngZ[m - moonsLo] = RAngleD(rx, ry);
+        } else {
+          cp = &rgcp[i - oMer];
+          rgrLenZ[m - moonsLo] = rgrLenM[m - moonsLo];
+          rgrAngZ[m - moonsLo] = Mod(cp->obj[m] - cp->obj[xSub <= 0 ?
+            objCenterSav : oSun]) + rDegQuad;
+        }
+        if (rLenMax < rgrLenZ[m - moonsLo])
+          rLenMax = rgrLenZ[m - moonsLo];
+        rgod[count].obj = m;
+        rgod[count].kv = ~0;
+        rgod[count].f = fTrue;
+        count++;
+      }
+      if (count <= countOld)
+        continue;
+      rRadi = RObjDiam(i) / 2.0;
+      if (ySub <= 0) {
+        // Determine angular diameter covered by moon in sky.
+        if (rRadi > 0.0) {
+          rT = rgrLenP[xSub][i] * rAUToKm;
+          rRadi = RAtnD(rRadi / rT);
+        }
+      } else
+        rRadi /= rAUToKm;
+      for (m = moonsLo; m <= moonsHi; m++) {
+        if (ignore[m] || ObjOrbit(m) != i)
+          continue;
+        if (rgrLenZ[m - moonsLo] <= rRadi)
+          rgrLenZ[m - moonsLo] = rRatio * rgrLenZ[m - moonsLo] / rRadi;
+        else
+          rgrLenZ[m - moonsLo] = rRatio + (1.0 - rRatio) * RSinD((rgrLenZ[m -
+            moonsLo] - rRadi) / (rLenMax - rRadi) * rDegQuad);
+      }
+    }
+    for (i = 0; i < count; i++) {
+      j = rgod[i].obj - moonsLo;
+      rgod[i].x = cx + (int)((real)xs * rgrLenZ[j] * RCosD(rgrAngZ[j]));
+      rgod[i].y = cy + (int)((real)ys * rgrLenZ[j] * RSinD(rgrAngZ[j]));
+    }
+
+    // Draw lines connecting planets which have aspects between them.
+    if (gs.fLabelCity) {
+      if (ySub <= 0) {
+        cp = &rgcp[xSub];
+        DrawColor(kAspB[aCon]);
+        for (j = count-1; j >= 1; j--) {
+          y = rgod[j].obj;
+          for (i = j-1; i >= 0; i--) {
+            x = rgod[i].obj;
+            if (ObjOrbit(x) != ObjOrbit(y))
+              continue;
+            // Determine angular diameters covered by moons in sky.
+            radi1 = RObjDiam(x) / 2.0;
+            radi2 = RObjDiam(y) / 2.0;
+            len1 = rgrLenP[xSub][x] * rAUToKm;
+            len2 = rgrLenP[xSub][y] * rAUToKm;
+            ang1 = RAtnD(radi1 / len1);
+            ang2 = RAtnD(radi2 / len2);
+            rT = !us.fAspect3D ? MinDistance(cp->obj[x], cp->obj[y]) :
+              SphDistance(cp->obj[x], cp->alt[x], cp->obj[y], cp->alt[y]);
+            ang = ang1 + ang2;
+            if (rT > ang*(rAspOrb[aCon] + 1.0))
+              continue;
+            DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
+              (int)(rT / (ang*(rAspOrb[aCon] + 1.0)) * NAbs(gs.nDashMax)));
+          }
+        }
+      } else {
+        if (!FCreateGrid(fFalse))
+          return;
+        k = gi.nScale;
+        gi.nScale = gi.nScaleTextT;
+        for (j = count-1; j >= 1; j--) {
+          y = rgod[j].obj;
+          for (i = j-1; i >= 0; i--) {
+            x = rgod[i].obj;
+            if (grid->n[x][y] && ObjOrbit(x) == ObjOrbit(y)) {
+              DrawColor(kAspB[grid->n[x][y]]);
+              DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
+                NDashAspect(x, y, grid->n[x][y], grid->v[x][y]));
+              if (gs.fLabelAsp)
+                DrawAspect(grid->n[x][y],
+                  (rgod[i].x + rgod[j].x) >> 1, (rgod[i].y + rgod[j].y) >> 1);
+            }
+          }
+        }
+        gi.nScale = k;
+      }
+    }
+    DrawObjects(rgod, count, 0);
+  } // ySub
+  } // xSub
+
+  // Draw boundary lines between the four separate moons graphs.
+  if (gs.fBorder) {
+    DrawColor(gi.kiGray);
+    DrawLineY(cx0, 0, gs.yWin-1);
+    DrawLineX(0, gs.xWin-1, cy0);
+  }
+
+  // Restore settings and recast original chart.
+  CopyRgb(ignoreSav, ignore, sizeof(ignoreSav));
+  AdjustRestrictions();
+  us.fMoonMove = fMoonSav;
+  CastChart(1);
 }
 
 
@@ -3061,8 +3398,7 @@ void XChartSphere()
   cr.xr = cr.xc - zGlyph; cr.yr = cr.yc - zGlyph;
   cr2 = cr;
   cr2.xr += zGlyph >> 1; cr2.yr += zGlyph >> 1;
-  cChart = 1 +
-    (us.nRel <= rcDual) + (us.nRel <= rcTriWheel) + (us.nRel <= rcQuadWheel);
+  cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
 
   if (us.nRel < rcNone)
     CastChart(1);
@@ -3388,7 +3724,7 @@ void XChartSphere()
         DrawColor(rgod[i].kv == ~0 && rgod[j].kv == ~0 ?
           kAspB[grid->n[i][j]] : gi.kiGray);
         DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
-          NAbs(grid->v[i][j] / (60*60*2)) +
+          NDashAspect(i, j, grid->n[i][j], grid->v[i][j]) +
           ((rgod[i].kv != ~0) + (rgod[j].kv != ~0))*2);
         if (gs.fLabelAsp)
           DrawAspect(grid->n[i][j],

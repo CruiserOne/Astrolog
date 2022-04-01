@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: general.cpp
+** Astrolog (Version 7.40) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -79,6 +79,23 @@ int CchSz(CONST char *sz)
   while (*pch)
     pch++;
   return (int)(pch - sz);
+}
+
+
+// Return the length of a string (not counting the null terminator). Like
+// CchSz() but treat UTF8 byte sequences as a single character when necessary.
+
+int CwchSz(CONST char *sz)
+{
+  CONST char *pch;
+  int cwch, dwch;
+
+  if (us.nCharset < ccUTF8)
+    return CchSz(sz);
+  cwch = 0;
+  for (pch = sz; *pch; pch += dwch, cwch++)
+    dwch = UTF8ToWch((uchar *)pch, NULL);
+  return cwch;
 }
 
 
@@ -187,7 +204,7 @@ void ClearB(pbyte pb, int cb)
 
 // Copy a given number of bytes from one location to another.
 
-void CopyRgb(byte *pbSrc, byte *pbDst, int cb)
+void CopyRgb(CONST byte *pbSrc, byte *pbDst, int cb)
 {
   while (cb-- > 0)
     *pbDst++ = *pbSrc++;
@@ -200,7 +217,7 @@ void CopyRgb(byte *pbSrc, byte *pbDst, int cb)
 void CopyRgchToSz(CONST char *pch, int cch, char *sz, int cchMax)
 {
   cch = Min(cch, cchMax-1);
-  CopyRgb((byte *)pch, (byte *)sz, cch);
+  CopyRgb((pbyte)pch, (pbyte)sz, cch);
   sz[cch] = chNull;
 }
 
@@ -313,7 +330,7 @@ int SzLookup(CONST StrLook *rgStrLook, CONST char *sz)
 // Return whether a zero terminated string is a substring of another string,
 // case insensitively.
 
-flag FCompareSzSubI(CONST char *sz1, CONST char *sz2)
+flag FEqSzSubI(CONST char *sz1, CONST char *sz2)
 {
   while (*sz1 && ChCap(*sz1) == ChCap(*sz2))
     sz1++, sz2++;
@@ -702,6 +719,85 @@ int AddDay(int month, int day, int year, int delta)
 }
 
 
+// Add a certain amount of time to the hour/day/month/year quantity that
+// defines a particular chart. This is used by the chart animation feature.
+// This can add or subtract anywhere from 1 to 9 seconds, minutes, hours,
+// days, months, years, decades, centuries, or millenia in any one call.
+// This is mainly just addition to the appropriate quantity, but have to
+// check for overflows, e.g. Dec 30 + 3 days = Jan 2 of next year.
+
+void AddTime(CI *pci, int mode, int toadd)
+{
+  int d, h;
+  real m;
+
+  if (!FBetween(mode, 1, 9))
+    mode = 4;
+
+  h = (int)RFloor(pci->tim);
+  m = RFract(pci->tim)*60.0;
+  if (m < 60.0 && m + 1.0/rLarge >= 60.0)  // Avoid roundoff error.
+    m = 60.0;
+  if (mode == 1)
+    m += 1.0/60.0*(real)toadd;             // Add seconds.
+  else if (mode == 2)
+    m += (real)toadd;                      // Add minutes.
+
+  // Add hours, either naturally or if minute value overflowed.
+
+  if (m >= 60.0 || m < 0.0 || mode == 3) {
+    if (m >= 60.0) {
+      m -= 60.0; toadd = NSgn2(toadd);
+    } else if (m < 0.0) {
+      m += 60.0; toadd = NSgn2(toadd);
+    }
+    h += toadd;
+  }
+
+  // Add days, either naturally or if hour value overflowed.
+
+  if (h >= 24 || h < 0 || mode == 4) {
+    if (h >= 24) {
+      h -= 24; toadd = NSgn2(toadd);
+    } else if (h < 0) {
+      h += 24; toadd = NSgn2(toadd);
+    }
+    pci->day = AddDay(pci->mon, pci->day, pci->yea, toadd);
+  }
+
+  // Add months, either naturally or if day value overflowed.
+
+  d = DayInMonth(pci->mon, pci->yea);
+  if (pci->day > d || pci->day < 1 || mode == 5) {
+    if (pci->day > d) {
+      pci->day -= d; toadd = NSgn2(toadd);
+    } else if (pci->day < 1) {
+      pci->day += DayInMonth(Mod12(pci->mon - 1), pci->yea);
+      toadd = NSgn2(toadd);
+    }
+    pci->mon += toadd;
+  }
+
+  // Add years, either naturally or if month value overflowed.
+
+  if (pci->mon > 12 || pci->mon < 1 || mode == 6) {
+    if (pci->mon > 12) {
+      pci->mon -= 12; toadd = NSgn2(toadd);
+    } else if (pci->mon < 1) {
+      pci->mon += 12; toadd = NSgn2(toadd);
+    }
+    pci->yea += toadd;
+  }
+  if (mode == 7)
+    pci->yea += 10 * toadd;      // Add decades.
+  else if (mode == 8)
+    pci->yea += 100 * toadd;     // Add centuries.
+  else if (mode == 9)
+    pci->yea += 1000 * toadd;    // Add millenia.
+  pci->tim = (real)h + m/60.0;   // Recalibrate hour time.
+}
+
+
 // Given an aspect and two objects making that aspect with each other, return
 // the maximum orb allowed for such an aspect. Normally this only depends on
 // the aspect itself, but some objects require narrow orbs, and some allow
@@ -755,7 +851,7 @@ void SetCentric(int obj)
 }
 
 
-// Return the planet that an object orbits, if any.
+// Return the planet or other object that an object orbits, if any.
 
 int ObjOrbit(int obj)
 {
@@ -768,6 +864,10 @@ int ObjOrbit(int obj)
       return oEar;
     // Check if this object has been redefined to be a planetary moon.
     if (rgTypSwiss[obj - custLo] == 3 && rgObjSwiss[obj - custLo] % 100 < 99)
+      return rgObjSwiss[obj - custLo] / 100 + 1;
+    // Check if this is a JPL Horizons object for a planetary moon.
+    if (rgTypSwiss[obj - custLo] == 4 && rgObjSwiss[obj - custLo] % 100 < 99 &&
+      FBetween(rgObjSwiss[obj - custLo], 401, 998))
       return rgObjSwiss[obj - custLo] / 100 + 1;
 #endif
     return oSun;
@@ -828,33 +928,6 @@ real RObjDiam(int obj)
 ******************************************************************************
 */
 
-// Exit the program, and do any cleanup necessary. Note that if there was
-// a non-fatal error, and were in the -Q loop mode, then won't actually
-// terminate the program, but rather drop back to the command line loop.
-
-void Terminate(int tc)
-{
-  char sz[cchSzDef];
-
-  if (us.fNoQuit)
-    return;
-  if (tc == tcForce) {
-    is.S = stdout;
-    AnsiColor(kWhiteA);
-    sprintf(sz, "\n%s %s exited.\n", szAppName, szVersionCore);
-    PrintSz(sz);
-  }
-  if (tc == tcError && us.fLoop)
-    return;
-  if (us.fAnsiColor) {
-    sprintf(sz, "%c[0m", chEscape);    // Get out of any Ansi color mode.
-    PrintSz(sz);
-  }
-  FinalizeProgram(tc != tcOK);
-  exit(NAbs(tc));
-}
-
-
 // Print a string on the screen. A seemingly simple operation, however
 // keep track of what column are printing at after each newline so can
 // automatically clip at the appropriate point, and keep track of the row
@@ -863,12 +936,20 @@ void Terminate(int tc)
 void PrintSz(CONST char *sz)
 {
   char szInput[cchSzDef], *pch;
+  wchar wch;
+  int ch, dch;
+  flag fWantIBM = fFalse;
 #ifndef WIN
   int fT;
 #endif
 
+#ifdef WINANY
+  if (is.S == stdout)
+    fWantIBM = fTrue;
+#endif
   for (pch = (char *)sz; *pch; pch++) {
-    if (*pch != '\n') {
+    ch = (uchar)*pch;
+    if (ch != '\n') {
       if (is.nHTML != 2) {
         is.cchCol++;
         if (us.fClip80 && is.cchCol >= us.nScreenWidth)  // Clip if needed.
@@ -882,32 +963,90 @@ void PrintSz(CONST char *sz)
     }
 #ifdef WIN
     if (is.S == stdout) {
-      if ((byte)*pch >= ' ') {
-        szInput[0] = *pch; szInput[1] = chNull;
+      // Windows text mode screen text should be output in IBM character set.
+      if (us.nCharset >= ccUTF8) {
+        pch += (UTF8ToWch((uchar *)pch, &wch) - 1);
+        if (us.nCharsetOut != ccLatin)
+          ch = ChIBMFromWch(wch);
+        else
+          ch = ChLatinFromWch(wch);
+      } else if (us.nCharset == ccLatin) {
+        if (us.nCharsetOut != ccLatin) {
+          wch = WchFromChLatin(ch);
+          ch = ChIBMFromWch(wch);
+        }
+      }
+      if ((byte)ch >= ' ') {
+        szInput[0] = ch; szInput[1] = chNull;
         TextOut(wi.hdc, (is.cchCol - 1 - wi.xScroll * 10) * wi.xChar + 4,
           (is.cchRow - wi.yScroll * 10) * wi.yChar, szInput, 1);
       }
     } else
 #endif
     if (is.nHTML == 1) {
-      if (*pch == '<')
+      // HTML text can handle Unicode characters.
+      if (us.nCharset > ccNone) {
+        if (us.nCharset >= ccUTF8)
+          pch += (UTF8ToWch((uchar *)pch, &wch) - 1);
+        else if (us.nCharset == ccLatin)
+          wch = WchFromChLatin(ch);
+        else if (us.nCharset == ccIBM)
+          wch = WchFromChIBM(ch);
+        ch = wch;
+      }
+      if (ch == '<')
         fprintf(is.S, "&lt;");
-      else if (*pch == '>')
+      else if (ch == '>')
         fprintf(is.S, "&gt;");
-      else if (*pch == '&')
+      else if (ch == '&')
         fprintf(is.S, "&amp;");
-      else if (*pch == '\"')
+      else if (ch == '\"')
         fprintf(is.S, "&quot;");
-      else if (*pch == ' ' && (pch <= sz || *(pch+1) <= ' '))
+      else if (ch == ' ' && (pch <= sz || *(pch+1) <= ' '))
         fprintf(is.S, "&nbsp;");
-      else if (*pch == '\n')
+      else if (ch == '\n')
         fprintf(is.S, "<br>\n");
+      else if (ch >= 128)
+        fprintf(is.S, "&#%d;", ch);
       else
-        putc(*pch, is.S);
-    } else
-      putc(*pch, is.S);
+        putc(ch, is.S);
+    } else {
+      // Text output should be IBM chars for Windows console, else Latin.
+      dch = 0;
+      if (us.nCharset > ccNone) {
+        if (us.nCharset >= ccUTF8) {
+          pch += (UTF8ToWch((uchar *)pch, &wch) - 1);
+          if (us.nCharsetOut == ccUTF8)
+            dch = WchToUTF8(wch, szInput);
+          else if (fWantIBM || us.nCharsetOut == ccIBM)
+            ch = ChIBMFromWch(wch);
+          else
+            ch = ChLatinFromWch(wch);
+        } else if (us.nCharset == ccLatin) {
+          if (us.nCharsetOut == ccUTF8) {
+            wch = WchFromChLatin(ch);
+            dch = WchToUTF8(wch, szInput);
+          } else if (fWantIBM || us.nCharsetOut == ccIBM) {
+            wch = WchFromChLatin(ch);
+            ch = ChIBMFromWch(wch);
+          }
+        } else {
+          if (us.nCharsetOut == ccUTF8) {
+            wch = WchFromChIBM(ch);
+            dch = WchToUTF8(wch, szInput);
+          } else if (!(fWantIBM || us.nCharsetOut == ccIBM)) {
+            wch = WchFromChIBM(ch);
+            ch = ChLatinFromWch(wch);
+          }
+        }
+      }
+      if (dch < 1)
+        putc(ch, is.S);
+      else
+        fprintf(is.S, "%s", szInput);
+    }
 #ifndef WIN
-    if (*pch == '\n' && is.S == stdout &&
+    if (ch == '\n' && is.S == stdout &&
       us.nScrollRow > 0 && is.cchRow >= us.nScrollRow) {
 
       // If have printed 'n' rows, stop and wait for a line to be entered.
@@ -933,7 +1072,7 @@ void PrintSz(CONST char *sz)
       }
     }
 #else
-    if (*pch == '\n' && is.S == stdout && wi.hdcPrint != hdcNil &&
+    if (ch == '\n' && is.S == stdout && wi.hdcPrint != hdcNil &&
       is.cchRow >= us.nScrollRow) {
 
       // If writing to the printer, start a new page when appropriate.
@@ -964,6 +1103,42 @@ void PrintCh(char ch)
 
   sz[0] = ch; sz[1] = chNull;    // Treat char as a string of length one.
   PrintSz(sz);                   // Then call above to print the string.
+}
+
+
+// A simple procedure used throughout Astrolog: Print a particular
+// character on the screen 'n' times.
+
+void PrintTab(char ch, int cch)
+{
+  while (cch-- > 0)
+    PrintCh(ch);
+}
+
+
+// Like PrintCh() but ensure line drawing characters aren't converted to
+// something else, if the character encoding is set differently.
+
+void PrintCh2(char ch)
+{
+  int nCharsetSav = us.nCharset;
+
+  us.nCharset = (us.nCharset > ccNone ? ccIBM : ccNone);
+  PrintCh(ch);
+  us.nCharset = nCharsetSav;
+}
+
+
+// Like PrintTab() but ensure line drawing characters aren't converted to
+// something else, if the character encoding is set differently.
+
+void PrintTab2(char ch, int cch)
+{
+  int nCharsetSav = us.nCharset;
+
+  us.nCharset = (us.nCharset > ccNone ? ccIBM : ccNone);
+  PrintTab(ch, cch);
+  us.nCharset = nCharsetSav;
 }
 
 
@@ -1066,7 +1241,7 @@ flag FErrorArgc(CONST char *szOpt, int carg, int cargMax)
   carg--;
   if (carg >= cargMax)
     return fFalse;
-  sprintf(sz, "Too few options to switch %c%s (%d given, %d required)",
+  sprintf(sz, "Too few parameters to switch %c%s (%d given, %d required)",
     chSwitch, szOpt, carg, cargMax);
   PrintError(sz);
   return fTrue;
@@ -1138,6 +1313,21 @@ void ErrorSwitch(CONST char *szOpt)
 }
 
 
+// Print error message for a unknown command subswitch.
+
+flag FErrorSubswitch(CONST char *szOpt, char chSub, flag f)
+{
+  char sz[cchSzDef];
+
+  if (!f)
+    return fFalse;
+  sprintf(sz, "Unknown subswitch '%c%s%c' to command switch '%c%s'",
+    chSwitch, szOpt, chSub, chSwitch, szOpt);
+  PrintError(sz);
+  return fTrue;
+}
+
+
 #ifdef PLACALC
 // Print error messages dealing with ephemeris file access.
 
@@ -1155,16 +1345,6 @@ void ErrorEphem(CONST char *sz, long l)
   PrintWarning(szT);
 }
 #endif
-
-
-// A simple procedure used throughout Astrolog: Print a particular
-// character on the screen 'n' times.
-
-void PrintTab(char ch, int cch)
-{
-  while (cch-- > 0)
-    PrintCh(ch);
-}
 
 
 // Set an Ansi or MS Windows text color.
@@ -1328,7 +1508,7 @@ char *SzAltitude(real deg)
       deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
-    ch = us.fAnsiChar > 1 ? 176 : chDeg1;
+    ch = us.fAnsiChar > 1 ? chDeg3 : chDeg1;
     sprintf(szAlt, "%c%2d%c%02d'", f ? '-' : '+', d, ch, m);
     if (is.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
@@ -1370,6 +1550,36 @@ char *SzDegree(real deg)
       sprintf(szPos, "%7.3f", deg);
     else
       sprintf(szPos, "%10.6f", deg);
+  }
+  return szPos;
+}
+
+
+// Like SzDegree() except don't have extra whitespace padding around it,
+// meaning different inputs are allowed to produce different length strings.
+
+char *SzDegree2(real deg)
+{
+  static char szPos[11], *pch;
+  int d, m;
+  real s;
+
+  deg = RAbs(deg);
+  if (us.nDegForm != 2) {
+    d = (int)deg;
+    m = (int)(RFract(deg)*60.0);
+    sprintf(szPos, "%d%c%02d'", d, chDeg1, m);
+    if (us.fSeconds) {
+      s = RFract(deg)*60.0; s = RFract(s)*60.0;
+      for (pch = szPos; *pch; pch++)
+        ;
+      sprintf(pch, "%02d\"", (int)s);
+    }
+  } else {
+    if (!us.fSeconds)
+      sprintf(szPos, "%.3f", deg);
+    else
+      sprintf(szPos, "%.6f", deg);
   }
   return szPos;
 }
@@ -1445,6 +1655,12 @@ char *SzTime(int hr, int min, int sec)
     hr += 24;
   while (hr >= 24)
     hr -= 24;
+  if (us.fAnsiChar == 4) {
+    // Format like "01:23:45 PM", as seen in Quick*Chart files.
+    sprintf(szTim, "%02d:%02d:%02d %cM",
+      Mod12(hr), min, sec, hr < 12 ? 'A' : 'P');
+    return szTim;
+  }
   if (us.fEuroTime) {
     if (sec < 0)
       sprintf(szTim, "%2d:%02d", hr, min);
@@ -1527,14 +1743,14 @@ char *SzLocation(real lon, real lat)
     return szLoc;
   }
   if (us.fAnsiChar != 3) {
-    chDeg = us.fAnsiChar > 1 ? 176 : chDeg1;
+    chDeg = us.fAnsiChar > 1 ? chDeg3 : chDeg1;
     if (us.nDegForm != 2) {
       if (!is.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%c%3.0f%c%02d%c",
           RFloor(RAbs(lon)), chDeg, i, chLon,
           RFloor(RAbs(lat)), chDeg, j, chLat);
       else
-        sprintf(szLoc, "%3.0f%c%02d:%02d%c%3.0f%c%02d:%02d%c",
+        sprintf(szLoc, "%3.0f%c%02d'%02d%c%3.0f%c%02d'%02d%c",
           RFloor(RAbs(lon)), chDeg, i, i2, chLon,
           RFloor(RAbs(lat)), chDeg, j, j2, chLat);
     } else {
@@ -1552,7 +1768,7 @@ char *SzLocation(real lon, real lat)
           RFloor(RAbs(lon)), chLon, i,
           RFloor(RAbs(lat)), chLat, j);
       else
-        sprintf(szLoc, "%3.0f%c%02d:%02d%3.0f%c%02d:%02d",
+        sprintf(szLoc, "%3.0f%c%02d'%02d%3.0f%c%02d'%02d",
           RFloor(RAbs(lon)), chLon, i, i2,
           RFloor(RAbs(lat)), chLat, j, j2);
     } else {
@@ -1643,9 +1859,6 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
   curtimer = curtimer / 60 + us.lTimeAddition;
   min = (int)(curtimer % 60);
   curtimer /= 60;
-#ifdef MACOLD
-  curtimer += 8;
-#endif
   if (zon == zonLMT)
     zon = us.lonDef / 15.0;
   hr = (real)(curtimer % 24) - (zon - (dst == dstAuto ? 0.0 : dst));
@@ -1716,6 +1929,454 @@ char *SzProcessProgname(char *szPath)
 }
 
 
+// Append a set of chart information to the program's chart list.
+
+flag FAppendCIList(CONST CI *pci)
+{
+  CI *pciNew = NULL;
+  int cciAlloc;
+
+  // Do nothing if exactly the same as the last chart in the list.
+  if (is.cci > 0) {
+    pciNew = &is.rgci[is.cci-1];
+    if (FEqCI((*pci), (*pciNew)))
+      return fTrue;
+  }
+
+  // Extend the size of the chart list allocation if necessary.
+  if (is.cci >= is.cciAlloc) {
+    cciAlloc = is.cciAlloc + 500;
+    pciNew = (CI *)RgAllocate(cciAlloc, CI, "chart list");
+    if (pciNew == NULL)
+      return fFalse;
+    if (is.rgci != NULL)
+      CopyRgb((pbyte)is.rgci, (pbyte)pciNew, sizeof(CI)*is.cci);
+    if (is.rgci != NULL)
+      DeallocateP(is.rgci);
+    is.rgci = pciNew;
+    is.cciAlloc = cciAlloc;
+  }
+
+  // Append the chart to the list, and increment the list size.
+  is.rgci[is.cci] = *pci;
+  is.cci++;
+  return fTrue;
+}
+
+
+// Sort all charts in the chart list by the specified method.
+
+flag FSortCIList(int nMethod)
+{
+  int i, j;
+  CI ciT, *pci1, *pci2;
+  real *rgr = NULL, rT;
+  flag fCompare;
+#ifdef EXPRESS
+  CP cpSav;
+#endif
+
+  // Empty lists or length 1 lists are already sorted.
+  if (is.cci <= 1)
+    return fTrue;
+  Assert(FBetween(nMethod, 0, 5));
+
+  // Sorting by AstroExpression involves actually casting each chart, so
+  // planet positions can be looked at by the custom sorting criterion.
+  if (nMethod == 5) {
+    rgr = RgAllocate(is.cci, real, "sort keys");
+    if (rgr == NULL)
+      return fFalse;
+    for (i = 0; i < is.cci; i++) {
+      rgr[i] = (real)i;
+#ifdef EXPRESS
+      // Set sort weight based on AstroExpression.
+      if (!us.fExpOff && FSzSet(us.szExpListS)) {
+        cpSav = cp0; ciT = ciCore;
+        ciCore = is.rgci[i];
+        CastChart(-1);
+        ExpSetN(iLetterZ, i);
+        rgr[i] = RParseExpression(us.szExpListS);
+        ciCore = ciT;
+        cp0 = cpSav;
+      }
+#endif
+    }
+  }
+
+  // Actually sort the chart list.
+  for (i = 1; i < is.cci; i++) {
+    j = i-1;
+    do {
+      pci1 = &is.rgci[j]; pci2 = &is.rgci[j+1];
+      switch (nMethod) {
+      case 0:
+        fCompare = (pci1->yea > pci2->yea ||
+          (pci1->yea == pci2->yea && (pci1->mon > pci2->mon ||
+          (pci1->mon == pci2->mon && (pci1->day > pci2->day ||
+          (pci1->day == pci2->day && pci1->tim > pci2->tim))))));
+        break;
+      case 1:
+        fCompare = (pci1->lon < pci2->lon);
+        break;
+      case 2:
+        fCompare = (pci1->lat < pci2->lat);
+        break;
+      case 3:
+        fCompare = (NCompareSz(is.rgci[j].nam, is.rgci[j+1].nam) > 0);
+        break;
+      case 4:
+        fCompare = (NCompareSz(is.rgci[j].loc, is.rgci[j+1].loc) > 0);
+        break;
+      case 5:
+        fCompare = (rgr[j] > rgr[j+1]);
+        if (fCompare) {
+          rT = rgr[j]; rgr[j] = rgr[j+1]; rgr[j+1] = rT;
+        }
+        break;
+      }
+      if (!fCompare)
+        break;
+      ciT = is.rgci[j]; is.rgci[j] = is.rgci[j+1]; is.rgci[j+1] = ciT;
+      j--;
+    } while (j >= 0);
+  }
+  if (rgr != NULL)
+    DeallocateP(rgr);
+  return fTrue;
+}
+
+
+// Filter the program's chart list to those charts that meet a criteria,
+// deleting all other charts from the list that don't meet it.
+
+void FilterCIList(CONST char *szName, CONST char *szLocation)
+{
+  int i, j, cciNew = 0;
+  CI *pci;
+#ifdef EXPRESS
+  CI ciSav;
+  CP cpSav;
+  flag fRet;
+#endif
+
+  for (i = 0; i < is.cci; i++) {
+    pci = &is.rgci[i];
+    // Chart must have both the name and location strings within it.
+    if (*szName) {
+      for (j = 0; pci->nam[j]; j++)
+        if (FEqSzSubI(szName, &pci->nam[j]))
+          break;
+      if (!pci->nam[j])
+        continue;
+    }
+    if (*szLocation) {
+      for (j = 0; pci->loc[j]; j++)
+        if (FEqSzSubI(szLocation, &pci->loc[j]))
+          break;
+      if (!pci->loc[j])
+        continue;
+    }
+#ifdef EXPRESS
+    // May want to skip current chart if AstroExpression says to do so.
+    if (!us.fExpOff && FSzSet(us.szExpListF)) {
+      cpSav = cp0; ciSav = ciCore;
+      ciCore = *pci;
+      CastChart(-1);
+      ExpSetN(iLetterZ, i);
+      fRet = !NParseExpression(us.szExpListF);
+      ciCore = ciSav;
+      cp0 = cpSav;
+      if (fRet)
+        continue;
+    }
+#endif
+    CopyRgb((pbyte)&is.rgci[i], (pbyte)&is.rgci[cciNew], sizeof(CI));
+    cciNew++;
+  }
+  is.cci = cciNew;
+}
+
+
+// Enumerate over all charts in the chart list. Implements the -Y5[2-4]
+// command switch.
+
+flag FEnumerateCIList(int nListAll)
+{
+#ifdef EXPRESS
+  int iList, iList2, i;
+  CI ciSav[4];
+  CP cpSav[4];
+
+  // Save chart data that will be edited.
+  if (!(!us.fExpOff && FSzSet(us.szExpListY)))
+    return fFalse;
+  for (i = 0; i < 3; i++) {
+    ciSav[i] = *rgpci[i];
+    cpSav[i] = *rgpcp[i];
+  }
+
+  // Loop over all charts in chart list.
+  iList = (nListAll == 3); iList2 = 0;
+  do {
+    is.iciIndex1 = iList; is.iciIndex2 = iList2;
+    if (nListAll == 1)
+      ciCore = ciMain = is.rgci[iList];
+    else if (nListAll == 2)
+      ciTwin = is.rgci[iList];
+    else {
+      ciCore = ciMain = is.rgci[iList];
+      ciTwin = is.rgci[iList2];
+    }
+    if (nListAll != 2) {
+      CastChart(-1);
+      cp1 = cp0;
+    }
+    if (nListAll > 1) {
+      ciSav[3] = ciCore; cpSav[3] = cp0;
+      ciCore = ciTwin;
+      CastChart(-1);
+      cp2 = cp0;
+      ciCore = ciSav[3]; cp0 = cpSav[3];
+    }
+    // Call ~5Y switch AstroExpression so user can see current chart.
+    ParseExpression(us.szExpListY);
+    if (nListAll >= 3) {
+      iList2++;
+      if (iList2 < (nListAll >= 4 ? is.cci : iList))
+        continue;
+      iList2 = 0;
+    }
+    iList++;
+  } while (iList < is.cci);
+
+  // Restore chart data.
+  is.iciIndex1 = is.iciIndex2 = -1;
+  for (i = 0; i < 3; i++) {
+    *rgpci[i] = ciSav[i];
+    *rgpcp[i] = cpSav[i];
+  }
+  return fTrue;
+#else
+  return fFalse;
+#endif
+}
+
+
+/*
+******************************************************************************
+** Character Encoding Procedures.
+******************************************************************************
+*/
+
+// Characters in 128-159 byte range of codepage Windows-1252
+CONST wchar rgwch1252[32] = {
+  0x20ac, 0,      0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
+  0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0,      0x017d, 0,
+  0,      0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
+  0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0,      0x017e, 0x0178};
+
+// Characters in 128-255 byte range of codepage IBM-437
+CONST wchar rgwch437[128] = {
+  0xc7,   0xfc,   0xe9,   0xe2,   0xe4,   0xe0,   0xe5,   0xe7,
+  0xea,   0xeb,   0xe8,   0xef,   0xee,   0xec,   0xc4,   0xc5,
+  0xc9,   0xe6,   0xc6,   0xf4,   0xf6,   0xf2,   0xfb,   0xf9,
+  0xff,   0xd6,   0xdc,   0xa2,   0xa3,   0xa5,   0x20a7, 0x0192,
+  0xe1,   0xed,   0xf3,   0xfa,   0xf1,   0xd1,   0xaa,   0xba,
+  0xbf,   0x2310, 0xac,   0xbd,   0xbc,   0xa1,   0xab,   0xbb,
+  0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556,
+  0x2555, 0x2563, 0x2551, 0x2557, 0x255d, 0x255c, 0x255b, 0x2510,
+  0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x255e, 0x255f,
+  0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x2567,
+  0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256b,
+  0x256a, 0x2518, 0x250c, 0x2588, 0x2584, 0x258c, 0x2590, 0x2580,
+  0x03b1, 0xdf,   0x0393, 0x03c0, 0x03a3, 0x03c3, 0xb5,   0x03c4,
+  0x03a6, 0x0398, 0x03a9, 0x03b4, 0x221e, 0x03c6, 0x03b5, 0x2229,
+  0x2261, 0xb1,   0x2265, 0x2264, 0x2320, 0x2321, 0xf7,   0x2248,
+  0xb0,   0x2219, 0xb7,   0x221a, 0x207f, 0xb2,   0x25a0, 0xa0};
+
+// Convert a UTF8 byte sequence to Unicode, returning number of bytes in it.
+
+int UTF8ToWch(CONST uchar *pch, wchar *pwch)
+{
+  int ch1, ch2, ch3;
+
+  // 1 byte UTF8 sequence: Characters 0-127
+  ch1 = pch[0];
+  if (ch1 < 0x80) {
+    if (pwch != NULL)
+      *pwch = ch1;
+    return 1;
+  }
+
+  // 2 byte UTF8 sequence: Characters 0x80 - 0x7FF
+  ch2 = pch[1];
+  if ((ch1 & 0xe0) == 0xc0 && (ch2 & 0xc0) == 0x80) {
+    if (pwch != NULL)
+      *pwch = ((ch1 & 0x1f) << 6) | (ch2 & 0x3f);
+    return 2;
+  }
+
+  // 3 byte UTF8 sequence: Characters 0x800 - 0xFFFF
+  ch3 = pch[2];
+  if ((ch1 & 0xf0) == 0xe0 && (ch2 & 0xc0) == 0x80 && (ch3 & 0xc0) == 0x80) {
+    if (pwch != NULL)
+      *pwch = ((ch1 & 0x0f) << 12) | ((ch2 & 0x3f) << 6) | (ch3 & 0x3f);
+    return 3;
+  }
+
+  // Treat illegal UTF8 sequence as one byte character
+  if (pwch != NULL)
+    *pwch = ch1;
+  return 1;
+}
+
+
+// Convert a wide Unicode character to UTF8, returning the number of bytes.
+
+int WchToUTF8(wchar wch, char *sz)
+{
+  // 1 byte UTF8 sequence: Characters 0-127
+  if (wch < 0x80) {
+    sprintf(sz, "%c", (uchar)wch);
+    return 1;
+  }
+
+  // 2 byte UTF8 sequence: Characters 0x80 - 0x7FF
+  if (wch < 0x800) {
+    sprintf(sz, "%c%c", (uchar)(0xc0 | (wch >> 6)),
+      (uchar)(0x80 | (wch & 0x3f)));
+    return 2;
+  }
+
+  // 3 byte UTF8 sequence: Characters 0x800 - 0xFFFF
+  sprintf(sz, "%c%c%c", (uchar)(0xe0 | (wch >> 12)),
+    (uchar)(0x80 | ((wch >> 6) & 0x3f)), (uchar)(0x80 | (wch & 0x3f)));
+  return 3;
+}
+
+
+// Convert a character in the Windows-1252 codepage to Unicode.
+
+wchar WchFromChLatin(uchar ch)
+{
+  if (!FBetween(ch, 128, 159))
+    return ch;
+  return rgwch1252[ch - 128];
+}
+
+
+// Convert a character in the IBM codepage to Unicode.
+
+wchar WchFromChIBM(uchar ch)
+{
+  if (ch < 128)
+    return ch;
+  return rgwch437[ch - 128];
+}
+
+
+// Convert a Unicode character to a byte in the Windows-1252 codepage.
+
+uchar ChLatinFromWch(wchar wch)
+{
+  int i;
+
+  if (FBetween(wch, 0, 255) && !FBetween(wch, 128, 159))
+    return (uchar)wch;
+  for (i = 0; i < 32; i++)
+    if (wch == rgwch1252[i])
+      return 128 + i;
+  return (wch < 256 ? wch : '?');
+}
+
+
+// Convert a Unicode character to a byte in the IBM-437 codepage.
+
+uchar ChIBMFromWch(wchar wch)
+{
+  int i;
+
+  if (FBetween(wch, 0, 127))
+    return (uchar)wch;
+  for (i = 0; i < 128; i++)
+    if (wch == rgwch437[i])
+      return 128 + i;
+  return (wch < 256 ? wch : '?');
+}
+
+
+// Convert a UTF8 string to a string in the Windows-1252 codepage, in place.
+// The converted string may be shorter, since UTF8 has multibyte characters.
+
+void UTF8ToLatinSz(char *sz)
+{
+  uchar *pchIn, *pchOut;
+  wchar wch;
+  int dch;
+
+  for (pchIn = pchOut = (uchar *)sz; *pchIn; pchIn += dch, pchOut++) {
+    dch = UTF8ToWch(pchIn, &wch);
+    *pchOut = ChLatinFromWch(wch);
+  }
+  *pchOut = chNull;
+}
+
+
+// Convert a UTF8 string to a string in the IBM-437 codepage, in place. The
+// converted string may be shorter, since UTF8 has multibyte characters.
+
+void UTF8ToIBMSz(char *sz)
+{
+  uchar *pchIn, *pchOut;
+  wchar wch;
+  int dch;
+
+  for (pchIn = pchOut = (uchar *)sz; *pchIn; pchIn += dch, pchOut++) {
+    dch = UTF8ToWch(pchIn, &wch);
+    *pchOut = ChIBMFromWch(wch);
+  }
+  *pchOut = chNull;
+}
+
+
+// Convert a UTF8 string to a different codepage, if needed.
+
+void ConvertSzFromUTF8(char *sz)
+{
+  if (us.nCharset == ccIBM)
+    UTF8ToIBMSz(sz);
+  else if (us.nCharset < ccUTF8)
+    UTF8ToLatinSz(sz);
+}
+
+
+// Convert a string to Windows-1252, from whatever encoding it might be in.
+
+CONST char *ConvertSzToLatin(CONST char *sz, char *szBuf, int cchBuf)
+{
+  char *pch;
+
+  if (us.nCharset <= ccNone || us.nCharset == ccLatin)
+    return sz;
+
+  // Convert string to Latin if not that format already.
+  CopyRgchToSz(sz, CchSz(sz), szBuf, cchBuf);
+  if (us.nCharset >= ccUTF8)
+    UTF8ToLatinSz(szBuf);
+  else
+    for (pch = szBuf; *pch; pch++)
+      *pch = ChLatinFromWch(WchFromChIBM(*pch));
+  return szBuf;
+}
+
+
+/*
+******************************************************************************
+** System Procedures.
+******************************************************************************
+*/
+
 // Given a string, return a pointer to a persistent version of it, in which
 // "persistent" means its contents won't be invalidated when the stack frame
 // changes. Strings such as macros and such need to be in their own space and
@@ -1734,9 +2395,10 @@ char *SzPersist(char *szSrc)
   // Otherwise make a copy of the string and use it.
   cb = CchSz(szSrc)+1;
   szNew = (char *)PAllocate(cb, "string");
-  is.cAlloc--;
-  if (szNew != NULL)
-    CopyRgb((byte *)szSrc, (byte *)szNew, cb);
+  if (szNew != NULL) {
+    CopyRgb((pbyte)szSrc, (pbyte)szNew, cb);
+    is.cAlloc--;
+  }
   return szNew;
 }
 
@@ -1812,5 +2474,32 @@ void Assert(flag f)
     PrintError("Debug Assert failed!\n");
 }
 #endif
+
+
+// Exit the program, and do any cleanup necessary. Note that if there was
+// a non-fatal error, and were in the -Q loop mode, then won't actually
+// terminate the program, but rather drop back to the command line loop.
+
+void Terminate(int tc)
+{
+  char sz[cchSzDef];
+
+  if (us.fNoQuit)
+    return;
+  if (tc == tcForce) {
+    is.S = stdout;
+    AnsiColor(kWhiteA);
+    sprintf(sz, "\n%s %s exited.\n", szAppName, szVersionCore);
+    PrintSz(sz);
+  }
+  if (tc == tcError && us.fLoop)
+    return;
+  if (us.fAnsiColor) {
+    sprintf(sz, "%c[0m", chEscape);    // Get out of any Ansi color mode.
+    PrintSz(sz);
+  }
+  FinalizeProgram(tc != tcOK);
+  exit(NAbs(tc));
+}
 
 /* general.cpp */

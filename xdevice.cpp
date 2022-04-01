@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: xdevice.cpp
+** Astrolog (Version 7.40) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -1161,7 +1161,7 @@ void PsBegin()
     fprintf(gi.file, "%%%%BoundingBox: 0 0 %d %d\n", gs.xWin, gs.yWin);
     fprintf(gi.file, "%%%%EndComments\n");
     fprintf(gi.file, "%%%%BeginSetup\n");
-    fprintf(gi.file, szPsFunctions, 6 * PSMUL, 6 * PSMUL);
+    fprintf(gi.file, szPsFunctions);
     fprintf(gi.file, "%%%%EndSetup\n");
     fprintf(gi.file, "0 0 %d %d rc\n", gs.xWin, gs.yWin);
   } else {
@@ -1172,7 +1172,7 @@ void PsBegin()
       (int)(gs.yInch*72.0+rRound)-PSGUTTER);
     fprintf(gi.file, "%%%%EndComments\n");
     fprintf(gi.file, "%%%%BeginProcSet: common\n");
-    fprintf(gi.file, szPsFunctions, 6 * PSMUL, 6 * PSMUL);
+    fprintf(gi.file, szPsFunctions);
     fprintf(gi.file, "%%%%EndProcSet\n");
     fprintf(gi.file, "%%%%Page: 1 1\n");
   }
@@ -1741,6 +1741,10 @@ void WireDrawGlobe(flag fSky, real deg)
   }
 #endif
 
+  // Draw grid of triangles or squares over the planet.
+
+  DrawMapTriangles(fTrue, rz, NULL, deg);
+
 #ifdef ATLAS
   // Draw locations of cities from atlas.
 
@@ -2050,8 +2054,7 @@ void WireChartSphere()
   fNoHorizon = ignorez[0] && ignorez[1] && ignorez[2] && ignorez[3];
   zGlyph = 7*gi.nScale; zGlyph2 = 14*gi.nScale;
   zr = Min(gs.xWin >> 1, gs.yWin >> 1) - zGlyph;
-  cChart = 1 +
-    (us.nRel <= rcDual) + (us.nRel <= rcTriWheel) + (us.nRel <= rcQuadWheel);
+  cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
   is.latMC = Lat;
 
   // Draw constellations.

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.30) File: express.cpp
+** Astrolog (Version 7.40) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2021 by
+** not enumerated below used in this program are Copyright (C) 1991-2022 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/10/2021.
+** Last code change made 3/31/2022.
 */
 
 #include "astrolog.h"
@@ -61,9 +61,9 @@
 ******************************************************************************
 */
 
-#define cfunA 342
+#define cfunA 363
 #ifdef GRAPH
-#define cfunX 36
+#define cfunX 46
 #else
 #define cfunX 0
 #endif
@@ -89,6 +89,7 @@
 #define I_III  P4(I_, I_, I_, I_)
 #define I_IIR  P4(I_, I_, I_, R_)
 #define I_IXX  P4(I_, I_, X_, X_)
+#define I_IIII P5(I_, I_, I_, I_, I_)
 #define I_IIIX P5(I_, I_, I_, I_, X_)
 #define I_R    P2(I_, R_)
 #define I_E    P2(I_, E_)
@@ -96,6 +97,8 @@
 #define I_EEE  P4(I_, E_, E_, E_)
 #define R_I    P2(R_, I_)
 #define R_II   P3(R_, I_, I_)
+#define R_IIII P5(R_, I_, I_, I_, I_)
+#define R_IR   P3(R_, I_, R_)
 #define R_R    P2(R_, R_)
 #define R_RR   P3(R_, R_, R_)
 #define R_RRRR P5(R_, R_, R_, R_, R_)
@@ -215,6 +218,7 @@ enum _functionindex {
   funMon5, funDay5, funYea5, funTim5, funDst5, funZon5, funLon5, funLat5,
   funMon6, funDay6, funYea6, funTim6, funDst6, funZon6, funLon6, funLat6,
   funMonN, funDayN, funYeaN, funTimN, funDstN, funZonN, funLonN, funLatN,
+  funMonL, funDayL, funYeaL, funTimL, funDstL, funZonL, funLonL, funLatL,
   funMonS, funDayS, funYeaS, funTimS, funDstS, funZonS, funLonS, funLatS,
   funMonT, funDayT, funYeaT, funTimT,
   funMonG, funDayG, funYeaG,
@@ -275,8 +279,15 @@ enum _functionindex {
   funGridVal,
   funGridDo,
   funGridDo2,
+  funListCnt,
+  funListCur,
+  funList1,
+  funList2,
+  funTiltXY,
   funContext,
   funVersion,
+  funAsnObj,
+  funAsnHou,
 
   // Astrolog command switch settings (general)
   fun_w1,
@@ -321,6 +332,7 @@ enum _functionindex {
   fun_Yh,
   fun_Ym,
   fun_Ys,
+  fun_Ys1,
   fun_Yn,
   fun_Yn0,
   fun_Yz0,
@@ -329,8 +341,13 @@ enum _functionindex {
   fun_Yr,
   fun_YC,
   fun_YO,
+  fun_Y8,
+  fun_Ya,
+  fun_Yao,
+  fun_Yo,
   fun_Yc,
   fun_Yp,
+  fun_Yb,
 
 #ifdef GRAPH
   // Astrolog command switch settings (graphics)
@@ -353,7 +370,6 @@ enum _functionindex {
   fun_XC,
   fun_XQ,
   fun_XN,
-  fun_YXe,
   fun_Xwx,
   fun_Xwy,
   fun_Xn,
@@ -369,7 +385,20 @@ enum _functionindex {
   fun_XGx,
   fun_XGy,
   fun_XZ,
+  fun_YXe,
+  fun_YXa,
+  fun_YXW,
   fun_YXK,
+
+  // Graphics functions (manual drawing)
+  funDCol,
+  funDDot,
+  funDSpot,
+  funDLine,
+  funDBox,
+  funDBlock,
+  funDCirc,
+  funDDisk,
 #endif
 
 #ifdef WIN
@@ -546,6 +575,14 @@ CONST FUN rgfun[cfun] = {
 {funZonN,    "ZonN",     1, R_I},
 {funLonN,    "LonN",     1, R_I},
 {funLatN,    "LatN",     1, R_I},
+{funMonL,    "MonL",     1, I_I},
+{funDayL,    "DayL",     1, I_I},
+{funYeaL,    "YeaL",     1, I_I},
+{funTimL,    "TimL",     1, R_I},
+{funDstL,    "DstL",     1, R_I},
+{funZonL,    "ZonL",     1, R_I},
+{funLonL,    "LonL",     1, R_I},
+{funLatL,    "LatL",     1, R_I},
 {funMonS,    "MonS",     0, I_},
 {funDayS,    "DayS",     0, I_},
 {funYeaS,    "YeaS",     0, I_},
@@ -663,8 +700,15 @@ CONST FUN rgfun[cfun] = {
 {funGridVal, "GridVal",  2, I_II},
 {funGridDo,  "DoGrid",   0, I_},
 {funGridDo2, "DoGrid2",  1, I_I},
+{funListCnt, "ListCnt",  0, I_},
+{funListCur, "ListCur",  0, I_},
+{funList1,   "List1",    0, I_},
+{funList2,   "List2",    0, I_},
+{funTiltXY,  "TiltXY",   2, R_IR},
 {funContext, "Context",  0, I_},
 {funVersion, "Version",  0, R_},
+{funAsnObj,  "=Obj",     4, R_IIII},
+{funAsnHou,  "=Hou",     4, R_IIII},
 
 // Astrolog command switch settings (general)
 {fun_w1,  "_w1",  0, I_},
@@ -709,16 +753,22 @@ CONST FUN rgfun[cfun] = {
 {fun_Yh,  "_Yh",  0, I_},
 {fun_Ym,  "_Ym",  0, I_},
 {fun_Ys,  "_Ys",  0, I_},
+{fun_Ys1, "_Ys1", 0, R_},
 {fun_Yn,  "_Yn",  0, I_},
 {fun_Yn0, "_Yn0", 0, I_},
 {fun_Yz0, "_Yz0", 0, R_},
 {fun_Yu,  "_Yu",  0, I_},
-{fun_Yu0, "_Yu0",  0, I_},
+{fun_Yu0, "_Yu0", 0, I_},
 {fun_Yr,  "_Yr",  0, I_},
 {fun_YC,  "_YC",  0, I_},
 {fun_YO,  "_YO",  0, I_},
+{fun_Y8,  "_Y8",  0, I_},
+{fun_Ya,  "_Ya",  0, I_},
+{fun_Yao, "_Yao", 0, I_},
+{fun_Yo,  "_Yoo", 0, I_},
 {fun_Yc,  "_Ycc", 0, I_},
 {fun_Yp,  "_Yp",  0, I_},
+{fun_Yb,  "_Yb",  0, I_},
 
 #ifdef GRAPH
 // Astrolog command switch settings (graphics)
@@ -741,7 +791,6 @@ CONST FUN rgfun[cfun] = {
 {fun_XC,  "_XC",  0, I_},
 {fun_XQ,  "_XQ",  0, I_},
 {fun_XN,  "_XN",  0, I_},
-{fun_YXe, "_YXe", 0, I_},
 {fun_Xwx, "_Xwx", 0, I_},
 {fun_Xwy, "_Xwy", 0, I_},
 {fun_Xn,  "_Xnn", 0, I_},
@@ -757,7 +806,20 @@ CONST FUN rgfun[cfun] = {
 {fun_XGx, "_XGx", 0, R_},
 {fun_XGy, "_XGy", 0, R_},
 {fun_XZ,  "_XZ",  0, I_},
+{fun_YXe, "_YXe", 0, I_},
+{fun_YXa, "_YXa", 0, I_},
+{fun_YXW, "_YXW", 0, I_},
 {fun_YXK, "_YXK", 1, I_I},
+
+// Graphics functions (manual drawing)
+{funDCol,   "DCol",   1, I_I},
+{funDDot,   "DDot",   2, I_II},
+{funDSpot,  "DSpot",  2, I_II},
+{funDLine,  "DLine",  4, I_IIII},
+{funDBox,   "DBox",   4, I_IIII},
+{funDBlock, "DBlock", 4, I_IIII},
+{funDCirc,  "DCirc",  4, I_IIII},
+{funDDisk,  "DDisk",  4, I_IIII},
 #endif
 
 #ifdef WIN
@@ -1053,6 +1115,14 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funZonN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->zon : 0.0; break;
   case funLonN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->lon : 0.0; break;
   case funLatN: r = FBetween(n1, 0, cRing) ? rgpci[n1]->lat : 0.0; break;
+  case funMonL: n = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].mon : 0;   break;
+  case funDayL: n = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].day : 0;   break;
+  case funYeaL: n = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].yea : 0;   break;
+  case funTimL: r = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].tim : 0.0; break;
+  case funDstL: r = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].dst : 0.0; break;
+  case funZonL: r = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].zon : 0.0; break;
+  case funLonL: r = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].lon : 0.0; break;
+  case funLatL: r = FBetween(n1, 0, is.cci-1) ? is.rgci[n1].lat : 0.0; break;
   case funMonS: n = ciSave.mon; break;
   case funDayS: n = ciSave.day; break;
   case funYeaS: n = ciSave.yea; break;
@@ -1176,8 +1246,38 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     grid->v[n1][n2] : 0; break;
   case funGridDo:  n = FCreateGrid(fFalse); break;
   case funGridDo2: n = FCreateGridRelation(n1 != 0); break;
-  case funContext: n = is.nContext; break;
+  case funListCnt: n = is.cci;       break;
+  case funListCur: n = is.iciCur;    break;
+  case funList1:   n = is.iciIndex1; break;
+  case funList2:   n = is.iciIndex2; break;
+  case funTiltXY:
+    if (FBetween(n1, 0, cLetter-1) &&
+      rgparVar[n1].fReal && rgparVar[n1+1].fReal) {
+      CoorXform(&rgparVar[n1].r, &rgparVar[n1+1].r, r2);
+      r = rgparVar[n1].r;
+    } else
+      r = 0.0;
+    break;
+  case funContext: n = is.nContext;  break;
   case funVersion: r = atof(szVersionCore); break;
+  case funAsnObj:
+    if (FRingObj(n1, n2) && FRingObj(n3, n4)) {
+      r = rgpcp[n1]->obj[n2] = rgpcp[n3]->obj[n4];
+      rgpcp[n1]->alt[n2] = rgpcp[n3]->alt[n4];
+      rgpcp[n1]->dir[n2] = rgpcp[n3]->dir[n4];
+      rgpcp[n1]->diralt[n2] = rgpcp[n3]->diralt[n4];
+      rgpcp[n1]->dirlen[n2] = rgpcp[n3]->dirlen[n4];
+      rgpcp[n1]->house[n2] = rgpcp[n3]->house[n4];
+    } else
+      r = 0.0;
+    break;
+  case funAsnHou:
+    if (FRingObj(n1, n2) && FRingObj(n3, n4)) {
+      r = rgpcp[n1]->cusp[n2] = rgpcp[n3]->cusp[n4];
+      rgpcp[n1]->cusp3[n2] = rgpcp[n3]->cusp3[n4];
+    } else
+      r = 0.0;
+    break;
 
   // Astrolog command switch settings (general)
   case fun_w1:  n = us.nWheelRows;      break;
@@ -1222,6 +1322,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Yh:  n = us.fBarycenter; break;
   case fun_Ym:  n = us.fMoonMove;   break;
   case fun_Ys:  n = us.fSidereal2;  break;
+  case fun_Ys1: r = us.rZodiacOffsetAll; break;
   case fun_Yn:  n = us.fTrueNode;   break;
   case fun_Yn0: n = us.fNoNutation; break;
   case fun_Yz0: r = us.rDeltaT;     break;
@@ -1230,8 +1331,13 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Yr:  n = us.fRound;      break;
   case fun_YC:  n = us.fSmartCusp;  break;
   case fun_YO:  n = us.fSmartSave;  break;
+  case fun_Y8:  n = us.fClip80;     break;
+  case fun_Ya:  n = us.nCharset;    break;
+  case fun_Yao: n = us.nCharsetOut; break;
+  case fun_Yo:  n = us.fWriteOld;   break;
   case fun_Yc:  n = us.fHouseAngle; break;
   case fun_Yp:  n = us.fPolarAsc;   break;
+  case fun_Yb:  n = us.nBioday;     break;
 
 #ifdef GRAPH
   // Astrolog command switch settings (graphics)
@@ -1254,7 +1360,6 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_XC:  n = gs.fHouseExtra; break;
   case fun_XQ:  n = gs.fKeepSquare; break;
   case fun_XN:  n = gs.fAnimMap;    break;
-  case fun_YXe: n = gs.fEcliptic;   break;
   case fun_Xwx: n = gs.xWin;        break;
   case fun_Xwy: n = gs.yWin;        break;
   case fun_Xn:  n = gs.nAnim;       break;
@@ -1270,7 +1375,26 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_XGx: r = gs.rRot;        break;
   case fun_XGy: r = gs.rTilt;       break;
   case fun_XZ:  n = gs.objTrack;    break;
+  case fun_YXe: n = gs.fEcliptic;   break;
+  case fun_YXa: n = gs.nDashMax;    break;
+  case fun_YXW: n = gs.nTriangles;  break;
   case fun_YXK: n = FValidColor(n1) ? rgbbmp[n1] : 0; break;
+
+  // Graphics functions (manual drawing)
+  case funDCol: if (FValidColor(n1)) DrawColor(n1); n = n1; break;
+  case funDDot: case funDSpot: case funDLine: case funDBox: case funDBlock:
+  case funDCirc: case funDDisk:
+    switch (ifun) {
+    case funDDot:   DrawPoint   (n1, n2);         break;
+    case funDSpot:  DrawSpot    (n1, n2);         break;
+    case funDLine:  DrawLine    (n1, n2, n3, n4); break;
+    case funDBox:   DrawEdge    (n1, n2, n3, n4); break;
+    case funDBlock: DrawBlock   (n1, n2, n3, n4); break;
+    case funDCirc:  DrawEllipse (n1, n2, n3, n4); break;
+    case funDDisk:  DrawEllipse2(n1, n2, n3, n4); break;
+    }
+    n = gi.kiCur;
+    break;
 #endif
 
 #ifdef WIN
@@ -1425,7 +1549,7 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
   char sz[cchSzMax*2], szT[cchSzMax], ch1, ch, *pchEdit;
   CONST char *rgpchEval[2], *pchParam, *pchT;
   int ifunT, iParamT, cch, n;
-  PAR rgpar2[4];
+  PAR rgpar2[4+1];
   flag fSkipEval;
 
   // Skip whitespace.
