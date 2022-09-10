@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: express.cpp
+** Astrolog (Version 7.50) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -61,9 +61,9 @@
 ******************************************************************************
 */
 
-#define cfunA 363
+#define cfunA 373
 #ifdef GRAPH
-#define cfunX 46
+#define cfunX 48
 #else
 #define cfunX 0
 #endif
@@ -92,6 +92,7 @@
 #define I_IIII P5(I_, I_, I_, I_, I_)
 #define I_IIIX P5(I_, I_, I_, I_, X_)
 #define I_R    P2(I_, R_)
+#define I_RI   P3(I_, R_, I_)
 #define I_E    P2(I_, E_)
 #define I_EE   P3(I_, E_, E_)
 #define I_EEE  P4(I_, E_, E_, E_)
@@ -101,6 +102,7 @@
 #define R_IR   P3(R_, I_, R_)
 #define R_R    P2(R_, R_)
 #define R_RR   P3(R_, R_, R_)
+#define R_RRR  P4(R_, R_, R_, R_)
 #define R_RRRR P5(R_, R_, R_, R_, R_)
 #define E_I    P2(E_, I_)
 #define E_IE   P3(E_, I_, E_)
@@ -198,6 +200,7 @@ enum _functionindex {
   funAngD,
   funFloor,
   funFract,
+  funDMS,
   funRnd,
   funRgb,
   funRgbR,
@@ -262,6 +265,10 @@ enum _functionindex {
   funLonDist,
   funLonDiff,
   funLonMid,
+  funLonDeca,
+  funLonNava,
+  funLonDwad,
+  funLonTerm,
   funDayWeek,
   funJulianT,
   funSphDist,
@@ -290,6 +297,8 @@ enum _functionindex {
   funAsnHou,
 
   // Astrolog command switch settings (general)
+  fun_v3,
+  fun_v31,
   fun_w1,
   fun_aj,
   fun_L1,
@@ -301,6 +310,8 @@ enum _functionindex {
   fun_P1,
   fun_N1,
   fun_I1,
+  fun_zv,
+  fun_zf,
   fun_A3,
   fun_Ap,
   fun_AP,
@@ -329,6 +340,7 @@ enum _functionindex {
   fun_9,
   fun_YT,
   fun_YV,
+  fun_Yf,
   fun_Yh,
   fun_Ym,
   fun_Ys,
@@ -382,6 +394,8 @@ enum _functionindex {
   fun_XL0,
   fun_X1,
   fun_Xv,
+  fun_XJ,
+  fun_X8,
   fun_XGx,
   fun_XGy,
   fun_XZ,
@@ -452,7 +466,7 @@ CONST FUN rgfun[cfun] = {
 {funSub,   "Sub",   2, E_EE},
 {funMul,   "Mul",   2, E_EE},
 {funDiv,   "Div",   2, E_EE},
-{funMod,   "Mod",   2, I_II},
+{funMod,   "Mod",   2, E_EE},
 {funPow,   "Pow",   2, R_RR},
 {funNeg,   "Neg",   1, E_E},
 {funInc,   "Inc",   1, E_E},
@@ -499,6 +513,7 @@ CONST FUN rgfun[cfun] = {
 {funAngD,  "AngD",  2, R_RR},
 {funFloor, "Floor", 1, R_R},
 {funFract, "Fract", 1, R_R},
+{funDMS,   "DMS",   3, R_RRR},
 {funRnd,   "Rnd",   2, I_II},
 {funRgb,   "Rgb",   3, I_III},
 {funRgbR,  "RgbR",  1, I_I},
@@ -683,6 +698,10 @@ CONST FUN rgfun[cfun] = {
 {funLonDist, "LonDist",  2, R_RR},
 {funLonDiff, "LonDiff",  2, R_RR},
 {funLonMid,  "LonMid",   2, R_RR},
+{funLonDeca, "LonDecan", 1, R_R},
+{funLonNava, "LonNavam", 1, R_R},
+{funLonDwad, "LonDwad",  1, R_R},
+{funLonTerm, "LonTerm",  2, I_RI},
 {funDayWeek, "DayWeek",  3, I_III},
 {funJulianT, "JulianT",  0, R_},
 {funSphDist, "PolDist",  4, R_RRRR},
@@ -711,6 +730,8 @@ CONST FUN rgfun[cfun] = {
 {funAsnHou,  "=Hou",     4, R_IIII},
 
 // Astrolog command switch settings (general)
+{fun_v3,  "_v3",  0, I_},
+{fun_v31, "_v31", 0, I_},
 {fun_w1,  "_w1",  0, I_},
 {fun_aj,  "_aj",  0, I_},
 {fun_L1,  "_L1",  0, I_},
@@ -722,6 +743,8 @@ CONST FUN rgfun[cfun] = {
 {fun_P1,  "_P1",  0, I_},
 {fun_N1,  "_N1",  0, I_},
 {fun_I1,  "_I1",  0, I_},
+{fun_zv,  "_zv",  0, R_},
+{fun_zf,  "_zf",  0, R_},
 {fun_A3,  "_A3",  0, I_},
 {fun_Ap,  "_Ap",  0, I_},
 {fun_AP,  "_APP", 0, I_},
@@ -750,6 +773,7 @@ CONST FUN rgfun[cfun] = {
 {fun_9,   "_9",   0, I_},
 {fun_YT,  "_YT",  0, I_},
 {fun_YV,  "_YV",  0, I_},
+{fun_Yf,  "_Yf",  0, I_},
 {fun_Yh,  "_Yh",  0, I_},
 {fun_Ym,  "_Ym",  0, I_},
 {fun_Ys,  "_Ys",  0, I_},
@@ -803,6 +827,8 @@ CONST FUN rgfun[cfun] = {
 {fun_XL0, "_XL0", 0, I_},
 {fun_X1,  "_X1",  0, I_},
 {fun_Xv,  "_Xv",  0, I_},
+{fun_XJ,  "_XJJ", 0, I_},
+{fun_X8,  "_X8",  0, I_},
 {fun_XGx, "_XGx", 0, R_},
 {fun_XGy, "_XGy", 0, R_},
 {fun_XZ,  "_XZ",  0, I_},
@@ -992,7 +1018,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funSub:   EIR(n1 - n2, r1 - r2); break;
   case funMul:   EIR(n1 * n2, r1 * r2); break;
   case funDiv:   EIR(n2 != 0 ? n1 / n2 : n1, r2 != 0.0 ? r1 / r2 : r1); break;
-  case funMod:   n = n2 != 0 ? n1 % n2 : n1; break;
+  case funMod:   EIR(n2 != 0 ? n1 % n2 : n1,
+    r1 - RFloor(r2 != 0.0 ? r1 / r2 : r1)*r2); break;
   case funPow:   r = pow(r1, r2); break;
   case funNeg:   EIR(-n1, -r1); break;
   case funInc:   EIR(n1 + 1, r1 + 1.0); break;
@@ -1039,6 +1066,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funAngD:  r = RAngleD(r1, r2); break;
   case funFloor: r = RFloor(r1); break;
   case funFract: r = r1 - RFloor(r1); break;
+  case funDMS:   r = DMS(r1, r2, r3); break;
   case funRnd:   n = (rand() & 16383) * (n2 - n1 + 1) / 16384 + n1; break;
   case funRgb:   n = Rgb(n1, n2, n3); break;
   case funRgbR:  n = RgbR(n1); break;
@@ -1223,6 +1251,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funLonDist: r = MinDistance(r1, r2); break;
   case funLonDiff: r = MinDifference(r1, r2); break;
   case funLonMid:  r = Midpoint(r1, r2); break;
+  case funLonDeca: r = Decan(r1); break;
+  case funLonNava: r = Navamsa(r1); break;
+  case funLonDwad: r = Dwad(r1); break;
+  case funLonTerm: n = ObjTerm(r1, n1); break;
   case funDayWeek: n = DayOfWeek(n1, n2, n3); break;
   case funJulianT: r = JulianDayFromTime(is.T); break;
   case funSphDist: r = SphDistance(r1, r2, r3, r4); break;
@@ -1280,6 +1312,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     break;
 
   // Astrolog command switch settings (general)
+  case fun_v3:  n = us.fListDecan;      break;
+  case fun_v31: n = us.nDecanType;      break;
   case fun_w1:  n = us.nWheelRows;      break;
   case fun_aj:  n = us.nAspectSort;     break;
   case fun_L1:  n = us.nAstroGraphStep; break;
@@ -1291,6 +1325,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_P1:  n = us.nArabicParts;    break;
   case fun_N1:  n = us.nAtlasList;      break;
   case fun_I1:  n = us.nScreenWidth;    break;
+  case fun_zv:  r = us.elvDef;        break;
+  case fun_zf:  r = us.tmpDef;        break;
   case fun_A3:  n = us.fAspect3D;     break;
   case fun_Ap:  n = us.fAspectLat;    break;
   case fun_AP:  n = us.fParallel2;    break;
@@ -1315,10 +1351,11 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_4:   n = us.nDwad;         break;
   case fun_f:   n = us.fFlip;         break;
   case fun_G:   n = us.fGeodetic;     break;
-  case fun_J:   n = us.fVedic;        break;
+  case fun_J:   n = us.fIndian;       break;
   case fun_9:   n = us.fNavamsa;      break;
   case fun_YT:  n = us.fTruePos;    break;
   case fun_YV:  n = us.fTopoPos;    break;
+  case fun_Yf:  n = us.fRefract;    break;
   case fun_Yh:  n = us.fBarycenter; break;
   case fun_Ym:  n = us.fMoonMove;   break;
   case fun_Ys:  n = us.fSidereal2;  break;
@@ -1341,43 +1378,45 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
 
 #ifdef GRAPH
   // Astrolog command switch settings (graphics)
-  case fun_XI1: r = gs.rBackPct;    break;
-  case fun_XI2: n = gs.nBackOrient; break;
-  case fun_Xr:  n = gs.fInverse;    break;
-  case fun_Xm:  n = !gs.fColor;     break;
-  case fun_XT:  n = gs.fText;       break;
-  case fun_Xi:  n = gs.fAlt;        break;
-  case fun_Xu:  n = gs.fBorder;     break;
-  case fun_Xx:  n = gs.fThick;      break;
-  case fun_Xl:  n = gs.fLabel;      break;
-  case fun_XA:  n = gs.fLabelAsp;   break;
-  case fun_XL:  n = gs.fLabelCity;  break;
-  case fun_Xj:  n = gs.fJetTrail;   break;
-  case fun_XF:  n = gs.fConstel;    break;
-  case fun_XW0: n = gs.fMollewide;  break;
-  case fun_Xe:  n = gs.fEquator;    break;
-  case fun_XU:  n = gs.fAllStar;    break;
-  case fun_XC:  n = gs.fHouseExtra; break;
-  case fun_XQ:  n = gs.fKeepSquare; break;
-  case fun_XN:  n = gs.fAnimMap;    break;
-  case fun_Xwx: n = gs.xWin;        break;
-  case fun_Xwy: n = gs.yWin;        break;
-  case fun_Xn:  n = gs.nAnim;       break;
-  case fun_Xs:  n = gs.nScale;      break;
-  case fun_XS:  n = gs.nScaleText;  break;
-  case fun_XU0: n = gs.nAllStar;    break;
-  case fun_XE1: n = gs.nAstLo;      break;
-  case fun_XE2: n = gs.nAstHi;      break;
-  case fun_XE:  n = gs.nAstLabel;   break;
-  case fun_XL0: n = gs.nLabelCity;  break;
-  case fun_X1:  n = gs.objLeft;     break;
-  case fun_Xv:  n = gs.nDecaFill;   break;
-  case fun_XGx: r = gs.rRot;        break;
-  case fun_XGy: r = gs.rTilt;       break;
-  case fun_XZ:  n = gs.objTrack;    break;
-  case fun_YXe: n = gs.fEcliptic;   break;
-  case fun_YXa: n = gs.nDashMax;    break;
-  case fun_YXW: n = gs.nTriangles;  break;
+  case fun_XI1: r = gs.rBackPct;     break;
+  case fun_XI2: n = gs.nBackOrient;  break;
+  case fun_Xr:  n = gs.fInverse;     break;
+  case fun_Xm:  n = !gs.fColor;      break;
+  case fun_XT:  n = gs.fText;        break;
+  case fun_Xi:  n = gs.fAlt;         break;
+  case fun_Xu:  n = gs.fBorder;      break;
+  case fun_Xx:  n = gs.fThick;       break;
+  case fun_Xl:  n = gs.fLabel;       break;
+  case fun_XA:  n = gs.fLabelAsp;    break;
+  case fun_XL:  n = gs.fLabelCity;   break;
+  case fun_Xj:  n = gs.fJetTrail;    break;
+  case fun_XF:  n = gs.fConstel;     break;
+  case fun_XW0: n = gs.fMollewide;   break;
+  case fun_Xe:  n = gs.fEquator;     break;
+  case fun_XU:  n = gs.fAllStar;     break;
+  case fun_XC:  n = gs.fHouseExtra;  break;
+  case fun_XQ:  n = gs.fKeepSquare;  break;
+  case fun_XN:  n = gs.fAnimMap;     break;
+  case fun_Xwx: n = gs.xWin;         break;
+  case fun_Xwy: n = gs.yWin;         break;
+  case fun_Xn:  n = gs.nAnim;        break;
+  case fun_Xs:  n = gs.nScale;       break;
+  case fun_XS:  n = gs.nScaleText;   break;
+  case fun_XU0: n = gs.nAllStar;     break;
+  case fun_XE1: n = gs.nAstLo;       break;
+  case fun_XE2: n = gs.nAstHi;       break;
+  case fun_XE:  n = gs.nAstLabel;    break;
+  case fun_XL0: n = gs.nLabelCity;   break;
+  case fun_X1:  n = gs.objLeft;      break;
+  case fun_Xv:  n = gs.nDecaFill;    break;
+  case fun_XJ:  n = gs.fIndianWheel; break;
+  case fun_X8:  n = gs.fMoonWheel;   break;
+  case fun_XGx: r = gs.rRot;         break;
+  case fun_XGy: r = gs.rTilt;        break;
+  case fun_XZ:  n = gs.objTrack;     break;
+  case fun_YXe: n = gs.fEcliptic;    break;
+  case fun_YXa: n = gs.nDashMax;     break;
+  case fun_YXW: n = gs.nTriangles;   break;
   case fun_YXK: n = FValidColor(n1) ? rgbbmp[n1] : 0; break;
 
   // Graphics functions (manual drawing)
@@ -1670,7 +1709,7 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
 
   // Error if can't parse contents.
   CopyRgchToSz(pchParam, cch, szT, cchSzMax);
-  sprintf(sz, "Unknown parameter: '%s'\nContext: '", szT);
+  sprintf(sz, "Unknown function: '%s'\nContext: '", szT);
   for (pchEdit = sz; *pchEdit; pchEdit++)
     ;
   pchT = pchCur;

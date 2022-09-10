@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: intrpret.cpp
+** Astrolog (Version 7.50) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -517,14 +517,14 @@ void InterpretMidpointRelation(int x, int y)
 
   if (!FInterpretObj(x) || !FInterpretObj(y))
     return;
-  n = grid->n[y][x];
+  n = grid->n[x][y];
   AnsiColor(kSignA(n));
   sprintf(sz, "%s midpoint %s in %s: The merging of %s's",
     szObjDisp[x], szObjDisp[y], szSignName[n], szPerson1);
   FieldWord(sz); FieldWord(szMindPart[x]);
   sprintf(sz, "with %s's", szPerson2); FieldWord(sz);
   FieldWord(szMindPart[y]); FieldWord("is");
-  if (grid->v[y][x]/3600 < 10)
+  if (grid->v[x][y]/3600 < 10)
     FieldWord("very");
   sprintf(sz, "%s, and", szDesc[n]); FieldWord(sz);
   sprintf(sz, "%s.", szDesire[n]); FieldWord(sz);
@@ -601,7 +601,7 @@ CONST char *rgEsoMantra2[cSign+1] = {"",
   "I am the mother and the child, I God, I matter am. "
     "Christ in you, the hope of glory.",
   "I choose the way which lies between the two great lines of force.",
-  "Warrior I am, and from the battle I emerge triumphant!",
+  "Warrior I am, and from the battle I emerge triumphant.",
   "I see the goal, I reach that goal, and then I see another.",
   "Lost am I in light supernal, yet on that light I turn my back.",
   "Water of life am I, poured forth for thirsty men.",

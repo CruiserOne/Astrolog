@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: atlas.cpp
+** Astrolog (Version 7.50) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -1597,7 +1597,7 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
       }
       ciCore.lon = pae->lon;
       ciCore.lat = pae->lat;
-      ciCore.loc = SzPersist(SzCity(rgiae[0]));
+      ciCore.loc = SzCopy(SzCity(rgiae[0]));
       *piae = i;
       return fTrue;
     }

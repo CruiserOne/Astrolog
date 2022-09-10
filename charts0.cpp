@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: charts0.cpp
+** Astrolog (Version 7.50) File: charts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -267,7 +267,8 @@ void DisplaySwitches(void)
   PrintS("\nSwitches which determine the type of chart to display:");
   PrintS(" _v: Display list of object positions (chosen by default).");
   PrintS(" _v0: Like _v but express velocities relative to average speed.");
-  PrintS(" _v3: Like _v but display decan information alongside positions.");
+  PrintS(
+    " _v3 [0-9]: Display decan or other information alongside positions.");
   PrintS(" _w [<rows>]: Display chart in a graphic house wheel format.");
   PrintS(" _w0 [..]: Like _w but reverse order of objects in houses 4..9.");
   PrintS(" _g: Display aspect and midpoint grid among planets.");
@@ -276,13 +277,13 @@ void DisplaySwitches(void)
   PrintS(" _gp: Like _g but generate parallel and contraparallel aspects.");
   PrintS(
     " _ga: Like _g but indicate applying/separating instead of offset orbs.");
-  PrintS(" _gx: Like _g but generate waxing/waxing instead of offset orbs.");
+  PrintS(" _gx: Like _g but generate waxing/waning instead of offset orbs.");
   PrintS(" _a: Display list of all aspects ordered by influence.");
   PrintS(" _a0: Like _a but display aspect summary too.");
   PrintS(" _ap: Like _a but generate parallel and contraparallel aspects.");
   PrintS(
     " _aa: Like _a but indicate applying/separating instead of offset orbs.");
-  PrintS(" _ax: Like _a but generate waxing/waxing instead of offset orbs.");
+  PrintS(" _ax: Like _a but generate waxing/waning instead of offset orbs.");
   PrintS(
     " _a[jonOPACDm]: Sort aspects by power, orb, orb difference, 1st planet,");
   PrintS("  2nd planet, aspect, 1st position, 2nd position, midpoint.");
@@ -368,6 +369,8 @@ void DisplaySwitches(void)
   PrintS(" _z0 [<offset>]: Change the default Daylight time setting.");
   PrintS(" _zl <long> <lat>: Change the default longitude & latitude.");
   PrintS(" _zv <elev>: Change the default elevation above sea level.");
+  PrintS(
+    " _zf <temp>: Change default temperature for atmospheric refraction.");
   PrintS(" _zj <name> <place>: Change the default name and place strings.");
   PrintS(" _zt <time>: Set only the time of current chart.");
   PrintS(" _zd <day>: Set only the day of current chart.");
@@ -498,8 +501,8 @@ void DisplaySwitches(void)
   PrintS(" _4 [<nest>]: Display objects in their (nested) dwad positions.");
   PrintS(" _f: Display houses as sign positions (flip them).");
   PrintS(" _G: Compute houses based on geographic location only.");
-  PrintS(" _J: Display wheel charts in Vedic format.");
-  PrintS(" _9: Display objects in their zodiac navamsa positions.");
+  PrintS(" _J: Display wheel charts in Indian format.");
+  PrintS(" _9: Display objects in their zodiac Navamsa positions.");
   PrintS(" _F <objnum> <sign> <deg>: Force object's position to be value.");
   PrintS(" _Fm <objnum> <obj1> <obj2>: Force object's position to midpoint.");
   PrintS(" _+ [<days>]: Cast chart for specified num of days in the future.");
@@ -558,6 +561,7 @@ void DisplaySwitchesRare(void)
   PrintS(" _YT: Compute true positions in space instead of apparent in sky.");
   PrintS(
     " _YV: Compute topocentric positions instead of from center of body.");
+  PrintS(" _Yf: Local horizon positions affected by atmospheric refraction.");
   PrintS(" _Yh: Compute location of solar system barycenter instead of Sun.");
   PrintS(" _Ym: Position planetary moons around current central object.");
   PrintS(
@@ -635,6 +639,8 @@ void DisplaySwitchesRare(void)
   PrintS(
     " _YR1 <flag1> <flag2>: Set restrictions for latitude, distance events.");
   PrintS(
+    " _YR2 <flag1> <flag2>: Set restrictions for node, equidistant events.");
+  PrintS(
     " _YRZ <rise> <zenith> <set> <nadir>: Set restrictions for _Zd chart.");
   PrintS(
     " _YR7 <ruler> <exalt> <eso> <hier> <ray>: Set rulership restrictions.");
@@ -699,6 +705,7 @@ void DisplaySwitchesRare(void)
   PrintS(" _YXG <0-2><0-2><0-3><0-2><0-2>: Select among different graphic");
   PrintS("  glyphs for Capricorn, Uranus, Pluto, Lilith, and Vertex.");
   PrintS(" _YXD <obj> <string1> <string2>: Customize glyphs for planet.");
+  PrintS(" _YXDD <obj> <from>: Copy glyph to one object from another.");
   PrintS(" _YXA <asp> <string1> <string2>: Customize glyphs for aspect.");
   PrintS(" _YXv <type> [<size> [<lines>]]: Set wheel chart decoration.");
   PrintS(" _YXt <string>: Display extra text in wheel chart sidebar.");
@@ -733,8 +740,10 @@ void DisplaySwitchesRare(void)
   PrintS(" _YY2 <zones> <entries>: Load time zone change lists from file.");
   PrintS(
     " _YY3 <rows>: Load atlas time zone to zone change mappings from file.");
-  PrintS(" _0[o,i,q,X,n,~]: Permanently disable file output, file input,");
-  PrintS("  program exiting, all graphics, internet, or AstroExpressions.");
+  PrintS(" _YYt <text>: Output formatted text string in current context.");
+  PrintS(" _0[o,i,q,X,n,b,~]: Permanently disable file output/input, program");
+  PrintS(
+    "  exiting, all graphics, internet, old formulas, or AstroExpressions.");
   PrintS(" _;: Ignore rest of command line and treat it as a comment.");
 #ifdef EXPRESS
   PrintS("\nSwitches to define AstroExpressions:");
@@ -792,6 +801,8 @@ void PrintObjects(void)
   int i, j, k, l;
 #ifdef SWISSGRAPH
   ES es;
+  real jt[2], tim;
+  int mon, day, yea;
 #endif
 
   sprintf(sz, "%s planets and objects:\n", szAppName); PrintSz(sz);
@@ -916,6 +927,16 @@ void PrintObjects(void)
       PrintZodiac(es.lon);
       PrintCh(' ');
       PrintAltitude(es.lat);
+      if (gs.fPrintMap && i > 4) {
+        // Print date range covered by ephemeris files.
+        SwissGetFileData(&jt[0], &jt[1]);
+        for (j = 0; j <= 1; j++) {
+          SwissRevJul(jt[j], fFalse, &mon, &day, &yea, &tim);
+          sprintf(sz, " %s%s %s%s", j <= 0 ? "(" : "",
+            SzDate(mon, day, yea, 0), SzTim(tim), j <= 0 ? " -" : ")");
+          PrintSz(sz);
+        }
+      }
       sprintf(sz, " %s\n", es.sz); PrintSz(sz);
     }
   }
@@ -1554,18 +1575,19 @@ void DisplayKeysX(void)
   PrintS(" Press 'c' to toggle relationship comparison chart mode.");
   PrintS(" Press 's', 'h', 'a', 'f', 'g', 'z', to toggle status of sidereal");
   PrintS("    zodiac, heliocentric charts, 3D houses, domal charts, decan");
-  PrintS("    charts, and vedic format wheel charts.");
+  PrintS("    charts, and Indian format wheel charts.");
   PrintS(" Press 'O' and 'o' to recall/store a previous chart from memory.");
 #ifdef X11
   PrintS(" Press 'B' to save current window contents to root background.");
-#else
-  PrintS(" Press 'B' to resize chart display to full size of screen.");
+#endif
+#ifdef WIN
+  PrintS(" Press 'B' to resize chart display to full size of window.");
 #endif
   PrintS(" Press 'Q' to resize chart display to a square.");
   PrintS(" Press '<' and '>' to decrease/increase the scale size of the");
   PrintS("    glyphs and the size of world map.");
-  PrintS(" Press '[' and ']' to decrease/increase tilt in globe display.");
   PrintS(" Press '{' and '}' to rotate left/right one degree in globe.");
+  PrintS(" Press '[' and ']' to decrease/increase tilt in globe display.");
   PrintS(" Press '+' and '-' to add/subtract a day from current chart.");
 #ifdef TIME
   PrintS(" Press 'n' to set chart information to current time now.");
@@ -1588,6 +1610,8 @@ void DisplayKeysX(void)
   PrintS(
     "    map (_XW), globe (_XG), polar (_XP), and telescope (_XZ) modes.");
   PrintS(" Press 'Y' to switch to biorhythm relationship chart mode.");
+  PrintS(
+    " Press '=' to switch between Western and North/South Indian wheels.");
   PrintS(" Press '0' to toggle between _Z,_Z0 & _XW,_XW0 & _E,_Ey modes.");
 #ifdef CONSTEL
   PrintS(" Press 'F' to toggle between world and constellation map modes.");
@@ -1682,6 +1706,8 @@ void DisplaySwitchesX(void)
   PrintS(" _Xd <name>, _di[..] <name>: Open X window on specified display.");
 #endif
   PrintS(" _Xv <0-2>: Set fill style for wedge areas in wheel charts.");
+  PrintS(" _XJ: Display wheel charts in North or South Indian form.");
+  PrintS(" _X8: Display planetary moons around planets in wheel charts.");
   PrintS(
     " _XX[0] [<degrees> [<degrees>]]: Display chart sphere instead of wheel.");
   PrintS(" _XW: Simply display an image of the world map.");

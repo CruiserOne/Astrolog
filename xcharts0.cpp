@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xcharts0.cpp
+** Astrolog (Version 7.50) File: xcharts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -181,8 +181,13 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
       if (us.fDecan)
         DrawPrint("Special: Decan mode", gi.kiLite, fFalse);
       if (us.rHarmonic != 1.0) {
-        FormatR(szT, us.rHarmonic, -5);
-        sprintf(sz, "Special: Harmonic %.7s", szT);
+        if (gi.nMode != gMidpoint || us.rHarmonic == 0.0) {
+          FormatR(szT, us.rHarmonic, -5);
+          sprintf(sz, "Special: Harmonic %.7s", szT);
+        } else {
+          FormatR(szT, rDegMax / us.rHarmonic, -5);
+          sprintf(sz, "Special: Dial %.7s", szT);
+        }
         DrawPrint(sz, gi.kiLite, fFalse);
       }
       if (us.nDwad == 1)
@@ -193,7 +198,7 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
       }
       if (us.fNavamsa)
         DrawPrint("Special: Navamsa mode", gi.kiLite, fFalse);
-      if (us.fMoonMove) {
+      if (us.fMoonMove && (us.fMoons || us.nStar > 0)) {
         sprintf(sz, "Special: Overlay %ss",
           FStar(us.objCenter) ? "planet" : "moon");
         DrawPrint(sz, gi.kiLite, fFalse);
@@ -221,6 +226,7 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
           for (pch = sz; *pch2 && *pch2 != '\n' &&
             !(*pch2 == '\\' && pch2[1] == 'n'); pch++, pch2++) {
 #ifdef EXPRESS
+            // Expand escape sequences like "\A" to that custom variable.
             if (*pch2 == '\\' && FCapCh(pch2[1])) {
               pch = PchFormatExpression(pch, pch2[1] - '@') + 1;
               pch2++;
@@ -495,8 +501,8 @@ void DrawSidebar()
 
 void DrawFillWheel(int x, int y, int i, int typ)
 {
-  KV kvC, kvB, kvF;
-  int nTrans, nRC, nGC, nBC, nRB, nGB, nBB, nRF, nGF, nBF;
+  KV kvC, kvF;
+  int nTrans;
 
   if (gs.nDecaFill <= 0)
     return;
@@ -510,13 +516,7 @@ void DrawFillWheel(int x, int y, int i, int typ)
       kvC = rgbbmp[gi.kiCur];
     else
       kvC = KvHue((real)(i-1) * rDegMax / (real)(typ < 2 ? cSign : cSector));
-    kvB = rgbbmp[gi.kiOff];
-    nRC = RgbR(kvC); nGC = RgbG(kvC); nBC = RgbB(kvC);
-    nRB = RgbR(kvB); nGB = RgbG(kvB); nBB = RgbB(kvB);
-    nRF = nRB + ((nRC - nRB) * nTrans >> 8);
-    nGF = nGB + ((nGC - nGB) * nTrans >> 8);
-    nBF = nBB + ((nBC - nBB) * nTrans >> 8);
-    kvF = Rgb(nRF, nGF, nBF);
+    kvF = KvBlend(rgbbmp[gi.kiOff], kvC, gs.rBackPct / 100.0);
 #ifdef EXPRESS
     // Modify RGB color through AstroExpression if one defined.
     if (!us.fExpOff && FSzSet(us.szExpColFill)) {
@@ -542,12 +542,16 @@ void DrawFillWheel(int x, int y, int i, int typ)
 void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
   real unity, real rh1, real rh2, real rs1)
 {
+  char sz[cchSzDef];
   int nTrans = (int)(gs.rBackPct * 256.0 / 100.0), *rgRules, i, j, k, x, y,
     nSav;
-  real rh, rs, rs2 = 0.95, r9 = 0.99, ra, rb, px, py, rDeg;
-  flag fVector = (gs.ft == ftPS || gs.ft == ftWmf), fSav;
+  CONST int *rgTerm;
+  real rh, rs, rs2 = 0.95, r9 = 0.99, ra, rb, px, py, rDeg, hOld, h;
+  flag fVector = (gs.ft == ftPS || gs.ft == ftWmf), fSimpleDecan, fSav;
 
   rh = (rh1 + rh2) / 2.0; rs = (rs1 + rs2) / 2.0;
+  fSimpleDecan = us.fListDecan && us.nDecanType <= ddChaldea &&
+    !(!us.fExpOff && FSzSet(us.szExpDecan));
 
   // Draw small five or one degree increments around the zodiac sign ring.
 
@@ -562,7 +566,7 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
       rb = rh2 + (rs1 - rh2) * 0.70;
     } else {
       ra = rh2; rb = rs1;
-      if (us.fListDecan && i%10 == 0 && i%30 != 0)
+      if (fSimpleDecan && i%10 == 0 && i%30 != 0)
         rb += (rs2 - rs1) * 0.30;
     }
     DrawDash(cx+POINT1(unitx, ra, px), cy+POINT1(unity, ra, py),
@@ -586,8 +590,18 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
     DrawLine(cx+POINT2(unitx, rs2, px), cy+POINT2(unity, rs2, py),
       cx+POINT1(unitx, rs1, px), cy+POINT1(unity, rs1, py));
   }
-  if (us.fListDecan)
+  if (us.fListDecan) {
     rs = rs1 + (rs2 - rs1) * 0.67;
+    if (us.nDecanType == ddDecanR) {
+      if (ignore7[rrStd] && ignore7[rrEso] && !ignore7[rrHie])
+        rgRules = rgSignHie1;
+      else if (ignore7[rrStd] && !ignore7[rrEso])
+        rgRules = rgSignEso1;
+      else
+        rgRules = rules;
+    } else if (FBetween(us.nDecanType, ddEgypt, ddPtolemy))
+      rgTerm = (us.nDecanType == ddEgypt ? rgnTermEgypt : rgnTermPtolemy);
+  }
   for (i = 1; i <= cSign; i++) {
     rDeg = Midpoint(xsign[i], xsign[Mod12(i+1)]);
     DrawColor(kSignB(i));
@@ -597,38 +611,82 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
     if (nTrans >= 128)
       DrawColor(gi.kiOn);
     DrawSign(i, x, y);
-    // Draw decan rulers if specified.
+    // Draw decan rulers or other sign subdivisions if specified.
     if (us.fListDecan) {
-      if (ignore7[rrStd] && ignore7[rrEso] && !ignore7[rrHie])
-        rgRules = rgSignHie1;
-      else if (ignore7[rrStd] && !ignore7[rrEso])
-        rgRules = rgSignEso1;
-      else
-        rgRules = rules;
-      for (j = 0; j < 3; j++) {
-        rDeg = ZFromS(i) + (real)j*10.0 + 5.0;
-        k = rgRules[SFromZ(Decan(rDeg))];
+      hOld = 0.0;
+      for (j = 0; hOld < 30.0; j++, hOld += h) {
+        h = 10.0;
+        k = -13;
+        if (us.nDecanType <= ddDecanR)
+          k = rgRules[SFromZ(Decan(ZFromS(i) + hOld))];
+        else if (us.nDecanType == ddDecanS)
+          k = -SFromZ(Decan(ZFromS(i) + hOld));
+        else if (us.nDecanType == ddChaldea) {
+          k = ((i-1)*3 + j) % 7;
+          k = (0x5143276 >> (6-k)*4) & 15;
+        } else if (FBetween(us.nDecanType, ddEgypt, ddPtolemy)) {
+          if (j < 5) {
+            h = (real)((rgTerm[i*2-2] >> (4-j)*4) & 15);
+            k = (rgTerm[i*2-1] >> (4-j)*4) & 15;
+          }
+        } else if (us.nDecanType == ddNavamsa) {
+          h = 30.0 / 9.0 + rSmall;
+          k = -SFromZ(Navamsa(ZFromS(i) + hOld));
+        } else if (us.nDecanType == dd27) {
+          rDeg = rDegMax / 27.0;
+          h = rDeg - (j > 0 ? 0.0 : rDeg*RFract(ZFromS(i) / rDeg));
+          if (hOld + h > 30.0)
+            h = 30.0 - hOld;
+          k = -100 - ((int)((ZFromS(i) + hOld + 1.0) / rDeg) + 1);
+          DrawColor(gi.kiLite);
+        } else {
+          h = 30.0 / 12.0;
+          k = -(us.nDecanType == dd12 ? j + 1 : Mod12(j + i));
+        }
+        rDeg = ZFromS(i) + hOld + h/2.0;
+#ifdef EXPRESS
+        // Notify AstroExpression a decan symbol is about to be drawn.
+        if (!us.fExpOff && FSzSet(us.szExpDecan)) {
+          ExpSetR(iLetterW, h);
+          ExpSetN(iLetterX, i);
+          ExpSetN(iLetterY, j);
+          ExpSetN(iLetterZ, k);
+          ParseExpression(us.szExpDecan);
+          h = RExpGet(iLetterW);
+          k = NExpGet(iLetterZ);
+          if (h <= 0.0)
+            h = 10.0;
+          else if (hOld + h > 30.0)
+            h = 30.0 - hOld;
+          rDeg = ZFromS(i) + hOld + h/2.0;
+        }
+#endif
         rDeg = PZ(HousePlaceInX(rDeg, 0.0));
         ra = rs1 + (rs2 - rs1) * 0.20;
         nSav = gi.nScale;
         gi.nScale = (gi.nScale + 1) >> 1;
         x = cx+POINT0(unitx, ra, PX(rDeg));
         y = cy+POINT0(unity, ra, PY(rDeg));
-#ifdef EXPRESS
-        // Notify AstroExpression a decan symbol is about to be drawn.
-        if (!us.fExpOff && FSzSet(us.szExpDecan)) {
-          ExpSetN(iLetterX, i);
-          ExpSetN(iLetterY, j);
-          ExpSetN(iLetterZ, k);
-          ParseExpression(us.szExpDecan);
-          k = NExpGet(iLetterZ);
-        }
-#endif
         if (k >= 0 && FItem(k))
           DrawObject(k, x, y);
-        else if (FValidSign(-k))
+        else if (FValidSign(-k)) {
+          DrawColor(kSignB(-k));
           DrawSign(-k, x, y);
+        } else if (k <= -100) {
+          sprintf(sz, "%d", -k-100);
+          DrawSz(sz, x, y + gi.nScaleT, dtScale2);
+        }
         gi.nScale = nSav;
+        if (!fSimpleDecan && hOld > 0.0) {
+          // Draw hatch mark for this section if haven't already done so.
+          rDeg = ZFromS(i) + hOld;
+          rDeg = PZ(HousePlaceInX(rDeg, 0.0));
+          px = PX(rDeg); py = PY(rDeg);
+          DrawColor(gs.fColorSign ? kSignB(i/30 + 1) : gi.kiOn);
+          ra = rs1; rb = rs1 + (rs2 - rs1) * 0.30;
+          DrawLine(cx+POINT1(unitx, ra, px), cy+POINT1(unity, ra, py),
+            cx+POINT2(unitx, rb, px), cy+POINT2(unity, rb, py));
+        }
       }
     }
   }
@@ -662,7 +720,7 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
   // Draw hatches within houses, if -YRd switch set.
 
   k = us.nSignDiv;
-  if (k > 1) {
+  if (k > 0) {
     ra = rh1 + (rh - rh1) * 0.25;
     rb = rh1 - (rh - rh1) * 0.25;
     for (i = 1; i <= cSign; i++)
@@ -712,8 +770,9 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
 void DrawSymbolRing(real *symbol, real *xplanet, real *dir, int cx, int cy,
   real unitx, real unity, real rp, real rl1, real rl2, real rg)
 {
-  int i;
-  real temp;
+  char sz[cchSzDef], rgch[oNorm1], rgf[oPlu-oMar+1][26], chT;
+  int col[oNorm1], i, j, x, y;
+  real symbolM[oNorm1], temp, rx, ry, rT;
 
   for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
     if (gs.fLabel) {
@@ -735,6 +794,59 @@ void DrawSymbolRing(real *symbol, real *xplanet, real *dir, int cx, int cy,
       DrawPoint(cx+POINT1(unitx, rp, PX(xplanet[i])),
         cy+POINT1(unity, rp, PY(xplanet[i])));
   }
+
+  // Wheels within wheels: Display planetary moons in orbit around their
+  // planet glyphs, when the -X8 setting is active.
+
+  if (!gs.fMoonWheel)
+    return;
+  ClearB((pbyte)rgf, sizeof(rgf));
+  for (i = oMoo; i <= moonsHi; i += (i != oMoo ? 1 : (moonsLo - oMoo))) {
+    if (ignore[i])
+      continue;
+    j = ObjOrbit(i);
+    if (ignore[j] || j == us.objCenter)
+      continue;
+    if (!us.fMoonMove) {
+      rx = space[i].x - space[j].x; ry = space[i].y - space[j].y;
+      temp = Mod(planet[j] - RAngleD(rx, ry));
+    } else
+      temp = Mod(planet[j] - planet[i]);
+    rT = (MinDistance(rDegHalf, temp) / rDegQuad - 1.0)*100.0;
+    col[i] = (rT <= -75.0 ? kObjB[oMC] : (rT >= 75.0 ? kObjB[oNad] :
+      (FBetween(temp, rDegQuad - 22.5, rDegQuad + 22.5) ? kObjB[oDes] :
+      (FBetween(temp, 270 - 22.5, 270 + 22.5) ? kObjB[oAsc] : gi.kiGray))));
+    temp += symbol[j];
+    symbolM[i] = temp;
+    // Only the first moon around a planet starting with 'X' gets capitalized.
+    chT = szObjDisp[i][0];
+    if (FBetween(j, oMar, oPlu) && FBetween(chT, 'A', 'Z')) {
+      if (rgf[j - oMar][chT - 'A'])
+        chT += ('a' - 'A');
+      else
+        rgf[j - oMar][chT - 'A'] = fTrue;
+    }
+    rgch[i] = chT;
+  }
+  for (i = oMar; i <= oPlu; i++)
+    if (!ignore[i])
+      FillSymbolRingM(i, symbolM,
+        (6.0 - (real)(gs.nScale / 100)) * (real)gi.nScaleTextT2 / 2.0);
+  for (i = moonsHi; i >= oMoo; i -= (i != moonsLo ? 1 : (moonsLo - oMoo))) {
+    if (ignore[i])
+      continue;
+    j = ObjOrbit(i);
+    if (ignore[j] || j == us.objCenter)
+      continue;
+    temp = symbol[j];
+    x = cx+POINT1(unitx, rg, PX(temp)); y = cy+POINT1(unity, rg, PY(temp));
+    sprintf(sz, "%c", rgch[i]);
+    DrawColor(col[i]);
+    temp = symbolM[i];
+    x += (int)((real)(6*gi.nScale+5*gi.nScaleT)*PX(temp));
+    y += (int)((real)(6*gi.nScale+5*gi.nScaleT)*PY(temp));
+    DrawSz(sz, x, y + gi.nScaleT*2, dtScale2);
+  }
 }
 
 
@@ -750,6 +862,8 @@ void DrawRing(int iRing, int iRingMax,
   int i;
 
   FProcessCommandLine(szWheelX[iRing]);
+  if (gs.fMoonWheel)
+    rl2 -= 0.01;
 
   // Draw the planet glyphs and lines to where the planets actually are.
   for (i = 0; i <= is.nObj; i++)
@@ -1674,6 +1788,13 @@ LAfter:
         if (!FMapCalc(x1, y1, &j, &k, fGlobe, fSky, rT, nScl, &cr, deg))
           DrawPoint(j, k);
       }
+      if (l >= 0 && gs.fLabel) {
+        x1 = Tropical((real)(l*30 + 15));
+        y1 = 0.0;
+        EclToEqu(&x1, &y1);
+        if (!FMapCalc(x1, y1, &j, &k, fGlobe, fSky, rT, nScl, &cr, deg))
+          DrawSign(l+1, j, k);
+      }
     }
   }
 
@@ -1722,8 +1843,13 @@ LAfter:
         x1 = pes2->lon; y1 = pes2->lat;
         x1 = Tropical(x1);
         EclToEqu(&x1, &y1);
-        if (!FMapCalc(x1, y1, &xp2, &yp2, fGlobe, fSky, rT, nScl, &cr, deg))
-          DrawLine(xp, yp, xp2, yp2);
+        if (!FMapCalc(x1, y1, &xp2, &yp2, fGlobe, fSky, rT, nScl, &cr, deg)) {
+          if (gi.nMode != gWorldMap || gs.fMollewide) {
+            if (NAbs(xp2 - xp) < (rx >> 2))
+              DrawLine(xp, yp, xp2, yp2);
+          } else
+            DrawWrap(xp, yp, xp2, yp2, 0, gs.xWin-1);
+        }
       }
     }
   }
@@ -1917,7 +2043,9 @@ void DrawChartX()
   switch (gi.nMode) {
   case gWheel:
   case gHouse:
-    if (us.nRel > rcDual)
+    if (gs.fIndianWheel)
+      XChartIndian();
+    else if (us.nRel > rcDual)
       XChartWheel();
     else if (FBetween(us.nRel, rcHexaWheel, rcTriWheel))
       XChartWheelMulti();
@@ -1926,9 +2054,12 @@ void DrawChartX()
     break;
   case gGrid:
     if (us.nRel > rcDual)
-      XChartGrid();
+      XChartGrid(0, 0);
     else
       XChartGridRelation();
+    break;
+  case gMidpoint:
+    XChartMidpoint();
     break;
   case gHorizon:
     if (us.fPrimeVert)
@@ -2044,7 +2175,9 @@ void DrawChartX()
       us.fAnsiChar = fSav;
     }
     i = dtBottom | dtScale2;
-    if (gi.nMode == gGrid || gi.nMode == gLocal || gi.nMode == gTraTraGra ||
+
+    if (!(gi.fBmp && gi.bmpBack.rgb != NULL) ||
+      gi.nMode == gGrid || gi.nMode == gLocal || gi.nMode == gTraTraGra ||
       gi.nMode == gTraNatGra || fMap || FBetween(gi.nMode, gGlobe, gPolar))
       i |= dtErase;
     DrawSz(sz, gs.xWin/2, gs.yWin - gi.nScaleT - gi.nScaleTextT2, i);

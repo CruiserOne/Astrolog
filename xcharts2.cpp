@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xcharts2.cpp
+** Astrolog (Version 7.50) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -71,7 +71,10 @@ flag FProper(int i)
   flag f;
 
   f = !ignore[i];
-  if (gi.nMode == gOrbit)
+  if (gi.nMode == gWheel || gi.nMode == gHouse)
+    f &= (!gs.fMoonWheel || (!FMoons(i) && i != oMoo) ||
+      ObjOrbit(i) == us.objCenter);
+  else if (gi.nMode == gOrbit)
     f &= FThing(i) && (us.fEphemFiles || !FGeo(i));
   else if (fMap || gi.nMode == gGlobe || gi.nMode == gPolar)
     f &= FThing2(i);
@@ -90,42 +93,109 @@ flag FProper(int i)
 
 void FillSymbolRing(real *symbol, real factor)
 {
-  real orb = DEFORB*256.0/(real)gs.yWin*(real)gi.nScale*factor, k1, k2, temp;
-  int i, j, k = 1, l;
+  real orb = DEFORB*256.0/(real)gs.yWin*(real)gi.nScale*factor, orb1, orb2,
+    ratio, k1, k2, temp;
+  int i, j, j1, j2, l;
+  flag rgf[oPlu+1], fMoved = fTrue;
+
+  // Determine which planets will be drawn with moons orbiting them.
+
+  if (gs.fMoonWheel) {
+    ratio = gs.nScale <= 100 ? 1.2 : (gs.nScale == 200 ? 0.65 :
+      (gs.nScale == 300 ? 0.50 : 0.40));
+    ClearB((pbyte)rgf, sizeof(rgf));
+    for (i = moonsLo; i <= moonsHi; i++) if (!ignore[i]) {
+      j = ObjOrbit(i);
+      if (FBetween(j, oMar, oPlu))
+        rgf[j] = fTrue;
+    }
+    rgf[oEar] = !ignore[oMoo];
+  }
 
   // Keep adjusting as long as can still make changes, or until 'n' rounds are
   // done. (With many objects, there just may not be enough room for all.)
 
-  for (l = 0; k && l < us.nDivision*2; l++) {
-    k = 0;
+  for (l = 0; fMoved && l < us.nDivision*2; l++) {
+    fMoved = fFalse;
     for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
 
       // For each object, determine who is closest on either side.
 
-      k1 = rLarge; k2 = -rLarge;
-      for (j = 0; j <= is.nObj; j++)
-        if (FProper(j) && i != j) {
-          temp = symbol[j]-symbol[i];
-          if (RAbs(temp) > rDegHalf)
-            temp -= rDegMax*RSgn(temp);
-          if (temp < k1 && temp > 0.0)
-            k1 = temp;
-          else if (temp > k2 && temp <= 0.0)
-            k2 = temp;
+      k1 = rLarge; k2 = -rLarge; j1 = j2 = oSun;
+      for (j = 0; j <= is.nObj; j++) if (FProper(j) && i != j) {
+        temp = symbol[j]-symbol[i];
+        if (RAbs(temp) > rDegHalf)
+          temp -= rDegMax*RSgn(temp);
+        if (temp < k1 && temp > 0.0) {
+          k1 = temp; j1 = j;
+        } else if (temp > k2 && temp <= 0.0) {
+          k2 = temp; j2 = j;
         }
+      }
+
+      // Determine the orb to allow on either size of the object. If current
+      // and/or adjacent bodies are orbited by moons, that will widen the orb.
+
+      orb1 = orb2 = orb;
+      if (gs.fMoonWheel) {
+        if (i <= oPlu && rgf[i] && i != us.objCenter)
+          orb1 = orb2 = orb + orb*ratio;
+        if (j1 <= oPlu && rgf[j1] && j1 != us.objCenter)
+          orb1 += orb*ratio;
+        if (j2 <= oPlu && rgf[j2] && j2 != us.objCenter)
+          orb2 += orb*ratio;
+      }
 
       // If an object's too close on one side, then move in other direction.
 
-      if (k2 > -orb && k1 > orb) {
-        k = 1; symbol[i] = Mod(symbol[i]+orb*0.51+k2*0.49);
-      } else if (k1 < orb && k2 < -orb) {
-        k = 1; symbol[i] = Mod(symbol[i]-orb*0.51+k1*0.49);
+      if (k2 > -orb2 && k1 > orb1) {
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]+orb2*0.51+k2*0.49);
+      } else if (k1 < orb1 && k2 < -orb2) {
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]-orb1*0.51+k1*0.49);
 
       // If object bracketed by close objects on both sides, then move it to
       // the midpoint, so it's as far away as possible from either one.
 
+      } else if (k2 > -orb2 && k1 < orb1) {
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]+(k1+k2)*(orb2/(orb2+orb1)));
+      }
+    }
+  }
+}
+
+
+// Like FillSymbolRing() but a simplified version used for distributing
+// planetary moons around a planet, used when the -X8 setting is in effect.
+
+void FillSymbolRingM(int obj, real *symbol, real factor)
+{
+  real orb = DEFORB*factor, k1, k2, temp;
+  int i, j, l;
+  flag fMoved = fTrue;
+
+  for (l = 0; fMoved && l < us.nDivision*2; l++) {
+    fMoved = fFalse;
+    for (i = moonsLo; i <= moonsHi; i++) {
+      if (ignore[i] || ObjOrbit(i) != obj)
+        continue;
+      k1 = rLarge; k2 = -rLarge;
+      for (j = moonsLo; j <= moonsHi; j++) {
+        if (ignore[j] || i == j || ObjOrbit(j) != obj)
+          continue;
+        temp = symbol[j]-symbol[i];
+        if (RAbs(temp) > rDegHalf)
+          temp -= rDegMax*RSgn(temp);
+        if (temp < k1 && temp > 0.0)
+          k1 = temp;
+        else if (temp > k2 && temp <= 0.0)
+          k2 = temp;
+      }
+      if (k2 > -orb && k1 > orb) {
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]+orb*0.51+k2*0.49);
+      } else if (k1 < orb && k2 < -orb) {
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]-orb*0.51+k1*0.49);
       } else if (k2 > -orb && k1 < orb) {
-        k = 1; symbol[i] = Mod(symbol[i]+(k1+k2)*0.5);
+        fMoved = fTrue; symbol[i] = Mod(symbol[i]+(k1+k2)*0.5);
       }
     }
   }
@@ -143,7 +213,8 @@ void FillSymbolRing(real *symbol, real factor)
 void FillSymbolLine(real *symbol)
 {
   real orb = DEFORB*1.35*(real)gi.nScale, max = rDegMax, k1, k2, temp;
-  int i, j, k = 1, l, tot = is.nObj*2+1;
+  int i, j, l, tot = is.nObj*2+1;
+  flag fMoved = fTrue;
 
   if (gi.nMode != gEphemeris)
     max *= (real)gi.nScale;
@@ -152,8 +223,8 @@ void FillSymbolLine(real *symbol)
 
   // Keep adjusting as long as can still make changes.
 
-  for (l = 0; k && l < us.nDivision*2; l++) {
-    k = 0;
+  for (l = 0; fMoved && l < us.nDivision*2; l++) {
+    fMoved = fFalse;
     for (i = 0; i <= tot; i++)
       if (FProper(i >> 1) && symbol[i] >= 0.0) {
 
@@ -173,11 +244,11 @@ void FillSymbolLine(real *symbol)
         // If an object's too close on one side, then move in other direction.
 
         if (k2 > -orb && k1 > orb) {
-          k = 1; symbol[i] = symbol[i]+orb*0.51+k2*0.49;
+          fMoved = fTrue; symbol[i] = symbol[i]+orb*0.51+k2*0.49;
         } else if (k1 < orb && k2 < -orb) {
-          k = 1; symbol[i] = symbol[i]-orb*0.51+k1*0.49;
+          fMoved = fTrue; symbol[i] = symbol[i]-orb*0.51+k1*0.49;
         } else if (k2 > -orb && k1 < orb) {
-          k = 1; symbol[i] = symbol[i]+(k1+k2)*0.5;
+          fMoved = fTrue; symbol[i] = symbol[i]+(k1+k2)*0.5;
         }
       }
   }
@@ -190,7 +261,7 @@ void FillSymbolLine(real *symbol)
 
 real PlaceInX(real deg)
 {
-  if (us.fVedic)
+  if (us.fIndian)
     deg = -chouse[1]*(gi.nMode != gWheel)*2.0-deg-60.0;
   return Mod(rDegHalf-deg+gi.rAsc);
 }
@@ -283,7 +354,7 @@ void XChartWheelRelation()
   unitx = (real)cx; unity = (real)cy;
   gi.rAsc = gs.objLeft ? cp1.obj[NAbs(gs.objLeft)-1] +
     rDegQuad*(gs.objLeft < 0) : cp1.cusp[1];
-  if (us.fVedic)
+  if (us.fIndian)
     gi.rAsc = gs.objLeft ? (gs.objLeft < 0 ? 120.0 : -60.0)-gi.rAsc : 0.0;
 
   // Fill out arrays with the degree of each object, cusp, and sign glyph.
@@ -369,7 +440,7 @@ void XChartWheelMulti()
   unitx = (real)cx; unity = (real)cy;
   gi.rAsc = gs.objLeft ? cp1.obj[NAbs(gs.objLeft)-1] +
     rDegQuad*(gs.objLeft < 0) : cp1.cusp[1];
-  if (us.fVedic)
+  if (us.fIndian)
     gi.rAsc = gs.objLeft ? (gs.objLeft < 0 ? 120.0 : -60.0)-gi.rAsc : 0.0;
   fHexa = (us.nRel == rcHexaWheel);
   fQuin = fHexa || (us.nRel == rcQuinWheel);
@@ -608,7 +679,7 @@ void XChartGridRelation()
               l = (int)((y == 0 ? cp2.obj[i] : cp1.obj[j])-ZFromS(k));
               c = kSignB(k);
               if (nScale > 3 && is.fSeconds)
-                sprintf(szT, "%c%02d", chDeg2,
+                sprintf(szT, "%c%02d", chDegL,
                   (int)((y == 0 ? cp2.obj[i] : cp1.obj[j])*60.0)%60);
               sprintf(sz, "%.3s %02d%s", szSignName[k], l, szT);
 
@@ -628,7 +699,7 @@ void XChartGridRelation()
               if (grid->n[i][j]) {
                 sprintf(sz, "%c%d%c%02d'%s",
                   rgchAppSep[us.nAppSep*2 + (grid->v[i][j] >= 0)],
-                  k/60, chDeg2, k%60, szT);
+                  k/60, chDegL, k%60, szT);
                 if (nScale == 3)
                   sz[7] = chNull;
               } else
@@ -636,7 +707,7 @@ void XChartGridRelation()
 
             // For midpoint cells, print degree and minute.
             } else
-              sprintf(sz, "%2d%c%02d'%s", k/60, chDeg2, k%60, szT);
+              sprintf(sz, "%2d%c%02d'%s", k/60, chDegL, k%60, szT);
           }
           DrawColor(c);
           DrawSz(sz, x*unit+unit/2, (y+1)*unit-3*gi.nScaleT, dtBottom);
@@ -1498,9 +1569,9 @@ flag XChartRising()
             DrawColor(ki[n]);
             DrawPoint(x1+1 + xp, y1+1 + yp + i);
 #endif
-          } else if (gs.ft == ftBmp)
+          } else if (gs.ft == ftBmp) {
             SetXY(x1+1 + xp, y1+1 + yp + i, !gi.fBmp ? ki[n] : n);
-          else {
+          } else {
             DrawColor(ki[n]);
             DrawPoint(x1+1 + xp, y1+1 + yp + i);
           }

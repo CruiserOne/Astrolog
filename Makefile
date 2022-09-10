@@ -1,4 +1,4 @@
-# Astrolog (Version 7.40) File: Makefile (Unix version)
+# Astrolog (Version 7.50) File: Makefile (Unix version)
 #
 # IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 # not enumerated elsewhere in this program are Copyright (C) 1991-2022 by
@@ -17,7 +17,7 @@
 # library, and if applicable, the main X library.
 #
 NAME = astrolog
-OBJ = astrolog.o atlas.o calc.o charts0.o charts1.o charts2.o charts3.o\
+OBJS = astrolog.o atlas.o calc.o charts0.o charts1.o charts2.o charts3.o\
  data.o express.o general.o intrpret.o io.o matrix.o placalc.o placalc2.o\
  xdata.o xgeneral.o xdevice.o xcharts0.o xcharts1.o xcharts2.o xscreen.o\
  swecl.o swedate.o swehouse.o swejpl.o swemmoon.o swemplan.o sweph.o\
@@ -25,10 +25,13 @@ OBJ = astrolog.o atlas.o calc.o charts0.o charts1.o charts2.o charts3.o\
 
 # If you don't have X windows, delete the "-lX11" part from the line below:
 # If not compiling with GNUC, delete the "-ldl" part from the line below:
-LIBS = -lm -lX11 -ldl
+LIBS = -lm -lX11 -ldl -s
 CPPFLAGS = -O -Wno-write-strings -Wno-narrowing -Wno-comment
+RM = rm -f
 
-astrolog:: $(OBJ)
-	cc -o $(NAME) $(OBJ) $(LIBS)
-	strip $(NAME)
+$(NAME): $(OBJS)
+	cc -o $(NAME) $(OBJS) $(LIBS)
+
+clean:
+	$(RM) $(OBJS) $(NAME)
 #

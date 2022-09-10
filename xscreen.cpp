@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xscreen.cpp
+** Astrolog (Version 7.50) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -193,6 +193,9 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
   case WM_SIZE:
     wi.xClient = gs.xWin = LOWORD(lParam);
     wi.yClient = gs.yWin = HIWORD(lParam);
+    if (!wi.fNotManual) {
+      gi.xWinResize = gs.xWin; gi.yWinResize = gs.yWin;
+    }
     wi.fDoResize = fTrue;
     break;
 
@@ -210,8 +213,8 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
       // Dragging with right mouse down rotates and tilts globes.
       if ((wParam & MK_RBUTTON) != 0 && us.fGraphics && (fMap ||
-        gi.nMode == gLocal || gi.nMode == gSphere || gi.nMode == gGlobe ||
-        gi.nMode == gPolar || gi.nMode == gTelescope)) {
+        gi.nMode == gMidpoint || gi.nMode == gLocal || gi.nMode == gSphere ||
+        gi.nMode == gGlobe || gi.nMode == gPolar || gi.nMode == gTelescope)) {
         gs.rRot += (real)(x-WLo(wi.lParamRC)) * rDegHalf / (real)gs.xWin *
           (gi.nMode == gLocal || gi.nMode == gTelescope ? -gi.zViewRatio :
           1.0);
@@ -226,8 +229,11 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
           gs.rTilt = rDegQuad;
         while (gs.rTilt < -rDegQuad)
           gs.rTilt = -rDegQuad;
-        if (gi.nMode == gLocal || gi.nMode == gTelescope)
+        if (gi.nMode == gMidpoint || gi.nMode == gTelescope) {
+          if (gi.nMode == gMidpoint && gs.objTrack >= 0)
+            gs.rRot = planet[gs.objTrack];
           gs.objTrack = -1;
+        }
         wi.lParamRC = lParam;
         wi.fDoRedraw = fTrue;
         break;
@@ -580,8 +586,10 @@ void ResizeWindowToChart()
     OffsetRect(&rcNew, -rcNew.left, 0);
   if (rcNew.top < 0)
     OffsetRect(&rcNew, 0, -rcNew.top);
+  wi.fNotManual = fTrue;
   MoveWindow(wi.hwnd, rcNew.left, rcNew.top,
     rcNew.right - rcNew.left, rcNew.bottom - rcNew.top, fTrue);
+  wi.fNotManual = fFalse;
 }
 #endif
 
@@ -604,8 +612,8 @@ void InteractX()
   PAINTSTRUCT ps;
   MSG msg;
 #endif
-  int fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse, fBreak = fFalse,
-    fPause = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
+  int fAutosize = fFalse, fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse,
+    fBreak = fFalse, fPause = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
     buttonx = -1, buttony = -1, dir = 1, length, key, i;
   KI coldrw = gi.kiLite;
 
@@ -691,6 +699,11 @@ void InteractX()
 
     // Physically resize window if we've changed the size parameters.
 
+    if (fAutosize) {
+      fAutosize = fFalse;
+      gs.xWin = gi.xWinResize; gs.yWin = gi.yWinResize;
+      fResize = fTrue;
+    }
     if (fResize) {
       fResize = fFalse;
 #ifdef X11
@@ -788,8 +801,8 @@ void InteractX()
 
       // Check for a manual resize of window by user.
       case ConfigureNotify:
-        gs.xWin = xevent.xconfigure.width;
-        gs.yWin = xevent.xconfigure.height;
+        gi.xWinResize = gs.xWin = xevent.xconfigure.width;
+        gi.yWinResize = gs.yWin = xevent.xconfigure.height;
         XFreePixmap(gi.disp, gi.pmap);
         gi.pmap = XCreatePixmap(gi.disp, gi.wind, gs.xWin, gs.yWin, gi.depth);
         fRedraw = fTrue;
@@ -880,12 +893,12 @@ void InteractX()
               fRedraw = fTrue;
             }
             break;
-          case 'B':
 #ifdef X11
+          case 'B':
             XSetWindowBackgroundPixmap(gi.disp, gi.root, gi.pmap);
             XClearWindow(gi.disp, gi.root);
-#endif
             break;
+#endif
           case 't':
             inv(gs.fText);
             fRedraw = fTrue;
@@ -931,6 +944,8 @@ void InteractX()
                 gs.rTilt-(real)NAbs(dir) : -rDegQuad;
               fRedraw = fTrue;
             }
+            if (gi.nMode == gTelescope)
+              gs.objTrack = -1;
             break;
           case ']':
             if (gs.rTilt < rDegQuad) {
@@ -938,14 +953,26 @@ void InteractX()
                 gs.rTilt+(real)NAbs(dir) : rDegQuad;
               fRedraw = fTrue;
             }
+            if (gi.nMode == gTelescope)
+              gs.objTrack = -1;
             break;
           case '{':
+            if (gi.nMode == gMidpoint || gi.nMode == gTelescope) {
+              if (gi.nMode == gMidpoint && gs.objTrack >= 0)
+                gs.rRot = planet[gs.objTrack];
+              gs.objTrack = -1;
+            }
             gs.rRot += (real)NAbs(dir);
             if (gs.rRot >= rDegMax)
               gs.rRot -= rDegMax;
             fRedraw = fTrue;
             break;
           case '}':
+            if (gi.nMode == gMidpoint || gi.nMode == gTelescope) {
+              if (gi.nMode == gMidpoint && gs.objTrack >= 0)
+                gs.rRot = planet[gs.objTrack];
+              gs.objTrack = -1;
+            }
             gs.rRot -= (real)NAbs(dir);
             if (gs.rRot < 0.0)
               gs.rRot += rDegMax;
@@ -1030,7 +1057,7 @@ void InteractX()
             fCast = fTrue;
             break;
           case 'z':
-            inv(us.fVedic);
+            inv(us.fIndian);
             fRedraw = fTrue;
             break;
           case '+':
@@ -1050,9 +1077,9 @@ void InteractX()
             break;
 #ifdef TIME
           case 'n':
-            FInputData(szNowCore);
+            Animate(10, 0);
             ciMain = ciCore;
-            fCast = fTrue;
+            fRedraw = fTrue;
             break;
 #endif
           case 'N':                        // The continuous update animation.
@@ -1071,22 +1098,22 @@ void InteractX()
           case '(': gs.nAnim = -9; break;
 
           // Should we go switch to a new chart type?
-          case 'V': gi.nMode = gWheel;      fRedraw = fTrue; break;
-          case 'A': gi.nMode = gGrid;       fRedraw = fTrue; break;
-          case 'Z': gi.nMode = gHorizon;    fRedraw = fTrue; break;
-          case 'S': gi.nMode = gOrbit;      fRedraw = fTrue; break;
-          case 'H': gi.nMode = gSector;     fRedraw = fTrue; break;
-          case 'K': gi.nMode = gCalendar;   fRedraw = fTrue; break;
-          case 'J': gi.nMode = gDisposit;   fRedraw = fTrue; break;
-          case 'L': gi.nMode = gAstroGraph; fRedraw = fTrue; break;
-          case 'E': gi.nMode = gEphemeris;  fRedraw = fTrue; break;
-          case 'I': gi.nMode = gRising;     fRedraw = fTrue; break;
-          case 'M': gi.nMode = gMoons;      fRedraw = fTrue; break;
-          case 'X': gi.nMode = gSphere;     fRedraw = fTrue; break;
-          case 'W': gi.nMode = gWorldMap;   fRedraw = fTrue; break;
-          case 'G': gi.nMode = gGlobe;      fRedraw = fTrue; break;
-          case 'P': gi.nMode = gPolar;      fRedraw = fTrue; break;
-          case 'T': gi.nMode = gTelescope;  fRedraw = fTrue; break;
+          case 'V': gi.nMode = gWheel;      fAutosize = fTrue; break;
+          case 'A': gi.nMode = gGrid;       fRedraw   = fTrue; break;
+          case 'Z': gi.nMode = gHorizon;    fAutosize = fTrue; break;
+          case 'S': gi.nMode = gOrbit;      fAutosize = fTrue; break;
+          case 'H': gi.nMode = gSector;     fAutosize = fTrue; break;
+          case 'K': gi.nMode = gCalendar;   fAutosize = fTrue; break;
+          case 'J': gi.nMode = gDisposit;   fAutosize = fTrue; break;
+          case 'L': gi.nMode = gAstroGraph; fRedraw   = fTrue; break;
+          case 'E': gi.nMode = gEphemeris;  fAutosize = fTrue; break;
+          case 'I': gi.nMode = gRising;     fAutosize = fTrue; break;
+          case 'M': gi.nMode = gMoons;      fAutosize = fTrue; break;
+          case 'X': gi.nMode = gSphere;     fAutosize = fTrue; break;
+          case 'W': gi.nMode = gWorldMap;   fRedraw   = fTrue; break;
+          case 'G': gi.nMode = gGlobe;      fAutosize = fTrue; break;
+          case 'P': gi.nMode = gPolar;      fAutosize = fTrue; break;
+          case 'T': gi.nMode = gTelescope;  fAutosize = fTrue; break;
 #ifdef BIORHYTHM
           case 'Y':                 // Should we switch to biorhythm chart?
             us.nRel = rcBiorhythm;
@@ -1094,10 +1121,14 @@ void InteractX()
             fCast = fTrue;
             break;
 #endif
+          case '=':
+            inv(gs.fIndianWheel);
+            fRedraw = fTrue;
+            break;
 #ifdef CONSTEL
           case 'F':
-            if (gi.nMode != gSphere &&
-              gi.nMode != gGlobe && gi.nMode != gPolar)
+            if (gi.nMode != gHorizon && gi.nMode != gSphere && gi.nMode !=
+              gGlobe && gi.nMode != gPolar && gi.nMode != gTelescope)
               gi.nMode = gWorldMap;
             inv(gs.fConstel);
             fRedraw = fTrue;
@@ -1166,7 +1197,7 @@ void InteractX()
             fBreak = fTrue;
             break;
           default:
-            if (key > '0' && key <= '9') {
+            if (FBetween(key, '1', '9')) {
               // Process numbers 1-9 signifying animation rate.
               dir = (dir > 0 ? 1 : -1)*(key-'0');
               break;
@@ -1508,9 +1539,16 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
   case 'v':
     if (FErrorArgc("Xv", argc, 1))
       return tcError;
-    i = NFromSz(argv[1]);
-    gs.nDecaFill = i;
+    gs.nDecaFill = NFromSz(argv[1]);
     darg++;
+    break;
+
+  case 'J':
+    SwitchF(gs.fIndianWheel);
+    break;
+
+  case '8':
+    SwitchF(gs.fMoonWheel);
     break;
 
   case 'X':
@@ -1593,9 +1631,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 
 #ifdef CONSTEL
   case 'F':
-    if (!fMap && gi.nMode != gGlobe && gi.nMode != gPolar)
-      gi.nMode = gWorldMap;
-    inv(gs.fConstel);
+    if (gi.nMode != gHorizon && gi.nMode != gSphere && gi.nMode != gGlobe &&
+      gi.nMode != gPolar && gi.nMode != gTelescope)
+      gi.nMode = FSwitchF2(gi.nMode == gWorldMap) * gWorldMap;
+    SwitchF(gs.fConstel);
     is.fHaveInfo |= gs.fAlt;
     break;
 #endif
@@ -1632,7 +1671,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 int NProcessSwitchesRareX(int argc, char **argv, int pos,
   flag fOr, flag fAnd, flag fNot)
 {
-  int darg = 0, i;
+  int darg = 0, i, j;
   real rT;
   char ch1, *pch = NULL;
 #ifdef SWISS
@@ -1665,15 +1704,23 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     break;
 
   case 'D':
-    if (FErrorArgc("YXD", argc, 3 - (ch1 == '1')))
+    if (FErrorArgc("YXD", argc, 3 - (ch1 == '1' || ch1 == 'D')))
       return tcError;
     i = NParseSz(argv[1], pmObject);
-    if (FErrorValN("YXD", !FItem(i), i, 0))
+    if (FErrorValN("YXD", !FItem(i), i, 1))
       return tcError;
-    szDrawObject[i] = argv[2][0] ? SzPersist(argv[2]) : szDrawObjectDef[i];
-    szDrawObject2[i] = (ch1 == '1' ? "" : (argv[3][0] ? SzPersist(argv[3]) :
-      szDrawObjectDef2[i]));
-    darg += 3 - (ch1 == '1');
+    if (ch1 == 'D') {
+      j = NParseSz(argv[2], pmObject);
+      if (FErrorValN("YXDD", !FItem(j), j, 2))
+        return tcError;
+      szDrawObject[i]  = szDrawObject[j];
+      szDrawObject2[i] = szDrawObject2[j];
+    } else {
+      szDrawObject[i] = argv[2][0] ? SzPersist(argv[2]) : szDrawObjectDef[i];
+      szDrawObject2[i] = (ch1 == '1' ? "" : (argv[3][0] ? SzPersist(argv[3]) :
+        szDrawObjectDef2[i]));
+    }
+    darg += 3 - (ch1 == '1' || ch1 == 'D');
     break;
 
   case 'A':
@@ -1807,6 +1854,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (FErrorArgc("YXU", argc, 2))
       return tcError;
     fAdd = (ch1 == '0' && FSzSet(gs.szStarsLin) && FSzSet(gs.szStarsLnk));
+    // Allocate or extend allocation of star name list.
     pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLin) + 1 : 0) +
       CchSz(argv[1]) + 1, "star name list");
     if (pch == NULL)
@@ -1818,6 +1866,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (gs.szStarsLin)
       DeallocateP(gs.szStarsLin);
     gs.szStarsLin = pch;
+    // Allocate or extend allocation of star link list.
     pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLnk) + 1 : 0) +
       CchSz(argv[2]) + 2, "star link list");
     if (pch == NULL)
@@ -1829,6 +1878,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (gs.szStarsLnk)
       DeallocateP(gs.szStarsLnk);
     gs.szStarsLnk = pch;
+    // Count total number of star names present, and reserve that many slots.
     gi.cStarsLin = *gs.szStarsLin != chNull;
     for (pch = gs.szStarsLin; *pch; pch++)
       if (*pch == chSep || *pch == chSep2)
@@ -1895,23 +1945,24 @@ int DetectGraphicsChartMode()
 {
   int nMode;
 
-  if (us.fWheel)                     nMode = gHouse;
-  else if (us.fGrid || us.fMidpoint) nMode = gGrid;
-  else if (us.fHorizon)              nMode = gHorizon;
-  else if (us.fOrbit)                nMode = gOrbit;
-  else if (us.fSector)               nMode = gSector;
-  else if (us.fInfluence)            nMode = gDisposit;
-  else if (us.fEsoteric)             nMode = gEsoteric;
-  else if (us.fAstroGraph)           nMode = gAstroGraph;
-  else if (us.fCalendar)             nMode = gCalendar;
-  else if (us.fEphemeris)            nMode = gEphemeris;
-  else if (us.fHorizonSearch)        nMode = gRising;
-  else if (us.fAtlasNear)            nMode = gLocal;
-  else if (us.fMoonChart)            nMode = gMoons;
-  else if (us.fInDayGra)             nMode = gTraTraGra;
-  else if (us.fTransitGra)           nMode = gTraNatGra;
-  else if (us.nRel == rcBiorhythm)   nMode = gBiorhythm;
-  else                               nMode = gWheel;
+  if (us.fWheel)                   nMode = gHouse;
+  else if (us.fGrid || us.fAspect) nMode = gGrid;
+  else if (us.fMidpoint)           nMode = gMidpoint;
+  else if (us.fHorizon)            nMode = gHorizon;
+  else if (us.fOrbit)              nMode = gOrbit;
+  else if (us.fSector)             nMode = gSector;
+  else if (us.fInfluence)          nMode = gDisposit;
+  else if (us.fEsoteric)           nMode = gEsoteric;
+  else if (us.fAstroGraph)         nMode = gAstroGraph;
+  else if (us.fCalendar)           nMode = gCalendar;
+  else if (us.fEphemeris)          nMode = gEphemeris;
+  else if (us.fHorizonSearch)      nMode = gRising;
+  else if (us.fAtlasNear)          nMode = gLocal;
+  else if (us.fMoonChart)          nMode = gMoons;
+  else if (us.fInDayGra)           nMode = gTraTraGra;
+  else if (us.fTransitGra)         nMode = gTraNatGra;
+  else if (us.nRel == rcBiorhythm) nMode = gBiorhythm;
+  else                             nMode = gWheel;
 
   return nMode;
 }

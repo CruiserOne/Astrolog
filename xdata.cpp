@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xdata.cpp
+** Astrolog (Version 7.50) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -69,7 +69,7 @@ GS gs = {
 #endif
   fTrue, fTrue, fFalse, fFalse, fTrue, fTrue, fFalse, fTrue, fTrue, fFalse,
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, fTrue, fFalse, fFalse, DEFAULTX, DEFAULTY,
+  fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, DEFAULTX, DEFAULTY,
 #ifdef WIN
   -10,
 #else
@@ -88,6 +88,9 @@ GI gi = {
   {0, 0, 0, NULL},
 #ifdef SWISS
   NULL, 0,
+#endif
+#ifdef ISG
+  DEFAULTX, DEFAULTY,
 #endif
 #ifdef X11
   NULL, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -109,7 +112,7 @@ WI wi = {
   hdcNil, hdcNil, (HWND)NULL, (HPEN)NULL, (HBRUSH)NULL, (HFONT)NULL,
   (HBITMAP)NULL, (HBITMAP)NULL, (HANDLE)NULL,
   0, 0, 0, 0, 0, 0, 0, -1, -1,
-  0, 0, 0, -1, fFalse, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse,
+  0, 0, 0, -1, fFalse, fTrue, fFalse, fFalse, fTrue, fFalse, fFalse, fFalse,
   1, fFalse, {0, 0, 0, 0}, fFalse, fFalse, {0, 0, 0, NULL},
 
   // Window user settings.
@@ -137,7 +140,8 @@ char *szFileTemp = szFileTempCore;
 WI wi = {
   (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, hdcNil, hdcNil, (HPEN)NULL,
   (HBRUSH)NULL, (HBITMAP)NULL, (HBITMAP)NULL,
-  0, 0, fFalse, fFalse, fFalse, fFalse, 0, 0, 0, {0, 0, 0, NULL}, kLtGray};
+  0, 0, fFalse, fFalse, fFalse, fFalse, fFalse, 0, 0, 0,
+  {0, 0, 0, NULL}, kLtGray};
 #endif
 
 // Color tables for Astrolog's graphics palette.
@@ -159,13 +163,14 @@ KV rgbind[cColor], fg, bg;
 #ifdef WIN
 CONST int ikPalette[cColor] =
   {-0, -1, 1, 4, 6, 3, -8, 5, -3, -2, -4, -5, -7, 2, 7, -6};
+// Map _graphicschart enum to Windows commands
 CONST int rgcmdMode[gMax] = {0,
-  cmdChartList, cmdChartWheel, cmdChartGrid, cmdChartHorizon, cmdChartOrbit,
-  cmdChartSector, cmdChartCalendar, cmdChartInfluence, cmdChartEsoteric,
-  cmdChartAstroGraph, cmdChartEphemeris, cmdChartRising, cmdChartLocal,
-  cmdTransit, cmdTransit, cmdChartSphere, cmdChartMap, cmdChartGlobe,
-  cmdChartPolar, cmdChartTelescope, 0/*cmdRelBiorhythm*/, cmdChartAspect,
-  cmdChartMidpoint, cmdChartArabic, cmdChartMoons, cmdTransit, cmdTransit,
+  cmdChartList, cmdChartWheel, cmdChartGrid, cmdChartMidpoint, cmdChartHorizon,
+  cmdChartOrbit, cmdChartSector, cmdChartCalendar, cmdChartInfluence,
+  cmdChartEsoteric, cmdChartAstroGraph, cmdChartEphemeris, cmdChartRising,
+  cmdChartLocal, cmdTransit, cmdTransit, cmdChartMoons, cmdChartSphere,
+  cmdChartMap, cmdChartGlobe, cmdChartPolar, cmdChartTelescope,
+  0/*cmdRelBiorhythm*/, cmdChartAspect, cmdChartArabic, cmdTransit, cmdTransit,
   cmdTransit, cmdTransit, cmdHelpSign, cmdHelpObject, cmdHelpAspect,
   cmdHelpConstellation, cmdHelpPlanetInfo, cmdHelpRay, cmdHelpMeaning,
   cmdHelpSwitch, cmdHelpObscure, cmdHelpKeystroke, cmdHelpCredit};

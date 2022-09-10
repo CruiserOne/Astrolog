@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xgeneral.cpp
+** Astrolog (Version 7.50) File: xgeneral.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -109,6 +109,28 @@ void DrawColor(KI col)
   }
 #endif
   gi.kiCur = col;
+}
+
+
+// Set the current line thickness to use when drawing graphics charts.
+
+void DrawThick(flag fThick)
+{
+#ifdef WIN
+  int kiCur;
+#endif
+
+  if (fThick == gs.fThick)
+    return;
+  gs.fThick = fThick;
+#ifdef WIN
+  if (!gi.fFile && wi.hdcPrint != NULL) {
+    // For Windows, reset pen width to reflect new thickness.
+    kiCur = gi.kiCur;
+    gi.kiCur = -1;
+    DrawColor(kiCur);
+  }
+#endif
 }
 
 
@@ -1087,7 +1109,7 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
   gi.nScale = nScale2 >> 1;
   fThin = gs.fThick && nFont == 0 && nScale2 / gi.nScaleT <= 2;
   if (fThin)
-    gs.fThick = fFalse;
+    DrawThick(fFalse);
   x += gi.nScale;
   if (!(dt & dtLeft))
     x -= cch*xFont*nScale2/4;
@@ -1171,7 +1193,7 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
 #endif
   gi.nScale = nScaleSav;
   if (fThin)
-    gs.fThick = fTrue;
+    DrawThick(fTrue);
 }
 
 
@@ -1211,7 +1233,7 @@ void DrawSign(int i, int x, int y)
 #endif
   fDoThin = gs.fThick && nFont == 0 && ch <= 0 && gi.nScale <= gi.nScaleT;
   if (fDoThin)
-    gs.fThick = fFalse;
+    DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
     if (WinDrawGlyph(ch, x, y, nFont, nScale))
@@ -1249,7 +1271,7 @@ void DrawSign(int i, int x, int y)
   } else
     DrawTurtle(szDrawSign[i], x, y);
   if (fDoThin)
-    gs.fThick = fTrue;
+    DrawThick(fTrue);
 }
 
 
@@ -1272,7 +1294,7 @@ void DrawHouse(int i, int x, int y)
 #endif
   fDoThin = gs.fThick && nFont == 0 && ch <= 0 && gi.nScale <= gi.nScaleT;
   if (fDoThin)
-    gs.fThick = fFalse;
+    DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
     if (nFont == fiArial)
@@ -1316,7 +1338,7 @@ void DrawHouse(int i, int x, int y)
   } else
     DrawTurtle(szDrawHouse[i], x, y);
   if (fDoThin)
-    gs.fThick = fTrue;
+    DrawThick(fTrue);
 }
 
 
@@ -1412,7 +1434,7 @@ void DrawObject(int obj, int x, int y)
 #endif
   fDoThin = gs.fThick && nFont == 0 && ch <= 0 && gi.nScale <= gi.nScaleT;
   if (fDoThin)
-    gs.fThick = fFalse;
+    DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
     if (WinDrawGlyph(ch, x, y, nFont, nScale))
@@ -1491,7 +1513,7 @@ void DrawObject(int obj, int x, int y)
   DrawSz(szGlyph, x, y, dtCent | dtScale2);
 LDone:
   if (fDoThin)
-    gs.fThick = fTrue;
+    DrawThick(fTrue);
 }
 
 
@@ -1500,7 +1522,7 @@ LDone:
 // passed in star magnitude. This is one of the few areas in the program that
 // works with more than a 16 color palette.
 
-void DrawStar(int x, int y, ES *pes)
+void DrawStar(int x, int y, CONST ES *pes)
 {
   KV kv;
   int n;
@@ -1588,7 +1610,7 @@ CONST wchar wzAspectFontUnicode[cAspect2] = {
 void DrawAspect(int asp, int x, int y)
 {
   int nFont = gs.nFont%10, ch = -1, nScale = 100;
-  flag fEclipse = fFalse;
+  flag fEclipse = fFalse, fDoThin;
 
   if (us.fParallel && asp <= aOpp)
     asp += cAspect;
@@ -1619,6 +1641,9 @@ void DrawAspect(int asp, int x, int y)
   if (!FBetween(nFont, 0, cFont-1))
     ch = -1;
 #endif
+  fDoThin = gs.fThick && nFont == 0 && ch <= 0 && gi.nScale <= gi.nScaleT;
+  if (fDoThin)
+    DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
     if (WinDrawGlyph(ch, x, y, nFont, nScale))
@@ -1652,6 +1677,8 @@ void DrawAspect(int asp, int x, int y)
     DrawTurtle(szDrawAspect2[asp], x, y);  // Special hi-res aspect glyphs.
     gi.nScale <<= 1;
   }
+  if (fDoThin)
+    DrawThick(fTrue);
 }
 
 

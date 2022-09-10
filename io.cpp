@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: io.cpp
+** Astrolog (Version 7.50) File: io.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -240,9 +240,12 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
       ;
     if (feof(file))
       break;
-    for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file) &&
-      (uchar)(ch = getbyte()) >= ' '; i++)
+    for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file); i++) {
+      ch = getbyte();
+      if (!((uchar)ch >= ' ' || ch == chTab))
+        break;
       szLine[i] = ch;
+    }
     if (ch != '\n')
       ch = getbyte();
     szLine[i] = chNull;
@@ -274,7 +277,7 @@ flag FOutputData(void)
   if (us.fNoWrite)
     return fFalse;
 
-  // Write other file formats if -od, -ol, -oa, or -oq is in effect.
+  // Write other file formats if -od, -ol, -oa, -oq, or -ox is in effect.
   if (us.nWriteFormat == 'd')
     return FOutputSettings();
   else if (us.nWriteFormat == 'l')
@@ -283,6 +286,10 @@ flag FOutputData(void)
     return FOutputAAFFile();
   else if (us.nWriteFormat == 'q')
     return FOutputQuickFile();
+#ifdef SWISSGRAPH
+  else if (us.nWriteFormat == 'x')
+    return FOutputDaedalusStar();
+#endif
 
   file = fopen(is.szFileOut, "w");  // Create and open the file for output.
   if (file == NULL) {
@@ -444,7 +451,7 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
         sprintf(sz, "%s %s", sz2, sz1);
       else
         sprintf(sz, "%s", sz2);
-      ciCore.nam = SzPersist(sz);
+      ciCore.nam = SzCopy(sz);
       AdvancePast(',');
       DD = NFromSz(pch);
       AdvancePast('.');
@@ -470,7 +477,7 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
         sprintf(sz, "%s, %s", sz1, sz2);
       else
         sprintf(sz, "%s", sz2);
-      ciCore.loc = SzPersist(sz);
+      ciCore.loc = SzCopy(sz);
       grf |= 1;
 
     // Input row #2.
@@ -608,7 +615,7 @@ flag FProcessQuickFile(CONST char *szFile, FILE *file)
     for (i = 23-1; i >= 0 && sz[i] <= ' '; i--)
       ;
     sz[i+1] = chNull;
-    ciCore.nam = SzPersist(sz);
+    ciCore.nam = SzCopy(sz);
     CopyRgchToSz(szLine+23, 3, sz, cchSzDef);
     MM = NParseSz(sz, pmMon);
     DD = NParseSz(szLine+23+3, pmDay);
@@ -630,7 +637,7 @@ flag FProcessQuickFile(CONST char *szFile, FILE *file)
     for (i = 25-1; i >= 0 && sz[i] <= ' '; i--)
       ;
     sz[i+1] = chNull;
-    ciCore.loc = SzPersist(sz);
+    ciCore.loc = SzCopy(sz);
     SS = 0.0;
     if (FZonDst(&szLine[23+24])) {
       ZZ += 1.0; SS += 1.0;
@@ -714,6 +721,7 @@ flag FOutputQuickFile(void)
     fprintf(file, " %-25.25s \n", pci->loc);
   }
 
+  fRet = fTrue;
 LDone:
   if (file != NULL)
     fclose(file);
@@ -815,7 +823,7 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
           ;
         CopyRgchToSz(pch, pch2 - pch, sz, cchSzDef);
         ConvertSzFromUTF8(sz);
-        ciCore.nam = SzPersist(sz);
+        ciCore.nam = SzCopy(sz);
         grf |= 256;
       }
       if ((grf & 512) == 0 && fDidLon && FEqRgch(pch, "\">", 2, fFalse)) {
@@ -834,7 +842,7 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
         CopyRgchToSz(pch, pch2 - pch, szLoc2, cchSzDef);
         sprintf(sz, "%s, %s", szLoc1, szLoc2);
         ConvertSzFromUTF8(sz);
-        ciCore.loc = SzPersist(sz);
+        ciCore.loc = SzCopy(sz);
         grf |= 1024;
       }
     }
@@ -919,7 +927,7 @@ flag FProcessSFTextFile(CONST char *szFile, FILE *file)
       pch[-13] = chNull;
     else if (cch > 15 && FEqRgch(pch - 15, " - Female Chart", 15, fFalse))
       pch[-15] = chNull;
-    ciCore.nam = SzPersist(szLine);
+    ciCore.nam = SzCopy(szLine);
     nState = 2;
   } else if (nState == 2) {
     for (pch = szLine; *pch && *pch <= ' '; pch++)
@@ -970,7 +978,7 @@ flag FProcessSFTextFile(CONST char *szFile, FILE *file)
       if (pch > szLine && pch[-1] == ',')
         pch[-1] = chNull;
     }
-    ciCore.loc = SzPersist(pch2);
+    ciCore.loc = SzCopy(pch2);
     AA = RParseSz(pch, pmLat);
     while (*pch && *pch != ',')
       pch++;
@@ -1024,7 +1032,7 @@ flag FOutputChartList()
     return fFalse;
   }
 
-  sprintf(sz, "@AL%s  ; %s chart list.\n", szVerCore, szAppName); PrintFSz();
+  sprintf(sz, "@AL%s  ; %s chart list.\n", szVerCore, szAppName); PrintF(sz);
   cci = is.cci <= 0 ? 1 : is.cci;
   for (i = 0; i < cci; i++) {
     pci = is.cci <= 0 ? &ciMain : &is.rgci[i];
@@ -1050,7 +1058,65 @@ flag FOutputChartList()
 }
 
 
-CONST char *szDegForm = "zdhn";
+// Output the extended star list (and asteroid list) in memory to a Daedalus
+// script file, which will set Daedalus' star background to their positions.
+
+#ifdef SWISSGRAPH
+flag FOutputDaedalusStar()
+{
+  char sz[cchSzDef];
+  FILE *file = NULL;
+  int i, j = 0, k;
+  ES es;
+
+  if (us.fNoWrite)
+    return fFalse;
+  file = fopen(is.szFileOut, "w");  // Create and open the file for output.
+  if (file == NULL) {
+    sprintf(sz, "Daedalus file '%s' can not be created.", is.szFileOut);
+    PrintError(sz);
+    return fFalse;
+  }
+  fprintf(file, "DS\n// Created by %s %s\nIf Lt Version 3400 "
+    "{Message 'This script requires Daedalus 3.4 or later to run.' Halt}\n",
+    szAppName, szVersionCore);
+
+  // Output extra stars.
+  if (gs.fAllStar) {
+    SwissComputeStar(0.0, NULL);
+    for (i = 1; SwissComputeStar(is.T, &es); i++) {
+      k = 255 - (int)((es.mag - rStarLite) / rStarSpan * 224.0);
+      k = Min(k, 255); k = Max(k, 32);
+      fprintf(file, "SetStar 1 %d %d %d GrayN %d\n", j,
+        (int)(Mod(270.0 - es.lon) * 32768.0 / rDegMax),
+        (int)((es.lat + rDegQuad) * 32768.0 / rDegHalf), k);
+      j++;
+    }
+  }
+
+  // Output extra asteroids.
+  if (gs.nAstLo > 0) {
+    SwissComputeAsteroid(0.0, NULL, fFalse);
+    for (i = gs.nAstLo; SwissComputeAsteroid(is.T, &es, fFalse); i++) {
+      k = 255 - (int)((es.mag - rStarLite) / rStarSpan * 224.0);
+      k = Min(k, 255); k = Max(k, 32);
+      fprintf(file, "SetStar 1 %d %d %d GrayN %d\n", j,
+        (int)(Mod(270.0 - es.lon) * 32768.0 / rDegMax),
+        (int)((es.lat + rDegQuad) * 32768.0 / rDegHalf), k);
+      j++;
+    }
+  }
+
+  fprintf(file, "nStarCount %d\nnStarSize 384\nfStars True\n", j);
+  fclose(file);
+  return fTrue;
+}
+#endif
+
+
+#define PrintFSz() PrintF(sz)
+#define PrintRSz(r, n) FormatR(sz, r, n); PrintF(sz)
+CONST char *szDegForm = "zhdn";
 CONST char *szTypSwiss[] = {"", "b", "O", "m", "j"};
 CONST char *szPntSwiss[] = {"", "n", "s", "p", "a"};
 
@@ -1103,6 +1169,8 @@ flag FOutputSettings()
   PrintF("; Default location      [longitude and latitude]\n");
   sprintf(sz, "-zv %s               ", SzElevation(us.elvDef)); PrintFSz();
   PrintF("; Default elevation     [in feet or meters     ]\n");
+  sprintf(sz, "-zf %s                 ", SzTemperature(us.tmpDef)); PrintFSz();
+  PrintF("; Default temperature   [in Fahren. or Celsius ]\n");
   sprintf(sz, "-zj \"%s\" \"%s\" ; Default name and location\n\n",
     us.namDef, us.locDef); PrintFSz();
 
@@ -1145,6 +1213,9 @@ flag FOutputSettings()
   sprintf(sz, "%cb      ", ChDashF(us.fEphemFiles)); PrintFSz();
   PrintF(
     "; Use ephemeris files       [\"=b\" uses them, \"_b\" doesn't      ]\n");
+  sprintf(sz, "%c0b     ", ChDashF(us.fNoPlacalc)); PrintFSz();
+  PrintF(
+    "; Disable old calculations  [\"=0b\" disables them, \"_0b\" allows ]\n");
   sprintf(sz, ":w %d    ", us.nWheelRows); PrintFSz();
   PrintF(
     "; Wheel chart text rows     [Change \"0\" to desired wheel rows  ]\n");
@@ -1243,8 +1314,11 @@ flag FOutputSettings()
   sprintf(sz, "-YR0 %s%s ; Restrict sign changes, direction changes\n",
     SzNumF(us.fIgnoreSign), SzNumF(us.fIgnoreDir)); PrintFSz();
   sprintf(sz, "-YR1 %s%s ; "
-    "Restrict latitude direction changes, distance direction changes\n\n",
+    "Restrict latitude direction changes, distance direction changes\n",
     SzNumF(us.fIgnoreDiralt), SzNumF(us.fIgnoreDirlen)); PrintFSz();
+  sprintf(sz, "-YR2 %s%s ; "
+    "Restrict latitude zero node crossings, distance equivalence\n\n",
+    SzNumF(us.fIgnoreAlt0), SzNumF(us.fIgnoreDisequ)); PrintFSz();
   PrintF("-YR7 ");
   for (i = 0; i < rrMax; i++) PrintF(SzNumF(ignore7[i]));
   PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n-YRZ ");
@@ -1256,39 +1330,39 @@ flag FOutputSettings()
     ";  6-11: Inc SSx SSq Ses Qui BQn\n"
     "; 12-18: SQn Sep Nov BNv BSp TSp QNv\n"
     "; 19-24: TDc Un1 Un2 Un3 Un4 Un5\n\n-YAo 1 5    ");
-  for (i = 1; i <= 5; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
+  for (i = 1; i <= 5; i++) { PrintF(" "); PrintRSz(rAspOrb[i], -6); }
   PrintF("      ; Major aspects\n-YAo 6 11   ");
-  for (i = 6; i <= 11; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
+  for (i = 6; i <= 11; i++) { PrintF(" "); PrintRSz(rAspOrb[i], -6); }
   PrintF("    ; Minor aspects\n-YAo 12 18  ");
-  for (i = 12; i <= 18; i++) { sprintf(sz, " %.0f", rAspOrb[i]); PrintFSz(); }
+  for (i = 12; i <= 18; i++) { PrintF(" "); PrintRSz(rAspOrb[i], -6); }
   PrintF("  ; Obscure aspects\n-YAo 19 24  ");
-  for (i = 19; i <= 24; i++) { sprintf(sz, " %.1f", rAspOrb[i]); PrintFSz(); }
+  for (i = 19; i <= 24; i++) { PrintF(" "); PrintRSz(rAspOrb[i], -6); }
   PrintF("  ; Very obscure aspects\n\n");
 
   PrintF("; DEFAULT MAX PLANET ASPECT ORBS:\n\n-YAm 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  for (i = 0; i <= 10; i++) { PrintF(" "); PrintRSz(rObjOrb[i], -306); }
   PrintF("      ; Planets\n-YAm 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  for (i = 11; i <= 21; i++) { PrintF(" "); PrintRSz(rObjOrb[i], -306); }
   PrintF("      ; Minor planets\n-YAm 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  for (i = 22; i <= 33; i++) { PrintF(" "); PrintRSz(rObjOrb[i], -306); }
   PrintF("  ; Cusp objects\n-YAm 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  for (i = 34; i <= 42; i++) { PrintF(" "); PrintRSz(rObjOrb[i], -306); }
   PrintF("              ; Uranians\n-YAm 43 51  ");
-  for (i = 43; i <= 51; i++) { sprintf(sz, "%4.0f", rObjOrb[i]); PrintFSz(); }
+  for (i = 43; i <= 51; i++) { PrintF(" "); PrintRSz(rObjOrb[i], -306); }
   PrintF("              ; Dwarfs\n-YAm 84 84  ");
   sprintf(sz, "%4.0f", rObjOrb[52]); PrintFSz();
   PrintF("                                              ; Fixed stars\n");
 
   PrintF("\n; DEFAULT PLANET ASPECT ORB ADDITIONS:\n\n-YAd 0 10   ");
-  for (i = 0; i <= 10; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  for (i = 0; i <= 10; i++) { PrintF(" "); PrintRSz(rObjAdd[i], -6); }
   PrintF("    ; Planets\n-YAd 11 21  ");
-  for (i = 11; i <= 21; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  for (i = 11; i <= 21; i++) { PrintF(" "); PrintRSz(rObjAdd[i], -6); }
   PrintF("    ; Minor planets\n-YAd 22 33  ");
-  for (i = 22; i <= 33; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  for (i = 22; i <= 33; i++) { PrintF(" "); PrintRSz(rObjAdd[i], -6); }
   PrintF("  ; Cusp objects\n-YAd 34 42  ");
-  for (i = 34; i <= 42; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  for (i = 34; i <= 42; i++) { PrintF(" "); PrintRSz(rObjAdd[i], -6); }
   PrintF("        ; Uranians\n-YAd 43 51  ");
-  for (i = 43; i <= 51; i++) { sprintf(sz, " %.0f", rObjAdd[i]); PrintFSz(); }
+  for (i = 43; i <= 51; i++) { PrintF(" "); PrintRSz(rObjAdd[i], -6); }
   PrintF("        ; Dwarfs\n-YAd 84 84  ");
   sprintf(sz, " %.0f", rObjAdd[52]); PrintFSz();
   PrintF("                        ; Fixed stars\n\n\n");
@@ -1448,6 +1522,8 @@ flag FOutputSettings()
 
 #ifdef GRAPH
   PrintF("; GRAPHICS DEFAULTS:\n\n");
+  sprintf(sz, "%cXJ              ", ChDashF(gs.fIndianWheel)); PrintFSz();
+  PrintF("; Indian type wheels [\"_XJ\" is Western, \"=XJ\" is Indian  ]\n");
   sprintf(sz, "%cXm              ", ChDashF(gs.fColor)); PrintFSz();
   PrintF("; Color charts       [\"=Xm\" is color, \"_Xm\" is monochrome]\n");
   sprintf(sz, "%cXr              ", ChDashF(gs.fInverse)); PrintFSz();
@@ -1884,16 +1960,23 @@ real RParseSz(CONST char *szEntry, int pm)
     i = Max(cch-1, 0);
     if (sz[i] == 'E' || (cch >= 9 && sz[cch-4] == ' ' && sz[cch-5] == 'E'))
       neg(r);
-  } else if (pm == pmDist) {
-    // Check for "mile" or "mi" suffix for miles instead of kilometers.
-    i = Max(cch-1, 0);
-    if (sz[i] == 'I' || sz[i] == 'E')
-      r *= rMiToKm;
   } else if (pm == pmElv) {
     // Check for "feet" or "ft" suffix for feet instead of meters.
     i = Max(cch-1, 0);
     if (sz[i] == 'F' || sz[i] == 'T')
       r *= rFtToM;
+  } else if (pm == pmTmp) {
+    // Check for "F" or "K" suffix for Fahrenheit/Kelvin instead of Celcius.
+    i = Max(cch-1, 0);
+    if (sz[i] == 'F')
+      r = (r - 32.0) * 5.0/9.0;
+    else if (sz[i] == 'K')
+      r -= 273.15;
+  } else if (pm == pmDist) {
+    // Check for "mile" or "mi" suffix for miles instead of kilometers.
+    i = Max(cch-1, 0);
+    if (sz[i] == 'I' || sz[i] == 'E')
+      r *= rMiToKm;
   } else if (pm == pmLength) {
     // Check for "cent" or "cm" suffix for centimeters instead of inches.
     i = Max(cch-1, 0);
@@ -2070,9 +2153,9 @@ flag FInputData(CONST char *szFile)
       -2.0, 24.0, pmTim);
 #ifdef ATLAS
     InputString("Enter name of city or location", sz);
-    ciCore.loc = SzPersist(sz);
+    ciCore.loc = SzCopy(sz);
     if (DisplayAtlasLookup(sz, 0, &i)) {
-      ciCore.loc = SzPersist(sz);  // DisplayAtlasLookup changes ciCore.loc.
+      ciCore.loc = SzCopy(sz);      // DisplayAtlasLookup changes ciCore.loc.
       if (DisplayTimezoneChanges(is.rgae[i].izn, 0, &ciCore)) {
         sprintf(sz, "Atlas data for %s: (%cT Zone %s) %s\n", SzCity(i),
           ChDst(SS), SzZone(ZZ),
@@ -2092,10 +2175,10 @@ flag FInputData(CONST char *szFile)
     AA = RInputRange("Enter Latitude  of place (e.g. '47N36') ",
       -rDegQuad, rDegQuad, pmLat);
     InputString("Enter name or title for chart ", sz);
-    ciCore.nam = SzPersist(sz);
+    ciCore.nam = SzCopy(sz);
 #ifndef ATLAS
     InputString("Enter name of city or location", sz);
-    ciCore.loc = SzPersist(sz);
+    ciCore.loc = SzCopy(sz);
 #endif
     PrintL();
     is.cchRow = 0;
@@ -2131,34 +2214,26 @@ flag FInputData(CONST char *szFile)
   // Read the chart parameters from an Astrological Exchange (AAF) file.
 
   } else if (ch == '#') {
-    fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessAAFFile(szFile, file))
       return fFalse;
-    is.fSzPersist = fT;
 
   // Read the chart parameters from a Quick*Chart file.
 
   } else if (i == 100 || i == 101) {
-    fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessQuickFile(szFile, file))
       return fFalse;
-    is.fSzPersist = fT;
 
   // Read the chart parameters from a Astrodatabank file.
 
   } else if (ch == '<') {
-    fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessADBFile(szFile, file))
       return fFalse;
-    is.fSzPersist = fT;
 
   // Read the chart parameters from a Solar Fire export text file.
 
   } else if (ch == '\n') {
-    fT = is.fSzPersist; is.fSzPersist = fFalse;
     if (!FProcessSFTextFile(szFile, file))
       return fFalse;
-    is.fSzPersist = fT;
 
   // Read the chart info from an older style -o list of seven numbers.
 

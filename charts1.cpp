@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: charts1.cpp
+** Astrolog (Version 7.50) File: charts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -243,10 +243,47 @@ void ChartListing(void)
         rT = RAbs(retalt[j]);
         sprintf(sz, "%9.7f", rT); PrintSz(sz);
       } else {
-        PrintSz(" Decan: ");
-        is.fSeconds = fFalse;
-        PrintZodiac(Decan(planet[j]));
-        is.fSeconds = us.fSeconds;
+        if (us.nDecanType == dd27) {
+          PrintSz(" Mansion: ");
+          k = us.nDegForm; us.nDegForm = 3;
+          is.fSeconds = fFalse;
+          PrintZodiac(planet[j]);
+          is.fSeconds = us.fSeconds; us.nDegForm = k;
+        } else if (us.nDecanType == ddDecanS || us.nDecanType >= ddNavamsa) {
+          if (us.nDecanType == ddDecanS) {
+            PrintSz(" Decan: ");
+            rT = Decan(planet[j]);
+          } else if (us.nDecanType == ddNavamsa) {
+            PrintSz(" Navamsa: ");
+            rT = Navamsa(planet[j]);
+          } else if (us.nDecanType == dd12) {
+            PrintSz(" 12-Harm: ");
+            rT = Mod(planet[j] * 12.0);
+          } else if (us.nDecanType == ddDwad) {
+            PrintSz(" Dwad: ");
+            rT = Dwad(planet[j]);
+          }
+          is.fSeconds = fFalse;
+          PrintZodiac(rT);
+          is.fSeconds = us.fSeconds;
+        } else {
+          if (us.nDecanType == ddDecanR) {
+            PrintSz(" Decan: ");
+            k = 0;
+          } else if (us.nDecanType == ddChaldea) {
+            PrintSz(" Chaldean: ");
+            k = 1;
+          } else if (us.nDecanType == ddEgypt) {
+            PrintSz(" Egyptian: ");
+            k = 2;
+          } else if (us.nDecanType == ddPtolemy) {
+            PrintSz(" Ptolemaic: ");
+            k = 3;
+          }
+          k = ObjTerm(planet[j], k);
+          AnsiColor(kObjA[k]);
+          sprintf(sz, "%.4s", szObjDisp[k]); PrintSz(sz);
+        }
       }
     }
     PrintL();
@@ -343,7 +380,7 @@ void ChartGrid(void)
               temp = grid->n[xg][yg];
               sprintf(sz, "%.3s", szSignName[temp]);
             } else if (r == 3)
-              sprintf(sz, "%2d%c", grid->v[xg][yg]/3600, chDeg0);
+              sprintf(sz, "%2d%c", grid->v[xg][yg]/3600, chDegS);
             else if (r == 4)
               sprintf(sz, "%02d'", grid->v[xg][yg]/60%60);
             else
@@ -361,7 +398,7 @@ void ChartGrid(void)
               temp = SFromZ(planet[y]);
               AnsiColor(kSignA(temp));
               if (r == 3)
-                sprintf(sz, "%2d%c", (int)planet[y] - (temp-1)*30, chDeg0);
+                sprintf(sz, "%2d%c", (int)planet[y] - (temp-1)*30, chDegS);
               else if (r == 4)
                 sprintf(sz, "%.3s", szSignName[temp]);
               else
@@ -538,7 +575,7 @@ void PrintHouse(int i, flag fLeft)
   real deg;
   int j;
 
-  if (us.fVedic) {
+  if (us.fIndian) {
     j = Mod12(12-i);
     deg = ZFromS(j);
   } else {
@@ -616,7 +653,7 @@ void PrintWheelCenter(int irow)
       szObjDisp[us.objCenter]));
     break;
   case 8:
-    sprintf(szT, "Julian Day: %%%sf", is.fSeconds ? "14.6" : "12.4");
+    sprintf(szT, "Julian Day: %%%sf", is.fSeconds ? "15.7" : "13.5");
     sprintf(sz, szT, JulianDayFromTime(is.T));
     break;
   default:
@@ -697,7 +734,7 @@ void ChartWheel(void)
     // Try to put object in its proper house. If no room, then overflow over
     // to the next succeeding house.
 
-    for (j = (us.fVedic ? Mod12(11-SFromZ(planet[i])) : inhouse[i])-1;
+    for (j = (us.fIndian ? Mod12(11-SFromZ(planet[i])) : inhouse[i])-1;
       j < cSign; j = j < cSign ? (j+1)%cSign : j) {
 
       // Now try to find the proper place in the house to put the object.
@@ -727,9 +764,9 @@ void ChartWheel(void)
 
   // Now, if this is really the -w switch and not -w0, then reverse the order
   // of objects in western houses for more intuitive reading. Also reverse the
-  // order of everything in the reverse order Vedic wheels.
+  // order of everything in the reverse order Indian wheels.
 
-  if (us.fVedic)
+  if (us.fIndian)
     for (i = 0; i < cSign; i++)
       for (j = 0; j < is.nWheelRows/2; j++) {
         k = is.nWheelRows-1-j;
@@ -745,8 +782,8 @@ void ChartWheel(void)
   // Here we actually print the wheel and the objects in it.
 
   PrintCh2(chNW); PrintTab2(chH, WHEELCOLS-8); PrintHouse(11, fTrue);
-  PrintTab2(chH, WHEELCOLS-11+us.fVedic); PrintHouse(10, fTrue);
-  PrintTab2(chH, WHEELCOLS-10+us.fVedic); PrintHouse(9, fTrue);
+  PrintTab2(chH, WHEELCOLS-11+us.fIndian); PrintHouse(10, fTrue);
+  PrintTab2(chH, WHEELCOLS-10+us.fIndian); PrintHouse(9, fTrue);
   PrintTab2(chH, wheelcols-4); PrintCh2(chNE); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
     for (j = 10; j >= 7; j--) {
@@ -764,7 +801,7 @@ void ChartWheel(void)
     PrintCh2(chV); PrintWheelSlot(wheel[6][i]);
     PrintCh2(chV); PrintL();
   }
-  PrintHouse(1, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fVedic);
+  PrintHouse(1, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fIndian);
   PrintCh2(chJW); PrintWheelCenter(is.nWheelRows); PrintCh2(chJE);
   PrintTab2(chH, WHEELCOLS-10); PrintHouse(7, fFalse); PrintL();
   for (i = 0; i < is.nWheelRows; i++) {
@@ -773,7 +810,7 @@ void ChartWheel(void)
     PrintCh2(chV); PrintWheelSlot(wheel[5][i]);
     PrintCh2(chV); PrintL();
   }
-  PrintHouse(2, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fVedic);
+  PrintHouse(2, fTrue); PrintTab2(chH, WHEELCOLS-10-us.fIndian);
   PrintCh2(chC); PrintTab2(chH, wheelcols-1); PrintCh2(chJS);
   PrintTab2(chH, wheelcols-1); PrintCh2(chC);
   PrintTab2(chH, WHEELCOLS-10); PrintHouse(6, fFalse); PrintL();
@@ -843,7 +880,7 @@ void PrintAspectSummary(int *ca, int *co, int count, real rPowSum)
 
 void ChartAspect(void)
 {
-  int ca[cAspect + 1], co[objMax];
+  int ca[cAspect + 1], co[objMax], rgobjList2[objMax];
   char sz[cchSzDef];
   int vcut = nLarge, icut, jcut, vhi, ihi, jhi, ahi, phi, v, i0, j0, i, j, k,
     p, count = 0;
@@ -851,6 +888,7 @@ void ChartAspect(void)
 
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
+
   loop {
     vhi = -nLarge;
 
@@ -885,8 +923,8 @@ void ChartAspect(void)
           default:  v = p;                           break;
           case aso: v = -NAbs(grid->v[j][i]);        break;
           case asn: v = -grid->v[j][i];              break;
-          case asO: v = -(j0*cObj + i0);             break;
-          case asP: v = -(i0*cObj + j0);             break;
+          case asO: v = -(Min(j0,i0)*cObj + Max(i0,j0)); break;
+          case asP: v = -(Max(i0,j0)*cObj + Min(j0,i0)); break;
           case asA: v = -(k*cObj*cObj + j*cObj + i); break;
           case asC: v = -(int)(planet[j]*3600.0);    break;
           case asD: v = -(int)(planet[i]*3600.0);    break;
@@ -914,9 +952,15 @@ void ChartAspect(void)
     }
 #endif
     sprintf(sz, "%3d: ", count); PrintSz(sz);
-    PrintAspect(jhi, !us.fParallel ? planet[jhi] : planetalt[jhi],
-      (int)RSgn(ret[jhi]), ahi, ihi,
-      !us.fParallel ? planet[ihi] : planetalt[ihi], (int)RSgn(ret[ihi]), 'a');
+    if (FBetween(us.nAspectSort, asO, asP) &&
+      rgobjList2[jhi] > rgobjList2[ihi])
+      PrintAspect(ihi, !us.fParallel ? planet[ihi] : planetalt[ihi],
+        ret[ihi], ahi, jhi, !us.fParallel ? planet[jhi] : planetalt[jhi],
+        ret[jhi], 'a');
+    else
+      PrintAspect(jhi, !us.fParallel ? planet[jhi] : planetalt[jhi],
+        ret[jhi], ahi, ihi, !us.fParallel ? planet[ihi] : planetalt[ihi],
+        ret[ihi], 'a');
     k = grid->v[jhi][ihi];
     AnsiColor(k < 0 ? kWhiteA : kLtGrayA);
     sprintf(sz, " - orb: %c%s", rgchAppSep[us.nAppSep*2 + (k >= 0)],
@@ -985,7 +1029,7 @@ void PrintAspectsToPoint(real deg, int obj, real rRet, char *szWhat)
         j = (int)(rOrb * 3600.0);
         AnsiColor(j < 0.0 ? kWhiteA : kLtGrayA);
         sprintf(sz, "- orb: %c%d%c%02d'", rgchAppSep[us.nAppSep*2 + (j >= 0)],
-          NAbs(j)/3600, chDeg1, NAbs(j)%3600/60); PrintSz(sz);
+          NAbs(j)/3600, chDegC, NAbs(j)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(j)%60); PrintSz(sz);
         }
@@ -1101,8 +1145,8 @@ void ChartMidpoint(void)
       PrintAltitude(midalt);
       PrintCh(' ');
     }
-    PrintAspect(ilo, planet[ilo], (int)RSgn(ret[ilo]), 0,
-      jlo, planet[jlo], (int)RSgn(ret[jlo]), 'm');
+    PrintAspect(ilo, planet[ilo], ret[ilo], 0, jlo, planet[jlo], ret[jlo],
+      'm');
     AnsiColor(kDefault);
     PrintSz(" - ");
     PrintSz(SzDegree(dist));
@@ -1141,9 +1185,11 @@ void ChartHorizon(void)
     azi[i] = Tropical(planet[i]); alt[i] = planetalt[i];
     EclToEqu(&azi[i], &alt[i]);
     azi[i] = Mod(is.lonMC - azi[i] + rDegQuad);
-    if (hm == hmHorizon)
+    if (hm == hmHorizon) {
       EquToLocal(&azi[i], &alt[i], rDegQuad - Lat);
-    else if (hm == hmPrime)
+      if (us.fRefract)
+        alt[i] = SwissRefract(alt[i]);
+    } else if (hm == hmPrime)
       EquToLocal(&azi[i], &alt[i], -Lat);
     azi[i] = rDegMax - azi[i];
 
@@ -1274,7 +1320,7 @@ void ChartHorizon(void)
       else {
         if (us.nDegForm != 2) {
           j = (int)(RFract(rDiam)*60.0);
-          sprintf(sz, "%3d%c%02d'", (int)rDiam, chDeg1, j);
+          sprintf(sz, "%3d%c%02d'", (int)rDiam, chDegC, j);
           len = RFract(rDiam)*60.0; len = RFract(len)*60.0;
           sprintf(&sz[7], "%05.2f\"", len);
         } else
@@ -1301,7 +1347,7 @@ void ChartOrbit(void)
 {
   char sz[cchSzMax], sz1[cchSzDef];
   real x, y, z, rT;
-  int i, j;
+  int i, j, jMax;
 
   sprintf(sz1, is.fSeconds ? " " : "");
   sprintf(sz, "Body   %s%sAzimuth%s%s   ", sz1, sz1, sz1, sz1);
@@ -1310,7 +1356,8 @@ void ChartOrbit(void)
     "%s%sX axis%s%s   %s%sY axis%s%s   %s%sZ axis%s%s   %s%sLength\n",
     sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1, sz1);
   PrintSz(sz);
-  for (j = 0; j <= oNorm; j++) {
+  jMax = Min(is.nObj, oNorm);
+  for (j = 0; j <= jMax; j++) {
     i = rgobjList[j];
     if (ignore[i] || (!FThing(i) ||
       ((i == oMoo || i == oNod || i == oSou) && !us.fEphemFiles)))
@@ -1661,7 +1708,7 @@ flag ChartAstroGraph(void)
   char sz[cchSzDef];
   real planet1[objMax], planet2[objMax], mc[objMax], ic[objMax],
     asc[objMax], des[objMax], asc1[objMax], des1[objMax], rgad[objMax],
-    lo = Lon, longm, w, x, y, z, ww, xx, yy, zz, ad, oa, am, od, dm;
+    lo = Lon, longm, w, x, y, z, ww, xx, yy, zz, ad, oa, am, od;
   int cCross = 0, i, j, k, l, m, n, o;
   flag fEdge;
 
@@ -1775,6 +1822,8 @@ flag ChartAstroGraph(void)
   // latitude, print the longitude location of the line in question.
 
   longm = Mod(is.lonMC + lo);
+  for (k = 0; k <= is.nObj; k++)
+    asc[k] = des[k] = rgad[k] = rLarge;
   for (j = 90-(90 % us.nAstroGraphStep); j >= -90; j -= us.nAstroGraphStep) {
     fEdge = (j >= 90 || j <= -90);
     if (!fEdge) {
@@ -1782,8 +1831,6 @@ flag ChartAstroGraph(void)
       sprintf(sz, "Asc@%2d%c: ", NAbs(j), j < 0 ? 's' : 'n');
       PrintSz(sz);
     }
-    for (k = 0; k <= is.nObj; k++)
-      asc[i] = des[i] = rgad[i] = rLarge;
     for (k = 0; k <= is.nObj; k++) {
       i = rgobjList[k];
       if (!ignore[i] && FThing2(i)) {
@@ -1851,8 +1898,7 @@ flag ChartAstroGraph(void)
           PrintCh(' ');
         } else {
           od = planet1[i] + DFromR(ad);
-          dm = od + rDegQuad;
-          z = longm-dm;
+          z = longm - (od + rDegQuad);
           if (z < 0.0)
             z += rDegMax;
           if (z > rDegHalf)
@@ -1926,7 +1972,7 @@ flag ChartAstroGraph(void)
                 ExpSetN(iLetterY, k);
                 ExpSetN(iLetterZ, (pcr-1)->ang2);
                 if (!NParseExpression(us.szExpCross))
-                  cCross--;
+                  cCross--, pcr--;
               }
 #endif
             }
@@ -1980,7 +2026,7 @@ flag ChartAstroGraph(void)
                 ExpSetN(iLetterY, k);
                 ExpSetN(iLetterZ, (pcr-1)->ang2);
                 if (!NParseExpression(us.szExpCross))
-                  cCross--;
+                  cCross--, pcr--;
               }
 #endif
             }
@@ -2058,7 +2104,7 @@ flag ChartMoons()
   char sz[cchSzMax];
   byte ignoreSav[objMax];
   int objCenterSav = us.objCenter, m, i, j, et, asp, orb, pass, nAsp, count;
-  real radi1, radi2, len1, len2, ang1, ang2, ang, rOrb, rPct, rT;
+  real radi1, radi2, len1, len2, ang1, ang2, ang, rOrb, rPct, rx, ry, rT;
   flag fMoonSav = us.fMoonMove, fInterpretSav = us.fInterpret;
   CP rgcp[7], *cp;
 
@@ -2139,15 +2185,15 @@ flag ChartMoons()
       PrintZodiac(rgcp[0].obj[m]);
       PrintCh(' ');
       PrintAltitude(rgcp[0].alt[m]);
-      rT = MinDistance(cp->obj[m], Mod(cp->obj[objCenterSav] + rDegQuad));
-      rT = (rT / rDegQuad - 1.0)*100.0;
+      rx = space[m].x - space[i].x; ry = space[m].y - space[i].y;
+      rx = Mod(planet[i] - RAngleD(rx, ry));
+      rT = (MinDistance(90.0, rx) / rDegQuad - 1.0)*100.0;
       j = (rT >= 75.0 ? oAsc : (rT <= -75.0 ? oDes : 0));
       AnsiColor(j != 0 ? kObjA[j] : kDefault);
       PrintCh(' ');
       sprintf(sz, !us.fSeconds ? "%4.0f" : "%7.2f", rT); PrintSz(sz);
-      rT = MinDistance(cp->obj[m], Mod(cp->obj[objCenterSav] + rDegHalf));
-      rT = (rT / rDegQuad - 1.0)*100.0;
       PrintSz("% ");
+      rT = (MinDistance(0.0, rx) / rDegQuad - 1.0)*100.0;
       if (j == 0)
         j = (rT >= 75.0 ? oMC : (rT <= -75.0 ? oNad : 0));
       AnsiColor(rT >= 75.0 ? kObjA[oMC] :
@@ -2209,7 +2255,7 @@ flag ChartMoons()
     PrintSz(sz);
     count = 0;
     for (i = moonsLo; i <= moonsHi; i++) {
-      if (pass >= 2 && ignore[i])
+      if (pass >= 2 && (ignore[i] || i == us.objCenter))
         continue;
       for (m = moonsLo; m <= moonsHi; m++) {
         if (pass <= 1) {
@@ -2221,7 +2267,7 @@ flag ChartMoons()
           j = ObjCOB(i);
           j = ignore[j] ? i : j;
         } else {
-          if (ignore[m] || m <= i)
+          if (ignore[m] || m <= i || m == us.objCenter)
             continue;
           j = i;
         }
@@ -2239,8 +2285,7 @@ flag ChartMoons()
         if (rT > ang*rOrb)
           continue;
         count++;
-        PrintAspect(i, planet[j], (int)RSgn(ret[j]), aCon,
-          m, planet[m], (int)RSgn(ret[m]), 'a');
+        PrintAspect(i, planet[j], ret[j], aCon, m, planet[m], ret[m], 'a');
         if (us.fSeconds) {
           AnsiColor(rT <= ang ? kDefault : kDkGray);
           sprintf(sz, " - alignment: %.0f%%", (1.0 - rT/ang)*100.0);
@@ -2295,12 +2340,11 @@ flag ChartMoons()
           (!us.fGraphAll && j != oSun && asp > aCon))
           continue;
         count++;
-        PrintAspect(m, planet[m], (int)RSgn(ret[m]), asp,
-          j, planet[j], (int)RSgn(ret[j]), 'a');
+        PrintAspect(m, planet[m], ret[m], asp, j, planet[j], ret[j], 'a');
         orb = grid->v[Min(j, m)][Max(m, j)];
         AnsiColor(orb < 0 ? kWhiteA : kLtGrayA);
         sprintf(sz, " - orb: %c%d%c%02d'",
-          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDeg1,
+          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDegC,
           NAbs(orb)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(orb)%60); PrintSz(sz);
@@ -2354,12 +2398,11 @@ flag ChartMoons()
         if (asp <= 0 || asp > nAsp)
           continue;
         count++;
-        PrintAspect(i, planet[i], (int)RSgn(ret[i]), asp,
-          m, planet[m], (int)RSgn(ret[m]), 'a');
+        PrintAspect(i, planet[i], ret[i], asp, m, planet[m], ret[m], 'a');
         orb = grid->v[Min(i, m)][Max(m, i)];
         AnsiColor(orb < 0 ? kWhiteA : kLtGrayA);
         sprintf(sz, " - orb: %c%d%c%02d'",
-          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDeg1,
+          rgchAppSep[us.nAppSep*2 + (orb >= 0)], NAbs(orb)/3600, chDegC,
           NAbs(orb)%3600/60); PrintSz(sz);
         if (is.fSeconds) {
           sprintf(sz, "%02d\"", NAbs(orb)%60); PrintSz(sz);

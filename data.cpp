@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: data.cpp
+** Astrolog (Version 7.50) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -104,10 +104,11 @@ US us = {
   0, 0, 0, 0, 0, 0, 0,
 
   // Obscure flags
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-  1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+  1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Value settings
+  ddDecanR,
   0,
   0,
   0,
@@ -135,6 +136,7 @@ US us = {
   DEFAULT_LONG,
   DEFAULT_LAT,
   0.0,
+  15.0,
   "",
   "",
   {0,0,0,0,0,0,0,0,0,0},
@@ -144,7 +146,7 @@ US us = {
 
   // Value subsettings
   0, 5, 200, cPart, 22, 0.0, 0.0, rDayInYear, 1.0, 1, 1, ccNone, ccNone,
-  24, 0, 0, rInvalid, 0.0, 0.0, oEar, oEar, 0, BIODAYS, 1,
+  24, 0, 0, rInvalid, 0.0, 0.0, oEar, oEar, 0, BIODAYS, 0,
 
   // AstroExpressions
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -160,16 +162,16 @@ IS is = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0, rInvalid, 0.0};
 
-CI ciCore = {11, 19, 1971, HM(11, 1),       0.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciMain = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTwin = {9,  11, 1991, HMS(0, 0, 38),   0.0, 0.0, DEFAULT_LOC, "", ""};
-CI ciThre = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFour = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFive = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciHexa = {-1, 0,  0,    0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTran = {1,  1,  2021, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {3,  31, 2022, HMS(23, 24, 25), 1.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciGreg = {10, 15, 1582, 0.0,             0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciCore = {11, 19, 1971, HM(11, 1),     0.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciMain = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTwin = {9,  11, 1991, HMS(0, 0, 38), 0.0, 0.0, DEFAULT_LOC, "", ""};
+CI ciThre = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFour = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciFive = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciHexa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciTran = {1,  1,  2022, 0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciSave = {9,  10, 2022, HMS(2, 59, 3), 1.0, 8.0, DEFAULT_LOC, "", ""};
+CI ciGreg = {10, 15, 1582, 0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
 CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 
 CI * CONST rgpci[cRing+1] = {&ciCore,
@@ -186,7 +188,7 @@ CP * CONST rgpcp[cRing+1] = {&cp0, &cp1, &cp2, &cp3, &cp4, &cp5, &cp6};
 PT3R space[objMax];
 real force[objMax];
 GridInfo *grid = NULL;
-int rgobjList[objMax], starname[cStar+1], kObjA[objMax];
+int rgobjList[objMax], rgobjList2[objMax], starname[cStar+1], kObjA[objMax];
 char *szMacro[48], *szWheel[cRing+1] = {"", "", "", "", "", "", ""};
 real rStarBrightDef[cStar+1] = {-1.0}, rStarBright[cStar+1],
   rStarDistDef[cStar+1], rStarDist[cStar+1];
@@ -225,7 +227,7 @@ byte ignorez[arMax] = {0, 0, 0, 0};     // Restrictions for -Zd chart events.
 byte ignore7[rrMax] = {0, 1, 1, 0, 1};  // Restrictions for rulership types.
 
 byte ignoreMem[objMax], ignore2Mem[objMax], ignoreaMem[cAspect+1],
-  ignorezMem[arMax], ignore7Mem[rrMax], ignorefMem[4];
+  ignorezMem[arMax], ignore7Mem[rrMax], ignorefMem[6];
 
 // Gauquelin sector plus zones, as specified with -Yl switch.
 
@@ -396,8 +398,8 @@ CONST char *szSuffix[cSign+1] = {"",
   "st", "nd", "rd", "th", "th", "th", "th", "th", "th", "th", "th", "th"};
 
 CONST char *szEphem[cmMax] = {
-  "Swiss Ephemeris 2.10.02", "Moshier Formulas 2.10.02",
-  "JPL Ephemeris 2.10.02", "Placalc Ephemeris", "Matrix Formulas",
+  "Swiss Ephemeris 2.10.03", "Moshier Formulas 2.10.03",
+  "JPL Ephemeris 2.10.03", "Placalc Ephemeris", "Matrix Formulas",
   "JPL Horizons Web Query", "None"};
 
 CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},

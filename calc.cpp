@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: calc.cpp
+** Astrolog (Version 7.50) File: calc.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -149,9 +149,15 @@ real RHousePlaceIn3DCore(real rLon, real rLat)
   lon = Tropical(rLon); lat = rLat;
   EclToEqu(&lon, &lat);
   lon = Mod(is.lonMC - lon + rDegQuad);
-  if (us.nHouse3D == hmPrime)
-    EquToLocal(&lon, &lat, -Lat);
-  else if (us.nHouse3D == hmHorizon)
+  if (us.nHouse3D == hmPrime) {
+    if (!us.fRefract)
+      EquToLocal(&lon, &lat, -Lat);
+    else {
+      EquToLocal(&lon, &lat, rDegQuad - Lat);
+      lat = SwissRefract(lat);
+      CoorXform(&lon, &lat, -rDegQuad);
+    }
+  } else if (us.nHouse3D == hmHorizon)
     EquToLocal(&lon, &lat, rDegQuad - Lat);
   lon = rDegMax - lon;
   return Mod(lon + rSmall);
@@ -609,49 +615,46 @@ void ComputeStars(real t, real Off)
 
 void SortPlanets()
 {
-  int i;
+  int i, j;
 #ifdef EXPRESS
   real rgrSort[oNorm1];
-  int j;
+  flag fCare1, fCare2;
 #endif
 
   // By default, objects are displayed in object index order.
-  for (i = 0; i <= oNorm; i++)
-    rgobjList[i] = i;
+  for (i = 0; i <= cObj; i++)
+    rgobjList[i] = rgobjList2[i] = i;
 
 #ifdef EXPRESS
   // Adjust indexes used for display with AstroExpressions.
-  if (!FSzSet(us.szExpSort))
-    return;
-  for (i = 0; i <= oNorm; i++) {
-    ExpSetN(iLetterZ, i);
-    ParseExpression(us.szExpSort);
-    rgrSort[i] = RExpGet(iLetterZ);
-  }
+  if (FSzSet(us.szExpSort)) {
+    for (i = 0; i <= oNorm; i++) {
+      ExpSetN(iLetterZ, i);
+      ParseExpression(us.szExpSort);
+      rgrSort[i] = RExpGet(iLetterZ);
+    }
 
-  // Sort adjusted list to determine final display ordering.
-  for (i = 1; i <= oNorm; i++) {
-    j = i-1;
-    while (j >= 0 && rgrSort[rgobjList[j]] > rgrSort[rgobjList[j+1]]) {
-      SwapN(rgobjList[j], rgobjList[j+1]);
-      j--;
+    // Sort adjusted list to determine final display ordering.
+    for (i = 1; i <= oNorm; i++) {
+      j = i-1;
+      loop {
+        fCare1 = !ignore[rgobjList[j]] || !ignore2[rgobjList[j]];
+        fCare2 = !ignore[rgobjList[j+1]] || !ignore2[rgobjList[j+1]];
+        if (!(j >= 0 && ((!fCare1 && fCare2) || (fCare1 == fCare2 &&
+          rgrSort[rgobjList[j]] > rgrSort[rgobjList[j+1]]))))
+          break;
+        SwapN(rgobjList[j], rgobjList[j+1]);
+        j--;
+      }
     }
   }
 #endif
-}
 
+  // Now take the list of computed star positions, and sort and compose the
+  // final index list based on what order the stars are supposed to be printed
+  // in. Only sort if one of the special -U subswitches is in effect.
 
-// Given the list of computed star positions, sort and compose the final index
-// list based on what order the stars are supposed to be printed in.
-
-void SortStars()
-{
-  int i, j;
-
-  // Sort the index list if one of the special -U subswitches is in effect.
-
-  if (us.nStar <= 1)
-    return;
+  if (us.nStar > 1 || FStar(us.objCenter))
   for (i = starLo+1; i <= starHi; i++) {
     j = i-1;
 
@@ -692,6 +695,10 @@ void SortStars()
       j--;
     }
   }
+
+  // Produce reverse lookup table mapping object index to its print order.
+  for (i = 0; i <= cObj; i++)
+    rgobjList2[rgobjList[i]] = i;
 }
 
 
@@ -748,6 +755,49 @@ real Navamsa(real deg)
   unit = deg - ZFromS(sign);
   sign2 = Mod12(((sign-1 & 3)^(2*FOdd(sign-1)))*3 + (int)(unit*0.3) + 1);
   return ZFromS(sign2) + unit;
+}
+
+
+CONST int rgnTermEgypt[cSign*2] = {
+  0x66855, 0x64357, 0x86853, 0x43675, 0x66576, 0x36457, 0x76584, 0x54367,
+  0x65766, 0x64735, 0x7a472, 0x34657, 0x68772, 0x73645, 0x74856, 0x54367,
+  0xc5454, 0x64375, 0x77844, 0x36475, 0x76755, 0x34657, 0xc4392, 0x46357};
+CONST int rgnTermPtolemy[cSign*2] = {
+  0x68754, 0x64357, 0x87744, 0x43675, 0x77745, 0x36475, 0x67773, 0x56347,
+  0x67665, 0x73465, 0x76566, 0x34675, 0x65856, 0x74635, 0x68763, 0x56437,
+  0x86565, 0x64375, 0x66765, 0x43657, 0x66855, 0x73465, 0x86664, 0x46357};
+
+// Return the planet associated with a degree of the zodiac. Can do decan
+// rulerships, Chaldean decans, Egyptian terms, or Ptolemaic terms.
+
+int ObjTerm(real pos, int nType)
+{
+  CONST int *rgRules, *rgTerm;
+  int sig = SFromZ(pos) - 1, deg, i, d = 0, n;
+
+  if (nType <= 0) {
+    if (ignore7[rrStd] && ignore7[rrEso] && !ignore7[rrHie])
+      rgRules = rgSignHie1;
+    else if (ignore7[rrStd] && !ignore7[rrEso])
+      rgRules = rgSignEso1;
+    else
+      rgRules = rules;
+    return rgRules[SFromZ(Decan(pos))];
+  } else if (nType == 1) {
+    n = ((int)pos)/10%7;
+    return (0x5143276 >> (6-n)*4) & 15;
+  } else if (nType >= 2) {
+    rgTerm = (nType == 2 ? rgnTermEgypt : rgnTermPtolemy);
+    deg = (int)pos - sig*30;
+    for (i = 0; i < 5; i++) {
+      n = (rgTerm[i*2] >> (4-i)*4) & 15;
+      d += n;
+      if (deg < d)
+        return (rgTerm[i*2+1] >> (4-i)*4) & 15;
+    }
+    Assert(fFalse);
+  }
+  return 0;
 }
 
 
@@ -1392,11 +1442,9 @@ real CastChart(int nContext)
     for (i = 0; i <= is.nObj; i++)
       planet[i] = Navamsa(planet[i]);
 
-  // Sort star positions now that all positions are finalized.
+  // Sort planet and star positions now that all positions are finalized.
 
   SortPlanets();
-  if (us.nStar || FStar(us.objCenter))
-    SortStars();
 
 #ifdef EXPRESS
   // Adjust final planet and house positions with AstroExpressions.
@@ -1672,20 +1720,20 @@ flag FAcceptAspect(int obj1, int asp, int obj2)
 
 // This is a subprocedure of FCreateGrid() and FCreateGridRelation(). Given
 // two planets, determine what aspect, if any, is present between them, and
-// save the aspect name and orb in the specified grid cell.
+// determine the aspect's orb too.
 
 int GetAspect(CONST real *planet1, CONST real *planet2,
   CONST real *planetalt1, CONST real *planetalt2,
   CONST real *ret1, CONST real *ret2, int i, int j, real *prOrb)
 {
   int asp;
-  real rAngle, rAngle3D, rDiff, rOrb, ret1a;
+  real rAngle, rAngle3D, rDiff, rOrb, ret2a;
 
   // Compute the angle between the two planets.
-  rAngle = MinDistance(planet2[i], planet1[j]);
+  rAngle = MinDistance(planet1[i], planet2[j]);
   if (us.fAspect3D || us.fAspectLat)
-    rAngle3D = SphDistance(planet2[i], planetalt2[i],
-      planet1[j], planetalt1[j]);
+    rAngle3D = SphDistance(planet1[i], planetalt1[i],
+      planet2[j], planetalt2[j]);
 
   // Check each aspect angle to see if it applies.
   for (asp = 1; asp <= us.nAsp; asp++) {
@@ -1700,13 +1748,13 @@ int GetAspect(CONST real *planet1, CONST real *planet2,
     // overtaking each other.
 
     if (us.nAppSep == 1) {
-      ret1a = us.nRel > rcTransit ? ret1[j] : 0.0;
-      rDiff *= RSgn2(ret1a-ret2[i]) * RSgn2(MinDifference(planet2[i],
-        planet1[j]));
+      ret2a = us.nRel > rcTransit ? ret2[j] : 0.0;
+      rDiff *= RSgn2(ret2a-ret1[i]) * RSgn2(MinDifference(planet1[i],
+        planet2[j]));
     } else if (us.nAppSep == 2) {
-      ret1a = us.nRel > rcTransit ? ret1[j] : 0.0;
-      rDiff = RAbs(rDiff) * RSgn2(ret2[i]-ret1a) *
-        RSgn2(MinDifference(planet2[i], planet1[j]));
+      ret2a = us.nRel > rcTransit ? ret2[j] : 0.0;
+      rDiff = RAbs(rDiff) * RSgn2(ret1[i]-ret2a) *
+        RSgn2(MinDifference(planet1[i], planet2[j]));
     }
 
 #ifdef EXPRESS
@@ -1719,7 +1767,7 @@ int GetAspect(CONST real *planet1, CONST real *planet2,
       ExpSetR(iLetterZ, rOrb);
       ParseExpression(us.szExpAsp);
       rDiff = RExpGet(iLetterY);
-      rOrb = RExpGet(iLetterZ);
+      rOrb  = RExpGet(iLetterZ);
     }
 #endif
 
@@ -1738,9 +1786,9 @@ int GetAspect(CONST real *planet1, CONST real *planet2,
 
 
 // Very similar to GetAspect(), this determines if there is a parallel or
-// contraparallel aspect between the given two planets, and stores the result
-// as above. The settings and orbs for conjunction are used for parallel and
-// those for opposition are used for contraparallel.
+// contraparallel aspect between the given two planets. The settings and orbs
+// for conjunction are used for parallel and those for opposition are used for
+// contraparallel.
 
 int GetParallel(CONST real *planet1, CONST real *planet2,
   CONST real *planetalt1, CONST real *planetalt2,
@@ -1792,7 +1840,7 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
       ExpSetR(iLetterZ, rOrb);
       ParseExpression(us.szExpAsp);
       rDiff = RExpGet(iLetterY);
-      rOrb = RExpGet(iLetterZ);
+      rOrb  = RExpGet(iLetterZ);
     }
 #endif
 
@@ -1812,43 +1860,43 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
 
 flag FCreateGrid(flag fFlip)
 {
-  int i, j, k, asp;
+  int x, y, k, asp;
   real l, rOrb, rT;
 
   if (!FEnsureGrid())
     return fFalse;
   ClearB((pbyte)grid, sizeof(GridInfo));
 
-  for (j = 0; j <= is.nObj; j++) if (!FIgnore(j))
-    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i))
+  for (y = 0; y <= is.nObj; y++) if (!FIgnore(y))
+    for (x = 0; x <= is.nObj; x++) if (!FIgnore(x))
 
       // The parameter 'flip' determines what half of the grid is filled in
       // with the aspects and what half is filled in with the midpoints.
 
-      if (fFlip ? i > j : i < j) {
-        grid->n[i][j] = grid->v[i][j] = 0;
+      if (fFlip ? x > y : x < y) {
+        grid->n[x][y] = grid->v[x][y] = 0;
         if (!us.fParallel) {
           asp = GetAspect(planet, planet, planetalt, planetalt,
-            ret, ret, i, j, &rOrb);
+            ret, ret, x, y, &rOrb);
         } else
           asp = GetParallel(planet, planet, planetalt, planetalt,
-            retalt, retalt, i, j, &rOrb);
+            retalt, retalt, x, y, &rOrb);
         if (asp > 0) {
-          grid->n[i][j] = asp; grid->v[i][j] = (int)(rOrb * 3600.0);
+          grid->n[x][y] = asp; grid->v[x][y] = (int)(rOrb * 3600.0);
         }
-      } else if (fFlip ? i < j : i > j) {
+      } else if (fFlip ? x < y : x > y) {
         // Calculate midpoint in 2D or 3D.
         if (!us.fHouse3D)
-          l = Mod(Midpoint(planet[i], planet[j]));
+          l = Mod(Midpoint(planet[x], planet[y]));
         else
-          SphRatio(planet[i], planetalt[i], planet[j], planetalt[j], 0.5,
+          SphRatio(planet[x], planetalt[x], planet[y], planetalt[y], 0.5,
             &l, &rT);
         k = (int)l;
-        grid->n[i][j] = k/30+1;
-        grid->v[i][j] = (int)(l*3600.0) % (30*3600);
+        grid->n[x][y] = k/30+1;
+        grid->v[x][y] = (int)(l*3600.0) % (30*3600);
       } else {
-        grid->n[i][j] = SFromZ(planet[j]);
-        grid->v[i][j] = (int)(planet[j]*60.0) % (30*60);
+        grid->n[x][y] = SFromZ(planet[y]);
+        grid->v[x][y] = (int)(planet[y]*60.0) % (30*60);
       }
   return fTrue;
 }
@@ -1860,36 +1908,38 @@ flag FCreateGrid(flag fFlip)
 
 flag FCreateGridRelation(flag fMidpoint)
 {
-  int i, j, k, asp;
+  int x, y, k, asp;
   real l, rOrb, rT;
 
   if (!FEnsureGrid())
     return fFalse;
   ClearB((pbyte)grid, sizeof(GridInfo));
 
-  for (j = 0; j <= is.nObj; j++) if (!FIgnore(j) || !FIgnore2(j))
-    for (i = 0; i <= is.nObj; i++) if (!FIgnore(i) || !FIgnore2(i))
+  for (y = 0; y <= is.nObj; y++) if (!FIgnore(y) || !FIgnore2(y))
+    for (x = 0; x <= is.nObj; x++) if (!FIgnore(x) || !FIgnore2(x))
       if (!fMidpoint) {
-        grid->n[i][j] = grid->v[i][j] = 0;
+        grid->n[x][y] = grid->v[x][y] = 0;
+        // Aspect grids are represented using x,y coordinates, however note
+        // that relationship aspect grids have chart #1 down the Y axis.
         if (!us.fParallel)
           asp = GetAspect(cp1.obj, cp2.obj, cp1.alt, cp2.alt,
-            cp1.dir, cp2.dir, i, j, &rOrb);
+            cp1.dir, cp2.dir, y, x, &rOrb);
         else
           asp = GetParallel(cp1.obj, cp2.obj, cp1.alt, cp2.alt,
-            cp1.diralt, cp2.diralt, i, j, &rOrb);
+            cp1.diralt, cp2.diralt, y, x, &rOrb);
         if (asp > 0) {
-          grid->n[i][j] = asp; grid->v[i][j] = (int)(rOrb * 3600.0);
+          grid->n[x][y] = asp; grid->v[x][y] = (int)(rOrb * 3600.0);
         }
       } else {
         // Calculate midpoint in 2D or 3D.
         if (!us.fHouse3D)
-          l = Mod(Midpoint(cp2.obj[i], cp1.obj[j]));
+          l = Mod(Midpoint(cp1.obj[x], cp2.obj[y]));
         else
-          SphRatio(cp2.obj[i], cp2.alt[i], cp1.obj[j], cp1.alt[j], 0.5,
+          SphRatio(cp1.obj[x], cp1.alt[x], cp2.obj[y], cp2.alt[y], 0.5,
             &l, &rT);
         k = (int)l;
-        grid->n[i][j] = k/30+1;
-        grid->v[i][j] = (int)(l*3600.0) % (30*3600);
+        grid->n[x][y] = k/30+1;
+        grid->v[x][y] = (int)(l*3600.0) % (30*3600);
       }
   return fTrue;
 }
@@ -1899,21 +1949,21 @@ flag FCreateGridRelation(flag fMidpoint)
 // opposed to visible from a particular location) and if so by what percentage
 // of distance overlap. Detects partial, annular, and total solar eclipses.
 
-int NCheckEclipseSolar(int iEar, int iMoo, real *prPct)
+int NCheckEclipseSolar(int iEar, int iMoo, int iSun, real *prPct)
 {
   PT3R pSun, pMoo, pEar, pNear, pUmb, vS2M, vS2E, vE2U, vS2Mu, vS2N;
   real radiS, radiE, radiM, radiU, radiP, lNear, lSM, lSU, lSE, lSN, lEU, dot;
 
-  // No shadows visible in a heliocentric chart.
-  if (iEar == oSun)
-    return etNone;
+  // Objects must be different.
+  if (iEar == iSun || iEar == iMoo || iMoo == iSun)
+    return etUndefined;
 
   // Calculate radius and coordinates of the objects in km.
-  radiS = rObjDiam[oSun] / 2.0;
+  radiS = rObjDiam[iSun] / 2.0;
   radiE = rObjDiam[iEar] / 2.0;
   radiM = rObjDiam[iMoo] / 2.0;
 
-  pSun = space[oSun]; pMoo = space[iMoo]; pEar = space[iEar];
+  pSun = space[iSun]; pMoo = space[iMoo]; pEar = space[iEar];
   PtMul(pSun, rAUToKm);
   PtMul(pMoo, rAUToKm);
   PtMul(pEar, rAUToKm);
@@ -1969,7 +2019,7 @@ int NCheckEclipse(int obj1, int obj2, real *prPct)
 
   // Objects that aren't actual things in space can't eclipse or be eclipsed.
   if (!FThing(obj1) || !FThing(obj2))
-    return etNone;
+    return etUndefined;
 
   // Calculate radius of the two objects in km.
   radi1 = RObjDiam(obj1) / 2.0;
@@ -1979,7 +2029,7 @@ int NCheckEclipse(int obj1, int obj2, real *prPct)
 
   // Special check if solar eclipse allowed to happen anywhere on Earth.
   if (us.fEclipseAny && obj1 == oSun)
-    return NCheckEclipseSolar(us.objCenter, obj2, prPct);
+    return NCheckEclipseSolar(us.objCenter, obj2, oSun, prPct);
 
   // Calculate angular distance between center points of the two objects.
   angDiff = SphDistance(planet[obj1], planetalt[obj1],
@@ -2013,26 +2063,30 @@ int NCheckEclipse(int obj1, int obj2, real *prPct)
 // other planet) and if so by what percentage of distance overlap. Detects
 // penumbral, total penumbral, partial, and total lunar eclipses.
 
-int NCheckEclipseLunar(int iEar, int iMoo, real *prPct)
+int NCheckEclipseLunar(int iEar, int iMoo, int iSun, real *prPct)
 {
   real radiS, radiE, radiM, radiU, radiP, lenS, lenM,
     angDiff, angM, angU, angP, theta;
 
-  // No shadows visible in a heliocentric chart.
-  if (iEar == oSun)
-    return etNone;
+  // Objects must be different.
+  if (iEar == iSun || iEar == iMoo || iMoo == iSun)
+    return etUndefined;
+
+  // Objects that aren't actual things in space can't eclipse or be eclipsed.
+  if (!FThing(iEar) || !FThing(iMoo) || !FThing(iSun))
+    return etUndefined;
 
   // Calculate angular distance between the Moon and point opposite the Sun.
-  angDiff = SphDistance(Mod(planet[oSun] + rDegHalf), -planetalt[oSun],
+  angDiff = SphDistance(Mod(planet[iSun] + rDegHalf), -planetalt[iSun],
     planet[iMoo], planetalt[iMoo]);
   if (angDiff > (iEar == oEar ? 2.0 : 18.0))
     return etNone;
 
   // Calculate radius of the Sun, Earth, and Moon in km.
-  radiS = rObjDiam[oSun] / 2.0;
+  radiS = rObjDiam[iSun] / 2.0;
   radiE = rObjDiam[iEar] / 2.0;
   radiM = rObjDiam[iMoo] / 2.0;
-  lenS = PtLen(space[oSun]) * rAUToKm;
+  lenS = PtLen(space[iSun]) * rAUToKm;
   lenM = PtLen(space[iMoo]) * rAUToKm;
 
   //radiU = (radiE - radiS) / lenS * (lenS + lenM) + radiS;
@@ -2078,8 +2132,8 @@ int NCheckEclipseAny(int obj1, int asp, int obj2, real *prEclipse)
   if (us.fEclipse && !us.fParallel) {
     if (asp == aCon)
       nEclipse = NCheckEclipse(obj1, obj2, &rEclipse);
-    else if (asp == aOpp && obj1 == oSun && ObjOrbit(obj2) == us.objCenter)
-      nEclipse = NCheckEclipseLunar(us.objCenter, obj2, &rEclipse);
+    else if (asp == aOpp)
+      nEclipse = NCheckEclipseLunar(us.objCenter, obj2, obj1, &rEclipse);
   }
   if (prEclipse != NULL)
     *prEclipse = rEclipse;
@@ -2694,6 +2748,10 @@ LNext:
     ExpSetR(iLetterZ, pes->mag);
     if (!NParseExpression(us.szExpStar))
       goto LNext;
+    pes->lon = RExpGet(iLetterW);
+    pes->lat = RExpGet(iLetterX);
+    pes->dir = RExpGet(iLetterY);
+    pes->mag = RExpGet(iLetterZ);
   }
 #endif
 
@@ -2809,6 +2867,9 @@ LNext:
       iast += (fBack ? -1 : 1);
       goto LNext;
     }
+    pes->lon = RExpGet(iLetterX);
+    pes->lat = RExpGet(iLetterY);
+    pes->dir = RExpGet(iLetterZ);
   }
 #endif
 
@@ -2852,7 +2913,7 @@ LNext:
 #endif
 
 
-// Wrapper around Swiss ephemeris planet name lookup routine.
+// Wrapper around Swiss Ephemeris planet name lookup routine.
 
 void SwissGetObjName(char *sz, int iobj)
 {
@@ -2879,7 +2940,7 @@ void SwissGetObjName(char *sz, int iobj)
 flag FSwissPlanetData(real jd, int ind, real *rPhase, real *rDiam, real *rMag)
 {
   int iobj, iflag;
-  double attr[20];
+  double attr[20];      // API requires at least 20 elements in output array.
   char serr[AS_MAXCH];
 
   if (ind == oEar)
@@ -2920,7 +2981,32 @@ flag FSwissPlanetData(real jd, int ind, real *rPhase, real *rDiam, real *rMag)
 }
 
 
-// Wrappers around Swiss ephemeris Julian Day conversion routines.
+// Wrapper around Swiss Ephemeris function to convert an altitude above the
+// horizon to altitude when atmospheric refraction is taken into account.
+
+real SwissRefract(real rAlt)
+{
+  real dret[20], rPress;
+
+  rPress = 1013.25 * pow(1.0 - 0.0065 * us.elvDef / 288.0, 5.255);
+  //alt[i] = swe_refrac(alt[i], rPress, us.tmpDef, SE_TRUE_TO_APP);
+  swe_refrac_extended(rAlt, us.elvDef, rPress, us.tmpDef,
+    0.0065/*SE_LAPSE_RATE*/, SE_TRUE_TO_APP, dret);
+  return dret[1];
+}
+
+
+// Wrapper around Swiss Ephemeris function to get date range of ephem file.
+
+void SwissGetFileData(real *jt1, real *jt2)
+{
+  int denum;
+
+  swe_get_current_file_data(3, jt1, jt2, &denum);
+}
+
+
+// Wrappers around Swiss Ephemeris Julian Day conversion routines.
 
 double SwissJulDay(int month, int day, int year, real hour, int gregflag)
 {

@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: xdevice.cpp
+** Astrolog (Version 7.50) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -933,7 +933,7 @@ flag BeginFileX()
         gs.ft == ftBmp ? "bitmap" : (gs.ft == ftPS ? "PostScript" :
         (gs.ft == ftWmf ? "metafile" : "wireframe")));
       InputString(sz, sz);
-      gi.szFileOut = SzPersist(sz);
+      gi.szFileOut = SzCopy(sz);
    }
 #else
     // If autosaving in potentially rapid succession, ensure the file isn't
@@ -1451,11 +1451,9 @@ void WireNum(int n)
 
 void WireLine(int x1, int y1, int z1, int x2, int y2, int z2)
 {
-  if (!FBetween(x1, -32767, 32767) || !FBetween(x2, -32767, 32767))
-    return;
-  if (!FBetween(y1, -32767, 32767) || !FBetween(y2, -32767, 32767))
-    return;
-  if (!FBetween(z1, -32767, 32767) || !FBetween(z2, -32767, 32767))
+  if (!FBetween(x1, -32767, 32767) || !FBetween(x2, -32767, 32767) ||
+      !FBetween(y1, -32767, 32767) || !FBetween(y2, -32767, 32767) ||
+      !FBetween(z1, -32767, 32767) || !FBetween(z2, -32767, 32767))
     return;
 
   if (gi.kiInFile != gi.kiCur) {
@@ -1479,6 +1477,31 @@ void WireSpot(int x, int y, int z)
 }
 
 
+// Add a circle to the current wireframe file. The circle may be tilted and
+// rotated in any configuration. Used when drawing rings of planets.
+
+void WireCircle(int x, int y, int z, real r, real tilt, real rot)
+{
+  int m, n, o, u, v, w, i, di;
+  real alt, azi;
+
+  i = NAbs((int)r) << 1;
+  di = 2 + (i < 90) + (i < 72) + (i < 60) + (i < 40);
+  for (i = 0; i <= nDegMax; i += di) {
+    azi = (real)i; alt = 0.0;
+    if (tilt != 0.0)
+      CoorXform(&azi, &alt, tilt);
+    azi += rot;
+    u = x + (int)(r * RCosD(alt) * RSinD(azi));
+    v = y + (int)(r * RCosD(alt) * RCosD(azi));
+    w = z + (int)(r * RSinD(alt));
+    if (i > 0)
+      WireLine(m, n, o, u, v, w);
+    m = u; n = v; o = w;
+  }
+}
+
+
 // Add an octahedron of a given radius to the current wireframe file. These
 // shapes are used to mark the exact locations of planets in the scene.
 
@@ -1492,6 +1515,41 @@ void WireOctahedron(int x, int y, int z, int r)
     WireLine(rgx[i], rgy[i], z, x, y, z-r);
     WireLine(rgx[i], rgy[i], z, x, y, z+r);
     WireLine(rgx[i], rgy[i], z, rgx[i+1 & 3], rgy[i+1 & 3], z);
+  }
+}
+
+
+// Add a sphere of a given radius to the current wireframe file. These shapes
+// are used to mark the exact locations of zoomed in planets in the scene.
+
+void WireSphere(int x, int y, int z, int r)
+{
+  real rgx[12+1], rgy[12+1], rgr[6+1];
+  int rgz[6+1], i, j, x1, y1, x2, y2;
+
+  for (i = 0; i < 12; i++) {
+    rgx[i] = RCosD((real)(i * nDegMax / 12));
+    rgy[i] = RSinD((real)(i * nDegMax / 12));
+  }
+  rgx[12] = rgx[0]; rgy[12] = rgy[0];
+  for (i = 0; i <= 6; i++) {
+    rgz[i] = z + (int)((real)r * rgx[i]);
+    rgr[i] = (real)r * rgy[i];
+  }
+  for (j = 0; j <= 6; j++) {
+    x2 = x + (int)rgr[j]; y2 = y;
+    for (i = 0; i < 12; i++) {
+      x1 = x2; y1 = y2;
+      x2 = x + (int)(rgr[j] * rgx[i+1]);
+      y2 = y + (int)(rgr[j] * rgy[i+1]);
+      if (j < 6)
+        WireLine(x1, y1, rgz[j], x2, y2, rgz[j]);
+      if (j <= 0)
+        continue;
+      x1 = x + (int)(rgr[j-1] * rgx[i+1]);
+      y1 = y + (int)(rgr[j-1] * rgy[i+1]);
+      WireLine(x2, y2, rgz[j], x1, y1, rgz[j-1]);
+    }
   }
 }
 
@@ -1830,7 +1888,7 @@ void WireDrawGlobe(flag fSky, real deg)
 void WireChartOrbit()
 {
   int x[objMax], y[objMax], z[objMax], zWin, xd, yd, i, j, k;
-  real sx, sz, xp, yp, zp, xp2, yp2, zp2;
+  real sx, sz, xp, yp, zp, xp2, yp2, zp2, rT;
 #ifdef SWISS
   ES es, *pes1, *pes2;
   int xT, yT, zT, x2, y2, z2;
@@ -1869,7 +1927,7 @@ void WireChartOrbit()
   }
 
   // Draw lines connecting planets which have aspects between them.
-  if (!gs.fEquator && us.nAsp > 0) {
+  if (gs.fEquator && us.nAsp > 0) {
     if (!FCreateGrid(fFalse))
       return;
     for (j = oNorm; j >= 1; j--)
@@ -1895,8 +1953,55 @@ void WireChartOrbit()
     else
       j = (int)(RLog10(RObjDiam(i)) * (real)gi.nScaleT);
     j = Max(j, 3 * gi.nScaleT);
-    WireOctahedron(x[i], y[i], z[i], j);
-    gi.zDefault = z[i] + (j + 5*gi.nScaleT);
+    rT = RObjDiam(i) / 2.0 / rAUToKm;
+    k = (int)(rT * sx);
+    j = Max(j, k);
+    if (j < 12 * gi.nScaleT) {
+      WireOctahedron(x[i], y[i], z[i], j);
+      gi.zDefault = z[i] + (j + 5*gi.nScaleT);
+    } else {
+      WireSphere(x[i], y[i], z[i], k);
+      gi.zDefault = z[i];
+      DrawColor(kDkGreenB);
+
+      // Draw rings around Saturn or Uranus.
+      if (i == oSat || i == oSaC || i == oUra || i == oUrC) {
+        PT3R vCross, ptCen;
+        real tilt, rot;
+        if (i == oSat || i == oSaC) {
+          PtSet(vCross, -0.0833346, -0.4629964, -0.8824339);
+        } else {
+          PtSet(vCross, 0.2059129, 0.9691102, -0.1357401);
+        }
+        // Adjust ring vector appropriately if in sidereal zodiac.
+        if (is.rSid != 0.0) {
+          rT = RLength2(vCross.x, vCross.y);
+          rot = RAngleD(vCross.x, vCross.y) + is.rSid;
+          vCross.x = RCosD(rot) * rT;
+          vCross.y = RSinD(rot) * rT;
+        }
+        // Calculate tilt of Saturn's rings up or down.
+        PtSet(ptCen, 0.0, 0.0, 1.0);
+        tilt = VAngleD(&vCross, &ptCen);
+        vCross.z = 0.0;
+        PtSet(ptCen, 1.0, 0.0, 0.0);
+        if (i == oSat || i == oSaC) {
+          rot = rDegMax - VAngleD(&vCross, &ptCen);
+          k = (int)(rSatRingA / rAUToKm * sx);
+          //DrawCircle(x[i], y[i], k, k);
+          WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
+          k = (int)(rSatRingB / rAUToKm * sx);
+          //DrawCircle(x[i], y[i], k, k);
+          WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
+        } else {
+          rot = VAngleD(&vCross, &ptCen);
+          k = (int)(rUraRing / rAUToKm * sx);
+          //DrawCircle(x[i], y[i], k, k);
+          WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
+        }
+      }
+      DrawColor(kObjB[i]);
+    }
     DrawObject(i, x[i], y[i]);
 
     // Draw orbital trails.
@@ -2174,7 +2279,7 @@ void WireChartSphere()
     }
 
   // Draw sign wedges.
-  if (!us.fVedic) {
+  if (!us.fIndian) {
     if (!gs.fColorSign)
       DrawColor(kDkBlueB);
     for (i = 0; i <= nDegMax; i++) {
@@ -2206,7 +2311,7 @@ void WireChartSphere()
   }
 
   // Label signs.
-  if (!us.fVedic) {
+  if (!us.fIndian) {
     nSav = gi.nScale;
     gi.nScale = gi.nScaleTextT;
     for (j = -80; j <= 80; j += 160)

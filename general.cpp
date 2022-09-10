@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: general.cpp
+** Astrolog (Version 7.50) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -344,8 +344,13 @@ flag FEqSzSubI(CONST char *sz1, CONST char *sz2)
 void FormatR(char *sz, real r, int n)
 {
   char szT[cchSzDef], *pch;
+  int x = n/100, y = NAbs(n%100);
 
-  sprintf(szT, "%%.%df", NAbs(n));
+  // If n > 100, use 100's place as minimum field length for entire number.
+  if (x != 0)
+    sprintf(szT, "%%%d.%df", NAbs(x) + y + 1, y);
+  else
+    sprintf(szT, "%%.%df", NAbs(n));
   sprintf(sz, szT, r);
   for (pch = sz; *pch; pch++)
     ;
@@ -749,7 +754,7 @@ void AddTime(CI *pci, int mode, int toadd)
     if (m >= 60.0) {
       m -= 60.0; toadd = NSgn2(toadd);
     } else if (m < 0.0) {
-      m += 60.0; toadd = NSgn2(toadd);
+      m += 60.0; toadd = -NSgn2(-toadd);
     }
     h += toadd;
   }
@@ -760,7 +765,7 @@ void AddTime(CI *pci, int mode, int toadd)
     if (h >= 24) {
       h -= 24; toadd = NSgn2(toadd);
     } else if (h < 0) {
-      h += 24; toadd = NSgn2(toadd);
+      h += 24; toadd = -NSgn2(-toadd);
     }
     pci->day = AddDay(pci->mon, pci->day, pci->yea, toadd);
   }
@@ -773,7 +778,7 @@ void AddTime(CI *pci, int mode, int toadd)
       pci->day -= d; toadd = NSgn2(toadd);
     } else if (pci->day < 1) {
       pci->day += DayInMonth(Mod12(pci->mon - 1), pci->yea);
-      toadd = NSgn2(toadd);
+      toadd = -NSgn2(-toadd);
     }
     pci->mon += toadd;
   }
@@ -835,6 +840,56 @@ CONST char *SzAspectAbbrev(int asp)
   if (us.fParallel && asp <= aOpp)
     asp += cAspect;
   return szAspectAbbrevDisp[asp];
+}
+
+
+// Restriction settings have changed in an arbitrary fashion (such as by
+// running an unknown command line). Set the various "is category enabled"
+// flags based on whether any of their objects are unrestricted.
+
+void RedoRestrictions()
+{
+  int i;
+  flag f;
+
+  for (f = fFalse, i = cuspLo; i <= cuspHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  us.fCusp = f;
+  for (f = fFalse, i = uranLo; i <= uranHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  us.fUranian = f;
+  for (f = fFalse, i = dwarfLo; i <= dwarfHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  us.fDwarf = f;
+  for (f = fFalse, i = moonsLo; i <= moonsHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  us.fMoons = f;
+  for (f = fFalse, i = cobLo; i <= cobHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  us.fCOB = f;
+  for (f = fFalse, i = starLo; i <= starHi; i++)
+    if (!ignore[i] || !ignore2[i]) {
+      f = fTrue;
+      break;
+    }
+  if (!(us.nStar != 0 && f))
+    us.nStar = f;
+  AdjustRestrictions();
 }
 
 
@@ -1156,6 +1211,34 @@ void PrintSzScreen(CONST char *sz)
 }
 
 
+// Print a string, however also expand escape sequences like "\A" to that
+// AstroExpression custom variable, and "\n" to a newline.
+
+void PrintSzFormat(CONST char *sz)
+{
+  char szFormat[cchSzMax], *pch2;
+  CONST char *pch;
+
+  for (pch = sz, pch2 = szFormat; *pch; pch++, pch2++) {
+#ifdef EXPRESS
+    if (*pch == '\\' && FCapCh(pch[1])) {
+      pch2 = PchFormatExpression(pch2, pch[1] - '@') - 1;
+      pch++;
+      continue;
+    }
+#endif
+    *pch2 = *pch;
+    if (*pch == '\\' && (pch[1] == '\\' || pch[1] == 'n')) {
+      if (pch[1] == 'n')
+        *pch2 = '\n';
+      pch++;
+    }
+  }
+  *pch2 = chNull;
+  PrintSz(szFormat);
+}
+
+
 // Print a partial progress message given a string. This is meant to be used
 // in the middle of long operations such as creating and saving files.
 
@@ -1429,6 +1512,24 @@ void PrintZodiac(real deg)
 }
 
 
+// Determine and return the best character to use for the degree symbol.
+
+char ChDeg()
+{
+  char chDeg;
+
+#ifdef GRAPH
+  // In graphics charts, always use the Latin encoding for degree.
+  if (us.fGraphics && us.fAnsiChar)
+    chDeg = (us.nCharset == ccIBM ? chDegI : chDegL);
+  else
+#endif
+    // Otherwise degree depends on the current output codepage environment.
+    chDeg = (us.fAnsiChar > 1 ? chDegT : chDegC);
+  return chDeg;
+}
+
+
 CONST char *szNakshatra[27+1] = {"",
   "Ashv", "Bhar", "Krit", "Rohi", "Mrig", "Ardr", "Puna", "Push", "Ashl",
   "Magh", "PPha", "UPha", "Hast", "Chit", "Swat", "Vish", "Anur", "Jyes",
@@ -1499,7 +1600,6 @@ char *SzAltitude(real deg)
   static char szAlt[11];
   int d, m, f;
   real s;
-  char ch;
 
   f = deg < 0.0;
   deg = RAbs(deg);
@@ -1508,8 +1608,7 @@ char *SzAltitude(real deg)
       deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
-    ch = us.fAnsiChar > 1 ? chDeg3 : chDeg1;
-    sprintf(szAlt, "%c%2d%c%02d'", f ? '-' : '+', d, ch, m);
+    sprintf(szAlt, "%c%2d%c%02d'", f ? '-' : '+', d, ChDeg(), m);
     if (is.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       sprintf(&szAlt[7], "%02d\"", (int)s);
@@ -1540,7 +1639,7 @@ char *SzDegree(real deg)
       deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
-    sprintf(szPos, "%3d%c%02d'", d, chDeg1, m);
+    sprintf(szPos, "%3d%c%02d'", d, ChDeg(), m);
     if (is.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       sprintf(&szPos[7], "%02d\"", (int)s);
@@ -1568,7 +1667,7 @@ char *SzDegree2(real deg)
   if (us.nDegForm != 2) {
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
-    sprintf(szPos, "%d%c%02d'", d, chDeg1, m);
+    sprintf(szPos, "%d%c%02d'", d, ChDeg(), m);
     if (us.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       for (pch = szPos; *pch; pch++)
@@ -1743,7 +1842,7 @@ char *SzLocation(real lon, real lat)
     return szLoc;
   }
   if (us.fAnsiChar != 3) {
-    chDeg = us.fAnsiChar > 1 ? chDeg3 : chDeg1;
+    chDeg = ChDeg();
     if (us.nDegForm != 2) {
       if (!is.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%c%3.0f%c%02d%c",
@@ -1797,6 +1896,22 @@ char *SzElevation(real elv)
     ;
   sprintf(pch, "%s", us.fEuroDist ? "m" : "ft");
   return szElev;
+}
+
+
+// Format and return a string containing a temperature, displayed in either
+// degrees Celsius or Fahrenheit, as used with atmospheric refraction.
+
+char *SzTemperature(real tmp)
+{
+  static char szTemp[21];
+  char *pch;
+
+  FormatR(szTemp, us.fEuroDist ? tmp : tmp * 9.0/5.0 + 32.0, -2);
+  for (pch = szTemp; *pch; pch++)
+    ;
+  sprintf(pch, "%s", us.fEuroDist ? "C" : "F");
+  return szTemp;
 }
 
 
@@ -2055,11 +2170,20 @@ void FilterCIList(CONST char *szName, CONST char *szLocation)
   int i, j, cciNew = 0;
   CI *pci;
 #ifdef EXPRESS
-  CI ciSav;
-  CP cpSav;
-  flag fRet;
+  CI ciSav[3];
+  CP cpSav[3];
+
+  for (i = 0; i <= 2; i++) {
+    ciSav[i] = *rgpci[i];
+    cpSav[i] = *rgpcp[i];
+  }
+  // Cast chart once ahead of time for chart slot #2 that won't be changing.
+  ciCore = ciTwin;
+  CastChart(0);
+  cp2 = cp0;
 #endif
 
+  // Loop over each chart in chart list.
   for (i = 0; i < is.cci; i++) {
     pci = &is.rgci[i];
     // Chart must have both the name and location strings within it.
@@ -2080,21 +2204,25 @@ void FilterCIList(CONST char *szName, CONST char *szLocation)
 #ifdef EXPRESS
     // May want to skip current chart if AstroExpression says to do so.
     if (!us.fExpOff && FSzSet(us.szExpListF)) {
-      cpSav = cp0; ciSav = ciCore;
-      ciCore = *pci;
+      ciCore = ciMain = *pci;
       CastChart(-1);
+      cp1 = cp0;
       ExpSetN(iLetterZ, i);
-      fRet = !NParseExpression(us.szExpListF);
-      ciCore = ciSav;
-      cp0 = cpSav;
-      if (fRet)
+      if (!NParseExpression(us.szExpListF))
         continue;
     }
 #endif
     CopyRgb((pbyte)&is.rgci[i], (pbyte)&is.rgci[cciNew], sizeof(CI));
     cciNew++;
   }
+
   is.cci = cciNew;
+#ifdef EXPRESS
+  for (i = 0; i <= 2; i++) {
+    *rgpci[i] = ciSav[i];
+    *rgpcp[i] = cpSav[i];
+  }
+#endif
 }
 
 
@@ -2109,11 +2237,22 @@ flag FEnumerateCIList(int nListAll)
   CP cpSav[4];
 
   // Save chart data that will be edited.
+  Assert(FBetween(nListAll, 1, 4));
   if (!(!us.fExpOff && FSzSet(us.szExpListY)))
     return fFalse;
-  for (i = 0; i < 3; i++) {
+  for (i = 0; i <= 2; i++) {
     ciSav[i] = *rgpci[i];
     cpSav[i] = *rgpcp[i];
+  }
+
+  // Cast chart once ahead of time for chart slot that won't be changing.
+  if (nListAll <= 2) {
+    i = (nListAll <= 1) * 2;
+    ciCore = ciSav[i];
+    CastChart(0);
+    *rgpcp[i] = cp0;
+    if (i == 0)
+      cp1 = cp0;
   }
 
   // Loop over all charts in chart list.
@@ -2152,7 +2291,7 @@ flag FEnumerateCIList(int nListAll)
 
   // Restore chart data.
   is.iciIndex1 = is.iciIndex2 = -1;
-  for (i = 0; i < 3; i++) {
+  for (i = 0; i <= 2; i++) {
     *rgpci[i] = ciSav[i];
     *rgpcp[i] = cpSav[i];
   }
@@ -2377,6 +2516,7 @@ CONST char *ConvertSzToLatin(CONST char *sz, char *szBuf, int cchBuf)
 ******************************************************************************
 */
 
+
 // Given a string, return a pointer to a persistent version of it, in which
 // "persistent" means its contents won't be invalidated when the stack frame
 // changes. Strings such as macros and such need to be in their own space and
@@ -2388,7 +2528,7 @@ char *SzPersist(char *szSrc)
   int cb;
 
   // Some strings such as outer level command line parameter arguments
-  // already persist, so we can just return the same string passed in.
+  // already persist, so can just return the same string passed in.
   if (is.fSzPersist)
     return szSrc;
 
@@ -2399,6 +2539,21 @@ char *SzPersist(char *szSrc)
     CopyRgb((pbyte)szSrc, (pbyte)szNew, cb);
     is.cAlloc--;
   }
+  return szNew;
+}
+
+
+// Like SzPersist() but used in contexts in which always want to make a copy
+// of the string.
+
+char *SzCopy(char *szSrc)
+{
+  char *szNew;
+  flag fSav = is.fSzPersist;
+
+  is.fSzPersist = fFalse;
+  szNew = SzPersist(szSrc);
+  is.fSzPersist = fSav;
   return szNew;
 }
 

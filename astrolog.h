@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: astrolog.h
+** Astrolog (Version 7.50) File: astrolog.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/24/2022.
+** Last code change made 9/9/2022.
 */
 
 /*
@@ -225,7 +225,7 @@
 #define WHEELROWS 11    // Max no. of objects that can be in a wheel house.
 #define SCREENWIDTH 80  // Number of columns to print interpretations in.
 #define MONTHSPACE 3    // Number of spaces between each calendar column.
-#define MAXINDAY 200    // Max number of aspects or transits displayable.
+#define MAXINDAY 300    // Max number of aspects or transits displayable.
 #define MAXCROSS 750    // Max number of latitude crossings displayable.
 #define BIODAYS 14      // Days to include in graphic biorhythms.
 #define CREDITWIDTH 74  // Number of text columns in the -Hc credit screen.
@@ -277,9 +277,9 @@
 #define chJS   (char)(us.fAnsiChar ? 194 : '-')
 #define chJW   (char)(us.fAnsiChar ? 180 : '|')
 #define chJE   (char)(us.fAnsiChar ? 195 : '|')
-#define chDeg0 (char)(us.fAnsiChar ? 248 : ' ')
-#define chDeg1 (char)(us.fAnsiChar ? 248 : ':')
-#define chDeg3 (char)(us.nCharset == ccIBM ? 248 : chDeg2)
+#define chDegS (char)(us.fAnsiChar ? chDegT : ' ')
+#define chDegC (char)(us.fAnsiChar ? chDegT : ':')
+#define chDegT (char)(us.nCharset <= ccIBM ? chDegI : chDegL)
 
 
 /*
@@ -456,9 +456,9 @@
 #define fTrue  TRUE
 
 #define szAppNameCore "Astrolog"
-#define szVersionCore "7.40"
-#define szVerCore     "740"
-#define szDateCore    "March 2022"
+#define szVersionCore "7.50"
+#define szVerCore     "750"
+#define szDateCore    "September 2022"
 #define szAddressCore \
   "Astara@msn.com - http://www.astrolog.org/astrolog.htm"
 #define szNowCore     "now"
@@ -517,39 +517,42 @@
 #define rInvalid   (1.23456789E-09)
 #define rRound     0.5
 
-#define chNull     '\0'
-#define chEscape   '\33' // 27
-#define chBell     '\7'
-#define chReturn   '\r'
-#define chTab      '\t'
-#define chDelete   '\b'
-#define chBreak    '\3'
-#define chDeg2     '\260' // 176
-#define chRet      'R'
-#define chRet2     'r'
-#define chSep      ','
-#define chSep2     ';'
+// Character constants
+
+#define chNull   '\0'
+#define chEscape '\33' // 27
+#define chBell   '\7'
+#define chReturn '\r'
+#define chTab    '\t'
+#define chDelete '\b'
+#define chBreak  '\3'
+#define chDegL   '\260' // 176 (Latin-1)
+#define chDegI   '\370' // 248 (IBM)
+#define chRet    'R'
+#define chRet2   'r'
+#define chSep    ','
+#define chSep2   ';'
 
 // Array index limits
 
-#define objMax     (cObj+1)
-#define objMaxG    (objMax+10)
-#define cCnstl     88
-#define cZone      72
-#define cSector    36
-#define cPart      177
-#define cWeek      7
-#define cColor     16
-#define cRainbow   7
-#define cRay       7
-#define cRing      6
-#define xFont      6
-#define yFont      10
-#define xFont2     (xFont >> 1)
-#define yFont2     (yFont >> 1)
-#define xFontT     (xFont2 * gi.nScaleTextT2)
-#define yFontT     (yFont2 * gi.nScaleTextT2)
-#define xSideT     (SIDESIZE * gi.nScaleTextT2 >> 1)
+#define objMax   (cObj+1)
+#define objMaxG  (objMax+10)
+#define cCnstl   88
+#define cZone    72
+#define cSector  36
+#define cPart    177
+#define cWeek    7
+#define cColor   16
+#define cRainbow 7
+#define cRay     7
+#define cRing    6
+#define xFont    6
+#define yFont    10
+#define xFont2   (xFont >> 1)
+#define yFont2   (yFont >> 1)
+#define xFontT   (xFont2 * gi.nScaleTextT2)
+#define yFontT   (yFont2 * gi.nScaleTextT2)
+#define xSideT   (SIDESIZE * gi.nScaleTextT2 >> 1)
 
 // Atlas values
 
@@ -702,6 +705,8 @@ enum _objects {
 // Aspects
 
 enum _aspects {
+  aDis = -8,  // Distances equal
+  aNod = -7,  // Latitude zero/node crossing
   aLen = -6,  // Direction change (distance)
   aAlt = -5,  // Direction change (latitude)
   aHou = -4,  // 3D House change
@@ -883,34 +888,50 @@ enum _rulerships {
   rrMax = 5,
 };
 
+// Decan (or other) division types
+
+enum _decandivisiontype {
+  ddNone    = 0,  // No division
+  ddDecanR  = 1,  // Decan/Face (ruler)
+  ddDecanS  = 2,  // Decan/Face (sign)
+  ddChaldea = 3,  // Chaldean Decan
+  ddEgypt   = 4,  // Egyptian Terms/Bounds
+  ddPtolemy = 5,  // Ptolemaic Terms/Bounds
+  ddNavamsa = 6,  // Navamsa division
+  dd12      = 7,  // 12th harmonic
+  ddDwad    = 8,  // Dwad
+  dd27      = 9,  // 27 Nakshatras
+  ddMax     = 10,
+};
+
 // Graphics chart modes
 
 enum _graphicschart {
   gWheel      = 1,
   gHouse      = 2,
   gGrid       = 3,
-  gHorizon    = 4,
-  gOrbit      = 5,
-  gSector     = 6,
-  gCalendar   = 7,
-  gDisposit   = 8,
-  gEsoteric   = 9,
-  gAstroGraph = 10,
-  gEphemeris  = 11,
-  gRising     = 12,
-  gLocal      = 13,
-  gTraTraGra  = 14,
-  gTraNatGra  = 15,
-  gMoons      = 16,
-  gSphere     = 17,
-  gWorldMap   = 18,
-  gGlobe      = 19,
-  gPolar      = 20,
-  gTelescope  = 21,
-  gBiorhythm  = 22,
+  gMidpoint   = 4,
+  gHorizon    = 5,
+  gOrbit      = 6,
+  gSector     = 7,
+  gCalendar   = 8,
+  gDisposit   = 9,
+  gEsoteric   = 10,
+  gAstroGraph = 11,
+  gEphemeris  = 12,
+  gRising     = 13,
+  gLocal      = 14,
+  gTraTraGra  = 15,
+  gTraNatGra  = 16,
+  gMoons      = 17,
+  gSphere     = 18,
+  gWorldMap   = 19,
+  gGlobe      = 20,
+  gPolar      = 21,
+  gTelescope  = 22,
+  gBiorhythm  = 23,
 #ifdef WIN
-  gAspect     = 23,
-  gMidpoint   = 24,
+  gAspect     = 24,
   gArabic     = 25,
   gTraTraTim  = 26,
   gTraTraInf  = 27,
@@ -1002,16 +1023,17 @@ enum _parsemode {
   pmZon    = 6,   // Time zone
   pmLon    = 7,   // Longitude
   pmLat    = 8,   // Latitude
-  pmDist   = 9,   // Distance (in km or miles)
-  pmElv    = 10,  // Elevation above sea level (in m or feet)
-  pmLength = 11,  // Length (in cm or inches)
-  pmObject = 12,  // Planet or other object
-  pmAspect = 13,  // Aspect
-  pmSystem = 14,  // House system
-  pmSign   = 15,  // Sign of the zodiac
-  pmColor  = 16,  // Color index
-  pmRGB    = 17,  // RGB color value
-  pmWeek   = 18,  // Day of week
+  pmElv    = 9,   // Elevation above sea level (in m or feet)
+  pmTmp    = 10,  // Temperature of location (in C or F)
+  pmDist   = 11,  // Distance (in km or miles)
+  pmLength = 12,  // Length (in cm or inches)
+  pmObject = 13,  // Planet or other object
+  pmAspect = 14,  // Aspect
+  pmSystem = 15,  // House system
+  pmSign   = 16,  // Sign of the zodiac
+  pmColor  = 17,  // Color index
+  pmRGB    = 18,  // RGB color value
+  pmWeek   = 19,  // Day of week
 };
 
 // File types
@@ -1195,6 +1217,7 @@ enum _terminationcode {
 #define FValidOffset(r) FBetween(r, -rDegMax, rDegMax)
 #define FValidCenter(obj) (FBetween(obj, oEar, cObj) && FThing(obj))
 #define FValidHarmonic(r) FBetween(r, -10000000.0, 10000000.0)
+#define FValidDecan(n) FBetween(n, 0, ddMax-1)
 #define FValidWheel(n) FBetween(n, 0, WHEELROWS)
 #define FValidAstrograph(n) ((n) > 0 && (n) < 90)
 #define FValidAstrograph2(n) FBetween(n, 0, 40000)
@@ -1214,7 +1237,7 @@ enum _terminationcode {
 #define FValidScaleText(n) (FBetween(n, 100, MAXSCALE) && (n)%50 == 0)
 #define FValidBackPct(r) FBetween(r, 0.0, 100.0)
 #define FValidBackOrient(n) FBetween(n, -1, 1)
-#define FValidZoom(r) (FBetween(r, 0.0001, rDegHalf) || (r) == 0.0)
+#define FValidZoom(r) (FBetween(r, 0.0001, rDegMax) || (r) == 0.0)
 #define FValidGraphX(x) (FBetween(x, BITMAPX1, BITMAPX) || (x) == 0)
 #define FValidGraphY(y) (FBetween(y, BITMAPY1, BITMAPY) || (y) == 0)
 #define FValidRotation(n) FBetween(n, 0, rDegMax-rSmall)
@@ -1231,7 +1254,7 @@ enum _terminationcode {
 #define DM(d, m) ((d) + (m)/60.0)
 #define DMS(d, m, s) (DM(d, m) + (s)/3600.0)
 #define ZD(z, d) ((real)(((z)-1)*30) + (d))
-#define ZDMS(z, d, m, s) ((real)(((z)-1)*30) + DMS(d, m, s))
+#define ZDMS(z, d, m, s) ZD(z, DMS(d, m, s))
 #define HM(h, m) ((h) + (m)/60.0)
 #define HMS(h, m, s) (HM(h, m) + (s)/3600.0)
 
@@ -1256,7 +1279,6 @@ enum _terminationcode {
 #define PrintL() PrintCh('\n')
 #define PrintL2() PrintSz("\n\n")
 #define PrintF(sz) fprintf(file, "%s", sz)
-#define PrintFSz() PrintF(sz)
 #define SwapN(n1, n2) (n1)^=(n2)^=(n1)^=(n2)
 #define FSwitchF(f) ((((f) || fOr) && !fAnd) != fNot)
 #define FSwitchF2(f) (((f) || (fOr || fNot)) && !fAnd)
@@ -1318,14 +1340,16 @@ enum _terminationcode {
   ((int)(RSqr((real)(Sq(180*nScl) - 4*Sq((y)*nScl))) + rRound))
 
 // Do settings indicate the current chart should have the info sidebar?
-#define fSidebar ((gi.nMode == gWheel || gi.nMode == gHouse || \
+#define fSidebar \
+  ((gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gMidpoint || \
   gi.nMode == gSector || gi.nMode == gSphere) && gs.fText && !us.fVelocity)
 
 // Is the current chart most properly displayed as a square graphic?
 #define fSquare \
   (gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gGrid || \
-  (gi.nMode == gHorizon && us.fPrimeVert) || gi.nMode == gDisposit || \
-  gi.nMode == gOrbit || gi.nMode == gSector || gi.nMode == gMoons || \
+  gi.nMode == gMidpoint || (gi.nMode == gHorizon && us.fPrimeVert) || \
+  gi.nMode == gDisposit || gi.nMode == gOrbit || gi.nMode == gSector || \
+  gi.nMode == gMoons || \
   gi.nMode == gSphere || gi.nMode == gGlobe || gi.nMode == gPolar)
 
 // Does the current chart have to be displayed in a map rectangle?
@@ -1344,8 +1368,8 @@ enum _terminationcode {
   (gi.nMode != gCalendar || (gs.fLabelAsp && us.nRel < rcNone)) && \
   !((gi.nMode == gWorldMap || gi.nMode == gGlobe || gi.nMode == gPolar) && \
     (gs.fAlt || gs.fConstel)) && \
-  !((gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gSector || \
-    gi.nMode == gSphere) && !us.fVelocity))
+  !((gi.nMode == gWheel || gi.nMode == gHouse || gi.nMode == gMidpoint || \
+    gi.nMode == gSector || gi.nMode == gSphere) && !us.fVelocity))
 #endif // GRAPH
 
 
@@ -1433,18 +1457,18 @@ typedef struct _InDayInfo {
   real time;     // Time of event in hours
   real pos1;     // Zodiac position of first planet
   real pos2;     // Zodiac position of second planet
-  char ret1;     // Sign of first planet's velocity
-  char ret2;     // Sign of second planet's velocity
+  real ret1;     // First planet's zodiac position velocity
+  real ret2;     // Second planet's zodiac position velocity
 } InDayInfo;
 
 typedef struct _TransInfo {
   short source;  // Transiting planet
   short aspect;  // The aspect transiting planet makes to natal planet
-  short dest;    // Natal planet
-  short isret;   // Sign of transiting planet's velocity
+  int dest;      // Natal planet
   real time;     // Time of transit in minutes
   real posT;     // Zodiac position of transiting planet
   real posN;     // Zodiac position of natal planet
+  real retT;     // Transiting planet's zodiac position velocity
 } TransInfo;
 
 typedef struct _AtlasEntry {
@@ -1590,7 +1614,7 @@ typedef struct _UserSettings {
   flag fUranian;     // -u
   flag fDwarf;       // -u0
   flag fMoons;       // -u8
-  flag fCOB;         // -uc
+  flag fCOB;         // -ub
   flag fProgress;    // Are we doing a -p progressed chart?
   flag fInterpret;   // Is -I interpretation switch in effect?
   flag fHouse3D;     // -c3
@@ -1600,7 +1624,7 @@ typedef struct _UserSettings {
   flag fDecan;       // -3
   flag fFlip;        // -f
   flag fGeodetic;    // -G
-  flag fVedic;       // -J
+  flag fIndian;      // -J
   flag fNavamsa;     // -9
   flag fEphemFiles;  // -b
   flag fWriteFile;   // -o
@@ -1625,6 +1649,7 @@ typedef struct _UserSettings {
   // Obscure flags
   flag fTruePos;      // -YT
   flag fTopoPos;      // -YV
+  flag fRefract;      // -Yf
   flag fBarycenter;   // -Yh
   flag fMoonMove;     // -Ym
   flag fSidereal2;    // -Ys
@@ -1647,6 +1672,8 @@ typedef struct _UserSettings {
   flag fIgnoreDir;    // -YR0
   flag fIgnoreDiralt; // -YR1
   flag fIgnoreDirlen; // -YR1
+  flag fIgnoreAlt0;   // -YR2
+  flag fIgnoreDisequ; // -YR2
   flag fIgnoreAuto;   // -YRh
   flag fStarsList;    // -YRU0
   flag fStarMagDist;  // -YUb
@@ -1655,11 +1682,13 @@ typedef struct _UserSettings {
   flag fNoRead;       // -0i
   flag fNoQuit;       // -0q
   flag fNoGraphics;   // -0X
+  flag fNoPlacalc;    // -0b
   flag fNoNetwork;    // -0n
   flag fNoExp;        // -0~
   flag fExpOff;       // -~0
 
   // Value settings
+  int   nDecanType;    // -v3
   int   nAspectSort;   // -a
   int   nEphemYears;   // -Ey
   int   nEphemRate;    // -E0
@@ -1687,6 +1716,7 @@ typedef struct _UserSettings {
   real  lonDef;        // -zl
   real  latDef;        // -zl
   real  elvDef;        // -zv
+  real  tmpDef;        // -zf
   char *namDef;        // -zj
   char *locDef;        // -zj
   char *rgszPath[10];  // -Yi
@@ -1876,6 +1906,8 @@ typedef struct _GraphicsSettings {
   flag fKeepSquare;  // Are we preserving chart aspect ratio (-XQ set).
   flag fAnimMap;     // Are we animating map instead of time (-XN set).
   flag fThick;       // Are we drawing thicker lines in charts (-Xx set).
+  flag fIndianWheel; // Are wheel charts North/South Indian (-XJ set).
+  flag fMoonWheel;   // Are moons drawn around planets in wheels (-X8 set).
   int xWin;          // Current hor. size of graphic chart (-Xw).
   int yWin;          // Current ver. size of graphic chart (-Xw).
   int nAnim;         // Current animation mode jump rate (-Xn).
@@ -1960,6 +1992,10 @@ typedef struct _GraphicsInternal {
 #ifdef SWISS
   ES *rges;           // List of extra star coordinates (-YXU).
   int cStarsLin;      // Count of extra star coordinates (-YXU).
+#endif
+#ifdef ISG
+  int xWinResize;     // Manually resized hor. size of graphic chart
+  int yWinResize;     // Manually resized ver. size of graphic chart
 #endif
 #ifdef X11
   Display *disp;      // The opened X11 display (-Xd).
@@ -2075,6 +2111,7 @@ typedef struct _WindowInternal {
   int cmdCur;        // Menu command for current chart type.
   flag fMenu;        // Do we need to repaint the menu bar?
   flag fMenuAll;     // Do we need to redetermine all menu checks?
+  flag fNotManual;   // Is window being resized automatically?
   flag fRedraw;      // Do we need to redraw the screen?
   flag fCast;        // Do we need to recast the chart positions?
   flag fAbort;       // Did the user cancel printing in progress?
@@ -2119,6 +2156,7 @@ typedef struct _WindowInternal {
   HBITMAP hbmpPrev; // Bitmap to restore after using background.
   short xClient;    // Horizontal & vertical window size.
   short yClient;
+  flag fNotManual;  // Is window being resized automatically?
   flag fDoRedraw;
   flag fDoResize;
   flag fDoCast;

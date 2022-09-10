@@ -1,4 +1,4 @@
-@AD740  ; Astrolog 7.40 default settings file astrolog.as
+@AD750  ; Astrolog 7.50 default settings file astrolog.as
 
 ; The contents of this file can be automatically generated with the
 ; "File / Save Settings" menu command, or with the -od command switch.
@@ -7,6 +7,7 @@
 -z0 Autodetect          ; Default Daylight time [0 standard, 1 daylight]
 -zl 122W19'59 47N36'35  ; Default location      [longitude and latitude]
 -zv 167ft               ; Default elevation     [in feet or meters     ]
+-zf 59F                 ; Default temperature   [in Fahren. or Celsius ]
 -zj "Current moment now" "Seattle, WA, USA" ; Default name and location
 
 -Yz 0   ; Time minute addition to be used if "now" charts are offset.
@@ -22,6 +23,7 @@ _k      ; Ansi color text           ["=k" is color, "_k" is monochrome ]
 :d 48   ; Searching divisions       [Change "48" to desired divisions  ]
 _b0     ; Print zodiac seconds      ["_b0" to minute, "=b0" to second  ]
 =b      ; Use ephemeris files       ["=b" uses them, "_b" doesn't      ]
+=0b     ; Disable old calculations  ["=0b" disables them, "_0b" allows ]
 :w 0    ; Wheel chart text rows     [Change "0" to desired wheel rows  ]
 :I 80   ; Text screen columns       [Change "80" to desired columns    ]
 -YQ 0   ; Text screen scroll limit  [Change "24" or set to "0" for none]
@@ -75,6 +77,7 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 
 -YR0 0 0  ; Restrict sign changes, direction changes
 -YR1 1 1  ; Restrict latitude direction changes, distance direction changes
+-YR2 1 1  ; Restrict latitude zero node crossings, distance equivalence
 
 -YR7 0 1 1 0 1  ; Restrict rulerships: std, esoteric, hierarch, exalt, ray
 -YRZ 0 0 0 0    ; Restrict angle events: rising, zenith, setting, nadir
@@ -176,6 +179,7 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 
 ; GRAPHICS DEFAULTS:
 
+_XJ              ; Indian type wheels ["_XJ" is Western, "=XJ" is Indian  ]
 =Xm              ; Color charts       ["=Xm" is color, "_Xm" is monochrome]
 _Xr              ; Reverse background ["_Xr" is black, "=Xr" is white     ]
 :Xw 600 600      ; Default X and Y resolution (not including sidebar)

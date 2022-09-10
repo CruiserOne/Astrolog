@@ -1,5 +1,5 @@
 /*
-** Astrolog (Version 7.40) File: wdriver.cpp
+** Astrolog (Version 7.50) File: wdriver.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
 ** not enumerated below used in this program are Copyright (C) 1991-2022 by
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 3/31/2022.
+** Last code change made 9/9/2022.
 */
 
 #include "astrolog.h"
@@ -267,20 +267,37 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
 
   switch (imenu) {
   case menuV:
+    CheckPopup(cmdRelComparison,   us.nRel != rcNone);
     CheckPopup(cmdChartModify,     gi.nMode == gHouse);
     CheckPopup(cmdHouseSet3D,      us.fHouse3D);
-    CheckPopup(cmdHouseSetVedic,   us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
     CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
     break;
-  case menuA:
+  case menuV2:
+    CheckPopup(cmdChartModify,     gi.nMode == gHouse);
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
+    CheckPopup(cmdGraphicsEquator, !gs.fEquator);
+    CheckPopup(cmdGraphicsLabel,   !gs.fLabel);
+    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    break;
+  case menuG:
     CheckPopup(cmdParallel,       us.fParallel);
     CheckPopup(cmdApplying,       us.nAppSep == 1);
     CheckPopup(cmdGraphicsAspect, gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify, gs.fAlt);
+    break;
+  case menuM:
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
+    CheckPopup(cmdGraphicsEquator, gs.fEquator);
+    CheckPopup(cmdGraphicsAspect,  gs.fEquator != !gs.fLabelAsp);
+    CheckPopup(cmdGraphicsModify,  gs.fAlt);
+    CheckPopup(cmdGraphicsCity,    !gs.fLabelCity);
+    CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
+    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
     break;
   case menuZ:
     CheckPopup(cmdChartModify,     us.fPrimeVert);
@@ -288,7 +305,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdConstellation,   gs.fConstel);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
-    CheckPopup(cmdHouseSetVedic,   us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsLabel,   gs.fLabel);
@@ -300,7 +317,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdHouseSet3D,      us.fHouse3D);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
-    CheckPopup(cmdGraphicsEquator, !gs.fEquator);
+    CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsLabel,   gs.fLabel);
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
@@ -309,7 +326,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
-    CheckPopup(cmdHouseSetVedic,   us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
     CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
     break;
@@ -323,7 +340,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     break;
   case menuJ:
     CheckPopup(cmdGraphicsModify, !gs.fAlt);
-    CheckPopup(cmdHouseSetVedic,  us.fVedic);
+    CheckPopup(cmdHouseSetIndian, us.fIndian);
     CheckPopup(cmdGraphicsHouse,  gs.fHouseExtra);
     break;
   case menu7:
@@ -334,6 +351,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     break;
   case menuL:
+    CheckPopup(cmdGraphicsBmp,    gi.fBmp);
     CheckPopup(cmdChartModify,    us.fLatitudeCross);
     CheckPopup(cmdGraphicsModify, gs.fAlt);
     break;
@@ -353,14 +371,14 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsModify, gs.fAlt);
     break;
   case menuN:
-    CheckPopup(cmdHouseSetVedic,   !us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  !us.fIndian);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsCity,    !gs.fLabelCity);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
     break;
-  case menuM:
+  case menu8:
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     CheckPopup(cmdGraphicsLabel,   gs.fLabel);
@@ -379,7 +397,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdChartModify,     gs.fSouth);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
-    CheckPopup(cmdHouseSetVedic,   !us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  !us.fIndian);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
@@ -391,6 +409,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
   case menuXG:
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
     CheckPopup(cmdConstellation,   gs.fConstel);
+    CheckPopup(cmdGraphicsBmp,     gi.fBmp);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
@@ -400,7 +419,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     break;
   case menuXZ:
     CheckPopup(cmdConstellation,   gs.fConstel);
-    CheckPopup(cmdHouseSetVedic,   us.fVedic);
+    CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
@@ -658,6 +677,9 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
       wi.yClient = HIWORD(lParam);
       if (wi.fWindowChart || wi.fChartWindow) {
         gs.xWin = wi.xClient; gs.yWin = wi.yClient;
+        if (!wi.fNotManual) {
+          gi.xWinResize = gs.xWin; gi.yWinResize = gs.yWin;
+        }
       }
       break;
 
@@ -690,7 +712,8 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
         // Dragging with right mouse down rotates and tilts globes.
         if ((wParam & MK_RBUTTON) != 0 && us.fGraphics && (fMap ||
-          gi.nMode == gLocal || gi.nMode == gSphere || gi.nMode == gGlobe ||
+          gi.nMode == gMidpoint || gi.nMode == gLocal ||
+          gi.nMode == gSphere || gi.nMode == gGlobe ||
           gi.nMode == gPolar || gi.nMode == gTelescope)) {
           gs.rRot += (real)(x-WLo(wi.lParamRC)) * rDegHalf / (real)gs.xWin *
             (gi.nMode == gLocal || gi.nMode == gTelescope ? -gi.zViewRatio :
@@ -706,8 +729,11 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
             gs.rTilt = rDegQuad;
           while (gs.rTilt < -rDegQuad)
             gs.rTilt = -rDegQuad;
-          if (gi.nMode == gLocal || gi.nMode == gTelescope)
+          if (gi.nMode == gMidpoint || gi.nMode == gTelescope) {
+            if (gi.nMode == gMidpoint && gs.objTrack >= 0)
+              gs.rRot = planet[gs.objTrack];
             gs.objTrack = -1;
+          }
           wi.lParamRC = lParam;
           wi.fRedraw = fTrue;
           wi.fMoved = fTrue;
@@ -785,14 +811,15 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
         goto LClose;
       wi.fMoved = fFalse;
       if (us.fGraphics) {
-        if (fMap || gi.nMode == gLocal || gi.nMode == gSphere ||
-          gi.nMode == gGlobe || gi.nMode == gPolar || gi.nMode == gTelescope)
+        if (fMap || gi.nMode == gMidpoint || gi.nMode == gLocal ||
+          gi.nMode == gSphere || gi.nMode == gGlobe || gi.nMode == gPolar ||
+          gi.nMode == gTelescope)
           wi.lParamRC = lParam;
         // Most graphics modes show popup right when mouse button clicked.
         if (gi.nMode == gWheel || gi.nMode == gHouse)
-          DoPopup(menuV, hwnd, lParam);
+          DoPopup(!gs.fIndianWheel ? menuV : menuV2, hwnd, lParam);
         else if (gi.nMode == gGrid)
-          DoPopup(menuA, hwnd, lParam);
+          DoPopup(menuG, hwnd, lParam);
         else if (gi.nMode == gHorizon)
           DoPopup(menuZ, hwnd, lParam);
         else if (gi.nMode == gOrbit)
@@ -810,7 +837,7 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
         else if (gi.nMode == gRising)
           DoPopup(menuZd, hwnd, lParam);
         else if (gi.nMode == gMoons)
-          DoPopup(menuM, hwnd, lParam);
+          DoPopup(menu8, hwnd, lParam);
         else if (gi.nMode == gTraTraGra || gi.nMode == gTraNatGra)
           DoPopup(menuD, hwnd, lParam);
         else if (gi.nMode == gBiorhythm)
@@ -824,7 +851,9 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
       if (!wi.fMoved && us.fGraphics) {
         // Some graphics modes can't show popup until mouse button lifted,
         // because can click and drag right mouse in window to rotate chart.
-        if (gi.nMode == gAstroGraph)
+        if (gi.nMode == gMidpoint)
+          DoPopup(menuM, hwnd, lParam);
+        else if (gi.nMode == gAstroGraph)
           DoPopup(menuL, hwnd, lParam);
         else if (gi.nMode == gLocal)
           DoPopup(menuN, hwnd, lParam);
@@ -1060,7 +1089,7 @@ int NWmCommand(WORD wCmd)
   int i;
   long l;
   real r;
-  flag fGraphicsSav, fT;
+  flag fGraphicsSav, fRestoreSize = fFalse, fT;
 
   wi.wCmd = wCmd;
   fGraphicsSav = us.fGraphics;
@@ -1325,8 +1354,8 @@ int NWmCommand(WORD wCmd)
 
 #ifdef TIME
   case cmdNow:
-    FInputData(szNowCore);
-    wi.fCast = fTrue;
+    Animate(10, 0);
+    wi.fRedraw = fTrue;
     break;
 #endif
 
@@ -1484,9 +1513,9 @@ int NWmCommand(WORD wCmd)
     wi.fCast = fTrue;
     break;
 
-  case cmdHouseSetVedic:
-    inv(us.fVedic);
-    WiCheckMenu(cmdHouseSetVedic, us.fVedic);
+  case cmdHouseSetIndian:
+    inv(us.fIndian);
+    WiCheckMenu(cmdHouseSetIndian, us.fIndian);
     wi.fRedraw = fTrue;
     break;
 
@@ -1608,10 +1637,12 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartList:
     wi.nMode = gWheel;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartWheel:
     wi.nMode = gHouse;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartGrid:
@@ -1625,31 +1656,37 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartMidpoint:
     wi.nMode = gMidpoint;
-    us.fGraphics = fFalse;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartHorizon:
     wi.nMode = gHorizon;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartOrbit:
     wi.nMode = gOrbit;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartSector:
     wi.nMode = gSector;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartCalendar:
     wi.nMode = gCalendar;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartInfluence:
     wi.nMode = gDisposit;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartEsoteric:
     wi.nMode = gEsoteric;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartAstroGraph:
@@ -1665,6 +1702,7 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartEphemeris:
     wi.nMode = gEphemeris;
+    fRestoreSize = fTrue;
     break;
 
 #ifdef ARABIC
@@ -1676,10 +1714,12 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartRising:
     wi.nMode = gRising;
+    fRestoreSize = fTrue;
     break;
 
   case cmdChartLocal:
     wi.nMode = gLocal;
+    fRestoreSize = fTrue;
     break;
 
   case cmdProgress:
@@ -1698,7 +1738,7 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartSphere:
     wi.nMode = gSphere;
-    us.fGraphics = wi.fRedraw = fTrue;
+    us.fGraphics = wi.fRedraw = fRestoreSize = fTrue;
     break;
 
   case cmdChartMap:
@@ -1708,17 +1748,17 @@ int NWmCommand(WORD wCmd)
 
   case cmdChartGlobe:
     wi.nMode = gGlobe;
-    us.fGraphics = wi.fRedraw = fTrue;
+    us.fGraphics = wi.fRedraw = fRestoreSize = fTrue;
     break;
 
   case cmdChartPolar:
     wi.nMode = gPolar;
-    us.fGraphics = wi.fRedraw = fTrue;
+    us.fGraphics = wi.fRedraw = fRestoreSize = fTrue;
     break;
 
   case cmdChartTelescope:
     wi.nMode = gTelescope;
-    us.fGraphics = wi.fRedraw = fTrue;
+    us.fGraphics = wi.fRedraw = fRestoreSize = fTrue;
     break;
 
   case cmdGraphicsReverse:
@@ -1785,8 +1825,8 @@ int NWmCommand(WORD wCmd)
       WiCheckMenu(cmdGraphicsText, fTrue);
     }
     WiCheckMenu(cmdGraphicsSidebar, !us.fVelocity);
-    if (wi.nMode != gWheel && gi.nMode != gHouse && gi.nMode != gSector &&
-      gi.nMode != gSphere)
+    if (wi.nMode != gWheel && gi.nMode != gHouse && gi.nMode != gMidpoint &&
+      gi.nMode != gSector && gi.nMode != gSphere)
       wi.nMode = gWheel;
     us.fGraphics = wi.fRedraw = fTrue;
     break;
@@ -1899,10 +1939,16 @@ int NWmCommand(WORD wCmd)
 
   case cmdRotateWest:
   case cmdRotateEast:
-    if (gi.nMode != gLocal && gi.nMode != gAstroGraph &&
-      gi.nMode != gSphere && gi.nMode != gWorldMap && gi.nMode != gGlobe &&
-      gi.nMode != gPolar && gi.nMode != gTelescope)
+    if (gi.nMode != gMidpoint && gi.nMode != gLocal &&
+      gi.nMode != gAstroGraph && gi.nMode != gSphere &&
+      gi.nMode != gWorldMap && gi.nMode != gGlobe && gi.nMode != gPolar &&
+      gi.nMode != gTelescope)
       wi.nMode = gGlobe;
+    if (gi.nMode == gMidpoint || gi.nMode == gTelescope) {
+      if (gi.nMode == gMidpoint && gs.objTrack >= 0)
+        gs.rRot = planet[gs.objTrack];
+      gs.objTrack = -1;
+    }
     r = (real)NAbs(wi.nDir) *
       (gi.nMode == gTelescope || gi.nMode == gLocal ? gi.zViewRatio : 1.0);
     if (wCmd == cmdRotateWest) {
@@ -1914,8 +1960,6 @@ int NWmCommand(WORD wCmd)
       if (gs.rRot < 0)
         gs.rRot += rDegMax;
     }
-    if (gi.nMode == gTelescope)
-      gs.objTrack = -1;
     us.fGraphics = wi.fRedraw = fTrue;
     break;
 
@@ -1934,6 +1978,14 @@ int NWmCommand(WORD wCmd)
       gs.rspace = r;
       us.fGraphics = wi.fRedraw = fTrue;
     }
+    break;
+
+  case cmdChartIndian:
+    if (!us.fListing && !us.fWheel)
+      wi.nMode = gWheel;
+    inv(gs.fIndianWheel);
+    WiCheckMenu(cmdChartIndian, gs.fIndianWheel);
+    us.fGraphics = wi.fRedraw = fTrue;
     break;
 
   case cmdGraphicsModify:
@@ -2210,6 +2262,11 @@ int NWmCommand(WORD wCmd)
     us.fGraphics = fFalse;
   if (us.fGraphics != fGraphicsSav)
     WiCheckMenu(cmdGraphics, us.fGraphics);
+  if (fRestoreSize && us.fGraphics) {
+    gs.xWin = gi.xWinResize; gs.yWin = gi.yWinResize;
+    if (wi.fChartWindow)
+      ResizeWindowToChart();
+  }
   return 0;
 }
 
@@ -2247,7 +2304,7 @@ void API RedoMenu()
   CheckMenu(cmdHouseSetDwad, us.nDwad > 0);
   CheckMenu(cmdHouseSetFlip, us.fFlip);
   CheckMenu(cmdHouseSetGeodetic, us.fGeodetic);
-  CheckMenu(cmdHouseSetVedic, us.fVedic);
+  CheckMenu(cmdHouseSetIndian, us.fIndian);
   CheckMenu(cmdHouseSetNavamsa, us.fNavamsa);
   CheckMenu(cmdResMinor, !ignore[oChi]);
   CheckMenu(cmdResCusp, us.fCusp);
@@ -2257,6 +2314,7 @@ void API RedoMenu()
   CheckMenu(cmdResCOB, us.fCOB);
   CheckMenu(cmdResStar, us.nStar);
   CheckMenu(cmdProgress, us.fProgress);
+  CheckMenu(cmdChartIndian, gs.fIndianWheel);
 #ifdef CONSTEL
   CheckMenu(cmdConstellation, gs.fConstel);
 #endif
@@ -2651,7 +2709,7 @@ flag API FRedraw(void)
     wi.wCmd = 0;
 
   wi.fRedraw = fFalse;
-  if (wi.fNoUpdate)
+  if (wi.fNoUpdate != 0)
     wi.fNoUpdate = fTrue;
   return fTrue;
 }
@@ -2789,6 +2847,7 @@ flag FCreateProgramGroup(flag fAll)
   DeleteShortcut(szDir, "Astrolog 7.10");
   DeleteShortcut(szDir, "Astrolog 7.20");
   DeleteShortcut(szDir, "Astrolog 7.30");
+  DeleteShortcut(szDir, "Astrolog 7.40");
 
   // Add main shortcuts in folder.
   sprintf(szName, "%s %s", szAppName, szVersionCore);

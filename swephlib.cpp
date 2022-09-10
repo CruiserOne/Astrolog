@@ -2492,11 +2492,11 @@ static TLS double dt[TABSIZ_SPACE] = {
 63.8285, 64.0908, 64.2998, 64.4734, 64.5736, 64.6876, 64.8452, 65.1464, 65.4574, 65.7768,
 /* 2010.0 - 2018.0 */
 66.0699, 66.3246, 66.6030, 66.9069, 67.2810, 67.6439, 68.1024, 68.5927, 68.9676, 69.2202,
-/* 2020.0 -        */
-69.3612, 69.3593,
+/* 2020.0 - 2023.0       */
+69.3612, 69.3593, 69.2945, 69.1833, 
 /* Extrapolated values: 
- * 2021 - 2028 */
-                  69.2581,   69.50,   70.00,   70.50,   71.00,   71.50,   72.00,
+ * 2024 - 2028 */
+                                     69.10,   69.00,   68.90,   68.80,   68.80,
 };
 
 #define TAB2_SIZ	27
@@ -3735,11 +3735,6 @@ char *swi_right_trim(char *s)
   return s;
 }
 
-size_t swi_strnlen(const char *str, size_t n) {
-  const char * stop = (char *)memchr(str, '\0', n);
-  return stop ? stop - str : n;
-}
-
 /*
  * The following C code (by Rob Warnock rpw3@sgi.com) does CRC-32 in
  * BigEndian/BigEndian byte/bit order. That is, the data is sent most
@@ -3774,8 +3769,8 @@ uint32 swi_crc32(unsigned char *buf, int len)
 
 static void init_crc32(void)
 {
-  int32 i, j;
-  uint32 c;
+  int32  j;
+  uint32 c, i;
   for (i = 0; i < 256; ++i) {
     for (c = i << 24, j = 8; j > 0; --j)
       c = c & 0x80000000 ? (c << 1) ^ CRC32_POLY : (c << 1);
@@ -3986,6 +3981,8 @@ static void split_deg_nakshatra(double ddeg, int32 roundflag, int32 *ideg, int32
   *isec = (int32) (ddeg * 3600);
   if (!(roundflag & (SE_SPLIT_DEG_ROUND_DEG | SE_SPLIT_DEG_ROUND_MIN | SE_SPLIT_DEG_ROUND_SEC))) {
     *dsecfr = ddeg * 3600 - *isec;
+  } else {
+    *dsecfr = *isec;  // is rounded, no fractional seconds
   }
 }  /* end split_deg_nakshtra */
 
@@ -4057,6 +4054,8 @@ void CALL_CONV swe_split_deg(double ddeg, int32 roundflag, int32 *ideg, int32 *i
   *isec = (int32) (ddeg * 3600);
   if (!(roundflag & (SE_SPLIT_DEG_ROUND_DEG | SE_SPLIT_DEG_ROUND_MIN | SE_SPLIT_DEG_ROUND_SEC))) {
     *dsecfr = ddeg * 3600 - *isec;
+  } else {
+    *dsecfr = *isec;  // is rounded, no fractional seconds
   }
 }  /* end split_deg */
 
