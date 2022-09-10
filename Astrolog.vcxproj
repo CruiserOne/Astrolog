@@ -88,60 +88,60 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="astrolog.h" />
-    <ClInclude Include="extern.h" />
-    <ClInclude Include="placalc.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="swehouse.h" />
-    <ClInclude Include="swejpl.h" />
-    <ClInclude Include="swenut2a.h" />
-    <ClInclude Include="sweodef.h" />
-    <ClInclude Include="sweph.h" />
-    <ClInclude Include="swephexp.h" />
-    <ClInclude Include="swephlib.h" />
+    <ClInclude Include="src\astrolog.h" />
+    <ClInclude Include="src\extern.h" />
+    <ClInclude Include="src\placalc.h" />
+    <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\swehouse.h" />
+    <ClInclude Include="src\swejpl.h" />
+    <ClInclude Include="src\swenut2a.h" />
+    <ClInclude Include="src\sweodef.h" />
+    <ClInclude Include="src\sweph.h" />
+    <ClInclude Include="src\swephexp.h" />
+    <ClInclude Include="src\swephlib.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="astrlog1.ico" />
-    <Image Include="astrlog2.ico" />
-    <Image Include="astrlog3.ico" />
-    <Image Include="astrlog4.ico" />
+    <Image Include="icons\astrlog1.ico" />
+    <Image Include="icons\astrlog2.ico" />
+    <Image Include="icons\astrlog3.ico" />
+    <Image Include="icons\astrlog4.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="astrolog.rc" />
+    <ResourceCompile Include="icons\astrolog.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="astrolog.cpp" />
-    <ClCompile Include="atlas.cpp" />
-    <ClCompile Include="calc.cpp" />
-    <ClCompile Include="charts0.cpp" />
-    <ClCompile Include="charts1.cpp" />
-    <ClCompile Include="charts2.cpp" />
-    <ClCompile Include="charts3.cpp" />
-    <ClCompile Include="data.cpp" />
-    <ClCompile Include="express.cpp" />
-    <ClCompile Include="general.cpp" />
-    <ClCompile Include="intrpret.cpp" />
-    <ClCompile Include="io.cpp" />
-    <ClCompile Include="matrix.cpp" />
-    <ClCompile Include="placalc.cpp" />
-    <ClCompile Include="placalc2.cpp" />
-    <ClCompile Include="swecl.cpp" />
-    <ClCompile Include="swedate.cpp" />
-    <ClCompile Include="swehouse.cpp" />
-    <ClCompile Include="swejpl.cpp" />
-    <ClCompile Include="swemmoon.cpp" />
-    <ClCompile Include="swemplan.cpp" />
-    <ClCompile Include="sweph.cpp" />
-    <ClCompile Include="swephlib.cpp" />
-    <ClCompile Include="wdialog.cpp" />
-    <ClCompile Include="wdriver.cpp" />
-    <ClCompile Include="xcharts0.cpp" />
-    <ClCompile Include="xcharts1.cpp" />
-    <ClCompile Include="xcharts2.cpp" />
-    <ClCompile Include="xdata.cpp" />
-    <ClCompile Include="xdevice.cpp" />
-    <ClCompile Include="xgeneral.cpp" />
-    <ClCompile Include="xscreen.cpp" />
+    <ClCompile Include="src\astrolog.cpp" />
+    <ClCompile Include="src\atlas.cpp" />
+    <ClCompile Include="src\calc.cpp" />
+    <ClCompile Include="src\charts0.cpp" />
+    <ClCompile Include="src\charts1.cpp" />
+    <ClCompile Include="src\charts2.cpp" />
+    <ClCompile Include="src\charts3.cpp" />
+    <ClCompile Include="src\data.cpp" />
+    <ClCompile Include="src\express.cpp" />
+    <ClCompile Include="src\general.cpp" />
+    <ClCompile Include="src\intrpret.cpp" />
+    <ClCompile Include="src\io.cpp" />
+    <ClCompile Include="src\matrix.cpp" />
+    <ClCompile Include="src\placalc.cpp" />
+    <ClCompile Include="src\placalc2.cpp" />
+    <ClCompile Include="src\swecl.cpp" />
+    <ClCompile Include="src\swedate.cpp" />
+    <ClCompile Include="src\swehouse.cpp" />
+    <ClCompile Include="src\swejpl.cpp" />
+    <ClCompile Include="src\swemmoon.cpp" />
+    <ClCompile Include="src\swemplan.cpp" />
+    <ClCompile Include="src\sweph.cpp" />
+    <ClCompile Include="src\swephlib.cpp" />
+    <ClCompile Include="src\wdialog.cpp" />
+    <ClCompile Include="src\wdriver.cpp" />
+    <ClCompile Include="src\xcharts0.cpp" />
+    <ClCompile Include="src\xcharts1.cpp" />
+    <ClCompile Include="src\xcharts2.cpp" />
+    <ClCompile Include="src\xdata.cpp" />
+    <ClCompile Include="src\xdevice.cpp" />
+    <ClCompile Include="src\xgeneral.cpp" />
+    <ClCompile Include="src\xscreen.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -17,11 +17,36 @@
 # library, and if applicable, the main X library.
 #
 NAME = astrolog
-OBJS = astrolog.o atlas.o calc.o charts0.o charts1.o charts2.o charts3.o\
- data.o express.o general.o intrpret.o io.o matrix.o placalc.o placalc2.o\
- xdata.o xgeneral.o xdevice.o xcharts0.o xcharts1.o xcharts2.o xscreen.o\
- swecl.o swedate.o swehouse.o swejpl.o swemmoon.o swemplan.o sweph.o\
- swephlib.o
+OBJS = src/atlas.o \
+       src/calc.o \
+       src/charts0.o \
+       src/charts1.o \
+       src/charts2.o \
+       src/charts3.o \
+       src/data.o \
+       src/express.o \
+       src/general.o \
+       src/intrpret.o \
+       src/io.o \
+       src/matrix.o \
+       src/placalc.o \
+       src/placalc2.o \
+       src/xdata.o \
+       src/xgeneral.o \
+       src/xdevice.o \
+       src/xcharts0.o \
+       src/xcharts1.o \
+       src/xcharts2.o \
+       src/xscreen.o \
+       src/swecl.o \
+       src/swedate.o \
+       src/swehouse.o \
+       src/swejpl.o \
+       src/swemmoon.o \
+       src/swemplan.o \
+       src/sweph.o \
+       src/swephlib.o \
+       src/astrolog.o
 
 # If you don't have X windows, delete the "-lX11" part from the line below:
 # If not compiling with GNUC, delete the "-ldl" part from the line below:

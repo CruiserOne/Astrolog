@@ -1,4 +1,10 @@
-# Astrolog 7.50
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/CruiserOne/Astrolog)
+![GitHub Release Date](https://img.shields.io/github/release-date/CruiserOne/Astrolog)
+![GitHub repo size](https://img.shields.io/github/repo-size/CruiserOne/Astrolog)
+![GitHub all releases](https://img.shields.io/github/downloads/CruiserOne/Astrolog/total)
+![GitHub](https://img.shields.io/github/license/CruiserOne/Astrolog)  
+
+# Astrolog
 
 This is a copy of the "official" version of Astrolog 7.50 (released September 10, 2022) described at: http://www.astrolog.org/astrolog.htm
 

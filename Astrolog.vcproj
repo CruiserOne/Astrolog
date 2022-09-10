@@ -179,47 +179,47 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\astrolog.h"
+				RelativePath="src\astrolog.h"
 				>
 			</File>
 			<File
-				RelativePath=".\extern.h"
+				RelativePath="src\extern.h"
 				>
 			</File>
 			<File
-				RelativePath=".\placalc.h"
+				RelativePath="src\placalc.h"
 				>
 			</File>
 			<File
-				RelativePath=".\resource.h"
+				RelativePath="src\resource.h"
 				>
 			</File>
 			<File
-				RelativePath=".\swehouse.h"
+				RelativePath="src\swehouse.h"
 				>
 			</File>
 			<File
-				RelativePath=".\swejpl.h"
+				RelativePath="src\swejpl.h"
 				>
 			</File>
 			<File
-				RelativePath=".\swenut2a.h"
+				RelativePath="src\swenut2a.h"
 				>
 			</File>
 			<File
-				RelativePath=".\sweodef.h"
+				RelativePath="src\sweodef.h"
 				>
 			</File>
 			<File
-				RelativePath=".\sweph.h"
+				RelativePath="src\sweph.h"
 				>
 			</File>
 			<File
-				RelativePath=".\swephexp.h"
+				RelativePath="src\swephexp.h"
 				>
 			</File>
 			<File
-				RelativePath=".\swephlib.h"
+				RelativePath="src\swephlib.h"
 				>
 			</File>
 		</Filter>
@@ -229,23 +229,23 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\astrlog1.ico"
+				RelativePath="icons\astrlog1.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\astrlog2.ico"
+				RelativePath="icons\astrlog2.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\astrlog3.ico"
+				RelativePath="icons\astrlog3.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\astrlog4.ico"
+				RelativePath="icons\astrlog4.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\astrolog.rc"
+				RelativePath="icons\astrolog.rc"
 				>
 			</File>
 		</Filter>
@@ -255,131 +255,131 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\astrolog.cpp"
+				RelativePath="src\astrolog.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\atlas.cpp"
+				RelativePath="src\atlas.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\calc.cpp"
+				RelativePath="src\calc.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\charts0.cpp"
+				RelativePath="src\charts0.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\charts1.cpp"
+				RelativePath="src\charts1.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\charts2.cpp"
+				RelativePath="src\charts2.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\charts3.cpp"
+				RelativePath="src\charts3.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\data.cpp"
+				RelativePath="src\data.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\express.cpp"
+				RelativePath="src\express.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\general.cpp"
+				RelativePath="src\general.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\intrpret.cpp"
+				RelativePath="src\intrpret.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\io.cpp"
+				RelativePath="src\io.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\matrix.cpp"
+				RelativePath="src\matrix.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\placalc.cpp"
+				RelativePath="src\placalc.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\placalc2.cpp"
+				RelativePath="src\placalc2.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swecl.cpp"
+				RelativePath="src\swecl.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swedate.cpp"
+				RelativePath="src\swedate.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swehouse.cpp"
+				RelativePath="src\swehouse.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swejpl.cpp"
+				RelativePath="src\swejpl.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swemmoon.cpp"
+				RelativePath="src\swemmoon.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swemplan.cpp"
+				RelativePath="src\swemplan.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\sweph.cpp"
+				RelativePath="src\sweph.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\swephlib.cpp"
+				RelativePath="src\swephlib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\wdialog.cpp"
+				RelativePath="src\wdialog.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\wdriver.cpp"
+				RelativePath="src\wdriver.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xcharts0.cpp"
+				RelativePath="src\xcharts0.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xcharts1.cpp"
+				RelativePath="src\xcharts1.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xcharts2.cpp"
+				RelativePath="src\xcharts2.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xdata.cpp"
+				RelativePath="src\xdata.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xdevice.cpp"
+				RelativePath="src\xdevice.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xgeneral.cpp"
+				RelativePath="src\xgeneral.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\xscreen.cpp"
+				RelativePath="src\xscreen.cpp"
 				>
 			</File>
 		</Filter>
