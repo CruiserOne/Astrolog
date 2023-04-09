@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xdata.cpp
+** Astrolog (Version 7.60) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -67,22 +67,23 @@ GS gs = {
 #else
   ftBmp,
 #endif
-  fTrue, fTrue, fFalse, fFalse, fTrue, fTrue, fFalse, fTrue, fTrue, fFalse,
-  fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, DEFAULTX, DEFAULTY,
+  fTrue, fTrue, fFalse, fFalse, fTrue, 000000, 0, 0, 0, 0, 0, 0, fFalse,
+  fTrue, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
+  fFalse, fFalse, fFalse, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse,
+  DEFAULTX, DEFAULTY,
 #ifdef WIN
   -10,
 #else
   0,
 #endif
   200, 100, 0, 0, 0, 3, 1, 0, 0.0, 0.0, oMoo, BITMAPMODE, 25.0, 1, 0,
-  8.5, 11.0, NULL, 0, 25, 11, 1, NULL, oCore, 0.0, 1000, 0, 600, 1111,
-  fFalse, fFalse, fTrue, 7, 0, NULL, NULL};
+  8.5, 11.0, NULL, 0, 25, 11, 1, NULL, oCore, 0.0, 1000, 0, 600,
+  1, 1, 1, 2, 2, 1, fFalse, fFalse, fTrue, 7, 0, NULL, NULL};
 
 GI gi = {
   0, fFalse, -1,
   NULL, 0, NULL, NULL, 0.0, fFalse, fFalse, 1.0,
-  2, 1, 1, 1, 1, 20, 10, 61822, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
+  2, 1, 1, 1, 1, 20, 10, 618229, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
   -1, -1, NULL, 0, 0, NULL,
   fTrue, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL},
   {0, 0, 0, NULL},
@@ -90,7 +91,7 @@ GI gi = {
   NULL, 0,
 #endif
 #ifdef ISG
-  DEFAULTX, DEFAULTY,
+  fFalse, 1, DEFAULTX, DEFAULTY,
 #endif
 #ifdef X11
   NULL, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -116,9 +117,8 @@ WI wi = {
   1, fFalse, {0, 0, 0, 0}, fFalse, fFalse, {0, 0, 0, NULL},
 
   // Window user settings.
-  fFalse, fTrue, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse,
-  0, kBlack, 1, 1000};
+  fTrue, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
+  0, kBlack, 1000};
 
 OPENFILENAME ofn = {
   sizeof(OPENFILENAME), (HWND)NULL, (HINSTANCE)NULL, NULL, NULL, 0, 1, NULL,
@@ -130,6 +130,10 @@ PRINTDLG prd = {
   PD_NOPAGENUMS | PD_NOSELECTION | PD_RETURNDC | PD_USEDEVMODECOPIES,
   0, 0, 0, 0, 1, (HINSTANCE)NULL, 0, NULL, NULL, (LPCSTR)NULL, (LPCSTR)NULL,
   (HGLOBAL)NULL, (HGLOBAL)NULL};
+
+CHOOSECOLOR chc = {
+  sizeof(CHOOSECOLOR), (HWND)NULL, (HWND)NULL, 0, NULL,
+  CC_FULLOPEN | CC_RGBINIT, 0L, NULL, NULL};
 
 char szFileName[cchSzMaxFile];
 char szFileTitle[cchSzMaxFile];
@@ -186,12 +190,25 @@ KI kMainB[9], kRainbowB[cRainbow+1], kElemB[cElem], kAspB[cAspect+1],
 
 CONST char *rgszFontName[cFont] = {szAppNameCore, "Wingdings", "Astro",
   "EnigmaAstrology", "HamburgSymbols", "Astronomicon",
-  "Courier New", "Consolas", "Arial"};
-CONST char rgszFontAllow[5][cFont+1] =
-  {"0-----67-", "0123456--", "0----5678", "0-234567-", "0-2345678"};
+  "Courier New", "Consolas", "Arial", "Hanks Nakshatra"};
+CONST char rgszFontAllow[6][cFont+1] = {"0-----67--", "0123456---",
+  "0----5678-", "0-234567--", "0-2345678-", "0-----6789"};
+
+CONST real rgrObjRing[oNep-oJup+2][2] = {
+  {129000.0, 0.0},      // Jupiter main ring outer radius
+  {136780.0, 92000.0},  // Saturn "A" ring outer, "B" ring inner radius
+  {51149.0,  0.0},      // Uranus "E" ring outer radius
+  {53200.0,  62932.0},  // Neptune Adams ring, Lassell ring inner radius
+  {2287.0,   0.0}};     // Haumea ring radius
+CONST PT3R rgvObjRing[oNep-oJup+2] = {
+  {-0.0133361,  0.0359933, -0.9992630},   // Jupiter ring vector
+  {-0.0833346, -0.4629964, -0.8824339},   // Saturn  ring vector
+  { 0.2059129,  0.9691102, -0.1357401},   // Uranus  ring vector
+  {-0.3617850,  0.3226569, -0.8746452},   // Neptune ring vector
+  {-0.3664383,  0.7179139, -0.5918805}};  // Haumea  ring vector
 
 #ifdef X11
-// Some physical X window variables dealing with the window itself.
+// Some X window variables dealing with the window itself.
 XSizeHints hint;
 char xkey[10];
 #endif
@@ -315,12 +332,14 @@ CONST char *szDrawObjectDef[objMaxG] = {
   "T", "T", "T", "T", "T", "T", "T", "T",
   "T", "T", "T", "T", "T", "T", "T", "T",
   "T", "T", "T", "T", "T", "T", "T", "T",
-  "T", "T", "T", "T", "T", "T", "T",
+  "T", "T", "T", "T", "T", "T", "T", "T",
+  "T", "T",
   "BD2D0BU6NG2NF2D4LGD2FR2EU2HL",            // Uranus #2
   "BL3R5EU2HL5D8R5",                         // Pluto  #2
+  "ND4U4NG3F3",                              // Pluto  #3
   "BD4UNL2NR2U2RELHUERHL2G2DF2R",            // Lilith #2
   "NU4GDGNDHUHU4BF8UHUHUBR2DGBDGD",          // Vertex #2
-  "ND4U4NG3F3",                              // Pluto  #3
+  "BD4NH2NE2U4LHU2ER2FD2GL",                 // Eris   #2
   "BU3NGD8NLR",                              // 1st Cusp
   "BR3L2ND4NU4L5U4",                         // 4th Cusp
   "BH4BRR6DG6D",                             // 7th Cusp
@@ -387,12 +406,13 @@ CONST char *szDrawObjectDef2[objMaxG] = {
   "", "", "", "", "", "", "", "", "", "", 
   "", "", "", "", "", "", "", "", "", "", 
   "", "", "", "", "", "", "", "", "", "", 
-  "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "",
   "",  // Uranus #2
   "",  // Pluto  #2
+  "",  // Pluto  #3
   "BD8U2NL4NR4U3R2E2L2H2U3E2R2H2L4G4D3F4R2",           // Lilith #2
   "NU8GDGDGDGNDHUHUHUHU8BF16HUHUH2UHUHBR6GDGDG2DGDG",  // Vertex #2
-  "",  // Pluto  #3
+  "",  // Eris   #2
   "",  // 1st Cusp
   "",  // 4th Cusp
   "",  // 7th Cusp

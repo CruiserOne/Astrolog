@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: astrolog.h
+** Astrolog (Version 7.60) File: astrolog.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 /*
@@ -75,11 +75,17 @@
 //#define WCLI /* Comment out this #define if you don't want to compile a    */
              /* command line Windows version that can still popup windows. */
 
+//#define WSETUP /* Comment out this #define if you don't want to compile a */
+               /* modern Windows version that can do its own (un)setup.   */
+
+#define JPLWEB /* Comment out this #define if you don't want to compile in */
+               /* features to access the JPL Horizons Website online.      */
+
 #define TIME /* Comment out this #define if your compiler can't take the  */
              /* calls to the 'time' or 'localtime' functions as in time.h */
 
 #define SWITCHES /* Comment out this #define if your system can not handle */
-                 /* parameters on the command line (such as Mac's).        */
+                 /* parameters on the command line (such as old Mac's).    */
 
 #define ENVIRON /* Comment out this #define if your system doesn't have  */
                 /* environment variables or can't compile calls to them. */
@@ -326,14 +332,16 @@
 #define WINANY
 #include <windows.h>
 #include <commdlg.h>
+#ifdef WSETUP
 #include <objbase.h>
 #include <comdef.h>
 #include <comdefsp.h>
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <shlwapi.h>
-#include "resource.h"
 #endif
+#include "resource.h"
+#endif // WIN
 #ifdef WCLI
 #define ISG
 #define WINANY
@@ -360,9 +368,6 @@
 #define VECTOR
 #endif
 #ifdef SWISS
-#ifdef WINANY
-#define JPLWEB
-#endif
 #endif // SWISS
 
 
@@ -405,6 +410,12 @@
 #error "If 'WIN' is defined 'PC' must be too"
 #endif
 #endif // WIN
+
+#ifdef WSETUP
+#ifndef WIN
+#error "If 'WSETUP' is defined 'WIN' must be too"
+#endif
+#endif // WSETUP
 
 #ifdef WCLI
 #ifndef GRAPH
@@ -456,9 +467,9 @@
 #define fTrue  TRUE
 
 #define szAppNameCore "Astrolog"
-#define szVersionCore "7.50"
-#define szVerCore     "750"
-#define szDateCore    "September 2022"
+#define szVersionCore "7.60"
+#define szVerCore     "760"
+#define szDateCore    "April 2023"
 #define szAddressCore \
   "Astara@msn.com - http://www.astrolog.org/astrolog.htm"
 #define szNowCore     "now"
@@ -481,10 +492,13 @@
 #define dayJ2G1    4
 #define dayJ2G2    15
 #define zonLMT     24.0
+#define zonLAT     23.0
 #define dstAuto    24.0
 #define rStarLite  -1.46
 #define rStarSpan  7.0
 #define rStarNot   999.99
+
+// Math and conversion constants
 
 #define rSqr2      1.41421356237309504880
 #define rSqr3      1.73205080756887729353
@@ -509,9 +523,6 @@
 #define rEpoch2000 -24.736467
 #define rJD2000    2451545.0
 #define rAxis      23.44578889
-#define rSatRingA  136780.0
-#define rSatRingB  92000.0
-#define rUraRing   51149.0
 #define rSmall     (1.7453E-09)
 #define rLarge     10000.0
 #define rInvalid   (1.23456789E-09)
@@ -535,24 +546,28 @@
 
 // Array index limits
 
-#define objMax   (cObj+1)
-#define objMaxG  (objMax+10)
-#define cCnstl   88
-#define cZone    72
-#define cSector  36
-#define cPart    177
-#define cWeek    7
-#define cColor   16
-#define cRainbow 7
-#define cRay     7
-#define cRing    6
-#define xFont    6
-#define yFont    10
-#define xFont2   (xFont >> 1)
-#define yFont2   (yFont >> 1)
-#define xFontT   (xFont2 * gi.nScaleTextT2)
-#define yFontT   (yFont2 * gi.nScaleTextT2)
-#define xSideT   (SIDESIZE * gi.nScaleTextT2 >> 1)
+#define objMax    (cObj+1)
+#define objMaxG   (objMax+11)
+#define cCnstl    88
+#define cZone     73
+#define cSector   36
+#define cPart     177
+#define cWeek     7
+#define cColor    16
+#define cRainbow  7
+#define cRay      7
+#define cRing     6
+#define cHasMoons 11
+
+// Font size constants
+
+#define xFont  6
+#define yFont  10
+#define xFont2 (xFont >> 1)
+#define yFont2 (yFont >> 1)
+#define xFontT (xFont2 * gi.nScaleTextT2)
+#define yFontT (yFont2 * gi.nScaleTextT2)
+#define xSideT (SIDESIZE * gi.nScaleTextT2 >> 1)
 
 // Atlas values
 
@@ -579,7 +594,7 @@
 #define cCOB    5
 #define cMoons2 (cMoons + cCOB)
 #define cCust   (cUran + cDwarf + cMoons2)
-#define cStar   47
+#define cStar   50
 #define cuspLo  (oCore+1)
 #define cuspHi  (cuspLo+cSign-1)
 #define uranLo  (cuspHi+1)
@@ -696,10 +711,12 @@ enum _objects {
   oUrC = (cobLo + 2),     // Uranus COB
   oNeC = (cobLo + 3),     // Neptune COB
   oPlC = (cobLo + 4),     // Pluto COB
-  oOri = (starLo-1 + 10), // Orion (Alnilam)
-  oAlr = (starLo-1 + 45), // Alnair
-  oAnd = (starLo-1 + 47), // Andromeda
-  cObj = 130,
+  oOri = (starLo-1 + 28), // Alnilam (Orion)
+  oAlr = (starLo-1 + 30), // Alnair
+  oPle = (starLo-1 + 45), // Alcyone (Pleiades)
+  oAnd = (starLo-1 + 46), // Andromeda (M31)
+  oGal = (starLo-1 + 49), // Galactic Center (Milky Way)
+  cObj = 133,
 };
 
 // Aspects
@@ -757,8 +774,8 @@ enum _housesystem {
   hsAlcabitius    = 9,
   hsKrusinski     = 10,
   hsEqualMC       = 11,
-  hsSinewaveRatio = 12,
-  hsSinewaveDelta = 13,
+  hsSineRatio     = 12,
+  hsSineDelta     = 13,
   hsWhole         = 14,
   hsVedic         = 15,
   hsSripati       = 16,
@@ -780,7 +797,13 @@ enum _housesystem {
   hsEqualVertex   = 31,
   hsWholeVertex   = 32,
   hsVedicVertex   = 33,
-  cSystem = 34,
+  hsPorphyryEP    = 34,
+  hsPorphyryVtx   = 35,
+  hsSineRatioEP   = 36,
+  hsSineRatioVtx  = 37,
+  hsSineDeltaEP   = 38,
+  hsSineDeltaVtx  = 39,
+  cSystem = 40,
 };
 
 // House system models
@@ -1000,6 +1023,15 @@ enum _calculationmethod {
   cmMax     = 7,
 };
 
+// Position Display Format
+
+enum _displayformat {
+  dfZod = 0,  // Zodiac Position
+  dfHM  = 1,  // Hours & Minutes
+  df360 = 2,  // 360 Degrees
+  dfNak = 3,  // 27 Nakshatras
+};
+
 // Draw text formatting flags
 
 enum _drawtext {
@@ -1034,6 +1066,7 @@ enum _parsemode {
   pmColor  = 17,  // Color index
   pmRGB    = 18,  // RGB color value
   pmWeek   = 19,  // Day of week
+  pmOffset = 20,  // Zodiac offset ayanamsa
 };
 
 // File types
@@ -1067,7 +1100,8 @@ enum _fontindex {
   fiCourier  = 6,  // Courier (New) text font
   fiConsolas = 7,  // Consolas text font
   fiArial    = 8,  // Arial text font
-  cFont = 9,
+  fiNakshatr = 9,  // HanksNakshatra font
+  cFont = 10,
 };
 
 // Letters
@@ -1187,6 +1221,7 @@ enum _terminationcode {
 #define FHelio(obj)   (FNorm(obj) && FObject(obj) && !FGeo(obj))
 #define FNodal(obj)   FBetween(obj, oNod, oLil)
 #define FGeo(obj)     ((obj) == oMoo || FNodal(obj))
+#define FHasMoon(obj) ((obj) >= 0 && (obj) != oSun)
 #define FAspect(asp)  FBetween(asp, 1, cAspect)
 #define FAspect2(asp) FBetween(asp, 1, cAspect2)
 #define FAspect3(asp) FBetween(asp, 1, cAspect3)
@@ -1227,11 +1262,12 @@ enum _terminationcode {
 #define FValidScreen(n) FBetween(n, 20, 200)
 #define FValidMacro(n) FBetween(n, 1, 48)
 #define FValidList(n) FBetween(n, 0, is.cci-1)
-#define FValidGlyphs(n) FBetween(n, 0, 22322)
+#define FValidGlyphs(n) FBetween(n, 0, 223222)
 #define FValidDecaType(n) FBetween(n, 0, 2)
 #define FValidDecaSize(n) FBetween(n, 0, 100)
 #define FValidDecaLine(n) FBetween(n, 1, 1000)
 #define FValidGrid(n) FBetween(n, 0, cObj)
+#define FValidRay(n) FBetween(n, 1, cRay)
 #define FValidEsoteric(n) FBetween(n, 1, 32000)
 #define FValidScale(n) (FBetween(n, 100, MAXSCALE) && (n)%100 == 0)
 #define FValidScaleText(n) (FBetween(n, 100, MAXSCALE) && (n)%50 == 0)
@@ -1262,7 +1298,7 @@ enum _terminationcode {
 #define kSignB(s) kObjB[cuspLo-1+(s)]
 #define kModeA(m) kElemA[(m) <= 1 ? (m) : eWat]
 #define kModeB(m) kElemB[(m) <= 1 ? (m) : eWat]
-#define FInterpretObj(obj) ((obj) <= oNorm && szMindPart[obj][0])
+#define FInterpretObj(obj) (szMindPart[obj][0] != chNull)
 #define FInterpretAsp(asp) ((asp) > 0 && szInteract[asp][0])
 #define szPerson  (ciMain.nam[0] ? ciMain.nam : "This person")
 #define szPerson0 (ciMain.nam[0] ? ciMain.nam : "the person")
@@ -1392,16 +1428,15 @@ typedef byte * pbyte;
 
 typedef int KI;
 typedef unsigned long KV;
-typedef short * TRIE;
 
 typedef struct _StrLook {
-  char *sz;
-  int isz;
+  char *sz;  // The string in the table
+  int isz;   // Number the string maps to
 } StrLook;
 
 typedef struct _StrLookR {
-  char *sz;
-  real r;
+  char *sz;  // The string in the table
+  real r;    // Real number the string maps to
 } StrLookR;
 
 typedef struct _PT2S {
@@ -1434,8 +1469,8 @@ typedef struct _TELE {
 } TELE;
 
 typedef struct _GridInfo {
-  byte n[objMax][objMax];
-  int  v[objMax][objMax];
+  byte n[objMax][objMax];  // Name of aspect, or sign of midpoint
+  real v[objMax][objMax];  // Value of aspect orb, or degree within sign
 } GridInfo;
 
 typedef struct _CrossInfo {
@@ -1527,9 +1562,12 @@ typedef struct _ChartPositions {
   real dir[objMax];     // Retrogradation velocity
   real diralt[objMax];  // Latitude velocity
   real dirlen[objMax];  // Distance velocity
+  PT3R pt[objMax];      // X,Y,Z coordintes in space
+  real dist[objMax];    // Distance to X,Y,Z coordinates
   real cusp[cSign+1];   // House cusp positions
   real cusp3[cSign+1];  // 3D house cusp positions
   int house[objMax];    // House each object is in
+  real lonMC;           // 0 longitude converted to equatorial coordinates
 } CP;
 
 #ifdef GRAPH
@@ -1563,6 +1601,7 @@ typedef struct _UserSettings {
   flag fInDay;          // -d
   flag fInDayInf;       // -D
   flag fEphemeris;      // -E
+  flag fArabic;         // -P
   flag fHorizonSearch;  // -Zd
   flag fTransit;        // -t
   flag fTransitInf;     // -T
@@ -1577,22 +1616,24 @@ typedef struct _UserSettings {
   flag fVelocity;       // -v0
   flag fListDecan;      // -v3
   flag fWheelReverse;   // -w0
-  flag fGridConfig;     // -g0
+  flag fGridConfig;     // -g0 (on by default)
   flag fGridMidpoint;   // -gm
   flag nAppSep;         // -ga
   flag fParallel;       // -gp
-  flag fAspSummary;     // -a0
-  flag fMidSummary;     // -m0
+  flag fDistance;       // -gd
+  flag fAspSummary;     // -a0 (on by default)
+  flag fMidSummary;     // -m0 (on by default)
   flag fMidAspect;      // -ma
   flag fPrimeVert;      // -Z0
   flag fSectorApprox;   // -l0
-  flag fInfluenceSign;  // -j0
-  flag fLatitudeCross;  // -L0
+  flag fInfluenceSign;  // -j0 (on by default)
+  flag fLatitudeCross;  // -L0 (on by default)
   flag fCalendarYear;   // -Ky
   flag fInDayMonth;     // -dm
   flag fInDayYear;      // -dy
   flag fGraphAll;       // -B0
   flag fArabicFlip;     // -P0
+  flag fMoonChartSep;   // -80
 
   // Table chart types
   flag fCredit;          // -Hc
@@ -1615,6 +1656,7 @@ typedef struct _UserSettings {
   flag fDwarf;       // -u0
   flag fMoons;       // -u8
   flag fCOB;         // -ub
+  flag fStar;        // -U
   flag fProgress;    // Are we doing a -p progressed chart?
   flag fInterpret;   // Is -I interpretation switch in effect?
   flag fHouse3D;     // -c3
@@ -1647,45 +1689,45 @@ typedef struct _UserSettings {
   flag fListAuto;    // -5
 
   // Obscure flags
-  flag fTruePos;      // -YT
-  flag fTopoPos;      // -YV
-  flag fRefract;      // -Yf
-  flag fBarycenter;   // -Yh
-  flag fMoonMove;     // -Ym
-  flag fSidereal2;    // -Ys
-  flag fTrueNode;     // -Yn
-  flag fNoNutation;   // -Yn0
-  flag fEuroDate;     // -Yd
-  flag fEuroTime;     // -Yt
-  flag fEuroDist;     // -Yv
-  flag fRound;        // -Yr
-  flag fSmartCusp;    // -YC
-  flag fSmartSave;    // -YO
-  flag fClip80;       // -Y8
-  flag fWriteOld;     // -Yo
-  flag fHouseAngle;   // -Yc
-  flag fPolarAsc;     // -Yp
-  flag fEclipse;      // -Yu
-  flag fEclipseAny;   // -Yu0
-  flag fObjRotWhole;  // -Y10
-  flag fIgnoreSign;   // -YR0
-  flag fIgnoreDir;    // -YR0
-  flag fIgnoreDiralt; // -YR1
-  flag fIgnoreDirlen; // -YR1
-  flag fIgnoreAlt0;   // -YR2
-  flag fIgnoreDisequ; // -YR2
-  flag fIgnoreAuto;   // -YRh
-  flag fStarsList;    // -YRU0
-  flag fStarMagDist;  // -YUb
-  flag fStarMagAbs;   // -YUb0
-  flag fNoWrite;      // -0o
-  flag fNoRead;       // -0i
-  flag fNoQuit;       // -0q
-  flag fNoGraphics;   // -0X
-  flag fNoPlacalc;    // -0b
-  flag fNoNetwork;    // -0n
-  flag fNoExp;        // -0~
-  flag fExpOff;       // -~0
+  flag fTruePos;       // -YT
+  flag fTopoPos;       // -YV
+  flag fRefract;       // -Yf
+  flag fBarycenter;    // -Yh
+  flag fMoonMove;      // -Ym
+  flag fSidereal2;     // -Ys
+  flag fTrueNode;      // -Yn
+  flag fNoNutation;    // -Yn0
+  flag fEuroDate;      // -Yd
+  flag fEuroTime;      // -Yt
+  flag fEuroDist;      // -Yv
+  flag fRound;         // -Yr
+  flag fSmartCusp;     // -YC
+  flag fSmartSave;     // -YO
+  flag fClip80;        // -Y8
+  flag fWriteOld;      // -Yo
+  flag fHouseAngle;    // -Yc
+  flag fPolarAsc;      // -Yp
+  flag fEclipse;       // -Yu
+  flag fEclipseAny;    // -Yu0
+  flag fObjRotWhole;   // -Y10
+  flag fIgnoreSign;    // -YR0
+  flag fIgnoreDir;     // -YR0
+  flag fIgnoreDiralt;  // -YR1
+  flag fIgnoreDirlen;  // -YR1
+  flag fIgnoreAlt0;    // -YR2
+  flag fIgnoreDisequ;  // -YR2
+  flag fIgnoreAuto;    // -YRh
+  flag fStarsList;     // -YRU0
+  flag fStarMagDist;   // -YUb
+  flag fStarMagAbs;    // -YUb0
+  flag fNoWrite;       // -0o
+  flag fNoRead;        // -0i
+  flag fNoQuit;        // -0q
+  flag fNoGraphics;    // -0X
+  flag fNoPlacalc;     // -0b
+  flag fNoNetwork;     // -0n
+  flag fNoExp;         // -0~
+  flag fExpOff;        // -~0
 
   // Value settings
   int   nDecanType;    // -v3
@@ -1693,7 +1735,7 @@ typedef struct _UserSettings {
   int   nEphemYears;   // -Ey
   int   nEphemRate;    // -E0
   int   nEphemFactor;  // -E0
-  int   nArabic;       // -P
+  int   nArabicSort;   // -P
   int   nRel;          // What relationship chart is in effect, if any?
   int   nSwissEph;     // -bs
   int   nHouseSystem;  // -c
@@ -1701,7 +1743,7 @@ typedef struct _UserSettings {
   int   nAsp;          // -A
   int   objCenter;     // -h
   int   nDwad;         // -4
-  int   nStar;         // -U
+  int   nStarSort;     // -U
   real  rHarmonic;     // Harmonic chart value passed to -x switch.
   int   objOnAsc;      // Planet value passed to -1 or -2 switch.
   int   objRequire;    // Required object passed to -RO switch.
@@ -1720,76 +1762,85 @@ typedef struct _UserSettings {
   char *namDef;        // -zj
   char *locDef;        // -zj
   char *rgszPath[10];  // -Yi
+  char *szADB;         // -Y5i
   char *szAstColor;    // -YkE
   char *szStarsColor;  // -YkU
   char *szStarsList;   // -YRU
 
   // Value subsettings
-  int   nWheelRows;       // Number of rows per house to use for -w wheel.
-  int   nAstroGraphStep;  // Latitude step rate passed to -L switch.
-  int   nAstroGraphDist;  // Maximum crossing distance passed to -L0 switch.
-  int   nArabicParts;     // Arabic parts to include value passed to -P.
-  int   nAtlasList;       // Number of rows to display value passed to -N.
-  real  rZodiacOffset;    // Position shifting value passed to -s switch.
-  real  rZodiacOffsetAll; // Position shifting value passed to -Ys switch.
-  real  rProgDay;         // Progression day value passed to -pd switch.
-  real  rProgCusp;        // Progression cusp ratio value passed to -pC.
-  int   nRatio1;          // Chart ratio factors passed to -rc or -rm.
+  int   nWheelRows;        // Number of rows per house to use for -w wheel.
+  int   nAstroGraphStep;   // Latitude step rate passed to -L switch.
+  int   nAstroGraphDist;   // Maximum crossing distance passed to -L0 switch.
+  int   nArabicParts;      // Arabic parts to include value passed to -P.
+  int   nAtlasList;        // Number of rows to display value passed to -N.
+  real  rZodiacOffset;     // Position shifting value passed to -s switch.
+  real  rZodiacOffsetAll;  // Position shifting value passed to -Ys switch.
+  real  rProgDay;          // Progression day value passed to -pd switch.
+  real  rProgCusp;         // Progression cusp ratio value passed to -pC.
+  int   nRatio1;           // Chart ratio factors passed to -rc or -rm.
   int   nRatio2;
-  int   nCharset;         // -Ya
-  int   nCharsetOut;      // -Yao
-  int   nScrollRow;       // -YQ
-  int   cSequenceLine;    // -Yq
-  long  lTimeAddition;    // -Yz
-  real  rDeltaT;          // -Yz0
-  real  rObjAddition;     // -YzO
-  real  rCuspAddition;    // -YzC
-  int   objRot1;          // -Y1
-  int   objRot2;          // -Y1
-  int   nArabicNight;     // -YP
-  int   nBioday;          // -Yb
-  int   nSignDiv;         // -YRd
+  int   nCharset;          // -Ya
+  int   nCharsetOut;       // -Yao
+  int   nScrollRow;        // -YQ
+  int   cSequenceLine;     // -Yq
+  long  lTimeAddition;     // -Yz
+  real  rDeltaT;           // -Yz0
+  real  rObjAddition;      // -YzO
+  real  rCuspAddition;     // -YzC
+  int   objRot1;           // -Y1
+  int   objRot2;           // -Y1
+  int   nHorizon;          // -YZ
+  int   nArabicNight;      // -YP
+  int   nBioday;           // -Yb
+  int   nSignDiv;          // -YRd
+  int   iExpADB;           // -~5i
+  int   cExpADB;           // -~5i
 
   // AstroExpression hooks
-  char *szExpConfig;      // -~g
-  char *szExpAspList;     // -~a
-  char *szExpAspSumm;     // -~a0
-  char *szExpMid;         // -~m
-  char *szExpMidAsp;      // -~ma
-  char *szExpInf;         // -~j
-  char *szExpInf0;        // -~j0
-  char *szExpEso;         // -~7
-  char *szExpCross;       // -~L
-  char *szExpEph;         // -~E
-  char *szExpRis;         // -~Zd
-  char *szExpDay;         // -~d
-  char *szExpVoid;        // -~dv
-  char *szExpTra;         // -~t
-  char *szExpPart;        // -~P
-  char *szExpObj;         // -~O
-  char *szExpHou;         // -~C
-  char *szExpAsp;         // -~A
-  char *szExpProg;        // -~p
-  char *szExpProg0;       // -~p0
-  char *szExpColObj;      // -~kO
-  char *szExpColAsp;      // -~kA
-  char *szExpColFill;     // -~kv
-  char *szExpFontSig;     // -~F
-  char *szExpFontHou;     // -~FC
-  char *szExpFontObj;     // -~FO
-  char *szExpFontAsp;     // -~FA
-  char *szExpSort;        // -~v
-  char *szExpDecan;       // -~v3
-  char *szExpSidebar;     // -~Xt
-  char *szExpStar;        // -~U
-  char *szExpAst;         // -~U0
-  char *szExpCast1;       // -~q1
-  char *szExpCast2;       // -~q2
-  char *szExpDisp1;       // -~Q1
-  char *szExpDisp2;       // -~Q2
-  char *szExpListS;       // -~5s
-  char *szExpListF;       // -~5f
-  char *szExpListY;       // -~5Y
+  char *szExpConfig;   // -~g
+  char *szExpAspList;  // -~a
+  char *szExpAspSumm;  // -~a0
+  char *szExpMid;      // -~m
+  char *szExpMidAsp;   // -~ma
+  char *szExpInf;      // -~j
+  char *szExpInf0;     // -~j0
+  char *szExpEso;      // -~7
+  char *szExpCross;    // -~L
+  char *szExpEph;      // -~E
+  char *szExpRis;      // -~Zd
+  char *szExpDay;      // -~d
+  char *szExpVoid;     // -~dv
+  char *szExpTra;      // -~t
+  char *szExpPart;     // -~P
+  char *szExpObj;      // -~O
+  char *szExpHou;      // -~C
+  char *szExpAsp;      // -~A
+  char *szExpProg;     // -~p
+  char *szExpProg0;    // -~p0
+  char *szExpColObj;   // -~kO
+  char *szExpColAsp;   // -~kA
+  char *szExpColFill;  // -~kv
+  char *szExpFontSig;  // -~F
+  char *szExpFontHou;  // -~FC
+  char *szExpFontObj;  // -~FO
+  char *szExpFontAsp;  // -~FA
+  char *szExpSort;     // -~v
+  char *szExpDecan;    // -~v3
+  char *szExpStar;     // -~U
+  char *szExpAst;      // -~U0
+  char *szExpCity;     // -~XL
+  char *szExpSidebar;  // -~Xt
+  char *szExpKey;      // -~XQ
+  char *szExpMenu;     // -~WQ
+  char *szExpCast1;    // -~q1
+  char *szExpCast2;    // -~q2
+  char *szExpDisp1;    // -~Q1
+  char *szExpDisp2;    // -~Q2
+  char *szExpDisp3;    // -~Q3
+  char *szExpListS;    // -~5s
+  char *szExpListF;    // -~5f
+  char *szExpListY;    // -~5Y
+  char *szExpADB;      // -~5i
 } US;
 
 typedef struct _InternalSettings {
@@ -1835,9 +1886,6 @@ typedef struct _InternalSettings {
   real JD;             // Fractional Julian day for current chart.
   real JDp;            // Julian day that a progressed chart indicates.
   real Tp;             // Julian time used for progressed chart cusps.
-  real lonMC;          // 0 longitude converted to equatorial coordinates.
-  real latMC;          // 0 latitude converted to equatorial coordinates.
-  TRIE rgsTrieFun;     // Trie tree of tokens for AstroExpression parsing.
   AtlasEntry *rgae;    // List of atlas entries for city coordinates.
   ZoneChange *rgzc;    // List of time zone change entries for zone areas.
   RuleName *rgrun;     // List of Daylight Saving change rule names.
@@ -1860,16 +1908,16 @@ typedef struct _InternalSettings {
 
 #ifdef SWISS
 typedef struct _ExtraStar {
-  real lon;          // Zodiac position.
-  real lat;          // Vertical latitude.
-  real dir;          // Velocity or speed.
-  real mag;          // Magnitude or brightness.
-  PT3R space;        // Coordinates in 3D space.
-  char sz[cchSzDef]; // Buffer for name of star.
-  char *pchNam;      // Star's classic name.
-  char *pchDes;      // Star's designation name.
-  char *pchBest;     // Best available name.
-  KI ki;             // Color to use for star.
+  real lon;           // Zodiac position.
+  real lat;           // Vertical latitude.
+  real dir;           // Velocity or speed.
+  real mag;           // Magnitude or brightness.
+  PT3R pt;            // Coordinates in 3D space.
+  char sz[cchSzDef];  // Buffer for name of star.
+  char *pchNam;       // Star's classic name.
+  char *pchDes;       // Star's designation name.
+  char *pchBest;      // Best available name.
+  KI ki;              // Color to use for star.
 } ES;
 #endif
 
@@ -1888,7 +1936,13 @@ typedef struct _GraphicsSettings {
   flag fInverse;     // Are we drawing in reverse video (-Xr set).
   flag fRoot;        // Are we drawing on the X11 background (-XB set).
   flag fText;        // Are we printing chart info on chart (-Xt set).
-  int nFont;         // Which fonts to use for sign/house/obj/asp (-YXf).
+  int nFontAll;      // Which fonts to use for sign/house/obj/asp (-YXf).
+  int nFontTxt;      // Which font to use for graphics text       (-YXft).
+  int nFontSig;      // Which font to use for signs of the zodiac (-YXfs).
+  int nFontHou;      // Which font to use for labelling houses    (-YXfh).
+  int nFontObj;      // Which font to use for planets and objects (-YXfo).
+  int nFontAsp;      // Which font to use for aspects             (-YXfa).
+  int nFontNak;      // Which font to use for Vedic Nakshatras    (-YXfn).
   flag fAlt;         // Are we drawing in alternate mode (-Xi set).
   flag fBorder;      // Are we drawing borders around charts (-Xu set).
   flag fLabel;       // Are we labeling objects in charts (-Xl not set).
@@ -1939,7 +1993,12 @@ typedef struct _GraphicsSettings {
   int cspace;        // Number of -S orbit trails allowed (-YXj).
   int zspace;        // Height diff of each orbit trail (-YXj0).
   int nRayWidth;     // Column width in -7 esoteric chart (-YX7).
-  int nGlyphs;       // Settings for what gylphs to use (-YXG).
+  int nGlyphCap;     // Glyph to use for sign Capricorn (-YXGc).
+  int nGlyphUra;     // Glyph to use for planet Uranus (-YXGu).
+  int nGlyphPlu;     // Glyph to use for planet Pluto (-YXGp).
+  int nGlyphLil;     // Glyph to use for object Lilith (-YXGl).
+  int nGlyphVer;     // Glyph to use for object Vertex (-YXGv).
+  int nGlyphEri;     // Glyph to use for planet Eris (-YXGe).
   flag fColorSign;   // More color for sign boundaries. (-YXk).
   flag fColorHouse;  // More color for house boundaries. (-YXk0).
   flag fAltPalette;  // Use alternate palette for white backgrounds (-YXK0).
@@ -1994,8 +2053,10 @@ typedef struct _GraphicsInternal {
   int cStarsLin;      // Count of extra star coordinates (-YXU).
 #endif
 #ifdef ISG
-  int xWinResize;     // Manually resized hor. size of graphic chart
-  int yWinResize;     // Manually resized ver. size of graphic chart
+  flag fPause;        // Is animation paused? (-Xnp set).
+  int nDir;           // Animation step factor and direction (-Xnf).
+  int xWinResize;     // Manually resized hor. size of graphic chart.
+  int yWinResize;     // Manually resized ver. size of graphic chart.
 #endif
 #ifdef X11
   Display *disp;      // The opened X11 display (-Xd).
@@ -2125,7 +2186,6 @@ typedef struct _WindowInternal {
   Bitmap bmpWin;     // Bitmap storing contents to be copied to window.
 
   // Window user settings.
-  flag fPause;         // Is animation paused?
   flag fBuffer;        // Are we drawing updates off screen?
   flag fHourglass;     // Bring up hourglass cursor on redraws?
   flag fChartWindow;   // Does chart change cause window resize?
@@ -2138,34 +2198,33 @@ typedef struct _WindowInternal {
   flag fAutoSaveWire;  // Autosave wireframe instead of bitmap?
   int nAutoSaveNum;    // Number of incremental bitmap save.
   KI kiPen;            // The current pen scribble color.
-  int nDir;            // Animation step factor and direction.
   UINT nTimerDelay;    // Milliseconds between animation draws.
 } WI;
 #endif
 
 #ifdef WCLI
 typedef struct _WindowInternal {
-  HINSTANCE hinst;  // Instance of the Astrolog window class.
-  HWND hwndMain;    // The outer created frame window.
-  HWND hwnd;        // The current window being dealt with.
-  HDC hdc;          // The current DC bring drawn upon.
-  HDC hdcBack;      // The current DC for the background bitmap.
-  HPEN hpen;        // Pen with the current line color.
-  HBRUSH hbrush;    // Fill if any with the current color.
-  HBITMAP hbmpBack; // Bitmap for the background image.
-  HBITMAP hbmpPrev; // Bitmap to restore after using background.
-  short xClient;    // Horizontal & vertical window size.
+  HINSTANCE hinst;   // Instance of the Astrolog window class.
+  HWND hwndMain;     // The outer created frame window.
+  HWND hwnd;         // The current window being dealt with.
+  HDC hdc;           // The current DC bring drawn upon.
+  HDC hdcBack;       // The current DC for the background bitmap.
+  HPEN hpen;         // Pen with the current line color.
+  HBRUSH hbrush;     // Fill if any with the current color.
+  HBITMAP hbmpBack;  // Bitmap for the background image.
+  HBITMAP hbmpPrev;  // Bitmap to restore after using background.
+  short xClient;     // Horizontal & vertical window size.
   short yClient;
-  flag fNotManual;  // Is window being resized automatically?
+  flag fNotManual;   // Is window being resized automatically?
   flag fDoRedraw;
   flag fDoResize;
   flag fDoCast;
   flag fWndclass;
-  int xMouse;       // Horizontal & vertical mouse position.
+  int xMouse;        // Horizontal & vertical mouse position.
   int yMouse;
-  LPARAM lParamRC;  // Coordinates where right click originated.
-  Bitmap bmpWin;    // Bitmap storing contents to be copied to window.
-  KI kiPen;         // The current pen scribble color.
+  LPARAM lParamRC;   // Coordinates where right click originated.
+  Bitmap bmpWin;     // Bitmap storing contents to be copied to window.
+  KI kiPen;          // The current pen scribble color.
 } WI;
 #endif
 

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: io.cpp
+** Astrolog (Version 7.60) File: io.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -73,7 +73,7 @@
 FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
 {
   FILE *file;
-  char szFileT[cchSzMax], sz[cchSzMax], szMode[3], *pch;
+  char szFileT[cchSzMax], szExe[cchSzMax], sz[cchSzMax], szMode[3], *pch;
 #ifdef ENVIRON
   char *env;
 #endif
@@ -81,6 +81,18 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
 
   // Some file types we want to open as binary instead of Ascii.
   sprintf(szMode, "r%s", nFileMode >= 2 ? "b" : "");
+#ifdef WIN
+  GetModuleFileName(wi.hinst, szExe, cchSzMax);
+#else
+  sprintf(szExe, "%s", is.szProgName != NULL ? is.szProgName : "");
+#endif
+  for (pch = szExe; *pch; pch++)
+    ;
+  while (pch > szExe && *pch != chDirSep)
+    pch--;
+  if (*pch == chDirSep)
+    pch++;
+  *pch = chNull;
 
   for (i = 0; i <= 1; i++) {
     if (i <= 0)
@@ -92,17 +104,9 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
     }
 
     // First look for the file in the directory of the Astrolog executable.
-#ifdef WIN
-    GetModuleFileName(wi.hinst, sz, cchSzMax);
-#else
-    sprintf(sz, "%s", is.szProgName != NULL ? is.szProgName : "");
-#endif
+    sprintf(sz, "%s", szExe);
     for (pch = sz; *pch; pch++)
       ;
-    while (pch > sz && *pch != chDirSep)
-      pch--;
-    if (*pch == chDirSep)
-      pch++;
     sprintf(pch, "%s", szFileT);
     file = fopen(sz, szMode);
     if (file != NULL)
@@ -115,13 +119,23 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
       goto LDone;
 
     // Next look in the directories indicated by the -Yi switch.
-    for (j = 0; j < 10; j++)
-      if (us.rgszPath[j] && *us.rgszPath[j]) {
-        sprintf(sz, "%s%c%s", us.rgszPath[j], chDirSep, szFileT);
+    for (j = 0; j < 10; j++) {
+      pch = us.rgszPath[j];
+      if (FSzSet(pch)) {
+        if ((FCapCh(*pch) || FUncapCh(*pch) || FNumCh(*pch)) &&
+          !(pch[1] == ':')) {
+          // If dir is relative path, then prepend the path to executable.
+          sprintf(sz, "%s", szExe);
+          for (pch = sz; *pch; pch++)
+            ;
+        } else
+          pch = sz;
+        sprintf(pch, "%s%c%s", us.rgszPath[j], chDirSep, szFileT);
         file = fopen(sz, szMode);
         if (file != NULL)
           goto LDone;
       }
+    }
 
 #ifdef ENVIRON
     // Next look for the file in the directory indicated by the version
@@ -248,6 +262,9 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
     }
     if (ch != '\n')
       ch = getbyte();
+    // Windows Notepad files sometimes have character 255 at end of file.
+    if (i > 0 && (uchar)szLine[i-1] == 255)
+      i--;
     szLine[i] = chNull;
     argc = NParseCommandLine(szLine, argv);
     if (!FProcessSwitches(argc, argv))
@@ -459,8 +476,10 @@ flag FProcessAAFFile(CONST char *szFile, FILE *file)
       AdvancePast('.');
       YY = NParseSz(pch, pmYea);
       AdvancePast(',');
-      TT = RParseSz(pch, pmTim);
+      sz1 = pch;
       AdvancePast(',');
+      pch[-1] = chNull;
+      TT = RParseSz(sz1, pmTim);
       sz1 = pch;
       AdvancePast(',');
       pch[-1] = chNull;
@@ -575,9 +594,10 @@ flag FOutputAAFFile(void)
   // Output row #2.
   nSav = us.fAnsiChar; us.fAnsiChar = 4;
   fprintf(file, "\n#B93:%f,%s,%s,", JulianDayFromTime(is.T),
-    SzLocation(Lon, Lat), Zon != zonLMT ? SzZone(Zon) : "*");
+    SzLocation(Lon, Lat), Zon != zonLMT && Zon != zonLAT ? SzZone(Zon) : "*");
   us.fAnsiChar = nSav;
-  fprintf(file, "%c\n", Zon == zonLMT ? 'L' : (Dst != 0.0 ? '1' : '0'));
+  fprintf(file, "%c\n", Zon == zonLMT || Zon == zonLAT ? 'L' :
+    (Dst != 0.0 ? '1' : '0'));
 
   fprintf(file, "#: AAF end\n");
   fclose(file);
@@ -736,8 +756,8 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
 {
   char szLine[cchSzLine], sz[cchSzDef], szLoc1[cchSzDef], szLoc2[cchSzDef],
     ch, *pch, *pch2;
-  int i, grf, pm = 0;
-  flag fHaveFile, fDidOne = fFalse, fDidStart, fDidLon, fRet = fFalse;
+  int i, grf, cchSz = CchSz(us.szADB);
+  flag fHaveFile, fDidOne = fFalse, fDidStart, fDidEnd, fDidLon, fRet = fFalse;
 
   fHaveFile = (file != NULL);
   if (!fHaveFile) {
@@ -747,10 +767,17 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
   }
   is.fileIn = file;
   do {
+#ifdef EXPRESS
+    if (!us.fExpOff && FSzSet(us.szExpADB)) {
+      for (i = us.iExpADB; i < us.iExpADB + us.cExpADB; i++)
+        if (!ExpSetN(i, 0))
+          goto LDone;
+    }
+#endif
 
-  fDidStart = fFalse;
+  fDidStart = fDidEnd = fFalse;
   grf = 0;
-  while (grf != 2047) {
+  while (!fDidEnd) {
     while (!feof(file) && (ch = getc(file)) < ' ')
       ;
     if (feof(file))
@@ -759,13 +786,14 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
       (uchar)(szLine[i] = getc(file)) >= ' '; i++)
       ;
     szLine[i] = chNull;
-
     fDidLon = fFalse;
     for (pch = szLine; *pch; pch++) {
       if (FEqRgch(pch, "<adb_entry", 10, fFalse))
         fDidStart = fTrue;
       else if (!fDidStart)
         continue;
+      if (FEqRgch(pch, "</adb_entry>", 12, fFalse))
+        fDidEnd = fTrue;
       if ((grf & 1) == 0 && FEqRgch(pch, "imonth=\"", 8, fFalse)) {
         MM = atoi(pch + 8);
         grf |= 1;
@@ -845,15 +873,32 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
         ciCore.loc = SzCopy(sz);
         grf |= 1024;
       }
+      if (cchSz > 0 && (grf & 2048) == 0 &&
+        FEqRgch(pch, us.szADB, cchSz, fFalse))
+        grf |= 2048;
+#ifdef EXPRESS
+      if (!us.fExpOff && FSzSet(us.szExpADB)) {
+        for (i = us.iExpADB; i < us.iExpADB + us.cExpADB; i++) {
+          pch2 = ExpGetString(i);
+          if (FSzSet(pch2) && FEqRgch(pch2, pch, CchSz(pch2), fFalse)) {
+            if (!ExpSetN(i, NExpGet(i) + 1))
+              goto LDone;
+          }
+        }
+      }
+#endif
     }
   }
 
-  if (grf != 2047) {
+  if ((grf & 2047) != 2047) {
     if (grf == 0 && fDidOne) {
       fRet = fTrue;
       goto LDone;
     }
-    PrintWarning("Couldn't detect all fields in Astrodatabank file.");
+    if (grf == 0)
+      PrintWarning("Couldn't find any charts in Astrodatabank file.");
+    else
+      PrintWarning("Couldn't detect all fields in Astrodatabank file.");
     goto LDone;
   }
   ZZ += SS;
@@ -862,6 +907,15 @@ flag FProcessADBFile(CONST char *szFile, FILE *file)
     PrintWarning("Values in Astrodatabank file are out of range.");
     goto LDone;
   }
+  if (cchSz > 0 && (grf & 2048) == 0)
+    continue;
+#ifdef EXPRESS
+  // Skip current chart record if AstroExpression says to do so.
+  if (!us.fExpOff && FSzSet(us.szExpADB)) {
+    if (!NParseExpression(us.szExpADB))
+      continue;
+  }
+#endif
   if (!FAppendCIList(&ciCore))
     goto LDone;
   fDidOne = fTrue;
@@ -1133,7 +1187,7 @@ flag FOutputSettings()
   flag f1, f2;
 #ifdef SWISS
   int j;
-  flag fAny = fFalse;
+  flag fAny;
 #endif
 
   if (us.fNoWrite)
@@ -1184,9 +1238,17 @@ flag FOutputSettings()
   sprintf(sz, "%cs      ", ChDashF(us.fSidereal)); PrintFSz();
   PrintF(
     "; Which zodiac to use       [\"_s\" is tropical, \"=s\" is sidereal]\n");
-  PrintF(":s "); FormatR(sz, us.rZodiacOffset, 6); PrintFSz();
+  PrintF(":s ");
+  FormatR(sz, us.rZodiacOffset, 6);
+  for (i = 0; *rgZodiacOffset[i].sz; i++) {
+    if (us.rZodiacOffset == rgZodiacOffset[i].r) {
+      sprintf(sz, "%.4s", rgZodiacOffset[i].sz);
+      break;
+    }
+  }
+  PrintFSz();
   PrintF(
-    "  ; Sidereal zodiac offset    [Change \"0.0\" to desired ayanamsa  ]\n");
+    " ; Sidereal zodiac offset    [Change \"Faga\" to desired ayanamsa ]\n");
   sprintf(sz, ":s%c     ", szDegForm[us.nDegForm]); PrintFSz();
   PrintF(
     "; Zodiac display format     [\"z\" is sign, \"d\" is 0-360 deg, etc]\n");
@@ -1194,7 +1256,7 @@ flag FOutputSettings()
   PrintF(
     "; Number of aspects         [Change \"5\" to desired number      ]\n");
   i = us.nHouseSystem; sprintf(sz, "-c %.4s ", i == hsEqualMC ?
-    rgSystem[1].sz : (i == hsSinewaveDelta ? rgSystem[3].sz : szSystem[i]));
+    rgSystem[1].sz : (i == hsSineDelta ? rgSystem[3].sz : szSystem[i]));
   PrintFSz();
   PrintF(
     "; House system              [Change \"Plac\" to desired system   ]\n");
@@ -1225,12 +1287,19 @@ flag FOutputSettings()
   sprintf(sz, "-YQ %d   ", us.nScrollRow); PrintFSz();
   PrintF(
     "; Text screen scroll limit  [Change \"24\" or set to \"0\" for none]\n");
-  sprintf(sz, "%cYn     ", ChDashF(us.fTrueNode)); PrintFSz();
-  PrintF(
-    "; Which Nodes and Lilith    [\"_Yn\" shows mean, \"=Yn\" shows true]\n");
   sprintf(sz, "%csr0    ", ChDashF(us.fEquator2)); PrintFSz();
   PrintF(
     "; Latitudes or declinations [\"_sr0\" shows lat., \"=sr0\" declin. ]\n");
+  sprintf(sz, "%cYs     ", ChDashF(us.fSidereal2)); PrintFSz();
+  PrintF(
+    "; Use plane of solar system [\"_Ys\" is ecliptic, \"=Ys\" is solar ]\n");
+  sprintf(sz, "%cYn     ", ChDashF(us.fTrueNode)); PrintFSz();
+  PrintF(
+    "; Which Nodes and Lilith    [\"_Yn\" shows mean, \"=Yn\" shows true]\n");
+  sprintf(sz, "%cYu%c    ", ChDashF(us.fEclipse), us.fEclipseAny ? '0' : ' ');
+  PrintFSz();
+  PrintF(
+    "; Show eclipse information  [\"=Yu0\" shows, \"_Yu0\" doesn't show ]\n");
   sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
   PrintF(
     "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
@@ -1258,10 +1327,6 @@ flag FOutputSettings()
   sprintf(sz, "-YP %d   ", us.nArabicNight); PrintFSz();
   PrintF(
     "; Arabic part formula       [\"1\" is fixed, \"0\" checks if night ]\n");
-  sprintf(sz, "%cYu%c    ", ChDashF(us.fEclipse), us.fEclipseAny ? '0' : ' ');
-  PrintFSz();
-  PrintF(
-    "; Show eclipse information  [\"=Yu0\" shows, \"_Yu0\" doesn't show ]\n");
   sprintf(sz, "%c0n     ", ChDashF(us.fNoNetwork)); PrintFSz();
   PrintF(
     "; Internet Web queries      [\"=0n\" disables them, \"_0n\" allows ]\n");
@@ -1286,7 +1351,7 @@ flag FOutputSettings()
     "; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos\n"
     "; 43-51: Hyg Pho Eri Hau Mak Gon Qua Sed Orc\n"
     "; 52-83: Planetary moons\n"
-    "; 84-130: Fixed stars\n"
+    "; 84-133: Fixed stars\n"
     "\n-YR 0 10     ");
   for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore[i]));
   PrintF("   ; Planets\n-YR 11 21    ");
@@ -1297,7 +1362,15 @@ flag FOutputSettings()
   for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore[i]));
   PrintF("       ; Uranians\n-YR 43 51    ");
   for (i = 43; i <= 51; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("       ; Dwarfs\n\n");
+  PrintF("       ; Dwarfs\n-YR 52 78    ");
+  for (i = 52; i <= 78; i++) PrintF(SzNumF(ignore[i]));
+  PrintF(" ; Moons\n-YR 79 83    ");
+  for (i = 79; i <= 83; i++) PrintF(SzNumF(ignore[i]));
+  PrintF("               ; Centers of Body\n-YR 84 108   ");
+  for (i = 84; i <= 108; i++) PrintF(SzNumF(ignore[i]));
+  PrintF(" ; Fixed stars\n-YR 109 133  ");
+  for (i = 109; i <= 133; i++) PrintF(SzNumF(ignore[i]));
+  PrintF(" ; Fixed stars\n\n");
 
   PrintF("; DEFAULT TRANSIT RESTRICTIONS:\n\n-YRT 0 10    ");
   for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore2[i]));
@@ -1309,7 +1382,15 @@ flag FOutputSettings()
   for (i = 34; i <= 42; i++) PrintF(SzNumF(ignore2[i]));
   PrintF("       ; Uranians\n-YRT 43 51   ");
   for (i = 43; i <= 51; i++) PrintF(SzNumF(ignore2[i]));
-  PrintF("       ; Dwarfs\n\n");
+  PrintF("       ; Dwarfs\n-YR 52 78    ");
+  for (i = 52; i <= 78; i++) PrintF(SzNumF(ignore2[i]));
+  PrintF(" ; Moons\n-YR 79 83    ");
+  for (i = 79; i <= 83; i++) PrintF(SzNumF(ignore2[i]));
+  PrintF("               ; Centers of Body\n-YR 84 108   ");
+  for (i = 84; i <= 108; i++) PrintF(SzNumF(ignore2[i]));
+  PrintF(" ; Fixed stars\n-YR 109 133  ");
+  for (i = 109; i <= 133; i++) PrintF(SzNumF(ignore2[i]));
+  PrintF(" ; Fixed stars\n\n");
 
   sprintf(sz, "-YR0 %s%s ; Restrict sign changes, direction changes\n",
     SzNumF(us.fIgnoreSign), SzNumF(us.fIgnoreDir)); PrintFSz();
@@ -1495,6 +1576,7 @@ flag FOutputSettings()
 
 #ifdef SWISS
   PrintF("; OBJECT CUSTOMIZATION:\n\n");
+  fAny = fFalse;
   for (i = custLo; i <= custHi; i++) {
     j = i - custLo;
     f1 = (rgObjSwiss[j] != rgObjSwissDef[j] || rgTypSwiss[j] !=
@@ -1512,11 +1594,30 @@ flag FOutputSettings()
         i, rgObjSwiss[j], f2 ? " " : "\n"); PrintFSz();
     }
     if (f2) {
-      sprintf(sz, "-YD %d %s\n", i, szObjDisp[i]); PrintFSz();
+      sprintf(sz, "-YD %d \"%s\"\n", i, szObjDisp[i]); PrintFSz();
     }
   }
   if (!fAny)
     PrintF("; [No objects are different from defaults]\n");
+  PrintF("\n\n; STAR CUSTOMIZATION:\n\n");
+  fAny = fFalse;
+  for (i = starLo; i <= starHi; i++) {
+    j = i - starLo + 1;
+    f1 = FSzSet(szStarCustom[j]);
+    f2 = (szObjDisp[i] != szObjName[i]);
+    if (!f1 && !f2)
+      continue;
+    fAny = fTrue;
+    if (f1) {
+      sprintf(sz, "-YU %d %s%s", i, szStarCustom[j], f2 ? " " : "\n");
+      PrintFSz();
+    }
+    if (f2) {
+      sprintf(sz, "-YD %d \"%s\"\n", i, szObjDisp[i]); PrintFSz();
+    }
+  }
+  if (!fAny)
+    PrintF("; [No star objects are different from defaults]\n");
   PrintF("\n\n");
 #endif
 
@@ -1551,8 +1652,8 @@ flag FOutputSettings()
   PrintFSz();
   PrintF(
     "; Bitmap file type   [\"Xbw\" is Windows .bmp, \"Xbn\" is X11   ]\n");
-  sprintf(sz, ":YXG %05d       ", gs.nGlyphs); PrintFSz();
-  PrintF("; Glyph selections [Capricorn, Uranus, Pluto, Lilith, Vertex]\n");
+  sprintf(sz, ":YXG %06d      ", nGlyphAll); PrintFSz();
+  PrintF("; Glyphs for [Capricorn, Uranus, Pluto, Lilith, Vertex, Eris]\n");
   sprintf(sz, ":YXg %d           ", gs.nGridCell); PrintFSz();
   PrintF("; Aspect grid cells  [\"0\" for autodetect  ]\n");
   sprintf(sz, ":YXS %.1f         ", gs.rspace); PrintFSz();
@@ -1561,8 +1662,8 @@ flag FOutputSettings()
   PrintF("; Orbit trail count\n");
   sprintf(sz, ":YX7 %d         ", gs.nRayWidth); PrintFSz();
   PrintF("; Esoteric ray column influence width\n");
-  sprintf(sz, ":YXf %05d       ", gs.nFont); PrintFSz();
-  PrintF("; System fonts to use [text, signs, houses, planets, aspects]\n");
+  sprintf(sz, ":YXf %06d      ", gs.nFontAll); PrintFSz();
+  PrintF("; Fonts to use [text, signs, houses, planets, aspects, naks.]\n");
   sprintf(sz, ":YXp %d           ", gs.nOrient); PrintFSz();
   PrintF(
     "; PostScript paper orientation [\"-1\" portrait, \"1\" landscape]\n");
@@ -1595,7 +1696,7 @@ void OpenDir(CONST char *szDir)
   hFile = _findfirst(szPath, &fi);
   fHaveFile = (hFile != -1);
   while (fHaveFile) {
-    if (fi.name[0] == '.')
+    if (fi.name[0] == '.' || (fi.attrib & _A_SUBDIR) != 0)
       goto LNext;
     // Skip over astrolog.as, atlas.as, and timezone.as if present.
     if (!fAll && (FEqSzI(fi.name, DEFAULT_INFOFILE) || FEqSzI(fi.name,
@@ -1907,6 +2008,10 @@ real RParseSz(CONST char *szEntry, int pm)
         break;
       }
     }
+  } else if (pm == pmOffset) {
+    for (i = 0; *rgZodiacOffset[i].sz; i++)
+      if (FMatchSz(sz, rgZodiacOffset[i].sz))
+        return rgZodiacOffset[i].r;
   }
 
   // Anything still at this point should be in a numeric format.
@@ -2062,7 +2167,7 @@ real RInputRange(CONST char *szPrompt, real low, real high, int pm)
 flag FInputData(CONST char *szFile)
 {
   FILE *file;
-  char sz[cchSzMax], ch;
+  char sz[cchSzMax], ch, *pch;
   int i, fT;
   real k, l, m;
 
@@ -2098,7 +2203,7 @@ flag FInputData(CONST char *szFile)
 
   if (szFile[0] == '_' && szFile[1] == '_') {
     ch = szFile[2];
-    if (FBetween(ch, '1', '6') && szFile[3] == chNull) {
+    if (FBetween(ch, '1', '0' + cRing) && szFile[3] == chNull) {
       is.fHaveInfo = fTrue;
       ciCore = *rgpci[ch - '0'];
       return fTrue;
@@ -2141,7 +2246,7 @@ flag FInputData(CONST char *szFile)
       1, 12, pmMon);
     DD = NInputRange("Enter day   for chart (e.g. '1' '31') ",
       1, DayInMonth(MM, 0), pmDay);
-    YY = NInputRange("Enter year  for chart (e.g. '2022')   ",
+    YY = NInputRange("Enter year  for chart (e.g. '2023')   ",
       -32000, 32000, pmYea);
     if (FBetween(YY, 0, 99)) {
       sprintf(sz,
@@ -2249,6 +2354,22 @@ flag FInputData(CONST char *szFile)
       return fFalse;
     }
     ciCore.nam = ciCore.loc = "";
+    if (!us.fWriteOld) {
+      // Set chart name to filename (minus path and extension) unless -Yo on.
+      sprintf(sz, "%s", szFile);
+      for (pch = sz; *pch; pch++)
+        ;
+      while (pch > sz && *pch != '/' && *pch != '\\' && *pch != '.')
+        pch--;
+      if (*pch == '.') {
+        *pch = chNull;
+        while (pch > sz && *pch != '/' && *pch != '\\' && *pch != '.')
+          pch--;
+      }
+      if (*pch == '/' || *pch == '\\')
+        pch++;
+      ciCore.nam = SzCopy(pch);
+    }
 
   // Read the actual chart positions from a file produced with -o0 switch.
 
@@ -2317,19 +2438,28 @@ flag FInputData(CONST char *szFile)
 ******************************************************************************
 */
 
+#ifdef WINANY
 #include <urlmon.h>  // For URLDownloadToFile()
+#endif
 
 // Download a Web page from a URL to the specified file.
 
 flag GetURL(const char *szUrl, const char *szFile)
 {
-  HRESULT hr;
   char sz[cchSzLine];
+#ifdef WINANY
+  HRESULT hr;
 
   hr = URLDownloadToFile(NULL, szUrl, szFile, 0, NULL);
   if (!FAILED(hr))
     return fTrue;
   sprintf(sz, "Failed to download '%s' (error %08x)\n", szUrl, hr);
+#else
+  sprintf(sz, "wget -q -O %s \"%s\"", szFile, szUrl);
+  if (system(sz) == 0)
+    return fTrue;
+  sprintf(sz, "Failed to download '%s'\n", szUrl);
+#endif
   PrintWarning(sz);
   return fFalse;
 }
@@ -2339,7 +2469,7 @@ flag GetURL(const char *szUrl, const char *szFile)
 // vectors. Similar to FSwissPlanet() but does a JPL Horizons Web query
 // instead of calling Swiss Ephemeris to compute the position.
 
-flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
+flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *dist,
   real *diralt, real *dirlen, char *szOut)
 {
   char szUrl[cchSzLine], szLine[cchSzLine], szName[cchSzMax],
@@ -2349,9 +2479,13 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
   FILE *file;
   real sec[3], len[3], rT;
   int phase = -1, i;
+  flag fSemicolon;
 
   if (us.fNoNetwork) {    // Don't allow if -0n set.
-    PrintWarning("Internet features are disabled.");
+    if (!is.fNoEphFile) {
+      is.fNoEphFile = fTrue;
+      PrintWarning("Internet features are disabled.");
+    }
     return fFalse;
   }
 
@@ -2367,8 +2501,8 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
     for (pch = szMon[i]; *pch; pch++)
       *pch = ChCap(*pch);
     hr[i] = NFloor(ci[i].tim);
-    min[i] = (int)((ci[i].tim - (real)hr[i])*60.0);
-    sec[i] = (int)(ci[i].tim * 3600.0 - (real)(hr[i]*3600+min[i]*60));
+    min[i] = (int)(RFract(RAbs(ci[i].tim))*60.0);
+    sec[i] = (int)(RFract(RAbs(ci[i].tim))*3600.0) % 60;
   }
 
   // Compose URL to download from internet.
@@ -2378,6 +2512,7 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
       -ciCore.lon, ciCore.lat, us.elvDef / 1000.0);
   } else
     *szLine = chNull;
+  fSemicolon = FBetween(id, nMillion, nMillion*2-1);
   sprintf(szUrl, "https://ssd.jpl.nasa.gov/horizons_batch.cgi?batch=1&"
     "COMMAND='%d%s'&"
     "OBJ_DATA='YES'&"
@@ -2387,9 +2522,9 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
     "START_TIME='%d-%s-%02d%%20%d:%02d:%lf'&"
     "STOP_TIME='%d-%s-%02d%%20%d:%02d:%lf'&"
     "STEP_SIZE='5%%20min'&"
-    "QUANTITIES= '21,31'&"
+    "QUANTITIES='21,31'&"
     "CSV_FORMAT='YES'",
-    id >= nMillion ? id - nMillion : id, id >= nMillion ? ";" : "",
+    fSemicolon ? id - nMillion : id, fSemicolon ? ";" : "",
     !us.fTopoPos ? "500" : "coord@399", szLine,
     ci[0].yea, szMon[0], ci[0].day, hr[0], min[0], sec[0],
     ci[2].yea, szMon[2], ci[2].day, hr[2], min[2], sec[2]);
@@ -2450,9 +2585,16 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
     }
   }
   fclose(file);
+#ifdef WINANY
   _unlink(szFileJPLCore);
+#else
+  remove(szFileJPLCore);
+#endif
   if (phase < 3) {
-    PrintWarning("Failed to get positions from " szFileJPLCore);
+    if (!is.fNoEphFile) {
+      is.fNoEphFile = fTrue;
+      PrintWarning("Failed to get positions from " szFileJPLCore);
+    }
     return fFalse;
   }
 
@@ -2464,14 +2606,14 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *space,
   *obj = pt[1].x;
   *objalt = pt[1].y;
   *dir = (pt[2].x - pt[0].x) * 144.0;
-  *space = len[1];
+  *dist = len[1];
   *diralt = (pt[2].y - pt[0].y) * 144.0;
   *dirlen = (len[2] - len[0]) * 144.0;
   if (us.fTruePos) {
     rT = pt[1].z / 1440.0;
     *obj += *dir * rT;
     *objalt += *diralt * rT;
-    *space += *dirlen * rT;
+    *dist += *dirlen * rT;
   }
   if (szOut != NULL)
     CopyRgchToSz(szName, CchSz(szName)+1, szOut, cchSzMax);

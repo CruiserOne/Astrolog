@@ -61,6 +61,7 @@
 
 #include "astrolog.h"
 #ifdef SWISS
+#undef space
 
 #include <string.h>
 #include <ctype.h>

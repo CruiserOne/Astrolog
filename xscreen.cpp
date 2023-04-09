@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xscreen.cpp
+** Astrolog (Version 7.60) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -611,10 +611,11 @@ void InteractX()
   HDC hdcWin;
   PAINTSTRUCT ps;
   MSG msg;
+  int nMsg;
 #endif
   int fAutosize = fFalse, fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse,
-    fBreak = fFalse, fPause = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
-    buttonx = -1, buttony = -1, dir = 1, length, key, i;
+    fBreak = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
+    buttonx = -1, buttony = -1, length, key, i;
   KI coldrw = gi.kiLite;
 
   neg(gs.nAnim);
@@ -728,17 +729,17 @@ void InteractX()
         CastChart(0);
       fRedraw = fTrue;
     }
-    if (gs.nAnim && !fPause)
+    if (gs.nAnim && !gi.fPause)
       fRedraw = fTrue;
 
     // Update the screen if anything has changed since last time around.
 
-    if (fRedraw && (!fPause || gs.nAnim)) {
+    if (fRedraw && (!gi.fPause || gs.nAnim)) {
       fRedraw = fFalse;
 
       // If we're in animation mode, change the chart info appropriately.
-      if (gs.nAnim && !fPause)
-        Animate(gs.nAnim, dir);
+      if (gs.nAnim && !gi.fPause)
+        Animate(gs.nAnim, gi.nDir);
 
       // Clear the screen and set up a buffer to draw in.
 #ifdef X11
@@ -782,13 +783,18 @@ void InteractX()
       DeleteDC(wi.hdc);
       EndPaint(wi.hwnd, &ps);
 #endif
+#ifdef EXPRESS
+      // Notify AstroExpression the screen has just been redrawn.
+      if (!us.fExpOff && FSzSet(us.szExpDisp3))
+        ParseExpression(us.szExpDisp3);
+#endif
     } // if
 
     // Now process what's on the event queue, i.e. any keys pressed, etc.
 
 #ifdef X11
     if (XEventsQueued(gi.disp, QueuedAfterFlush /*QueuedAfterReading*/) ||
-      !gs.nAnim || fPause) {
+      !gs.nAnim || gi.fPause) {
       XNextEvent(gi.disp, &xevent);
 
       // Restore what's on window if a part of it gets uncovered.
@@ -852,8 +858,9 @@ void InteractX()
 #ifdef WCLI
       if (PeekMessage(&msg, (HWND)NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
-        if (LOWORD(msg.message) != WM_CHAR) {
-          switch (LOWORD(msg.message)) {
+        nMsg = LOWORD(msg.message);
+        if (nMsg != WM_CHAR && nMsg != WM_KEYDOWN) {
+          switch (nMsg) {
           case WM_SIZE:
             wi.xClient = gs.xWin = LOWORD(msg.lParam);
             wi.yClient = gs.yWin = HIWORD(msg.lParam);
@@ -868,17 +875,27 @@ void InteractX()
           }
         } else {
           key = (int)msg.wParam;
+          if (nMsg == WM_KEYDOWN)
+            key = FBetween(key, VK_F1, VK_F12) ? key - VK_F1 + 201 : 0;
 #endif // WCLI
 
+#ifdef EXPRESS
+          // May want to adjust current key if AstroExpression says to do so.
+          if (!us.fExpOff && FSzSet(us.szExpKey)) {
+            ExpSetN(iLetterZ, key);
+            ParseExpression(us.szExpKey);
+            key = NExpGet(iLetterZ);
+          }
+#endif
           switch (key) {
           case ' ':
             fRedraw = fTrue;
             break;
           case 'p':
-            inv(fPause);
+            inv(gi.fPause);
             break;
           case 'r':
-            neg(dir);
+            neg(gi.nDir);
             break;
           case 'x':
             inv(gs.fInverse);
@@ -941,7 +958,7 @@ void InteractX()
           case '[':
             if (gs.rTilt > -rDegQuad) {
               gs.rTilt = gs.rTilt > -rDegQuad ?
-                gs.rTilt-(real)NAbs(dir) : -rDegQuad;
+                gs.rTilt-(real)NAbs(gi.nDir) : -rDegQuad;
               fRedraw = fTrue;
             }
             if (gi.nMode == gTelescope)
@@ -950,7 +967,7 @@ void InteractX()
           case ']':
             if (gs.rTilt < rDegQuad) {
               gs.rTilt = gs.rTilt < rDegQuad ?
-                gs.rTilt+(real)NAbs(dir) : rDegQuad;
+                gs.rTilt+(real)NAbs(gi.nDir) : rDegQuad;
               fRedraw = fTrue;
             }
             if (gi.nMode == gTelescope)
@@ -962,7 +979,7 @@ void InteractX()
                 gs.rRot = planet[gs.objTrack];
               gs.objTrack = -1;
             }
-            gs.rRot += (real)NAbs(dir);
+            gs.rRot += (real)NAbs(gi.nDir);
             if (gs.rRot >= rDegMax)
               gs.rRot -= rDegMax;
             fRedraw = fTrue;
@@ -973,7 +990,7 @@ void InteractX()
                 gs.rRot = planet[gs.objTrack];
               gs.objTrack = -1;
             }
-            gs.rRot -= (real)NAbs(dir);
+            gs.rRot -= (real)NAbs(gi.nDir);
             if (gs.rRot < 0.0)
               gs.rRot += rDegMax;
             fRedraw = fTrue;
@@ -1026,9 +1043,9 @@ void InteractX()
             fCast = fTrue;
             break;
           case 'U':
-            us.nStar = !us.nStar;
+            inv(us.fStar);
             for (i = starLo; i <= starHi; i++)
-              ignore[i] = !us.nStar || !ignore[i];
+              ignore[i] = !us.fStar || !ignore[i];
             AdjustRestrictions();
             fCast = fTrue;
             break;
@@ -1061,11 +1078,11 @@ void InteractX()
             fRedraw = fTrue;
             break;
           case '+':
-            Animate(gs.nAnim, NAbs(dir));
+            Animate(gs.nAnim, NAbs(gi.nDir));
             fCast = fTrue;
             break;
           case '-':
-            Animate(gs.nAnim, -NAbs(dir));
+            Animate(gs.nAnim, -NAbs(gi.nDir));
             fCast = fTrue;
             break;
           case 'o':
@@ -1199,7 +1216,7 @@ void InteractX()
           default:
             if (FBetween(key, '1', '9')) {
               // Process numbers 1-9 signifying animation rate.
-              dir = (dir > 0 ? 1 : -1)*(key-'0');
+              gi.nDir = (gi.nDir > 0 ? 1 : -1)*(key-'0');
               break;
             } else if (FBetween(key, 201, 248)) {
               is.fSzInteract = fTrue;
@@ -1311,8 +1328,15 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       ErrorArgv("XM");
       return tcError;
     }
-    if (ch1 == '0')
-      gs.nFont = FSwitchF(gs.nFont > 0) * gi.nFontPrev;
+    if (ch1 == '0') {
+      gs.nFontAll = FSwitchF(gs.nFontAll > 0) * gi.nFontPrev;
+      gs.nFontTxt = gs.nFontAll / 100000;
+      gs.nFontSig = (gs.nFontAll / 10000) % 10;
+      gs.nFontHou = (gs.nFontAll / 1000) % 10;
+      gs.nFontObj = (gs.nFontAll / 100) % 10;
+      gs.nFontAsp = (gs.nFontAll / 10) % 10;
+      gs.nFontNak = gs.nFontAll % 10;
+    }
     gs.ft = FSwitchF2(gs.ft == ftWmf) * ftWmf;
 #endif
     break;
@@ -1539,7 +1563,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
   case 'v':
     if (FErrorArgc("Xv", argc, 1))
       return tcError;
-    gs.nDecaFill = NFromSz(argv[1]);
+    i = NFromSz(argv[1]);
+    if (FErrorValN("Xv", !FBetween(i, 0, 3), i, 0))
+      return tcError;
+    gs.nDecaFill = i;
     darg++;
     break;
 
@@ -1641,6 +1668,19 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 
 #ifdef ISG
   case 'n':
+    if (ch1 == 'p') {
+      SwitchF(gi.fPause);
+      break;
+    } else if (ch1 == 'f') {
+      if (FErrorArgc("Xnf", argc, 1))
+        return tcError;
+      i = NFromSz(argv[1]);
+      if (FErrorValN("Xnf", !FBetween(i, 1, 9), i, 0))
+        return tcError;
+      gi.nDir = i;
+      darg++;
+      break;
+    }
     if (argc > 1 && (i = NFromSz(argv[1])))
       darg++;
     else
@@ -1693,13 +1733,48 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (FErrorArgc("YXG", argc, 1))
       return tcError;
     i = NFromSz(argv[1]);
-    if (FErrorValN("YXG", !FValidGlyphs(i), i, 0))
-      return tcError;
-    gs.nGlyphs = (FBetween(i/10000, 1, 2) ? i/10000 : gs.nGlyphs/10000)*10000 +
-      (FBetween(i/1000%10, 1, 2) ? i/1000%10 : gs.nGlyphs/1000%10)*1000 +
-      (FBetween(i/100%10, 1, 3) ? i/100%10 : gs.nGlyphs/100%10)*100 +
-      (FBetween(i/10%10, 1, 2) ? i/10%10 : gs.nGlyphs/10%10)*10 +
-      (FBetween(i%10, 1, 2) ? i%10 : gs.nGlyphs%10);
+    switch (ch1) {
+    case 'c':
+      if (FErrorValN("YXGc", !FBetween(i, 1, 2), i, 0))
+        return tcError;
+      gs.nGlyphCap = i;
+      break;
+    case 'u':
+      if (FErrorValN("YXGu", !FBetween(i, 1, 2), i, 0))
+        return tcError;
+      gs.nGlyphUra = i;
+      break;
+    case 'p':
+      if (FErrorValN("YXGp", !FBetween(i, 1, 3), i, 0))
+        return tcError;
+      gs.nGlyphPlu = i;
+      break;
+    case 'l':
+      if (FErrorValN("YXGl", !FBetween(i, 1, 2), i, 0))
+        return tcError;
+      gs.nGlyphLil = i;
+      break;
+    case 'v':
+      if (FErrorValN("YXGv", !FBetween(i, 1, 2), i, 0))
+        return tcError;
+      gs.nGlyphVer = i;
+      break;
+    case 'e':
+      if (FErrorValN("YXGe", !FBetween(i, 1, 2), i, 0))
+        return tcError;
+      gs.nGlyphEri = i;
+      break;
+    default:
+      if (FErrorValN("YXG", !FValidGlyphs(i), i, 0))
+        return tcError;
+      if (FBetween(i/100000,   1, 2)) gs.nGlyphCap = i/100000;
+      if (FBetween(i/10000%10, 1, 2)) gs.nGlyphUra = i/10000%10;
+      if (FBetween(i/1000%10,  1, 3)) gs.nGlyphPlu = i/1000%10;
+      if (FBetween(i/100%10,   1, 2)) gs.nGlyphLil = i/100%10;
+      if (FBetween(i/10%10,    1, 2)) gs.nGlyphVer = i/10%10;
+      if (FBetween(i%10,       1, 2)) gs.nGlyphEri = i%10;
+      break;
+    }
     darg++;
     break;
 
@@ -1898,16 +1973,58 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     if (FErrorArgc("YXf", argc, 1))
       return tcError;
     i = NFromSz(argv[1]);
-    if (FErrorValN("YXf", !FBetween(i, 0, 99999), i, 0))
-      return tcError;
-    gs.nFont =
-      (rgszFontAllow[0][i/10000]   > '-' ? i/10000   : gs.nFont/10000)*10000 +
-      (rgszFontAllow[1][i/1000%10] > '-' ? i/1000%10 : gs.nFont/1000%10)*1000 +
-      (rgszFontAllow[2][i/100%10]  > '-' ? i/100%10  : gs.nFont/100%10)*100 +
-      (rgszFontAllow[3][i/10%10]   > '-' ? i/10%10   : gs.nFont/10%10)*10 +
-      (rgszFontAllow[4][i%10]      > '-' ? i%10      : gs.nFont%10);
-    if (gs.nFont != 0)
-      gi.nFontPrev = gs.nFont;
+    switch (ch1) {
+    case 't':
+      if (FErrorValN("YXft", !FBetween(i, 0, 9) || rgszFontAllow[0][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontTxt = i;
+      break;
+    case 's':
+      if (FErrorValN("YXfs", !FBetween(i, 0, 9) || rgszFontAllow[1][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontSig = i;
+      break;
+    case 'h':
+      if (FErrorValN("YXfh", !FBetween(i, 0, 9) || rgszFontAllow[2][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontHou = i;
+      break;
+    case 'o':
+      if (FErrorValN("YXfo", !FBetween(i, 0, 9) || rgszFontAllow[3][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontObj = i;
+      break;
+    case 'a':
+      if (FErrorValN("YXfa", !FBetween(i, 0, 9) || rgszFontAllow[4][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontAsp = i;
+      break;
+    case 'n':
+      if (FErrorValN("YXfn", !FBetween(i, 0, 9) || rgszFontAllow[5][i] == '-',
+        i, 0))
+        return tcError;
+      gs.nFontNak = i;
+      break;
+    default:
+      if (FErrorValN("YXf", !FBetween(i, 0, 999999), i, 0))
+        return tcError;
+      gs.nFontTxt = i/100000;
+      gs.nFontSig = i/10000%10;
+      gs.nFontHou = i/1000%10;
+      gs.nFontObj = i/100%10;
+      gs.nFontAsp = i/10%10;
+      gs.nFontNak = i%10;
+      break;
+    }
+    gs.nFontAll = gs.nFontTxt*100000 + gs.nFontSig*10000 +
+      gs.nFontHou*1000 + gs.nFontObj*100 + gs.nFontAsp*10 + gs.nFontNak;
+    if (gs.nFontAll != 0)
+      gi.nFontPrev = gs.nFontAll;
     darg++;
     break;
 

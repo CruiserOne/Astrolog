@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: express.cpp
+** Astrolog (Version 7.60) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -61,18 +61,23 @@
 ******************************************************************************
 */
 
-#define cfunA 373
+#define cfunA 415
 #ifdef GRAPH
-#define cfunX 48
+#define cfunX 68
 #else
 #define cfunX 0
 #endif
+#ifdef ISG
+#define cfunI 2
+#else
+#define cfunI 0
+#endif
 #ifdef WIN
-#define cfunW 9
+#define cfunW 10
 #else
 #define cfunW 0
 #endif
-#define cfun (cfunA + cfunX + cfunW)
+#define cfun (cfunA + cfunX + cfunI + cfunW)
 
 #define P2(n1, n2)             (((n2) << 2) | (n1))
 #define P3(n1, n2, n3)         (((n3) << 4) | P2(n1, n2))
@@ -117,9 +122,11 @@
 
 #define EIR(I, R) if (!fRetReal) {n = (I);} else {r = (R);}
 #define IIR(I, R) n = !fOptReal ? (I) : (R)
-#define SetReal(I, R) if (FBetween(I, 0, cLetter)) \
-  { rgparVar[I].r = (R); rgparVar[I].fReal = fTrue; }
+#define SetReal(I, R) if ((I) >= 0 && FEnsureParVar((I)+1)) \
+  { xi.rgparVar[I].r = (R); xi.rgparVar[I].fReal = fTrue; }
 #define FRingObj(ring, obj) (FBetween(ring, 0, cRing) && FValidObj(obj))
+
+typedef short * TRIE;
 
 typedef struct _function {
   int ifun;     // Index of function
@@ -134,11 +141,22 @@ typedef struct _parameter {
   flag fReal; // Whether parameter is real or integer
 } PAR;
 
-PAR rgparVar[cLetter+1];       // List of variables
-char *rgszExpMacro[cLetter+1]; // List of macros
+typedef struct _AstroexpressionInternal {
+  TRIE rgsTrieFun;      // Trie tree of tokens for AstroExpression parsing
+  PAR *rgparVar;        // List of custom variables
+  int cparVar;          // Size of list of custom variables
+  char **rgszExpMacro;  // List of AstroExpression macros
+  int cszExpMacro;      // Size of list of AstroExpression macros
+  char **rgszExpStr;    // List of AstroExpression strings
+  int cszExpStr;        // Size of list of AstroExpression strings
+} XI;
 
+XI xi = {NULL, NULL, 0, NULL, 0, NULL, 0};
+
+extern int ILookupTrie P((CONST TRIE, CONST char *, int, flag));
 extern CONST char *PchGetParameter P((CONST char *, PAR *, int, int, flag));
 extern void GetParameter P((CONST char *, PAR *));
+extern flag FEnsureParVar P((int));
 
 // Functions
 
@@ -208,6 +226,8 @@ enum _functionindex {
   funRgbB,
   funBlend,
   funHue,
+  funHue2,
+  funChar,
 
   // Specific functions (related to Astrolog and astrology)
   funSigns,
@@ -225,6 +245,7 @@ enum _functionindex {
   funMonS, funDayS, funYeaS, funTimS, funDstS, funZonS, funLonS, funLatS,
   funMonT, funDayT, funYeaT, funTimT,
   funMonG, funDayG, funYeaG,
+  funDstD, funZonD, funLonD, funLatD,
   funObjLon,  funObjLat,  funObjDir,  funObjDirY,  funObjDirL,  funObjHou,
   funObjLon1, funObjLat1, funObjDir1, funObjDirY1, funObjDirL1, funObjHou1,
   funObjLon2, funObjLat2, funObjDir2, funObjDirY2, funObjDirL2, funObjHou2,
@@ -236,6 +257,9 @@ enum _functionindex {
   funObjX,
   funObjY,
   funObjZ,
+  funObjXN,
+  funObjYN,
+  funObjZN,
   funObjOn,
   funObjOnT,
   funObjOrb,
@@ -243,6 +267,14 @@ enum _functionindex {
   funObjInf,
   funObjInfT,
   funObjCol,
+  funObjRul,
+  funObjRul2,
+  funObjEso,
+  funObjEso2,
+  funObjHie,
+  funObjHie2,
+  funObjExa,
+  funObjRay,
   funObjDist,
   funObjYear,
   funObjDiam,
@@ -258,6 +290,15 @@ enum _functionindex {
   funCusp4, funCusp3D4,
   funCuspInf,
   funSector,
+  funSigRul,
+  funSigRul2,
+  funSigEso,
+  funSigEso2,
+  funSigHie,
+  funSigHie2,
+  funSigRay,
+  funSigRay2,
+  funRayCol,
   funLonSign,
   funLonDeg,
   funLonHou,
@@ -271,6 +312,7 @@ enum _functionindex {
   funLonTerm,
   funDayWeek,
   funJulianT,
+  funLatLmt,
   funSphDist,
   funOblique,
   funRAMC,
@@ -309,6 +351,7 @@ enum _functionindex {
   fun_E02,
   fun_P1,
   fun_N1,
+  fun_80,
   fun_I1,
   fun_zv,
   fun_zf,
@@ -359,7 +402,15 @@ enum _functionindex {
   fun_Yo,
   fun_Yc,
   fun_Yp,
+  fun_YZ,
   fun_Yb,
+  fun_YR0,
+  fun_YR1,
+  fun_YR2,
+  fun_YRZ,
+  fun_YR7,
+  fun_Y5I1,
+  fun_Y5I2,
 
 #ifdef GRAPH
   // Astrolog command switch settings (graphics)
@@ -399,8 +450,22 @@ enum _functionindex {
   fun_XGx,
   fun_XGy,
   fun_XZ,
+  fun_YXG,
+  fun_YXGc,
+  fun_YXGu,
+  fun_YXGp,
+  fun_YXGl,
+  fun_YXGv,
+  fun_YXGe,
   fun_YXe,
   fun_YXa,
+  fun_YXf,
+  fun_YXft,
+  fun_YXfs,
+  fun_YXfh,
+  fun_YXfo,
+  fun_YXfa,
+  fun_YXfn,
   fun_YXW,
   fun_YXK,
 
@@ -413,10 +478,23 @@ enum _functionindex {
   funDBlock,
   funDCirc,
   funDDisk,
+  funDText,
+  funDSign,
+  funDHouse,
+  funDObj,
+  funDAsp,
+  funDNak,
+#endif
+
+#ifdef ISG
+  // Functions related to interactive screen graphics
+  fun_Xnp,
+  fun_Xnf,
 #endif
 
 #ifdef WIN
   // Functions related to Windows operations
+  funDlg,
   funMouse,
 
   // Astrolog command switch settings (Windows)
@@ -429,6 +507,14 @@ enum _functionindex {
   fun_Wo3,
   fun_WZ,
 #endif
+
+  // Functions related to compile time options
+  funPc,
+  funWin,
+  funX11,
+  funWcli,
+  funWsetup,
+  funJplweb,
 
   // Programming functions (related to variables and control flow)
   funVar,
@@ -521,6 +607,8 @@ CONST FUN rgfun[cfun] = {
 {funRgbB,  "RgbB",  1, I_I},
 {funBlend, "Blend", 3, I_IIR},
 {funHue,   "Hue",   1, I_R},
+{funHue2,  "Hue2",  1, I_R},
+{funChar,  "Char",  2, I_II},
 
 // Specific functions (related to Astrolog and astrology)
 {funSigns,   "Signs",    0, I_},
@@ -613,6 +701,10 @@ CONST FUN rgfun[cfun] = {
 {funMonG,    "MonG",     0, I_},
 {funDayG,    "DayG",     0, I_},
 {funYeaG,    "YeaG",     0, I_},
+{funDstD,    "DstD",     0, R_},
+{funZonD,    "ZonD",     0, R_},
+{funLonD,    "LonD",     0, R_},
+{funLatD,    "LatD",     0, R_},
 {funObjLon,   "ObjLon",    1, R_I}, 
 {funObjLat,   "ObjLat",    1, R_I},
 {funObjDir,   "ObjDir",    1, R_I},
@@ -664,6 +756,9 @@ CONST FUN rgfun[cfun] = {
 {funObjX,    "ObjX",     1, R_I},
 {funObjY,    "ObjY",     1, R_I},
 {funObjZ,    "ObjZ",     1, R_I},
+{funObjXN,   "ObjXN",    1, R_I},
+{funObjYN,   "ObjYN",    1, R_I},
+{funObjZN,   "ObjZN",    1, R_I},
 {funObjOn,   "ObjOn",    1, I_I},
 {funObjOnT,  "ObjOnT",   1, I_I},
 {funObjOrb,  "ObjOrb",   1, R_I},
@@ -671,6 +766,14 @@ CONST FUN rgfun[cfun] = {
 {funObjInf,  "ObjInf",   1, R_I},
 {funObjInfT, "ObjInfT",  1, R_I},
 {funObjCol,  "ObjCol",   1, I_I},
+{funObjRul,  "ObjRul",   1, I_I},
+{funObjRul2, "ObjRul2",  1, I_I},
+{funObjEso,  "ObjRulS",  1, I_I},
+{funObjEso2, "ObjRulS2", 1, I_I},
+{funObjHie,  "ObjRulH",  1, I_I},
+{funObjHie2, "ObjRulH2", 1, I_I},
+{funObjExa,  "ObjExa",   1, I_I},
+{funObjRay,  "ObjRay",   1, I_I},
 {funObjDist, "ObjDist",  1, R_I},
 {funObjYear, "ObjYear",  1, R_I},
 {funObjDiam, "ObjDiam",  1, R_I},
@@ -691,6 +794,15 @@ CONST FUN rgfun[cfun] = {
 {funCusp3D4, "Cusp3D4",  1, R_I},
 {funCuspInf, "HouseInf", 1, R_I},
 {funSector,  "PlusZone", 1, I_I},
+{funSigRul,  "SignRul",  1, I_I},
+{funSigRul2, "SignRul2", 1, I_I},
+{funSigEso,  "SignEso",  1, I_I},
+{funSigEso2, "SignEso2", 1, I_I},
+{funSigHie,  "SignHie",  1, I_I},
+{funSigHie2, "SignHie2", 1, I_I},
+{funSigRay,  "SignRay",  1, I_I},
+{funSigRay2, "SignRay2", 2, I_II},
+{funRayCol,  "RayCol",   1, I_I},
 {funLonSign, "LonSign",  1, I_R},
 {funLonDeg,  "LonDeg",   1, R_R},
 {funLonHou,  "LonHouse", 1, I_R},
@@ -704,6 +816,7 @@ CONST FUN rgfun[cfun] = {
 {funLonTerm, "LonTerm",  2, I_RI},
 {funDayWeek, "DayWeek",  3, I_III},
 {funJulianT, "JulianT",  0, R_},
+{funLatLmt,  "LATLMT",   0, R_},
 {funSphDist, "PolDist",  4, R_RRRR},
 {funOblique, "Oblique",  0, R_},
 {funRAMC,    "RAMC",     0, R_},
@@ -716,7 +829,7 @@ CONST FUN rgfun[cfun] = {
 {funParall,  "AspLat",   3, I_III},
 {funParall2, "AspLat2",  3, I_III},
 {funGridNam, "GridNam",  2, I_II},
-{funGridVal, "GridVal",  2, I_II},
+{funGridVal, "GridVal",  2, R_II},
 {funGridDo,  "DoGrid",   0, I_},
 {funGridDo2, "DoGrid2",  1, I_I},
 {funListCnt, "ListCnt",  0, I_},
@@ -742,6 +855,7 @@ CONST FUN rgfun[cfun] = {
 {fun_E02, "_E02", 0, I_},
 {fun_P1,  "_P1",  0, I_},
 {fun_N1,  "_N1",  0, I_},
+{fun_80,  "_80",  0, I_},
 {fun_I1,  "_I1",  0, I_},
 {fun_zv,  "_zv",  0, R_},
 {fun_zf,  "_zf",  0, R_},
@@ -792,50 +906,72 @@ CONST FUN rgfun[cfun] = {
 {fun_Yo,  "_Yoo", 0, I_},
 {fun_Yc,  "_Ycc", 0, I_},
 {fun_Yp,  "_Yp",  0, I_},
+{fun_YZ,  "_YZ",  0, I_},
 {fun_Yb,  "_Yb",  0, I_},
+{fun_YR0, "_YR0", 1, I_I},
+{fun_YR1, "_YR1", 1, I_I},
+{fun_YR2, "_YR2", 1, I_I},
+{fun_YRZ, "_YRZ", 1, I_I},
+{fun_YR7, "_YR7", 1, I_I},
+{fun_Y5I1, "_Y5I1", 0, I_},
+{fun_Y5I2, "_Y5I2", 0, I_},
 
 #ifdef GRAPH
 // Astrolog command switch settings (graphics)
-{fun_XI1, "_XI1", 0, R_},
-{fun_XI2, "_XI2", 0, I_},
-{fun_Xr,  "_Xr",  0, I_},
-{fun_Xm,  "_Xm",  0, I_},
-{fun_XT,  "_XT",  0, I_},
-{fun_Xi,  "_Xi",  0, I_},
-{fun_Xu,  "_Xuu", 0, I_},
-{fun_Xx,  "_Xx",  0, I_},
-{fun_Xl,  "_Xll", 0, I_},
-{fun_XA,  "_XA",  0, I_},
-{fun_XL,  "_XL",  0, I_},
-{fun_Xj,  "_Xj",  0, I_},
-{fun_XF,  "_XF",  0, I_},
-{fun_XW0, "_XW0", 0, I_},
-{fun_Xe,  "_Xee", 0, I_},
-{fun_XU,  "_XU",  0, I_},
-{fun_XC,  "_XC",  0, I_},
-{fun_XQ,  "_XQ",  0, I_},
-{fun_XN,  "_XN",  0, I_},
-{fun_Xwx, "_Xwx", 0, I_},
-{fun_Xwy, "_Xwy", 0, I_},
-{fun_Xn,  "_Xnn", 0, I_},
-{fun_Xs,  "_Xs",  0, I_},
-{fun_XS,  "_XSS", 0, I_},
-{fun_XU0, "_XU0", 0, I_},
-{fun_XE1, "_XE1", 0, I_},
-{fun_XE2, "_XE2", 0, I_},
-{fun_XE,  "_XE",  0, I_},
-{fun_XL0, "_XL0", 0, I_},
-{fun_X1,  "_X1",  0, I_},
-{fun_Xv,  "_Xv",  0, I_},
-{fun_XJ,  "_XJJ", 0, I_},
-{fun_X8,  "_X8",  0, I_},
-{fun_XGx, "_XGx", 0, R_},
-{fun_XGy, "_XGy", 0, R_},
-{fun_XZ,  "_XZ",  0, I_},
-{fun_YXe, "_YXe", 0, I_},
-{fun_YXa, "_YXa", 0, I_},
-{fun_YXW, "_YXW", 0, I_},
-{fun_YXK, "_YXK", 1, I_I},
+{fun_XI1,  "_XI1",  0, R_},
+{fun_XI2,  "_XI2",  0, I_},
+{fun_Xr,   "_Xr",   0, I_},
+{fun_Xm,   "_Xm",   0, I_},
+{fun_XT,   "_XT",   0, I_},
+{fun_Xi,   "_Xi",   0, I_},
+{fun_Xu,   "_Xuu",  0, I_},
+{fun_Xx,   "_Xx",   0, I_},
+{fun_Xl,   "_Xll",  0, I_},
+{fun_XA,   "_XA",   0, I_},
+{fun_XL,   "_XL",   0, I_},
+{fun_Xj,   "_Xj",   0, I_},
+{fun_XF,   "_XF",   0, I_},
+{fun_XW0,  "_XW0",  0, I_},
+{fun_Xe,   "_Xee",  0, I_},
+{fun_XU,   "_XU",   0, I_},
+{fun_XC,   "_XC",   0, I_},
+{fun_XQ,   "_XQ",   0, I_},
+{fun_XN,   "_XN",   0, I_},
+{fun_Xwx,  "_Xwx",  0, I_},
+{fun_Xwy,  "_Xwy",  0, I_},
+{fun_Xn,   "_Xnn",  0, I_},
+{fun_Xs,   "_Xs",   0, I_},
+{fun_XS,   "_XSS",  0, I_},
+{fun_XU0,  "_XU0",  0, I_},
+{fun_XE1,  "_XE1",  0, I_},
+{fun_XE2,  "_XE2",  0, I_},
+{fun_XE,   "_XE",   0, I_},
+{fun_XL0,  "_XL0",  0, I_},
+{fun_X1,   "_X1",   0, I_},
+{fun_Xv,   "_Xv",   0, I_},
+{fun_XJ,   "_XJJ",  0, I_},
+{fun_X8,   "_X8",   0, I_},
+{fun_XGx,  "_XGx",  0, R_},
+{fun_XGy,  "_XGy",  0, R_},
+{fun_XZ,   "_XZ",   0, I_},
+{fun_YXG,  "_YXG",  0, I_},
+{fun_YXGc, "_YXGc", 0, I_},
+{fun_YXGu, "_YXGu", 0, I_},
+{fun_YXGp, "_YXGp", 0, I_},
+{fun_YXGl, "_YXGl", 0, I_},
+{fun_YXGv, "_YXGv", 0, I_},
+{fun_YXGe, "_YXGe", 0, I_},
+{fun_YXe,  "_YXe",  0, I_},
+{fun_YXa,  "_YXa",  0, I_},
+{fun_YXf,  "_YXf",  0, I_},
+{fun_YXft, "_YXft", 0, I_},
+{fun_YXfs, "_YXfs", 0, I_},
+{fun_YXfh, "_YXfh", 0, I_},
+{fun_YXfo, "_YXfo", 0, I_},
+{fun_YXfa, "_YXfa", 0, I_},
+{fun_YXfn, "_YXfn", 0, I_},
+{fun_YXW,  "_YXW",  0, I_},
+{fun_YXK,  "_YXK",  1, I_I},
 
 // Graphics functions (manual drawing)
 {funDCol,   "DCol",   1, I_I},
@@ -846,22 +982,43 @@ CONST FUN rgfun[cfun] = {
 {funDBlock, "DBlock", 4, I_IIII},
 {funDCirc,  "DCirc",  4, I_IIII},
 {funDDisk,  "DDisk",  4, I_IIII},
+{funDText,  "DText",  3, I_III},
+{funDSign,  "DSign",  3, I_III},
+{funDHouse, "DHouse", 3, I_III},
+{funDObj,   "DObj",   3, I_III},
+{funDAsp,   "DAsp",   3, I_III},
+{funDNak,   "DNak",   3, I_III},
+#endif
+
+#ifdef ISG
+// Functions related to interactive screen graphics
+{fun_Xnp, "_Xnp", 0, I_},
+{fun_Xnf, "_Xnf", 0, I_},
 #endif
 
 #ifdef WIN
 // Functions related to Windows operations
+{funDlg,   "Dlg",   0, I_},
 {funMouse, "Mouse", 1, I_I},
 
 // Astrolog command switch settings (Windows)
-{fun_WN,   "_WN",   1, I_},
-{fun_Wn,   "_Wnn",  1, I_},
-{fun_Wh,   "_Wh",   1, I_},
-{fun_Wt,   "_Wt",   1, I_},
-{fun_Wo,   "_Wo",   1, I_},
-{fun_Wo0,  "_Wo0",  1, I_},
-{fun_Wo3,  "_Wo3",  1, I_},
-{fun_WZ,   "_WZ",   1, I_},
+{fun_WN,  "_WN",  0, I_},
+{fun_Wn,  "_Wnn", 0, I_},
+{fun_Wh,  "_Wh",  0, I_},
+{fun_Wt,  "_Wt",  0, I_},
+{fun_Wo,  "_Wo",  0, I_},
+{fun_Wo0, "_Wo0", 0, I_},
+{fun_Wo3, "_Wo3", 0, I_},
+{fun_WZ,  "_WZ",  0, I_},
 #endif
+
+// Functions related to compile time options
+{funPc,     "PC",     0, I_},
+{funWin,    "WIN",    0, I_},
+{funX11,    "X11",    0, I_},
+{funWcli,   "WCLI",   0, I_},
+{funWsetup, "WSETUP", 0, I_},
+{funJplweb, "JPLWEB", 0, I_},
 
 // Programming functions (related to variables and control flow)
 {funVar,     "Var",     1, E_I},
@@ -1074,6 +1231,9 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funRgbB:  n = RgbB(n1); break;
   case funBlend: n = KvBlend(n1, n2, r3); break;
   case funHue:   n = KvHue(r1); break;
+  case funHue2:  n = KvHue2(r1); break;
+  case funChar:  n = !FBetween(n1, 0, xi.cszExpStr-1) || !xi.rgszExpStr[n1] ||
+    n2 > CchSz(xi.rgszExpStr[n1]) ? -1 : xi.rgszExpStr[n1][n2]; break;
 
   // Specific functions (related to Astrolog and astrology)
   case funSigns: n = cSign;   break;
@@ -1166,6 +1326,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funMonG: n = ciGreg.mon; break;
   case funDayG: n = ciGreg.day; break;
   case funYeaG: n = ciGreg.yea; break;
+  case funDstD: r = us.dstDef; break;
+  case funZonD: r = us.zonDef; break;
+  case funLonD: r = us.lonDef; break;
+  case funLatD: r = us.latDef; break;
   case funObjLon:   r = FValidObj(n1) ? planet[n1]     : 0.0; break;
   case funObjLat:   r = FValidObj(n1) ? planetalt[n1]  : 0.0; break;
   case funObjDir:   r = FValidObj(n1) ? ret[n1]        : 0.0; break;
@@ -1217,13 +1381,24 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funObjX:    r = FValidObj(n1)    ? space[n1].x   : 0.0; break;
   case funObjY:    r = FValidObj(n1)    ? space[n1].y   : 0.0; break;
   case funObjZ:    r = FValidObj(n1)    ? space[n1].z   : 0.0; break;
+  case funObjXN:   r = FRingObj(n1, n2) ? rgpcp[n1]->pt[n2].x : 0.0; break;
+  case funObjYN:   r = FRingObj(n1, n2) ? rgpcp[n1]->pt[n2].y : 0.0; break;
+  case funObjZN:   r = FRingObj(n1, n2) ? rgpcp[n1]->pt[n2].z : 0.0; break;
   case funObjOn:   n = FValidObj(n1)    ? !ignore[n1]   : 0;   break;
   case funObjOnT:  n = FValidObj(n1)    ? !ignore2[n1]  : 0;   break;
   case funObjOrb:  r = FValidObj(n1)    ? rObjOrb[n1]   : 0.0; break;
   case funObjAdd:  r = FValidObj(n1)    ? rObjAdd[n1]   : 0.0; break;
   case funObjInf:  r = FBetween(n1, 0, oNorm1+5) ? rObjInf[n1]   : 0.0; break;
   case funObjInfT: r = FBetween(n1, 0, oNorm1) ? rTransitInf[n1] : 0.0; break;
-  case funObjCol:  n = FValidObj(n1)    ? kObjA[n1]     : 0;   break;
+  case funObjCol:  n = FValidObj(n1)    ? kObjA[n1]     : 0; break;
+  case funObjRul:  n = FNorm(n1)        ? ruler1[n1]    : 0; break;
+  case funObjRul2: n = FNorm(n1)        ? ruler2[n1]    : 0; break;
+  case funObjEso:  n = FNorm(n1)        ? rgObjEso1[n1] : 0; break;
+  case funObjEso2: n = FNorm(n1)        ? rgObjEso2[n1] : 0; break;
+  case funObjHie:  n = FNorm(n1)        ? rgObjHie1[n1] : 0; break;
+  case funObjHie2: n = FNorm(n1)        ? rgObjHie2[n1] : 0; break;
+  case funObjExa:  n = FNorm(n1)        ? exalt[n1]     : 0; break;
+  case funObjRay:  n = FNorm(n1)        ? rgObjRay[n1]  : 0; break;
   case funObjDist: r = FNorm(n1)        ? rObjDist[n1]  : 0.0; break;
   case funObjYear: r = FNorm(n1)        ? rObjYear[n1]  : 0.0; break;
   case funObjDiam: r = RObjDiam(n1); break;
@@ -1243,7 +1418,17 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funCusp4:   r = FValidSign(n1)   ? cp4.cusp[n1]  : 0.0; break;
   case funCusp3D4: r = FValidSign(n1)   ? cp4.cusp3[n1] : 0.0; break;
   case funCuspInf: r = FBetween(n1, 1, cSign+5) ? rHouseInf[n1] : 0.0; break;
-  case funSector:  n = FSector(n1) ? pluszone[n1] : 0; break;
+  case funSector:  n = FSector(n1)    ? pluszone[n1]   : 0;  break;
+  case funSigRul:  n = FValidSign(n1) ? rules[n1]      : -1; break;
+  case funSigRul2: n = FValidSign(n1) ? rules2[n1]     : -1; break;
+  case funSigEso:  n = FValidSign(n1) ? rgSignEso1[n1] : -1; break;
+  case funSigEso2: n = FValidSign(n1) ? rgSignEso2[n1] : -1; break;
+  case funSigHie:  n = FValidSign(n1) ? rgSignHie1[n1] : -1; break;
+  case funSigHie2: n = FValidSign(n1) ? rgSignHie2[n1] : -1; break;
+  case funSigRay:  n = FValidSign(n1) ? rgSignRay[n1]  : 0; break;
+  case funSigRay2: n = FValidSign(n1) && FValidRay(n2) ? rgSignRay2[n1][n2] :
+    0; break;
+  case funRayCol:  n = FValidRay(n1)  ? kRayA[n1]      : 0; break;
   case funLonSign: n = SFromZ(r1); break;
   case funLonDeg:  r = r1 - (real)((SFromZ(r1)-1)*30); break;
   case funLonHou:  n = NHousePlaceIn2D(r1); break;
@@ -1254,12 +1439,13 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funLonDeca: r = Decan(r1); break;
   case funLonNava: r = Navamsa(r1); break;
   case funLonDwad: r = Dwad(r1); break;
-  case funLonTerm: n = ObjTerm(r1, n1); break;
+  case funLonTerm: n = ObjTerm(r1, n2); break;
   case funDayWeek: n = DayOfWeek(n1, n2, n3); break;
   case funJulianT: r = JulianDayFromTime(is.T); break;
+  case funLatLmt:  r = SwissLatLmt(JulianDayFromTime(is.T)); break;
   case funSphDist: r = SphDistance(r1, r2, r3, r4); break;
   case funOblique: r = is.OB; break;
-  case funRAMC:    r = is.RA; break;
+  case funRAMC:    r = cp0.lonMC; break;
   case funDeltaT:  r = is.rDeltaT * 86400.0; break;
   case funSidDiff: r = is.rOff; break;
   case funNutat:   r = is.rNut; break;
@@ -1274,7 +1460,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     cp1.diralt, cp2.diralt, n1, n2, &r); SetReal(n3, r); break;
   case funGridNam: n = grid != NULL && FValidObj(n1) && FValidObj(n2) ?
     grid->n[n1][n2] : 0; break;
-  case funGridVal: n = grid != NULL && FValidObj(n1) && FValidObj(n2) ?
+  case funGridVal: r = grid != NULL && FValidObj(n1) && FValidObj(n2) ?
     grid->v[n1][n2] : 0; break;
   case funGridDo:  n = FCreateGrid(fFalse); break;
   case funGridDo2: n = FCreateGridRelation(n1 != 0); break;
@@ -1283,10 +1469,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funList1:   n = is.iciIndex1; break;
   case funList2:   n = is.iciIndex2; break;
   case funTiltXY:
-    if (FBetween(n1, 0, cLetter-1) &&
-      rgparVar[n1].fReal && rgparVar[n1+1].fReal) {
-      CoorXform(&rgparVar[n1].r, &rgparVar[n1+1].r, r2);
-      r = rgparVar[n1].r;
+    if (n1 >= 0 && FEnsureParVar(n1+1) &&
+      xi.rgparVar[n1].fReal && xi.rgparVar[n1+1].fReal) {
+      CoorXform(&xi.rgparVar[n1].r, &xi.rgparVar[n1+1].r, r2);
+      r = xi.rgparVar[n1].r;
     } else
       r = 0.0;
     break;
@@ -1324,6 +1510,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_E02: n = us.nEphemFactor;    break;
   case fun_P1:  n = us.nArabicParts;    break;
   case fun_N1:  n = us.nAtlasList;      break;
+  case fun_80:  n = us.fMoonChartSep;   break;
   case fun_I1:  n = us.nScreenWidth;    break;
   case fun_zv:  r = us.elvDef;        break;
   case fun_zf:  r = us.tmpDef;        break;
@@ -1374,50 +1561,75 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Yo:  n = us.fWriteOld;   break;
   case fun_Yc:  n = us.fHouseAngle; break;
   case fun_Yp:  n = us.fPolarAsc;   break;
+  case fun_YZ:  n = us.nHorizon;    break;
   case fun_Yb:  n = us.nBioday;     break;
+  case fun_YR0: n = n1 == 0 ? us.fIgnoreSign   :
+    (n1 == 1 ? us.fIgnoreDir    : -1); break;
+  case fun_YR1: n = n1 == 0 ? us.fIgnoreDiralt :
+    (n1 == 1 ? us.fIgnoreDirlen : -1); break;
+  case fun_YR2: n = n1 == 0 ? us.fIgnoreAlt0   :
+    (n1 == 1 ? us.fIgnoreDisequ : -1); break;
+  case fun_YRZ: n = FBetween(n1, 0, 3)     ? ignorez[n1] : -1; break;
+  case fun_YR7: n = FBetween(n1, 0, rrMax) ? ignore7[n1] : -1; break;
+  case fun_Y5I1: n = us.iExpADB; break;
+  case fun_Y5I2: n = us.cExpADB; break;
 
 #ifdef GRAPH
   // Astrolog command switch settings (graphics)
-  case fun_XI1: r = gs.rBackPct;     break;
-  case fun_XI2: n = gs.nBackOrient;  break;
-  case fun_Xr:  n = gs.fInverse;     break;
-  case fun_Xm:  n = !gs.fColor;      break;
-  case fun_XT:  n = gs.fText;        break;
-  case fun_Xi:  n = gs.fAlt;         break;
-  case fun_Xu:  n = gs.fBorder;      break;
-  case fun_Xx:  n = gs.fThick;       break;
-  case fun_Xl:  n = gs.fLabel;       break;
-  case fun_XA:  n = gs.fLabelAsp;    break;
-  case fun_XL:  n = gs.fLabelCity;   break;
-  case fun_Xj:  n = gs.fJetTrail;    break;
-  case fun_XF:  n = gs.fConstel;     break;
-  case fun_XW0: n = gs.fMollewide;   break;
-  case fun_Xe:  n = gs.fEquator;     break;
-  case fun_XU:  n = gs.fAllStar;     break;
-  case fun_XC:  n = gs.fHouseExtra;  break;
-  case fun_XQ:  n = gs.fKeepSquare;  break;
-  case fun_XN:  n = gs.fAnimMap;     break;
-  case fun_Xwx: n = gs.xWin;         break;
-  case fun_Xwy: n = gs.yWin;         break;
-  case fun_Xn:  n = gs.nAnim;        break;
-  case fun_Xs:  n = gs.nScale;       break;
-  case fun_XS:  n = gs.nScaleText;   break;
-  case fun_XU0: n = gs.nAllStar;     break;
-  case fun_XE1: n = gs.nAstLo;       break;
-  case fun_XE2: n = gs.nAstHi;       break;
-  case fun_XE:  n = gs.nAstLabel;    break;
-  case fun_XL0: n = gs.nLabelCity;   break;
-  case fun_X1:  n = gs.objLeft;      break;
-  case fun_Xv:  n = gs.nDecaFill;    break;
-  case fun_XJ:  n = gs.fIndianWheel; break;
-  case fun_X8:  n = gs.fMoonWheel;   break;
-  case fun_XGx: r = gs.rRot;         break;
-  case fun_XGy: r = gs.rTilt;        break;
-  case fun_XZ:  n = gs.objTrack;     break;
-  case fun_YXe: n = gs.fEcliptic;    break;
-  case fun_YXa: n = gs.nDashMax;     break;
-  case fun_YXW: n = gs.nTriangles;   break;
-  case fun_YXK: n = FValidColor(n1) ? rgbbmp[n1] : 0; break;
+  case fun_XI1:  r = gs.rBackPct;     break;
+  case fun_XI2:  n = gs.nBackOrient;  break;
+  case fun_Xr:   n = gs.fInverse;     break;
+  case fun_Xm:   n = !gs.fColor;      break;
+  case fun_XT:   n = gs.fText;        break;
+  case fun_Xi:   n = gs.fAlt;         break;
+  case fun_Xu:   n = gs.fBorder;      break;
+  case fun_Xx:   n = gs.fThick;       break;
+  case fun_Xl:   n = gs.fLabel;       break;
+  case fun_XA:   n = gs.fLabelAsp;    break;
+  case fun_XL:   n = gs.fLabelCity;   break;
+  case fun_Xj:   n = gs.fJetTrail;    break;
+  case fun_XF:   n = gs.fConstel;     break;
+  case fun_XW0:  n = gs.fMollewide;   break;
+  case fun_Xe:   n = gs.fEquator;     break;
+  case fun_XU:   n = gs.fAllStar;     break;
+  case fun_XC:   n = gs.fHouseExtra;  break;
+  case fun_XQ:   n = gs.fKeepSquare;  break;
+  case fun_XN:   n = gs.fAnimMap;     break;
+  case fun_Xwx:  n = gs.xWin;         break;
+  case fun_Xwy:  n = gs.yWin;         break;
+  case fun_Xn:   n = gs.nAnim;        break;
+  case fun_Xs:   n = gs.nScale;       break;
+  case fun_XS:   n = gs.nScaleText;   break;
+  case fun_XU0:  n = gs.nAllStar;     break;
+  case fun_XE1:  n = gs.nAstLo;       break;
+  case fun_XE2:  n = gs.nAstHi;       break;
+  case fun_XE:   n = gs.nAstLabel;    break;
+  case fun_XL0:  n = gs.nLabelCity;   break;
+  case fun_X1:   n = gs.objLeft;      break;
+  case fun_Xv:   n = gs.nDecaFill;    break;
+  case fun_XJ:   n = gs.fIndianWheel; break;
+  case fun_X8:   n = gs.fMoonWheel;   break;
+  case fun_XGx:  r = gs.rRot;         break;
+  case fun_XGy:  r = gs.rTilt;        break;
+  case fun_XZ:   n = gs.objTrack;     break;
+  case fun_YXG:  n = nGlyphAll;       break;
+  case fun_YXGc: n = gs.nGlyphCap;    break;
+  case fun_YXGu: n = gs.nGlyphUra;    break;
+  case fun_YXGp: n = gs.nGlyphPlu;    break;
+  case fun_YXGl: n = gs.nGlyphLil;    break;
+  case fun_YXGv: n = gs.nGlyphVer;    break;
+  case fun_YXGe: n = gs.nGlyphEri;    break;
+  case fun_YXe:  n = gs.fEcliptic;    break;
+  case fun_YXa:  n = gs.nDashMax;     break;
+  case fun_YXf:  n = gs.nFontAll;     break;
+  case fun_YXft: n = gs.nFontTxt;     break;
+  case fun_YXfs: n = gs.nFontSig;     break;
+  case fun_YXfh: n = gs.nFontHou;     break;
+  case fun_YXfo: n = gs.nFontObj;     break;
+  case fun_YXfa: n = gs.nFontAsp;     break;
+  case fun_YXfn: n = gs.nFontNak;     break;
+  case fun_YXW:  n = gs.nTriangles;   break;
+  case fun_YXK:  n = FValidColor(n1) ? rgbbmp[n1] : 0; break;
 
   // Graphics functions (manual drawing)
   case funDCol: if (FValidColor(n1)) DrawColor(n1); n = n1; break;
@@ -1434,16 +1646,39 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     }
     n = gi.kiCur;
     break;
+  case funDText:
+    if (FBetween(n1, 0, xi.cszExpStr-1))
+      DrawSz(xi.rgszExpStr[n1], n2, n3, dtCent);
+    n = n1; break;
+  case funDSign:  if (FValidSign(n1)) DrawSign(n1, n2, n3);
+    n = gi.kiCur; break;
+  case funDHouse: if (FValidSign(n1)) DrawHouse(n1, n2, n3);
+    n = gi.kiCur; break;
+  case funDObj:   if (FValidObj(n1)) DrawObject(n1, n2, n3);
+    n = gi.kiCur; break;
+  case funDAsp:   if (FValidAspect(n1)) DrawAspect(n1, n2, n3);
+    n = gi.kiCur; break;
+  case funDNak:   if (FBetween(n1, 1, 24)) DrawNakshatra(n1, n2, n3);
+    n = gi.kiCur; break;
+#endif
+
+#ifdef ISG
+  // Functions related to interactive screen graphics
+  case fun_Xnp: n = gi.fPause; break;
+  case fun_Xnf: n = gi.nDir;   break;
 #endif
 
 #ifdef WIN
   // Functions related to Windows operations
+  case funDlg:
+    n = KvDialog();
+    break;
   case funMouse:
     GetCursorPos(&pt);
     ScreenToClient(wi.hwnd, &pt);
-    if (FBetween(n1, 0, cLetter-1)) {
-      rgparVar[n1].n   = pt.x; rgparVar[n1].fReal   = fFalse;
-      rgparVar[n1+1].n = pt.y; rgparVar[n1+1].fReal = fFalse;
+    if (n1 >= 0 && FEnsureParVar(n1+1)) {
+      xi.rgparVar[n1].n   = pt.x; xi.rgparVar[n1].fReal   = fFalse;
+      xi.rgparVar[n1+1].n = pt.y; xi.rgparVar[n1+1].fReal = fFalse;
     }
     n = LFromWW(pt.x, pt.y);
     break;
@@ -1459,11 +1694,55 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_WZ:  n = wi.fSaverRun;     break;
 #endif
 
+  // Functions related to compile time options
+  case funPc:
+#ifdef PC
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+  case funWin:
+#ifdef WIN
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+  case funX11:
+#ifdef X11
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+  case funWcli:
+#ifdef WCLI
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+  case funWsetup:
+#ifdef WSETUP
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+  case funJplweb:
+#ifdef JPLWEB
+    n = 1;
+#else
+    n = 0;
+#endif
+    break;
+
   // Programming functions (related to variables and control flow)
   case funVar:
-    if (FBetween(n1, 0, cLetter)) {
-      fRetReal = rgparVar[n1].fReal;
-      EIR(rgparVar[n1].n, rgparVar[n1].r);
+    if (FBetween(n1, 0, xi.cparVar-1)) {
+      fRetReal = xi.rgparVar[n1].fReal;
+      EIR(xi.rgparVar[n1].n, xi.rgparVar[n1].r);
     } else
       n = 0;
     break;
@@ -1516,17 +1795,18 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     } while (rgpar[0].fReal ? rgpar[0].r != 0.0 : rgpar[0].n != 0);
     break;
   case funFor:
-    if (FBetween(n1, 0, cLetter)) {
-      rgparVar[n1] = rgpar[2];
-      for (rgparVar[n1].n = n2; rgparVar[n1].n <= n3; rgparVar[n1].n++)
+    if (n1 >= 0 && FEnsureParVar(n1+1)) {
+      xi.rgparVar[n1] = rgpar[2];
+      for (xi.rgparVar[n1].n = n2; xi.rgparVar[n1].n <= n3;
+        xi.rgparVar[n1].n++)
         PchGetParameter(rgpchEval[0], &rgpar[0], ifun, 1, fTrue);
-      n = rgparVar[n1].n;
+      n = xi.rgparVar[n1].n;
     } else
       n = 0;
     break;
   case funMacro:
-    if (FBetween(n1, 0, cLetter) && FSzSet(rgszExpMacro[n1])) {
-      GetParameter(rgszExpMacro[n1], &rgpar[0]);
+    if (FBetween(n1, 0, xi.cszExpMacro) && FSzSet(xi.rgszExpMacro[n1])) {
+      GetParameter(xi.rgszExpMacro[n1], &rgpar[0]);
       goto LParseRet;
     } else
       n = 0;
@@ -1542,8 +1822,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   // Variable assignment functions
   case funAssign:
   case funAssign2:
-    if (FBetween(n1, 0, cLetter)) {
-      rgparVar[n1] = rgpar[2];
+    if (n1 >= 0 && FEnsureParVar(n1+1)) {
+      xi.rgparVar[n1] = rgpar[2];
       fRetReal = rgpar[2].fReal;
       EIR(n2, r2);
     } else
@@ -1551,9 +1831,12 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     break;
   default:
     if (FBetween(ifun, funAssignA, funAssignZ)) {
-      rgparVar[ifun - funAssignA + 1] = rgpar[1];
-      fRetReal = rgpar[1].fReal;
-      EIR(n1, r1);
+      if (FEnsureParVar(cLetter + 1)) {
+        xi.rgparVar[ifun - funAssignA + 1] = rgpar[1];
+        fRetReal = rgpar[1].fReal;
+        EIR(n1, r1);
+      } else
+        n = 0;
       break;
     }
     sprintf(sz, "Function %d is undefined.", ifun);
@@ -1588,6 +1871,7 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
   char sz[cchSzMax*2], szT[cchSzMax], ch1, ch, *pchEdit;
   CONST char *rgpchEval[2], *pchParam, *pchT;
   int ifunT, iParamT, cch, n;
+  real r;
   PAR rgpar2[4+1];
   flag fSkipEval;
 
@@ -1595,9 +1879,10 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
   while (*pchCur == ' ')
     pchCur++;
   if (*pchCur == chNull) {
-    if (ifun >= 0)
-      sprintf(szT, " of function %s", rgfun[ifun].szName);
-    else
+    if (ifun >= 0) {
+      sprintf(szT, " (%d required) of function %s", rgfun[ifun].nParam,
+        rgfun[ifun].szName);
+    } else
       *szT = chNull;
     sprintf(sz, "Couldn't get parameter %d%s due to end of line.\n", iParam,
       szT);
@@ -1633,7 +1918,7 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
       goto LDone;
     }
     if (FNumCh(ch)) {
-      rgpar[0].n = ch - '0';
+      rgpar[0].n = atoi(pchParam + 1);
       rgpar[0].fReal = fFalse;
       goto LDone;
     }
@@ -1643,11 +1928,17 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
   if (ch1 == '@') {
     ch = ChCap(pchParam[1]);
     if (FCapCh(ch)) {
-      rgpar[0] = rgparVar[ch - '@'];
+      n = ch - '@';
+      if (!FEnsureParVar(n+1))
+        goto LError;
+      rgpar[0] = xi.rgparVar[n];
       goto LDone;
     }
     if (FNumCh(ch)) {
-      rgpar[0] = rgparVar[ch - '0'];
+      n = atoi(pchParam + 1);
+      if (!FEnsureParVar(n+1))
+        goto LError;
+      rgpar[0] = xi.rgparVar[n];
       goto LDone;
     }
   }
@@ -1657,6 +1948,7 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
     for (pchT = pchParam+2, n = 0; *pchT && *pchT > ' '; pchT++, n++)
       szT[n] = *pchT;
     szT[n] = chNull;
+    n = -1; r = -rLarge;
     switch (ChCap(ch1)) {
     case 'M': n = NParseSz(szT, pmMon);    break;
     case 'O': n = NParseSz(szT, pmObject); break;
@@ -1665,17 +1957,21 @@ CONST char *PchGetParameter(CONST char *pchCur, PAR *rgpar, int ifun,
     case 'S': n = NParseSz(szT, pmSign);   break;
     case 'K': n = NParseSz(szT, pmColor);  break;
     case 'W': n = NParseSz(szT, pmWeek);   break;
-    default: n = -1;
+    case 'Z': r = RParseSz(szT, pmOffset); break;
     }
     if (n >= 0) {
       rgpar[0].n = n;
       rgpar[0].fReal = fFalse;
       goto LDone;
+    } else if (r >= -rLarge) {
+      rgpar[0].r = r;
+      rgpar[0].fReal = fTrue;
+      goto LDone;
     }
   }
 
   // Check for function.
-  ifunT = ILookupTrie(is.rgsTrieFun, pchParam, cch, fTrue);
+  ifunT = ILookupTrie(xi.rgsTrieFun, pchParam, cch, fTrue);
   if (ifunT >= 0) {
     rgpchEval[0] = rgpchEval[1] = NULL;
 
@@ -2005,13 +2301,13 @@ flag FCreateTries()
   char *rgsz[cfun];
   int csMax = 16000, isz, cs;
 
-  is.rgsTrieFun = RgAllocate(csMax, short, "trie");
-  if (is.rgsTrieFun == NULL)
+  xi.rgsTrieFun = RgAllocate(csMax, short, "trie");
+  if (xi.rgsTrieFun == NULL)
     return fFalse;
 
   for (isz = 0; isz < cfun; isz++)
     rgsz[isz] = rgfun[isz].szName;
-  cs = CsCreateTrie((CONST uchar **)rgsz, cfun, is.rgsTrieFun, csMax, fTrue);
+  cs = CsCreateTrie((CONST uchar **)rgsz, cfun, xi.rgsTrieFun, csMax, fTrue);
   csMax -= cs;
 
 #ifdef DEBUG
@@ -2019,7 +2315,7 @@ flag FCreateTries()
   // in its trie and see if it returns the expected index.
 
   for (isz = 0; isz < cfun; isz++) {
-    cs = ILookupTrie(is.rgsTrieFun,
+    cs = ILookupTrie(xi.rgsTrieFun,
       rgfun[isz].szName, CchSz(rgfun[isz].szName), fTrue);
     if (cs != isz) {
       sprintf(sz, "Function string %d (%s) maps to trie value %d.",
@@ -2045,6 +2341,78 @@ flag FCreateTries()
 ******************************************************************************
 */
 
+// Ensure there are at least the given number of slots available in the custom
+// variable array, reallocating if needed.
+
+flag FEnsureParVar(int cparNew)
+{
+  PAR *pparT;
+
+  if (cparNew <= xi.cparVar)
+    return fTrue;
+
+  if (cparNew <= cLetter)
+    cparNew = cLetter + 1;
+  pparT = (PAR *)RgReallocate(xi.rgparVar, xi.cparVar, sizeof(PAR), cparNew,
+    "variable list");
+  if (pparT == NULL)
+    return fFalse;
+  if (xi.rgparVar != NULL)
+    DeallocateP(xi.rgparVar);
+  xi.rgparVar = pparT;
+  xi.cparVar = cparNew;
+  return fTrue;
+}
+
+
+// Ensure there are at least the given number of slots available in the
+// AstroExpression macro string array, reallocating if needed.
+
+flag FEnsureExpMacro(int cszNew)
+{
+  char **rgszT;
+
+  if (cszNew <= xi.cszExpMacro)
+    return fTrue;
+
+  if (cszNew <= cLetter)
+    cszNew = cLetter + 1;
+  rgszT = (char **)RgReallocate(xi.rgszExpMacro, xi.cszExpMacro,
+    sizeof(char *), cszNew, "macro list");
+  if (rgszT == NULL)
+    return fFalse;
+  if (xi.rgszExpMacro != NULL)
+    DeallocateP(xi.rgszExpMacro);
+  xi.rgszExpMacro = rgszT;
+  xi.cszExpMacro = cszNew;
+  return fTrue;
+}
+
+
+// Ensure there are at least the given number of slots available in the
+// AstroExpression custom string array, reallocating if needed.
+
+flag FEnsureExpStr(int cszNew)
+{
+  char **rgszT;
+
+  if (cszNew <= xi.cszExpStr)
+    return fTrue;
+
+  if (cszNew <= cLetter)
+    cszNew = cLetter + 1;
+  rgszT = (char **)RgReallocate(xi.rgszExpStr, xi.cszExpStr,
+    sizeof(char *), cszNew, "string list");
+  if (rgszT == NULL)
+    return fFalse;
+  if (xi.rgszExpStr != NULL)
+    DeallocateP(xi.rgszExpStr);
+  xi.rgszExpStr = rgszT;
+  xi.cszExpStr = cszNew;
+  return fTrue;
+}
+
+
 // Parse an arbitrary integer expression, and return its result.
 
 long NParseExpression(CONST char *sz)
@@ -2052,7 +2420,7 @@ long NParseExpression(CONST char *sz)
   PAR par = {0, 0.0, fFalse};  // If parsing fails, assume 0.
 
   // Ensure the lookup tables have been created.
-  if (us.fNoExp || us.fExpOff || (is.rgsTrieFun == NULL && !FCreateTries()))
+  if (us.fNoExp || us.fExpOff || (xi.rgsTrieFun == NULL && !FCreateTries()))
     return par.n;
 
   GetParameter(sz, &par);
@@ -2067,7 +2435,7 @@ real RParseExpression(CONST char *sz)
   PAR par = {0, 0.0, fFalse};  // If parsing fails, assume 0.
 
   // Ensure the lookup tables have been created.
-  if (us.fNoExp || us.fExpOff || (is.rgsTrieFun == NULL && !FCreateTries()))
+  if (us.fNoExp || us.fExpOff || (xi.rgsTrieFun == NULL && !FCreateTries()))
     return par.r;
 
   GetParameter(sz, &par);
@@ -2083,7 +2451,7 @@ flag ShowParseExpression(CONST char *sz)
   char szMsg[cchSzMax], szNum[cchSzDef];
 
   // Ensure the lookup tables have been created.
-  if (us.fNoExp || (is.rgsTrieFun == NULL && !FCreateTries()))
+  if (us.fNoExp || (xi.rgsTrieFun == NULL && !FCreateTries()))
     return fFalse;
 
   GetParameter(sz, &par);
@@ -2101,7 +2469,9 @@ flag ShowParseExpression(CONST char *sz)
 
 int NExpGet(int i)
 {
-  return !rgparVar[i].fReal ? rgparVar[i].n : (int)rgparVar[i].r;
+  if (i >= xi.cparVar)
+    return 0;
+  return !xi.rgparVar[i].fReal ? xi.rgparVar[i].n : (int)xi.rgparVar[i].r;
 }
 
 
@@ -2109,25 +2479,89 @@ int NExpGet(int i)
 
 real RExpGet(int i)
 {
-  return rgparVar[i].fReal ? rgparVar[i].r : (real)rgparVar[i].n;
+  if (i >= xi.cparVar)
+    return 0.0;
+  return xi.rgparVar[i].fReal ? xi.rgparVar[i].r : (real)xi.rgparVar[i].n;
 }
 
 
 // Set a parameter to an integer value.
 
-void ExpSetN(int i, int n)
+flag ExpSetN(int i, int n)
 {
-  rgparVar[i].fReal = fFalse;
-  rgparVar[i].n = n;
+  if (!FEnsureParVar(i+1))
+    return fFalse;
+  xi.rgparVar[i].fReal = fFalse;
+  xi.rgparVar[i].n = n;
+  return fTrue;
 }
 
 
 // Set a parameter to a real value.
 
-void ExpSetR(int i, real r)
+flag ExpSetR(int i, real r)
 {
-  rgparVar[i].fReal = fTrue;
-  rgparVar[i].r = r;
+  if (!FEnsureParVar(i+1))
+    return fFalse;
+  xi.rgparVar[i].fReal = fTrue;
+  xi.rgparVar[i].r = r;
+  return fTrue;
+}
+
+
+// Set an AstroExpression macro to a string.
+
+flag ExpSetMacro(int i, char *sz)
+{
+  if (!FEnsureExpMacro(i+1))
+    return fFalse;
+  xi.rgszExpMacro[i] = sz;
+  return fTrue;
+}
+
+
+// Set an AstroExpression custom string or string list to the given input.
+
+flag ExpSetString(int i, char *sz, flag fList)
+{
+  int csz, j;
+  char *pch, *pchT;
+
+  // Simple case: Simply assign input string to AstroExpression string.
+  if (!FEnsureExpStr(i+1))
+    return fFalse;
+  sz = SzPersist(sz);
+  if (!fList) {
+    xi.rgszExpStr[i] = sz;
+    return fTrue;
+  }
+
+  // Complex case: Use first character as delimeter within list of strings.
+  for (pch = sz, csz = 0; *pch; pch++)
+    if (*pch == sz[0])
+      csz++;
+  if (csz <= 0)
+    return fTrue;
+  pch = sz + 1;
+  for (j = 0; j < csz; j++) {
+    for (pchT = pch; *pchT && *pchT != sz[0]; pchT++)
+      ;
+    *pchT = chNull;
+    if (!ExpSetString(i + j, pch, fFalse))
+      break;
+    pch = pchT + 1;
+  }
+  return fTrue;
+}
+
+
+// Return pointer to an AstroExpression custom string.
+
+char *ExpGetString(int i)
+{
+  if (!FBetween(i, 0, xi.cszExpStr-1))
+    return NULL;
+  return xi.rgszExpStr[i];
 }
 
 
@@ -2137,21 +2571,50 @@ char *PchFormatExpression(char *sz, int i)
 {
   char *pch;
 
-  if (rgparVar[i].fReal)
-    sprintf(sz, "%lf", rgparVar[i].r);
+  if (i >= xi.cparVar)
+    sprintf(sz, "0");
+  else if (xi.rgparVar[i].fReal)
+    FormatR(sz, xi.rgparVar[i].r, 6);
   else
-    sprintf(sz, "%d", rgparVar[i].n);
+    sprintf(sz, "%d", xi.rgparVar[i].n);
   for (pch = sz; *pch; pch++)
     ;
   return pch;
 }
 
 
-// Initialize all custom variables to integer zero.
+// Set a string to an AstroExpression custom string that's indexed by a custom
+// variable.
 
-void ExpInit(void)
+char *PchFormatString(char *sz, int i)
 {
-  ClearB((pbyte)rgparVar, sizeof(rgparVar));
+  char *pch;
+
+  *sz = chNull;
+  if (i >= 0 && i < xi.cparVar && !xi.rgparVar[i].fReal) {
+    i = xi.rgparVar[i].n;
+    if (i < xi.cszExpStr && FSzSet(xi.rgszExpStr[i]))
+      sprintf(sz, "%s", xi.rgszExpStr[i]);
+  }
+  for (pch = sz; *pch; pch++)
+    ;
+  return pch;
+}
+
+
+// Program is about to exit, so free any AstroExpression related memory that
+// was allocated.
+
+void ExpFinalize(void)
+{
+  if (xi.rgsTrieFun != NULL)
+    DeallocateP(xi.rgsTrieFun);
+  if (xi.rgparVar != NULL)
+    DeallocateP(xi.rgparVar);
+  if (xi.rgszExpMacro != NULL)
+    DeallocateP(xi.rgszExpMacro);
+  if (xi.rgszExpStr != NULL)
+    DeallocateP(xi.rgszExpStr);
 }
 #endif // EXPRESS
 

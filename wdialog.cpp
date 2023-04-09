@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: wdialog.cpp
+** Astrolog (Version 7.60) File: wdialog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -154,7 +154,7 @@ void SetEditSZOA(HWND hdlg, int idDst, int idZon, int idLon, int idLat,
   for (i = 0; i < cZone; i++) {
     if (szZon[i][1] && szZon[i][1] != 'D' && szZon[i][1] != 'W' &&
       szZon[i][2] && szZon[i][2] != 'D') {
-      if (rZon[i] != zonLMT)
+      if (rZon[i] != zonLMT && rZon[i] != zonLAT)
         sprintf(sz, "%s %s", SzZone(rZon[i]), szZon[i]);
       else
         sprintf(sz, "%s", SzZone(rZon[i]));
@@ -326,6 +326,17 @@ flag FDlgInfoAtlas(HWND hdlg, WORD wParam, flag fDefault)
   return fFalse;
 }
 #endif
+
+
+// Bring up the Windows color picker dialog. Return the color selected.
+
+KV KvDialog()
+{
+  chc.rgbResult = rgbbmp[gi.kiOn];
+  chc.lpCustColors = (dword *)rgbbmp;
+  ChooseColor(&chc);
+  return chc.rgbResult;
+}
 
 
 /*
@@ -547,6 +558,7 @@ flag API DlgSaveChart()
 }
 
 
+#ifdef WSETUP
 // Bring up the Windows standard folder selection dialog, and open all the
 // Astrolog files within that folder into the chart list. Called from the
 // File / Other Formats / Open Charts in Folder command.
@@ -576,6 +588,7 @@ flag API DlgOpenDir()
   wi.fCast = fTrue;
   return fTrue;
 }
+#endif
 
 
 // Bring up the Windows standard print dialog, receive any printing settings
@@ -896,7 +909,7 @@ flag API DlgList(HWND hdlg, uint message, WORD wParam, LONG lParam)
 
 flag API DlgCommand(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
-  char sz[cchSzMax];
+  char sz[cchSzLine];
 
   switch (message) {
   case WM_INITDIALOG:
@@ -910,7 +923,7 @@ flag API DlgCommand(HWND hdlg, uint message, WORD wParam, LONG lParam)
   case WM_COMMAND:
     if (wParam == IDOK) {
       us.fExpOff = !GetCheck(dxCo_e);
-      GetEdit(deCo, sz);
+      GetDlgItemText(hdlg, deCo, sz, cchSzLine);  // Longer cchSzLine string.
       FProcessCommandLine(sz);
       wi.fCast = wi.fMenuAll = fTrue;
     }
@@ -1416,6 +1429,7 @@ flag API DlgObjectM(HWND hdlg, uint message, WORD wParam, LONG lParam)
       SetEditColor(hdlg, dck00 - moonsLo + i, kObjU[i], 3);
     }
     SetCheck(dxMo_Ym, us.fMoonMove);
+    SetCheck(dxMo_80, us.fMoonChartSep);
     SetCheck(dxMo_X8, gs.fMoonWheel);
     return fTrue;
 
@@ -1445,6 +1459,7 @@ flag API DlgObjectM(HWND hdlg, uint message, WORD wParam, LONG lParam)
         }
       }
       us.fMoonMove = GetCheck(dxMo_Ym);
+      us.fMoonChartSep = GetCheck(dxMo_80);
       gs.fMoonWheel = GetCheck(dxMo_X8);
       wi.fCast = fTrue;
     }
@@ -1468,8 +1483,10 @@ flag API DlgCustom(HWND hdlg, uint message, WORD wParam, LONG lParam)
 #ifdef SWISS
   char *pch, *pchEnd;
   int k, l;
+#ifdef JPLWEB
   real rT;
 #endif
+#endif // SWISS
 
   switch (message) {
   case WM_INITDIALOG:
@@ -1482,7 +1499,7 @@ flag API DlgCustom(HWND hdlg, uint message, WORD wParam, LONG lParam)
         sprintf(sz, "%s%d",
           j <= 0 ? "h" : (j == 1 ? "" : (j == 3 ? "m" : "j")), k);
       else
-        sprintf(sz, "%.3s", szObjName[k]);
+        sprintf(sz, k < cobLo ? "%.3s" : "%.4s", szObjName[k]);
       for (pch = sz; *pch; pch++)
         ;
       j = rgPntSwiss[i - custLo];
@@ -1600,6 +1617,83 @@ flag API DlgCustom(HWND hdlg, uint message, WORD wParam, LONG lParam)
             GetEdit(den01 - custLo + i, sz);
             if (!FEqSz(sz, szObjDisp[i]))
               szObjDisp[i] = SzCopy(sz);
+          }
+        }
+      }
+      wi.fCast = fTrue;
+    }
+    if (wParam == IDOK || wParam == IDCANCEL) {
+      EndDialog(hdlg, fTrue);
+      return fTrue;
+    }
+    break;
+  }
+  return fFalse;
+}
+
+
+// Processing function for the custom stars dialog, as brought up with the
+// Setting / Planetary Moons / Star Customization menu command.
+
+flag API DlgCustomS(HWND hdlg, uint message, WORD wParam, LONG lParam)
+{
+  char sz[cchSzMax];
+  int i, j;
+#ifdef SWISS
+  int k;
+#endif
+
+  switch (message) {
+  case WM_INITDIALOG:
+    for (i = starLo; i <= starHi; i++) {
+      SetEdit(den01 - starLo + i, szObjDisp[i]);
+#ifdef SWISS
+      k = i - starLo + 1;
+      if (FSzSet(szStarCustom[k]))
+        SetEdit(ded01 - starLo + i, szStarCustom[k]);
+      else if (*szStarNameSwiss[k])
+        SetEdit(ded01 - starLo + i, szStarNameSwiss[k]);
+      else
+        SetEdit(ded01 - starLo + i, szObjName[i]);
+#endif
+    }
+#ifndef SWISS
+    ShowWindow(GetDlgItem(hdlg, dbCu_l), SW_HIDE);
+    for (i = starLo; i <= starHi; i++)
+      ShowWindow(GetDlgItem(hdlg, ded01 - starLo + i), SW_HIDE);
+#endif
+    return fTrue;
+
+  case WM_COMMAND:
+#ifdef SWISS
+    if (wParam == dbCu_l)
+      for (i = starLo; i <= starHi; i++) {
+        GetEdit(den01 - starLo + i, sz);
+        if (*sz && !FEqSz(sz, szObjUnknown))
+          continue;
+        GetEdit(ded01 - starLo + i, sz);
+        if (!SwissTestStar(sz))
+          sprintf(sz, "%s", szObjUnknown);
+        SetEdit(den01 - starLo + i, sz);
+      }
+#endif
+
+    if (wParam == IDOK) {
+      for (j = 0; j <= 1; j++) {
+        for (i = starLo; i <= starHi; i++) {
+          if (j) {
+            GetEdit(den01 - starLo + i, sz);
+            if (!FEqSz(sz, szObjDisp[i]))
+              szObjDisp[i] = SzCopy(sz);
+#ifdef SWISS
+            GetEdit(ded01 - starLo + i, sz);
+            k = i - starLo + 1;
+            if (FEqSz(sz, *szStarNameSwiss[k] ? szStarNameSwiss[k] :
+              szObjDisp[i]))
+              szStarCustom[k] = NULL;
+            else
+              szStarCustom[k] = SzCopy(sz);
+#endif
           }
         }
       }
@@ -1762,10 +1856,10 @@ flag API DlgStar(HWND hdlg, uint message, WORD wParam, LONG lParam)
     if (wParam == IDOK) {
       for (i = 0; i < cStar; i++)
         ignore[starLo + i] = GetCheck(dx01 + i);
-      if (!us.nStar) {
+      if (!us.fStar) {
         for (i = starLo; i <= starHi; i++)
           if (!ignore[i]) {
-            us.nStar = fTrue;
+            us.fStar = fTrue;
             WiCheckMenu(cmdResStar, fTrue);
             break;
           }
@@ -1774,7 +1868,7 @@ flag API DlgStar(HWND hdlg, uint message, WORD wParam, LONG lParam)
           if (!ignore[i])
             break;
         if (i > starHi) {
-          us.nStar = fFalse;
+          us.fStar = fFalse;
           WiCheckMenu(cmdResStar, fFalse);
         }
       }
@@ -2067,7 +2161,7 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetCheck(dxDi_YOO, us.fSmartSave);
     SetCheck(dxDi_kh, us.fTextHTML);
     SetCheck(dxDi_Yo, us.fWriteOld);
-    SetCheck(dxDi_YXf, gs.nFont > 0);
+    SetCheck(dxDi_YXf, gs.nFontAll > 0);
     SetEdit(deDi_YXp0_x, SzLength(gs.xInch));
     SetEdit(deDi_YXp0_y, SzLength(gs.yInch));
     SetRadio(gs.nOrient == 0 ? dr03 : (gs.nOrient > 0 ? dr01 : dr02),
@@ -2077,6 +2171,7 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
     for (i = 0; i < 5; i++)
       SetCheck(dxDi_r0 + i, ignore7[i]);
     SetRadio(dr12 + us.nAppSep, dr12, dr14);
+    SetCheck(dxDi_gd, us.fDistance);
     return fTrue;
 
   case WM_COMMAND:
@@ -2107,7 +2202,13 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
       us.fSmartSave = GetCheck(dxDi_YOO);
       us.fTextHTML = GetCheck(dxDi_kh);
       us.fWriteOld = GetCheck(dxDi_Yo);
-      gs.nFont = GetCheck(dxDi_YXf) * gi.nFontPrev;
+      gs.nFontAll = GetCheck(dxDi_YXf) * gi.nFontPrev;
+      gs.nFontTxt = gs.nFontAll / 100000;
+      gs.nFontSig = (gs.nFontAll / 10000) % 10;
+      gs.nFontHou = (gs.nFontAll / 1000) % 10;
+      gs.nFontObj = (gs.nFontAll / 100) % 10;
+      gs.nFontAsp = (gs.nFontAll / 10) % 10;
+      gs.nFontNak = gs.nFontAll % 10;
       GetEdit(deDi_YXp0_x, sz); gs.xInch = RParseSz(sz, pmLength);
       GetEdit(deDi_YXp0_y, sz); gs.yInch = RParseSz(sz, pmLength);
       gs.nOrient = GetCheck(dr03) ? 0 : (GetCheck(dr01) ? 1 : -1);
@@ -2119,6 +2220,7 @@ flag API DlgDisplay(HWND hdlg, uint message, WORD wParam, LONG lParam)
       if (!ignore7[rrRay])
         EnsureRay();
       us.nAppSep = GetRadio(hdlg, dr12, dr14);
+      us.fDistance = GetCheck(dxDi_gd);
       wi.fCast = fTrue;
     }
     if (wParam == IDOK || wParam == IDCANCEL) {
@@ -2215,7 +2317,6 @@ flag API DlgTransit(HWND hdlg, uint message, WORD wParam, LONG lParam)
       case 4: wi.nMode = gTraNatTim; break;
       case 5: wi.nMode = gTraNatInf; break;
       case 6: wi.nMode = gTraNatGra; break;
-      default: wi.nMode = gWheel;
       }
       n2 = GetCheck(dr08) ? 0 : (GetCheck(dr09) ? 1 :
         (GetCheck(dr10) ? 2 : 3));
@@ -2226,7 +2327,8 @@ flag API DlgTransit(HWND hdlg, uint message, WORD wParam, LONG lParam)
       if (n1 == 3 || n1 == 6)
         us.nEphemYears = (n2 <= 2 ? 1 : (nty <= 1 ? 5 : nty));
       else {
-        us.fGraphics = fFalse;
+        if (n1 > 0)
+          us.fGraphics = fFalse;
         if (n1 == 2 || n1 == 5) {
           wi.fCast = fTrue;
           if (n1 == 2)
@@ -2367,7 +2469,7 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetCheck(dxCh_P0, us.fArabicFlip);
     SetEditN(deCh_Nl, us.nAtlasList);
     SetEditN(deCh_Yb, us.nBioday);
-    switch (us.nStar) {
+    switch (us.nStarSort) {
     case 'z': nT = dr02; break;
     case 'l': nT = dr03; break;
     case 'n': nT = dr04; break;
@@ -2377,7 +2479,7 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
     default:  nT = dr01;
     }
     SetRadio(nT, dr01, dr07);
-    switch (us.nArabic) {
+    switch (us.nArabicSort) {
     case 'z': nT = dr09; break;
     case 'n': nT = dr10; break;
     case 'f': nT = dr11; break;
@@ -2430,13 +2532,11 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
       us.fArabicFlip = GetCheck(dxCh_P0);
       us.nAtlasList = nn;
       us.nBioday = yb;
-      if (us.nStar)
-        us.nStar = GetCheck(dr02) ? 'z' : (GetCheck(dr03) ? 'l' :
-          (GetCheck(dr04) ? 'n' : (GetCheck(dr05) ? 'b' :
-          (GetCheck(dr06) ? 'd' : (GetCheck(dr07) ? 'v' : fTrue)))));
-      if (us.nArabic)
-        us.nArabic = GetCheck(dr09) ? 'z' : (GetCheck(dr10) ? 'n' :
-          (GetCheck(dr11) ? 'f' : fTrue));
+      us.nStarSort = GetCheck(dr02) ? 'z' : (GetCheck(dr03) ? 'l' :
+        (GetCheck(dr04) ? 'n' : (GetCheck(dr05) ? 'b' :
+        (GetCheck(dr06) ? 'd' : (GetCheck(dr07) ? 'v' : 0)))));
+      us.nArabicSort = GetCheck(dr09) ? 'z' : (GetCheck(dr10) ? 'n' :
+        (GetCheck(dr11) ? 'f' : 0));
       GetEdit(dcCh_a, sz);
       for (i = 1; i < asMax; i++)
         if (FMatchSz(sz, rgszSort[i]))
@@ -2461,7 +2561,8 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
 
 
 CONST char *rgszFontDisp[cFont] = {szAppNameCore, "Wingdings", "Astro",
-  "Enigma", "Hamburg", "Astronomicon", "Courier New", "Consolas", "Arial"};
+  "Enigma", "Hamburg", "Astronomicon", "Courier New", "Consolas", "Arial",
+  "Hank's Nakshatra"};
 CONST char *rgszCityColor[6] = {"None", "Region", "Region+State",
   "Generic Zone", "Current Zone", "Rainbow"};
 
@@ -2478,6 +2579,7 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
   case WM_INITDIALOG:
     SetEditN(deGr_Xw_x, gs.xWin);
     SetEditN(deGr_Xw_y, gs.yWin);
+    SetCheck(dxGr_XQ, gs.fKeepSquare);
     for (is = 100; is <= 400; is += 50) {
       sprintf(sz, "%d", is);
       if (is % 100 == 0)
@@ -2486,8 +2588,11 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
     }
     SetEditN(dcGr_Xs, gs.nScale);
     SetEditN(dcGr_XSS, gs.nScaleText);
-    SetEditR(hdlg, deGr_XI1, gs.rBackPct, 1);
-    SetCheck(dxGr_XQ, gs.fKeepSquare);
+    for (is = 25; is <= 100; is += 25) {
+      sprintf(sz, "%.1f", (real)is);
+      SetCombo(dcGr_XI1, sz);
+    }
+    SetEditR(hdlg, dcGr_XI1, gs.rBackPct, 1);
     SetEditN(deGr_YXg, gs.nGridCell);
     SetEditN(deGr_YXj, gs.cspace);
     if (gs.objTrack >= 0)
@@ -2509,23 +2614,25 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
     SetEdit(deGr_X1, szObjName[gs.objLeft == 0 ? oSun : NAbs(gs.objLeft)-1]);
     SetRadio(dr04 + gs.nDecaType, dr04, dr06);
     SetEditN(deGr_YXv, gs.nDecaSize);
-    SetRadio(dr07 + gs.nDecaFill, dr07, dr09);
-    for (i = dcGr_Xf0; i <= dcGr_Xf4; i++)
+    SetRadio(dr07 + Min(gs.nDecaFill, 2), dr07, dr09);
+    for (i = dcGr_Xf0; i <= dcGr_Xf5; i++)
       for (j = 0; j < cFont; j++) {
         if (rgszFontAllow[i-dcGr_Xf0][j] < '0')
           continue;
         SetCombo(i, rgszFontDisp[j]);
       }
-    SetEdit(dcGr_Xf0, rgszFontDisp[gs.nFont/10000]);
-    SetEdit(dcGr_Xf1, rgszFontDisp[gs.nFont/1000%10]);
-    SetEdit(dcGr_Xf2, rgszFontDisp[gs.nFont/100%10]);
-    SetEdit(dcGr_Xf3, rgszFontDisp[gs.nFont/10%10]);
-    SetEdit(dcGr_Xf4, rgszFontDisp[gs.nFont%10]);
-    SetRadio(drg01 + (gs.nGlyphs/10000 - 1), drg01, drg02);
-    SetRadio(drg03 + (gs.nGlyphs/1000%10 - 1), drg03, drg04);
-    SetRadio(drg05 + (gs.nGlyphs/100%10 - 1), drg05, drg07);
-    SetRadio(drg08 + (gs.nGlyphs/10%10 - 1), drg08, drg09);
-    SetRadio(drg10 + (gs.nGlyphs%10 - 1), drg10, drg11);
+    SetEdit(dcGr_Xf0, rgszFontDisp[gs.nFontTxt]);
+    SetEdit(dcGr_Xf1, rgszFontDisp[gs.nFontSig]);
+    SetEdit(dcGr_Xf2, rgszFontDisp[gs.nFontHou]);
+    SetEdit(dcGr_Xf3, rgszFontDisp[gs.nFontObj]);
+    SetEdit(dcGr_Xf4, rgszFontDisp[gs.nFontAsp]);
+    SetEdit(dcGr_Xf5, rgszFontDisp[gs.nFontNak]);
+    SetRadio(drg01 + gs.nGlyphCap - 1, drg01, drg02);
+    SetRadio(drg03 + gs.nGlyphUra - 1, drg03, drg04);
+    SetRadio(drg05 + gs.nGlyphPlu - 1, drg05, drg07);
+    SetRadio(drg08 + gs.nGlyphLil - 1, drg08, drg09);
+    SetRadio(drg10 + gs.nGlyphVer - 1, drg10, drg11);
+    SetRadio(drg12 + gs.nGlyphEri - 1, drg12, drg13);
     for (i = 0; i < 6; i++)
       SetCombo(dcGr_XL, rgszCityColor[i]);
     SetEdit(dcGr_XL, rgszCityColor[gs.fLabelAsp ? gs.nLabelCity : 0]);
@@ -2538,7 +2645,7 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
       ny = GetEditN(hdlg, deGr_Xw_y);
       ns = GetEditN(hdlg, dcGr_Xs);
       nS = GetEditN(hdlg, dcGr_XSS);
-      rI = GetEditR(hdlg, deGr_XI1);
+      rI = GetEditR(hdlg, dcGr_XI1);
       ng = GetEditN(hdlg, deGr_YXg);
       GetEdit(deGr_XZ, sz); nxz = NParseSz(sz, pmObject);
       ryxs = GetEditR(hdlg, deGr_YXS);
@@ -2565,9 +2672,9 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
         if (wi.fWindowChart)
           ResizeWindowToChart();
       }
+      gs.fKeepSquare = GetCheck(dxGr_XQ);
       gs.nScale = ns; gs.nScaleText = nS;
       gs.rBackPct = rI;
-      gs.fKeepSquare = GetCheck(dxGr_XQ);
       gs.nGridCell = ng;
       gs.cspace = GetEditN(hdlg, deGr_YXj);
       gs.objTrack = nxz;
@@ -2588,27 +2695,36 @@ flag API DlgGraphics(HWND hdlg, uint message, WORD wParam, LONG lParam)
       gs.nDecaType = GetRadio(hdlg, dr04, dr06);
       gs.nDecaSize = nyxv;
       gs.nDecaFill = GetRadio(hdlg, dr07, dr09);
-      gs.nFont = 0;
-      for (i = dcGr_Xf0; i <= dcGr_Xf4; i++) {
+      for (i = dcGr_Xf0; i <= dcGr_Xf5; i++) {
         GetEdit(i, sz);
         // Astro font in slot #2 gets checked first, since it's a substring.
         for (j = 2; j < cFont; j += (j == 2 ? -2 : (j == 1 ? 2 : 1))) {
           if (rgszFontAllow[i-dcGr_Xf0][j] >= '0' &&
             FMatchSz(sz, rgszFontDisp[j])) {
-            gs.nFont = gs.nFont * 10 + j;
             break;
           }
         }
         if (j >= cFont)    // If no match, default to "Astrolog".
-          gs.nFont *= 10;
+          j = 0;
+        switch (i) {
+        case dcGr_Xf0: gs.nFontTxt = j; break;
+        case dcGr_Xf1: gs.nFontSig = j; break;
+        case dcGr_Xf2: gs.nFontHou = j; break;
+        case dcGr_Xf3: gs.nFontObj = j; break;
+        case dcGr_Xf4: gs.nFontAsp = j; break;
+        case dcGr_Xf5: gs.nFontNak = j; break;
+        }
       }
-      gs.nGlyphs = (GetRadio(hdlg, drg01, drg02) + 1) * 10000 +
-        (GetRadio(hdlg, drg03, drg04) + 1) * 1000 +
-        (GetRadio(hdlg, drg05, drg07) + 1) * 100 +
-        (GetRadio(hdlg, drg08, drg09) + 1) * 10 +
-        (GetRadio(hdlg, drg10, drg11) + 1);
-      if (gs.nFont != 0)
-        gi.nFontPrev = gs.nFont;
+      gs.nFontAll = gs.nFontTxt*100000 + gs.nFontSig*10000 +
+        gs.nFontHou*1000 + gs.nFontObj*100 + gs.nFontAsp*10 + gs.nFontNak;
+      if (gs.nFontAll != 0)
+        gi.nFontPrev = gs.nFontAll;
+      gs.nGlyphCap = GetRadio(hdlg, drg01, drg02) + 1;
+      gs.nGlyphUra = GetRadio(hdlg, drg03, drg04) + 1;
+      gs.nGlyphPlu = GetRadio(hdlg, drg05, drg07) + 1;
+      gs.nGlyphLil = GetRadio(hdlg, drg08, drg09) + 1;
+      gs.nGlyphVer = GetRadio(hdlg, drg10, drg11) + 1;
+      gs.nGlyphEri = GetRadio(hdlg, drg12, drg13) + 1;
       GetEdit(dcGr_XL, sz);
       for (i = 0; i < 6; i++)
         if (NCompareSzI(sz, rgszCityColor[i]) == 0)

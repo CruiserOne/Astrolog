@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: charts2.cpp
+** Astrolog (Version 7.60) File: charts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -168,7 +168,6 @@ void ChartListingRelation(void)
 
 void ChartGridRelation(void)
 {
-  char sz[cchSzDef];
   int i0, j0, i, j, k, temp;
 
 #ifdef INTERPRET
@@ -177,51 +176,19 @@ void ChartGridRelation(void)
     return;
   }
 #endif
-  PrintSz(" 2>");
-  for (i0 = 0; i0 <= is.nObj; i0++) {
-    i = rgobjList[i0];
-    if (ignore[i])
-      continue;
-    PrintCh2(chV);
-    AnsiColor(kObjA[i]);
-    sprintf(sz, "%.3s", szObjDisp[i]); PrintSz(sz);
-    AnsiColor(kDefault);
-  }
-  PrintSz("\n1  ");
-  for (i0 = 0; i0 <= is.nObj; i0++) {
-    i = rgobjList[i0];
-    if (ignore[i])
-      continue;
-    PrintCh2(chV);
-    AnsiColor(kSignA(SFromZ(cp2.obj[i])));
-    sprintf(sz, "%2d%c", (int)cp2.obj[i] % 30, chDegS); PrintSz(sz);
-    AnsiColor(kDefault);
-  }
-  PrintSz("\nV  ");
-  for (i0 = 0; i0 <= is.nObj; i0++) {
-    i = rgobjList[i0];
-    if (ignore[i])
-      continue;
-    PrintCh2(chV);
-    temp = SFromZ(cp2.obj[i]);
-    AnsiColor(kSignA(temp));
-    sprintf(sz, "%.3s", szSignName[temp]); PrintSz(sz);
-    AnsiColor(kDefault);
-  }
-  if (us.fSeconds) {
-    PrintSz("\n   ");
+
+  for (k = 2; k <= 4 + us.fSeconds; k++) {
+    PrintSz(k <= 2 ? " 2>" : (k == 3 ? "1  " : (k == 4 ? "V  " : "   ")));
     for (i0 = 0; i0 <= is.nObj; i0++) {
       i = rgobjList[i0];
       if (ignore[i])
         continue;
-      PrintCh(chV);
-      temp = SFromZ(cp2.obj[i]);
-      AnsiColor(kSignA(temp));
-      sprintf(sz, "%02d'", (int)(cp2.obj[i]*60.0) % 60); PrintSz(sz);
+      PrintCh2(chV);
+      PrintGridCell(-3, i, 0, k);
       AnsiColor(kDefault);
     }
+    PrintL();
   }
-  PrintL();
   for (j0 = 0; j0 <= is.nObj; j0++) {
     j = rgobjList[j0];
     if (ignore[j])
@@ -229,20 +196,8 @@ void ChartGridRelation(void)
     for (k = 1; k <= 4 + us.fSeconds; k++) {
       if (k < 2)
         PrintTab2(chH, 3);
-      else if (k == 2) {
-        AnsiColor(kObjA[j]);
-        sprintf(sz, "%.3s", szObjDisp[j]); PrintSz(sz);
-      } else {
-        temp = SFromZ(cp1.obj[j]);
-        AnsiColor(kSignA(temp));
-        if (k == 3)
-          sprintf(sz, "%2d%c", (int)cp1.obj[j] - (temp-1)*30, chDegS);
-        else if (k == 4)
-          sprintf(sz, "%.3s", szSignName[temp]);
-        else
-          sprintf(sz, "%02d'", (int)(cp1.obj[j]*60.0) % 60);
-        PrintSz(sz);
-      }
+      else
+        PrintGridCell(-2, j, 0, k);
       if (k > 1)
         AnsiColor(kDefault);
       for (i0 = 0; i0 <= is.nObj; i0++) {
@@ -251,43 +206,12 @@ void ChartGridRelation(void)
           continue;
         PrintCh2(k < 2 ? chC : chV);
         temp = grid->n[i][j];
-        if (k > 1) {
-          if (i == j)
-            AnsiColor(kReverse);
-          AnsiColor(us.fGridMidpoint ? kSignA(temp) : kAspA[temp]);
-        }
+        if (k > 1 && i == j)
+          AnsiColor(kReverse);
         if (k < 2)
           PrintTab2(chH, 3);
-        else if (k == 2) {
-          if (us.fGridMidpoint)
-            sprintf(sz, "%.3s", szSignName[temp]);
-          else
-            sprintf(sz, "%s", temp ? SzAspectAbbrev(temp) : "   ");
-          PrintSz(sz);
-        } else if (k == 3) {
-          if (us.fGridMidpoint) {
-            sprintf(sz, "%2d%c", grid->v[i][j]/3600, chDegS); PrintSz(sz);
-          } else
-            if (grid->n[i][j]) {
-              if (NAbs(grid->v[i][j]) < 6000*60)
-                sprintf(sz, "%c%2d",
-                  rgchAppSep[us.nAppSep*2 + (grid->v[i][j] >= 0)],
-                  NAbs(grid->v[i][j])/3600);
-              else
-                sprintf(sz, "%3d", NAbs(temp)/3600);
-              PrintSz(sz);
-            } else
-              PrintSz("   ");
-        } else {
-          if (grid->n[i][j]) {
-            if (k == 4)
-              sprintf(sz, "%02d'", NAbs(grid->v[i][j])/60%60);
-            else
-              sprintf(sz, "%02d\"", NAbs(grid->v[i][j])%60);
-            PrintSz(sz);
-          } else
-            PrintSz("   ");
-        }
+        else
+          PrintGridCell(i, j, 1 + us.fGridMidpoint, k);
         AnsiColor(kDefault);
       }
       PrintL();
@@ -303,10 +227,11 @@ void ChartGridRelation(void)
 void ChartAspectRelation(void)
 {
   int ca[cAspect + 1], co[objMax];
-  char sz[cchSzDef];
+  char sz[cchSzDef], *pch;
   int vcut = nLarge, icut, jcut, vhi, ihi, jhi, ahi, phi, v, i0, j0, i, j, k,
-    p, count = 0;
-  real ip, jp, rPowSum = 0.0;
+    p, count = 0, nSav;
+  real ip, jp, rPowSum = 0.0, rT;
+  flag fDistance = us.fDistance && !us.fParallel;
 
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
@@ -327,7 +252,7 @@ void ChartAspectRelation(void)
           ip = RObjInf(i);
           jp = RObjInf(j);
           p = (int)(rAspInf[k]*(ip+jp)/2.0*
-            (1.0-RAbs((real)(grid->v[i][j]))/3600.0/GetOrb(i, j, k))*1000.0);
+            (1.0-RAbs(grid->v[i][j])/GetOrb(i, j, k))*10000.0);
 #ifdef EXPRESS
           // Adjust power with AstroExpression if one set.
           if (FSzSet(us.szExpAspList)) {
@@ -341,8 +266,8 @@ void ChartAspectRelation(void)
 #endif
           switch (us.nAspectSort) {
           default:  v = p;                           break;
-          case aso: v = -NAbs(grid->v[i][j]);        break;
-          case asn: v = -grid->v[i][j];              break;
+          case aso: v = -NAbs((int)(grid->v[i][j]*3600.0)); break;
+          case asn: v = -(int)(grid->v[i][j]*3600.0);       break;
           case asO: v = -(j0*cObj + i0);             break;
           case asP: v = -(i0*cObj + j0);             break;
           case asA: v = -(k*cObj*cObj + j*cObj + i); break;
@@ -350,9 +275,9 @@ void ChartAspectRelation(void)
           case asD: v = -(int)(cp2.obj[i]*3600.0);   break;
           case asM: v = -(int)(Midpoint(cp1.obj[j], cp2.obj[i])*3600.0); break;
           }
-          if ((v < vcut || (v == vcut && (i > icut ||
-            (i == icut && j > jcut)))) && v > vhi) {
-            vhi = v; ihi = i; jhi = j; ahi = k; phi = p;
+          if ((v < vcut || (v == vcut && (i0 > icut ||
+            (i0 == icut && j0 > jcut)))) && v > vhi) {
+            vhi = v; ihi = i0; jhi = j0; ahi = k; phi = p;
           }
         }
       }
@@ -360,26 +285,39 @@ void ChartAspectRelation(void)
     if (vhi <= -nLarge)    // Exit when no less powerful aspect found.
       break;
     vcut = vhi; icut = ihi; jcut = jhi;
-    count++;                              // Display the current aspect.
-    rPowSum += (real)phi/1000.0;
+    i = rgobjList[ihi]; j = rgobjList[jhi];
+    count++;                               // Display the current aspect.
+    rPowSum += (real)phi/10000.0;
     ca[ahi]++;
-    co[jhi]++; co[ihi]++;
+    co[j]++; co[i]++;
 #ifdef INTERPRET
-    if (us.fInterpret) {                  // Interpret it if -I in effect.
-      InterpretAspectRelation(jhi, ihi);
+    if (us.fInterpret) {                   // Interpret it if -I in effect.
+      InterpretAspectRelation(j, i);
       AnsiColor(kDefault);
       continue;
     }
 #endif
     sprintf(sz, "%3d: ", count); PrintSz(sz);
-    PrintAspect(jhi, cp1.obj[jhi], cp1.dir[jhi], ahi,
-      ihi, cp2.obj[ihi], cp2.dir[ihi], 'A');
-    k = grid->v[ihi][jhi];
-    AnsiColor(k < 0 ? kWhiteA : kLtGrayA);
-    sprintf(sz, "- orb: %c%s", rgchAppSep[us.nAppSep*2 + (k >= 0)],
-      SzDegree2((real)NAbs(k)/3600.0)); PrintSz(sz);
+    PrintAspect(j, planetval1(j), planetdir1(j), ahi,
+      i, planetval2(i), planetdir2(i), 'A');
+    rT = grid->v[i][j];
+    AnsiColor(rT < 0.0 ? kWhiteA : kLtGrayA);
+    if (fDistance) {
+      nSav = us.nDegForm; us.nDegForm = df360;
+    }
+    sprintf(sz, "- orb: %c%s", rgchAppSep[us.nAppSep*2 + (rT >= 0.0)],
+      SzDegree2(RAbs(rT)));
+    if (fDistance) {
+      us.nDegForm = nSav;
+      for (pch = sz; *pch; pch++)
+        ;
+      pch[-1] = '%';
+    }
+    PrintSz(sz);
     AnsiColor(kDkGreenA);
-    sprintf(sz, " - power: %5.2f\n", (real)phi/1000.0); PrintSz(sz);
+    PrintSz(" - power: ");
+    sprintf(sz, us.fSeconds ? "%7.4f" : "%5.2f", (real)phi/10000.0);
+    PrintSz(sz); PrintL();
     AnsiColor(kDefault);
   }
 
@@ -403,25 +341,24 @@ void ChartMidpointRelation(void)
 {
   int cs[cSign + 1];
   char sz[cchSzDef];
-  int mcut = -1, icut, jcut, mlo, ilo, jlo, m, i, j, count = 0;
-  long lSpanSum = 0;
-  real mid, dist, midalt;
+  int icut, jcut, ilo, jlo, i, j, count = 0;
+  real rSpanSum = 0.0, mcut = -1.0, mlo, m, mid, dist, midalt;
 
   ClearB((pbyte)cs, sizeof(cs));
   loop {
-    mlo = 360*60*60;
+    mlo = rDegMax;
 
     // Search for the next closest midpoint farther down in the zodiac.
 
     for (i = 0; i <= is.nObj; i++) if (!FIgnore(i))
       for (j = 0; j <= is.nObj; j++) if (!FIgnore(j)) {
-        m = (grid->n[i][j]-1)*(30*60*60) + grid->v[i][j];
+        m = ZFromS(grid->n[i][j]) + grid->v[i][j];
         if ((m > mcut || (m == mcut && (i > icut ||
           (i == icut && j > jcut)))) && m < mlo) {
           ilo = i; jlo = j; mlo = m;
         }
       }
-    if (mlo >= 360*60*60)  // Exit when no midpoint farther in zodiac found.
+    if (mlo >= rDegMax)  // Exit when no midpoint farther in zodiac found.
       break;
     mcut = mlo; icut = ilo; jcut = jlo;
     if (us.objRequire >= 0 && ilo != us.objRequire && jlo != us.objRequire)
@@ -448,9 +385,8 @@ void ChartMidpointRelation(void)
     }
 #endif
     count++;                               // Display the current midpoint.
-    cs[mlo/(30*60*60)+1]++;
-    m = (int)(dist*3600.0);
-    lSpanSum += m;
+    cs[SFromZ(mlo)]++;
+    rSpanSum += dist;
 #ifdef INTERPRET
     if (us.fInterpret) {                   // Interpret it if -I in effect.
       InterpretMidpointRelation(ilo, jlo);
@@ -478,7 +414,7 @@ void ChartMidpointRelation(void)
     PrintSz(" degree span.\n");
   }
 
-  PrintMidpointSummary(cs, count, lSpanSum);
+  PrintMidpointSummary(cs, count, rSpanSum);
 }
 
 
@@ -765,13 +701,27 @@ void PrintAspect(int obj1, real pos1, real ret1, int asp,
   char sz[cchSzDef];
   KI ki;
   real rDiff;
-  flag fPar = (us.fParallel && asp >= aCon) || asp == aAlt, fSav = is.fSeconds,
-    fWax;
+  flag fPar = (us.fParallel && asp >= aCon) || asp == aAlt, fDis, fLon,
+    fSav = is.fSeconds, fWax;
+
+  fDis = us.fDistance && !us.fParallel && asp >= aCon &&
+    !(chart == 'm' || chart == 'M' ||
+    chart == 'd' || chart == 'e' || chart == 't' || chart == 'u');
+  fLon = !fPar && !fDis;
+  if (fDis) {
+    // Express distance values as proportions of each other from 0-100%.
+    if (pos1 > pos2) {
+      pos2 = pos2/pos1*99.999; pos1 = 99.999;
+    } else if (pos1 < pos2) {
+      pos1 = pos1/pos2*99.999; pos2 = 99.999;
+    } else
+      pos1 = pos2 = 99.999;
+  }
 
   is.fSeconds = fFalse;
   if (asp >= aCon && rgobjList2[obj1] > rgobjList2[obj2] &&
     !(chart == 'A' || chart == 'M' || chart == 't' || chart == 'T' ||
-    chart == 'e' || chart == 'u' || chart == 'U')) {
+    chart == 'e' || chart == 'u' || chart == 'U' || chart == '8')) {
     SwapN(obj1, obj2); SwapR(&pos1, &pos2); SwapR(&ret1, &ret2);
   }
   AnsiColor(kObjA[obj1]);
@@ -782,32 +732,45 @@ void PrintAspect(int obj1, real pos1, real ret1, int asp,
 
   // Print name of first planet.
   sprintf(sz, "%7.7s", szObjDisp[obj1]); PrintSz(sz);
-  ki = !fPar ? kSignA(SFromZ(pos1)) : kDefault;
+  ki = fLon ? kSignA(SFromZ(pos1)) : kDefault;
   AnsiColor(ki);
   sprintf(sz, " %c", ret1 > 0.0 ? '(' : (ret1 < 0.0 ? '[' : '<')); PrintSz(sz);
+  if (asp == aSig && ret1 > 0.0)
+    pos1 += 29.999;
+  else if (asp == aDeg)
+    pos1 = (real)obj2 * (rDegMax / (real)(cSign * us.nSignDiv));
   if (!us.fSeconds) {
-    if (!fPar)
-      sprintf(sz, "%.3s", szSignName[SFromZ(pos1)]);
-    else
+    if (fLon) {
+      if (us.nDegForm == df360)
+        sprintf(sz, "%3d", (int)pos1);
+      else if (us.nDegForm == dfHM)
+        sprintf(sz, "%2dh", (int)pos1/15);
+      else if (us.nDegForm == dfNak)
+        sprintf(sz, "%.3s", szNakshatra[(int)(pos1 / (rDegMax/27.0)) + 1]);
+      else
+        sprintf(sz, "%.3s", szSignName[SFromZ(pos1)]);
+    } else if (fPar)
       sprintf(sz, "%c%2d", pos1 < 0 ? '-' : '+', (int)RAbs(pos1));
+    else
+      sprintf(sz, "%2d%%", (int)pos1);
     PrintSz(sz);
   } else {
-    if (asp == aSig && ret1 > 0.0)
-      pos1 += 29.999;
-    else if (asp == aDeg)
-      pos1 = (real)obj2 * (rDegMax / (real)(cSign * us.nSignDiv));
-    if (!fPar)
+    if (fLon)
       PrintZodiac(pos1);
-    else
+    else if (fPar)
       PrintAltitude(pos1);
+    else {
+      sprintf(sz, "%f", pos1); sprintf(sz+6, "%s", "%"); PrintSz(sz);
+    }
     AnsiColor(ki);
   }
   sprintf(sz, "%c", ret1 > 0.0 ? ')' : (ret1 < 0.0 ? ']' : '>')); PrintSz(sz);
   PrintCh(' ');
 
   // Mark aspect with wax/wan for charts that don't already include it.
-  if (us.nAppSep == 2 && !(chart == 'a' || chart == 'A' || chart == 'm' ||
-    chart == 'M' || chart == 'D' || chart == 'T' || chart == 'U')) {
+  if (us.nAppSep == 2 &&
+    !(chart == 'a' || chart == 'A' || chart == 'm' || chart == 'M' ||
+    chart == 'D' || chart == 'T' || chart == 'U' || chart == '8')) {
     if (asp > aOpp) {
       rDiff = MinDifference(pos2, pos1);
       if (chart == 't' || chart == 'T')
@@ -860,25 +823,37 @@ void PrintAspect(int obj1, real pos1, real ret1, int asp,
     sprintf(sz, "%d%s 3D House", obj2, szSuffix[obj2]); PrintSz(sz);
   } else if (asp == aNod) {
     AnsiColor(kElemA[obj2*2+1]);
-    sprintf(sz, "%s", szDir[obj2*2]); PrintSz(sz);
+    sprintf(sz, "%s", rgszDir[obj2*2]); PrintSz(sz);
   } else if (asp >= 0 || asp == aDis) {
-    ki = !fPar ? kSignA(SFromZ(pos2)) : kDefault;
+    ki = fLon ? kSignA(SFromZ(pos2)) : kDefault;
     AnsiColor(ki);
     if (chart == 't' || chart == 'u' || chart == 'T' || chart == 'U')
       PrintSz("natal ");
     sprintf(sz, "%c", ret2 > 0.0 ? '(' : (ret2 < 0.0 ? '[' : '<'));
     PrintSz(sz);
     if (!us.fSeconds) {
-      if (!fPar)
-        sprintf(sz, "%.3s", szSignName[SFromZ(pos2)]);
-      else
+      if (fLon) {
+        if (us.nDegForm == df360)
+          sprintf(sz, "%3d", (int)pos2);
+        else if (us.nDegForm == dfHM)
+          sprintf(sz, "%2dh", (int)pos2/15);
+        else if (us.nDegForm == dfNak)
+          sprintf(sz, "%.3s", szNakshatra[(int)(pos2 / (rDegMax/27.0)) + 1]);
+        else
+          sprintf(sz, "%.3s", szSignName[SFromZ(pos2)]);
+      } else if (fPar)
         sprintf(sz, "%c%2d", pos2 < 0 ? '-' : '+', (int)RAbs(pos2));
+      else
+        sprintf(sz, "%2d%%", (int)pos2);
       PrintSz(sz);
     } else {
-      if (!fPar)
+      if (fLon)
         PrintZodiac(pos2);
-      else
+      else if (fPar)
         PrintAltitude(pos2);
+      else {
+        sprintf(sz, "%f", pos2); sprintf(sz+6, "%s", "%"); PrintSz(sz);
+      }
       AnsiColor(ki);
     }
     sprintf(sz, "%c ", ret2 > 0.0 ? ')' : (ret2 < 0.0 ? ']' : '>'));
@@ -887,8 +862,8 @@ void PrintAspect(int obj1, real pos1, real ret1, int asp,
     sprintf(sz, "%.10s", szObjDisp[obj2]); PrintSz(sz);
   }
 
-  if (chart == 'D' || chart == 'T' || chart == 'U' ||
-    chart == 'a' || chart == 'A' || chart == 'm' || chart == 'M')
+  if (chart == 'D' || chart == 'T' || chart == 'U' || chart == 'a' ||
+    chart == 'A' || chart == 'm' || chart == 'M' || chart == '8')
     PrintTab(' ', 10-CchSz(szObjDisp[obj2]));
   is.fSeconds = fSav;
 }
@@ -904,10 +879,10 @@ void PrintAspect(int obj1, real pos1, real ret1, int asp,
 void ChartInDayInfluence(void)
 {
   int source[MAXINDAY], aspect[MAXINDAY], dest[MAXINDAY], ca[cAspect + 1],
-    co[objMax], occurcount = 0, i, j, k, l, m;
-  real power[MAXINDAY], rPowSum = 0.0;
+    co[objMax], occurcount = 0, i, j, k, l, nSav;
+  real power[MAXINDAY], rPowSum = 0.0, rT;
   char sz[cchSzDef], *pch;
-  flag f;
+  flag fDistance = us.fDistance && !us.fParallel, f;
 
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
@@ -926,9 +901,9 @@ void ChartInDayInfluence(void)
       if (FIgnore(i) || (k = grid->n[i][j]) == 0 || occurcount >= MAXINDAY)
         continue;
       source[occurcount] = i; aspect[occurcount] = k; dest[occurcount] = j;
-      l = grid->v[i][j];
+      rT = grid->v[i][j];
       power[occurcount] = (RTransitInf(i)/4.0) * (RTransitInf(j)/4.0) *
-        rAspInf[k]*(1.0-(real)NAbs(l)/3600.0/GetOrb(i, j, k));
+        rAspInf[k]*(1.0-(real)RAbs(rT)/GetOrb(i, j, k));
       rPowSum += power[occurcount];
       ca[k]++;
       co[i]++; co[j]++;
@@ -944,8 +919,8 @@ void ChartInDayInfluence(void)
       k = j+1;
       switch (us.nAspectSort) {
       default:  f = power[j] > power[k]; break;
-      case aso: f = NAbs(grid->v[source[j]][dest[j]]) <
-                    NAbs(grid->v[source[k]][dest[k]]); break;
+      case aso: f = RAbs(grid->v[source[j]][dest[j]]) <
+                    RAbs(grid->v[source[k]][dest[k]]); break;
       case asn: f = grid->v[source[j]][dest[j]] <
                     grid->v[source[k]][dest[k]]; break;
       case asO: f = rgobjList2[source[j]]*cObj + rgobjList2[dest[j]] <
@@ -974,16 +949,25 @@ void ChartInDayInfluence(void)
   for (i = 0; i < occurcount; i++) {
     sprintf(sz, "%3d: ", i+1); PrintSz(sz);
     j = source[i]; k = aspect[i]; l = dest[i];
-    PrintAspect(j, !us.fParallel ? planet[j] : planetalt[j], ret[j], k, l,
-      !us.fParallel ? planet[l] : planetalt[l], ret[l], 'D');
-    m = grid->v[j][l];
-    AnsiColor(m < 0 ? kWhiteA : kLtGrayA);
-    pch = SzDegree((real)m/3600.0);
-    sprintf(sz, " - %s%s", szAppSep[us.nAppSep*2 + (m >= 0)],
-      &pch[*pch == ' ']);
+    PrintAspect(j, planetval(j), planetdir(j), k,
+      l, planetval(l), planetdir(l), 'D');
+    rT = grid->v[j][l];
+    AnsiColor(rT < 0.0 ? kWhiteA : kLtGrayA);
+    if (fDistance) {
+      nSav = us.nDegForm; us.nDegForm = df360;
+    }
+    sprintf(sz, " - %s %s", szAppSep[us.nAppSep*2 + (rT >= 0.0)],
+      SzDegree2(RAbs(rT)));
+    if (fDistance) {
+      us.nDegForm = nSav;
+      for (pch = sz; *pch; pch++)
+        ;
+      pch[-1] = '%';
+    }
     PrintSz(sz);
     AnsiColor(kDkGreenA);
-    sprintf(sz, " - power:%6.2f", power[i]); PrintSz(sz);
+    PrintSz(" - power:");
+    sprintf(sz, is.fSeconds ? "%8.4f" : "%6.2f", power[i]); PrintSz(sz);
     PrintInDayEvent(j, k, l, -1);
   }
   if (occurcount == 0)
@@ -999,11 +983,11 @@ void ChartInDayInfluence(void)
 void ChartTransitInfluence(flag fProg)
 {
   int source[MAXINDAY], aspect[MAXINDAY], dest[MAXINDAY], ca[cAspect + 1],
-    co[objMax], occurcount = 0, fProgress = us.fProgress, i, j, k, l, m;
-  real power[MAXINDAY], rPowSum = 0.0;
+    co[objMax], occurcount = 0, fProgress = us.fProgress, i, j, k, l, m, nSav;
+  real power[MAXINDAY], rPowSum = 0.0, rT;
   char sz[cchSzDef], *pch;
   byte ignoreSav[objMax];
-  flag f;
+  flag fDistance = us.fDistance && !us.fParallel, f;
 
   ClearB((pbyte)ca, sizeof(ca));
   ClearB((pbyte)co, sizeof(co));
@@ -1060,9 +1044,9 @@ void ChartTransitInfluence(flag fProg)
         occurcount >= MAXINDAY)
         continue;
       source[occurcount] = i; aspect[occurcount] = k; dest[occurcount] = j;
-      l = grid->v[i][j];
+      rT = grid->v[i][j];
       power[occurcount] = RTransitInf(i) * (RObjInf(j)/4.0) * rAspInf[k] *
-        (1.0-(real)NAbs(l)/3600.0/GetOrb(i, j, k));
+        (1.0-(real)RAbs(rT)/GetOrb(i, j, k));
       rPowSum += power[occurcount];
       ca[k]++;
       co[i]++; co[j]++;
@@ -1078,8 +1062,8 @@ void ChartTransitInfluence(flag fProg)
       k = j+1;
       switch (us.nAspectSort) {
       default:  f = power[j] > power[k]; break;
-      case aso: f = NAbs(grid->v[source[j]][dest[j]]) <
-                    NAbs(grid->v[source[k]][dest[k]]); break;
+      case aso: f = RAbs(grid->v[source[j]][dest[j]]) <
+                    RAbs(grid->v[source[k]][dest[k]]); break;
       case asn: f = grid->v[source[j]][dest[j]] <
                     grid->v[source[k]][dest[k]]; break;
       case asO: f = rgobjList2[source[j]]*cObj + rgobjList2[dest[j]] <
@@ -1108,17 +1092,25 @@ void ChartTransitInfluence(flag fProg)
   for (i = 0; i < occurcount; i++) {
     k = aspect[i]; l = source[i]; m = dest[i];
     sprintf(sz, "%3d: ", i+1); PrintSz(sz);
-    PrintAspect(l, !us.fParallel ? cp2.obj[l] : cp2.alt[l], cp2.dir[l], k,
-      dest[i], !us.fParallel ? cp1.obj[m] : cp1.alt[m], cp1.dir[m],
-      fProg ? 'U' : 'T');
-    m = grid->v[l][m];
-    AnsiColor(m < 0 ? kWhiteA : kLtGrayA);
-    pch = SzDegree((real)m/3600.0);
-    sprintf(sz, "- %s%s", szAppSep[us.nAppSep*2 + (m >= 0)],
-      &pch[*pch == ' ']);
+    PrintAspect(l, planetval2(l), planetdir2(l), k,
+      dest[i], planetval1(m), planetdir1(m), fProg ? 'U' : 'T');
+    rT = grid->v[l][m];
+    AnsiColor(rT < 0.0 ? kWhiteA : kLtGrayA);
+    if (fDistance) {
+      nSav = us.nDegForm; us.nDegForm = df360;
+    }
+    sprintf(sz, " - %s %s", szAppSep[us.nAppSep*2 + (rT >= 0.0)],
+      SzDegree2(RAbs(rT)));
+    if (fDistance) {
+      us.nDegForm = nSav;
+      for (pch = sz; *pch; pch++)
+        ;
+      pch[-1] = '%';
+    }
     PrintSz(sz);
     AnsiColor(kDkGreenA);
-    sprintf(sz, " - power: %5.2f", power[i]); PrintSz(sz);
+    PrintSz(" - power: ");
+    sprintf(sz, is.fSeconds ? "%7.4f" : "%5.2f", power[i]); PrintSz(sz);
     if (k == aCon && l == dest[i]) {    // Print a "R" to mark returns.
       AnsiColor(kWhiteA);
       PrintSz(" R");
@@ -1152,8 +1144,7 @@ flag ChartAstroGraphRelation(void)
   char sz[cchSzDef], sz2[2][4];
   real planet1[2][objMax], planet2[2][objMax], mc[2][objMax], ic[2][objMax],
     asc[2][objMax], des[2][objMax], asc1[2][objMax], des1[2][objMax],
-    rgad[2][objMax], lonmc[2], lo[2],
-    longm, w, x, y, z, ww, xx, yy, zz, ad, oa, am, od;
+    rgad[2][objMax], lo[2], longm, w, x, y, z, ww, xx, yy, zz, ad, oa, am, od;
   int cCross = 0, i, i2, j, k, l, m, n, o;
   byte ignore3[objMax];
   flag fTransit, fEdge;
@@ -1165,12 +1156,6 @@ flag ChartAstroGraphRelation(void)
     pcr = rgcr;
   }
 
-  ciCore = ciTwin;
-  CastChart(2);
-  lonmc[1] = is.lonMC;
-  ciCore = ciMain;
-  CastChart(1);
-  lonmc[0] = is.lonMC;
   fTransit = us.nRel == rcTransit || us.nRel == rcProgress;
   if (fTransit) {
     sprintf(sz2[0], "%c.", us.nRel == rcTransit ? 'T' : 'P');
@@ -1224,7 +1209,7 @@ flag ChartAstroGraphRelation(void)
     i = rgobjList[j];
     if (!ignore3[i] && FThing2(i)) {
       AnsiColor(kObjA[i]);
-      x = lonmc[i2] - planet1[i2][i];
+      x = rgpcp[i2+1]->lonMC - planet1[i2][i];
       if (x < 0.0)
         x += rDegMax;
       if (x > rDegHalf)
@@ -1295,7 +1280,7 @@ flag ChartAstroGraphRelation(void)
       asc[i2][k] = des[i2][k] = rgad[i2][k] = rLarge;
   for (j = 90-(90 % us.nAstroGraphStep); j >= -90; j -= us.nAstroGraphStep) {
     for (i2 = 0; i2 <= 1; i2++) {
-    longm = Mod(lonmc[i2] + lo[i2]);
+    longm = Mod(rgpcp[i2+1]->lonMC + lo[i2]);
     fEdge = (j >= 90 || j <= -90);
     if (!fEdge) {
       AnsiColor(kDefault);
@@ -1735,6 +1720,9 @@ void ChartCalendarYear(void)
 }
 
 
+CONST char *rgszDateDiff[11] = {"", "Years  ", "Months ", "Weeks  ", "Days   ",
+  "Hours  ", "Minutes", "Seconds", "Longitude", "Latitude ", "Distance "};
+
 // Display either a biorhythm chart or the time difference in various units
 // between two charts, i.e. two types of relationship "charts" that aren't
 // related in any way to planetary positions, as specified by either the
@@ -1742,7 +1730,7 @@ void ChartCalendarYear(void)
 
 void DisplayRelation(void)
 {
-  char sz[cchSzDef];
+  char sz[cchSzDef], szT[cchSzDef];
   int i;
   real k, l;
 #ifdef BIORHYTHM
@@ -1757,24 +1745,25 @@ void DisplayRelation(void)
     k = RAbs(ciMain.lon - ciTwin.lon);
     l = RAbs(ciMain.lat - ciTwin.lat);
     for (i = 1; i <= 10; i++) {
-      if (i <= cRainbow)
-        AnsiColor(kRainbowA[i]);
-      else
-        AnsiColor(kDefault);
+      AnsiColor(i <= cRainbow ? kRainbowA[i] : kDefault);
+      sprintf(szT, "%s: %%.%dlf", rgszDateDiff[i],
+        2 + us.fSeconds*(2 - (i == 7)));
       switch (i) {
-      case 1: sprintf(sz, "Years  : %.2f", is.JD/rDayInYear);    break;
-      case 2: sprintf(sz, "Months : %.2f", is.JD/(rDayInYear/12.0)); break;
-      case 3: sprintf(sz, "Weeks  : %.2f", is.JD/7.0);           break;
-      case 4: sprintf(sz, "Days   : %.2f", is.JD);               break;
-      case 5: sprintf(sz, "Hours  : %.2f", is.JD*24.0);          break;
-      case 6: sprintf(sz, "Minutes: %.2f", is.JD*(24.0*60.0));   break;
-      case 7: sprintf(sz, "Seconds: %.2f", is.JD*(24.0*3600.0)); break;
-      case 8: sprintf(sz, "Longitude: %.2f", k);                 break;
-      case 9: sprintf(sz, "Latitude : %.2f", l);                 break;
+      case 1: sprintf(sz, szT, is.JD/rDayInYear);    break;
+      case 2: sprintf(sz, szT, is.JD/(rDayInYear/12.0)); break;
+      case 3: sprintf(sz, szT, is.JD/7.0);           break;
+      case 4: sprintf(sz, szT, is.JD);               break;
+      case 5: sprintf(sz, szT, is.JD*24.0);          break;
+      case 6: sprintf(sz, szT, is.JD*(24.0*60.0));   break;
+      case 7: sprintf(sz, szT, is.JD*(24.0*3600.0)); break;
+      case 8: sprintf(sz, szT, k);                 break;
+      case 9: sprintf(sz, szT, l);                 break;
       case 10:
         l = SphDistance(ciMain.lon, ciMain.lat, ciTwin.lon, ciTwin.lat);
-        sprintf(sz, "Distance : %.2f (%.2f %s)", l, l / 360.0 *
-          (us.fEuroDist ? 40075.0 : 24901.0), us.fEuroDist ? "km" : "miles");
+        sprintf(sz, szT, l); PrintSz(sz);
+        sprintf(szT, " (%%.%dlf %%s)", 2 + us.fSeconds*2);
+        sprintf(sz, szT, l / 360.0 * (us.fEuroDist ? 40075.0 : 24901.0),
+          us.fEuroDist ? "km" : "miles");
         break;
       }
       PrintSz(sz);

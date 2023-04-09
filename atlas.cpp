@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: atlas.cpp
+** Astrolog (Version 7.60) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -1209,11 +1209,11 @@ flag FLoadZoneRules(FILE *file, int irunMax, int irueMax)
 }
 
 
+int rgznChange[iznMax], rgizcChange[iznMax+1];
+
 // Load time zone changes from an open file, consisting of the specified
 // number of zones, each consisting of a sublist of zone change entries
 // (total entries also specified). Implements the -YY2 command switch.
-
-int rgznChange[iznMax], rgizcChange[iznMax+1];
 
 flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
 {
@@ -1376,11 +1376,11 @@ flag FLoadZoneChanges(FILE *file, int izcnMax, int izceMax)
 }
 
 
+int mpznzc[iznMax];
+
 // Load time zone links from an open file, consisting of the specified number
 // of time zones from atlas.as, and how each maps to a zone change area
 // specified above with -YY2. Implements the -YY3 command switch.
-
-int mpznzc[iznMax];
 
 flag FLoadZoneLinks(FILE *file, int czl)
 {
@@ -1745,7 +1745,7 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
 
 
 // Sanitize a time, in which the individual parameters may be out of range.
-// For example, 25:00 on 32 Dec 2021 gets converted to 1:00 on 2 Jan 2022.
+// For example, 25:00 on 32 Dec 2022 gets converted to 1:00 on 2 Jan 2023.
 
 void AdjustTime(int *mon, int *day, int *yea, int *tim)
 {
@@ -1856,6 +1856,12 @@ flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
     return fFalse;
 
   // Loop over all possible time zone areas, or just the one specified.
+  if (lDialog == 0 && iznIn < 0) {
+    AnsiColor(kWhiteA);
+    sprintf(sz, "%s %s time changes\n\n", szAppName, szVersionCore);
+    PrintSz(sz);
+    AnsiColor(kDefault);
+  }
   for (izn = (iznIn < 0 ? 0 : iznIn); izn < (iznIn < 0 ? iznMax : iznIn+1);
     izn++) {
 
@@ -1863,17 +1869,15 @@ flag DisplayTimezoneChanges(int iznIn, size_t lDialog, CI *ci)
   if (iznIn < 0 && izn > 0)
     PrintL();
   izcn = mpznzc[izn];
-  if (lDialog == 0) {
-    if (ci == NULL) {
-      AnsiColor(kWhiteA);
-      sprintf(sz, "Time changes within zone: %s", rgszzn[izn]); PrintSz(sz);
-      i = rgznChange[izcn];
-      if (i != izn) {
-        sprintf(sz, " (same as %s)", rgszzn[i]); PrintSz(sz);
-      }
-      PrintL();
-      AnsiColor(kDefault);
+  if (lDialog == 0 && ci == NULL) {
+    AnsiColor(kWhiteA);
+    sprintf(sz, "Time changes within zone: %s", rgszzn[izn]); PrintSz(sz);
+    i = rgznChange[izcn];
+    if (i != izn) {
+      sprintf(sz, " (same as %s)", rgszzn[i]); PrintSz(sz);
     }
+    PrintL();
+    AnsiColor(kDefault);
   }
 #ifdef WIN
   else {

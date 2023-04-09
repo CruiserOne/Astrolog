@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: general.cpp
+** Astrolog (Version 7.60) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -415,6 +415,28 @@ KV KvHue(real deg)
 }
 
 
+CONST int rgnHue2[cSign+1] =
+  {0, 15, 30, 45, 60, 75, 120, 180, 210, 240, 270, 315, 360};
+
+// Return a RGB color of the rainbow given a number 0-360, in which 0 is red,
+// 120 is yellow, and 240 is blue. This aligns with paint based RYB primary
+// colors, instead of light based RGB colors as in KvHue().
+
+KV KvHue2(real deg)
+{
+  int sig;
+
+  while (deg >= rHueMax)
+    deg -= rHueMax;
+  while (deg < 0.0)
+    deg += rHueMax;
+  sig = SFromZ(deg)-1;
+  deg = (real)rgnHue2[sig] +
+    (deg - (real)(sig*30)) / 30.0 * (real)(rgnHue2[sig+1] - rgnHue2[sig]);
+  return KvHue(deg);
+}
+
+
 /*
 ******************************************************************************
 ** General Astrology Procedures.
@@ -586,8 +608,9 @@ char *Dignify(int obj, int sign)
 
 LExit:
   // Put "most significant" rulership state present in the first character.
-  for (ich = 1; ich <= 5; ich += ich == 1 ? 3 :
-    (ich == 4 ? -2 : (ich == 3 ? 2 : 1))) {
+  // Order: Standard rulership, exaltation, esoteric, Hierarchical, Ray.
+  for (ich = 1; ich <= rrMax; ich += (ich == 1 ? 3 :
+    (ich == 4 ? -2 : (ich == 3 ? 2 : 1)))) {
     if (szDignify[ich] != '_') {
       szDignify[0] = szDignify[ich];
       break;
@@ -643,8 +666,8 @@ void EnsureStarBright()
       rStarBrightDef[i] = 1.0;
 #endif
       rStarBright[i] = rStarBrightDef[i];
-      // Assume each star is 100 LY away.
-      rStarDistDef[i] = rStarDist[i] = 100.0 * rLYToAU;
+      // No distance data, so assume each star is 100 LY away.
+      rStarBrightDistDef[i] = cp0.dist[oNorm+i] = 100.0 * rLYToAU;
     }
 
 #ifdef SWISS
@@ -887,8 +910,7 @@ void RedoRestrictions()
       f = fTrue;
       break;
     }
-  if (!(us.nStar != 0 && f))
-    us.nStar = f;
+  us.fStar = f;
   AdjustRestrictions();
 }
 
@@ -912,6 +934,8 @@ int ObjOrbit(int obj)
 {
   if (FGeo(obj))
     return oEar;
+  if (FBetween(obj, oMer, cPlanet) || obj == oEar)
+    return oSun;
   if (FCust(obj)) {
 #ifdef SWISS
     // Check if this object has been redefined to be related to Earth's Moon.
@@ -921,14 +945,27 @@ int ObjOrbit(int obj)
     if (rgTypSwiss[obj - custLo] == 3 && rgObjSwiss[obj - custLo] % 100 < 99)
       return rgObjSwiss[obj - custLo] / 100 + 1;
     // Check if this is a JPL Horizons object for a planetary moon.
-    if (rgTypSwiss[obj - custLo] == 4 && rgObjSwiss[obj - custLo] % 100 < 99 &&
-      FBetween(rgObjSwiss[obj - custLo], 401, 998))
-      return rgObjSwiss[obj - custLo] / 100 + 1;
+    if (rgTypSwiss[obj - custLo] == 4) {
+      if (rgObjSwiss[obj - custLo] % 100 < 99 &&
+        FBetween(rgObjSwiss[obj - custLo], 401, 998))
+        return rgObjSwiss[obj - custLo] / 100 + 1;
+      // Check if this is a JPL Horizons object for a Dwarf planet moon.
+      if (rgObjSwiss[obj - custLo] == 120136199)  // Dysnomia
+        return oEri;
+      if (rgObjSwiss[obj - custLo] == 120136108)  // Hi'iaka
+        return oHau;
+      if (rgObjSwiss[obj - custLo] == 220136108)  // Namaka
+        return oHau;
+      if (rgObjSwiss[obj - custLo] == 120050000)  // Weywot
+        return oQua;
+      if (rgObjSwiss[obj - custLo] == 120090482)  // Vanth
+        return oOrc;
+      if (rgObjSwiss[obj - custLo] == 120120347)  // Actaea
+        return oOrc;  // Hack: Since Salacia not present by default
+    }
 #endif
     return oSun;
   }
-  if (FBetween(obj, oMer, cPlanet) || obj == oEar)
-    return oSun;
   return -1;
 }
 
@@ -940,9 +977,11 @@ int ObjMoons(int i)
   int pla, moo, obj;
 
   pla = i/100; moo = i - pla*100;
-  if (FBetween(pla, 4, 9) && FBetween(moo, 1, 8))
-    obj = moonsLo + nMooMap[pla-4][moo-1];
-  else if (FBetween(pla, 5, 9) && moo == 99)
+  if (FBetween(pla, 4, 9) && FBetween(moo, 1, 8)) {
+    obj = nMooMap[pla-4][moo-1];
+    if (obj >= 0)
+      obj += moonsLo;
+  } else if (FBetween(pla, 5, 9) && moo == 99)
     obj = cobLo + (pla-5);
   else
     obj = -1;
@@ -1161,7 +1200,7 @@ void PrintCh(char ch)
 }
 
 
-// A simple procedure used throughout Astrolog: Print a particular
+// A simple procedure used throughout the program: Print a particular
 // character on the screen 'n' times.
 
 void PrintTab(char ch, int cch)
@@ -1211,30 +1250,42 @@ void PrintSzScreen(CONST char *sz)
 }
 
 
-// Print a string, however also expand escape sequences like "\A" to that
-// AstroExpression custom variable, and "\n" to a newline.
+// Print a string, however also expand escape sequences like "\n" to a
+// newline, "\A" to AstroExpression custom variable @a, and "\a" to the
+// AstroExpression custom string indexed by custom variable @a.
 
-void PrintSzFormat(CONST char *sz)
+void PrintSzFormat(CONST char *sz, flag fPopup)
 {
-  char szFormat[cchSzMax], *pch2;
+  char szFormat[cchSzLine], *pch2;
   CONST char *pch;
 
   for (pch = sz, pch2 = szFormat; *pch; pch++, pch2++) {
-#ifdef EXPRESS
-    if (*pch == '\\' && FCapCh(pch[1])) {
-      pch2 = PchFormatExpression(pch2, pch[1] - '@') - 1;
-      pch++;
-      continue;
-    }
-#endif
     *pch2 = *pch;
     if (*pch == '\\' && (pch[1] == '\\' || pch[1] == 'n')) {
       if (pch[1] == 'n')
         *pch2 = '\n';
       pch++;
     }
+#ifdef EXPRESS
+    else if (*pch == '\\') {
+      if (FCapCh(pch[1])) {
+        pch2 = PchFormatExpression(pch2, pch[1] - '@') - 1;
+        pch++;
+        continue;
+      } else if (FUncapCh(pch[1])) {
+        pch2 = PchFormatString(pch2, pch[1] - '`') - 1;
+        pch++;
+        continue;
+      }
+    }
+#endif
   }
   *pch2 = chNull;
+#ifdef WIN
+  if (fPopup)
+    PrintNotice(szFormat);
+  else
+#endif
   PrintSz(szFormat);
 }
 
@@ -1501,9 +1552,9 @@ void AnsiColor(int k)
 void PrintZodiac(real deg)
 {
   if (us.fRound) {
-    if (us.nDegForm == 0)
+    if (us.nDegForm == dfZod)
       deg = Mod(deg + (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0));
-    else if (us.nDegForm == 1)
+    else if (us.nDegForm == dfHM)
       deg = Mod(deg + (is.fSeconds ? rRound/4.0/60.0 : rRound/4.0));
   }
   AnsiColor(kSignA((int)(deg / 30.0) + 1));
@@ -1530,11 +1581,6 @@ char ChDeg()
 }
 
 
-CONST char *szNakshatra[27+1] = {"",
-  "Ashv", "Bhar", "Krit", "Rohi", "Mrig", "Ardr", "Puna", "Push", "Ashl",
-  "Magh", "PPha", "UPha", "Hast", "Chit", "Swat", "Vish", "Anur", "Jyes",
-  "Mula", "PAsh", "UAsh", "Srav", "Dhan", "Shat", "PBha", "UBha", "Reva"};
-
 // Given a zodiac position, return a string containing it as it's formatted
 // for display to the user.
 
@@ -1545,7 +1591,7 @@ char *SzZodiac(real deg)
   real s;
 
   switch (us.nDegForm) {
-  case 0:
+  case dfZod:
     // Normally, format the position in degrees/sign/minutes format.
 
     sign = (int)deg / 30;
@@ -1558,7 +1604,7 @@ char *SzZodiac(real deg)
     }
     break;
 
-  case 1:
+  case dfHM:
     // However, if -sh switch in effect, format position as hours/minutes.
 
     d = (int)deg / 15;
@@ -1570,7 +1616,7 @@ char *SzZodiac(real deg)
     }
     break;
 
-  case 2:
+  case df360:
     // Or, if -sd in effect, format position as a simple degree.
 
     sprintf(szZod, is.fSeconds ? "%11.7f" : "%7.3f", deg);
@@ -1582,7 +1628,7 @@ char *SzZodiac(real deg)
     deg = Mod(deg + rSmall);
     sign = (int)(deg / (rDegMax/27.0));
     d = (int)((deg - (real)sign*(rDegMax/27.0)) * 40.0 / (rDegMax/27.0));
-    sprintf(szZod, "%2d%s%d", sign+1, szNakshatra[sign + 1], d/10 + 1);
+    sprintf(szZod, "%2d%.4s%d", sign+1, szNakshatra[sign + 1], d/10 + 1);
     if (is.fSeconds)
       sprintf(&szZod[7], ".%d%s", d%10,
         szSignAbbrev[Mod12((int)(deg/(rDegMax/27.0/4.0))+1)]);
@@ -1603,7 +1649,7 @@ char *SzAltitude(real deg)
 
   f = deg < 0.0;
   deg = RAbs(deg);
-  if (us.nDegForm != 2) {
+  if (us.nDegForm != df360) {
     if (us.fRound)
       deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
     d = (int)deg;
@@ -1634,7 +1680,7 @@ char *SzDegree(real deg)
   real s;
 
   deg = RAbs(deg);
-  if (us.nDegForm != 2) {
+  if (us.nDegForm != df360) {
     if (us.fRound)
       deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
     d = (int)deg;
@@ -1664,7 +1710,7 @@ char *SzDegree2(real deg)
   real s;
 
   deg = RAbs(deg);
-  if (us.nDegForm != 2) {
+  if (us.nDegForm != df360) {
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
     sprintf(szPos, "%d%c%02d'", d, ChDeg(), m);
@@ -1795,6 +1841,8 @@ char *SzZone(real zon)
 
   if (zon == zonLMT)
     sprintf(szZon, "LMT");
+  else if (zon == zonLAT)
+    sprintf(szZon, "LAT");
   else if (!is.fSeconds && RFract(RAbs(zon)) < rSmall)
     sprintf(szZon, "%d%c", (int)RAbs(zon), zon < 0.0 ? 'E' : 'W');
   else
@@ -1843,7 +1891,7 @@ char *SzLocation(real lon, real lat)
   }
   if (us.fAnsiChar != 3) {
     chDeg = ChDeg();
-    if (us.nDegForm != 2) {
+    if (us.nDegForm != df360) {
       if (!is.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%c%3.0f%c%02d%c",
           RFloor(RAbs(lon)), chDeg, i, chLon,
@@ -1861,7 +1909,7 @@ char *SzLocation(real lon, real lat)
           RAbs(lon), chLon, RAbs(lat), chLat);
     }
   } else {
-    if (us.nDegForm != 2) {
+    if (us.nDegForm != df360) {
       if (!is.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%3.0f%c%02d",
           RFloor(RAbs(lon)), chLon, i,
@@ -2079,11 +2127,15 @@ flag FAppendCIList(CONST CI *pci)
 }
 
 
+
+#define cShellGap 9  // Sequence A102549
+CONST int rgnShellGap[] = {1, 4, 10, 23, 57, 132, 301, 701, 1750};
+
 // Sort all charts in the chart list by the specified method.
 
 flag FSortCIList(int nMethod)
 {
-  int i, j;
+  int ig, gap, i, j;
   CI ciT, *pci1, *pci2;
   real *rgr = NULL, rT;
   flag fCompare;
@@ -2119,42 +2171,49 @@ flag FSortCIList(int nMethod)
     }
   }
 
-  // Actually sort the chart list.
-  for (i = 1; i < is.cci; i++) {
-    j = i-1;
-    do {
-      pci1 = &is.rgci[j]; pci2 = &is.rgci[j+1];
-      switch (nMethod) {
-      case 0:
-        fCompare = (pci1->yea > pci2->yea ||
-          (pci1->yea == pci2->yea && (pci1->mon > pci2->mon ||
-          (pci1->mon == pci2->mon && (pci1->day > pci2->day ||
-          (pci1->day == pci2->day && pci1->tim > pci2->tim))))));
-        break;
-      case 1:
-        fCompare = (pci1->lon < pci2->lon);
-        break;
-      case 2:
-        fCompare = (pci1->lat < pci2->lat);
-        break;
-      case 3:
-        fCompare = (NCompareSz(is.rgci[j].nam, is.rgci[j+1].nam) > 0);
-        break;
-      case 4:
-        fCompare = (NCompareSz(is.rgci[j].loc, is.rgci[j+1].loc) > 0);
-        break;
-      case 5:
-        fCompare = (rgr[j] > rgr[j+1]);
-        if (fCompare) {
-          rT = rgr[j]; rgr[j] = rgr[j+1]; rgr[j+1] = rT;
+  // Actually sort the chart list, using shell sort.
+  pci2 = &ciT;
+  for (ig = cShellGap-1; ig >= 0; ig--) {
+    gap = rgnShellGap[ig];
+    for (i = gap; i < is.cci; i++) {
+      ciT = is.rgci[i];
+      if (nMethod == 5)
+        rT = rgr[i];
+      for (j = i; j >= gap; j -= gap) {
+        pci1 = &is.rgci[j - gap];
+        switch (nMethod) {
+        case 0:
+          fCompare = (pci1->yea > pci2->yea ||
+            (pci1->yea == pci2->yea && (pci1->mon > pci2->mon ||
+            (pci1->mon == pci2->mon && (pci1->day > pci2->day ||
+            (pci1->day == pci2->day && pci1->tim > pci2->tim))))));
+          break;
+        case 1:
+          fCompare = (pci1->lon < pci2->lon);
+          break;
+        case 2:
+          fCompare = (pci1->lat < pci2->lat);
+          break;
+        case 3:
+          fCompare = (NCompareSz(pci1->nam, pci2->nam) > 0);
+          break;
+        case 4:
+          fCompare = (NCompareSz(pci1->loc, pci2->loc) > 0);
+          break;
+        case 5:
+          fCompare = (rT < rgr[j - gap]);
+          if (fCompare)
+            rgr[j] = rgr[j - gap];
+          break;
         }
-        break;
+        if (!fCompare)
+          break;
+        is.rgci[j] = is.rgci[j - gap];
       }
-      if (!fCompare)
-        break;
-      ciT = is.rgci[j]; is.rgci[j] = is.rgci[j+1]; is.rgci[j+1] = ciT;
-      j--;
-    } while (j >= 0);
+      is.rgci[j] = ciT;
+      if (nMethod == 5)
+        rgr[j] = rT;
+    }
   }
   if (rgr != NULL)
     DeallocateP(rgr);
@@ -2573,7 +2632,8 @@ pbyte PAllocate(long cb, CONST char *szType)
 #endif
 
   // Handle success or failure of the allocation.
-  if (pb == NULL && szType) {
+  Assert(szType != NULL);
+  if (pb == NULL) {
     sprintf(szT, "%s: Not enough memory for %s (%ld bytes).",
       szAppName, szType, cb);
     PrintWarning(szT);
@@ -2617,6 +2677,24 @@ void DeallocateP(void *pv)
   DeallocatePCore(pv);
 #endif
   is.cAlloc--;
+}
+
+
+// Change the size of a memory allocation, containing a list of cElem items of
+// cbElem size, to a list of cElemNew items.
+
+pbyte RgReallocate(void *rgElem, int cElem, int cbElem, int cElemNew,
+  CONST char *szType)
+{
+  pbyte rgElemNew;
+
+  rgElemNew = PAllocate(cElemNew * cbElem, szType);
+  if (rgElemNew == NULL)
+    return NULL;
+  ClearB(rgElemNew, cElemNew * cbElem);
+  if (rgElem != NULL)
+    CopyRgb((pbyte)rgElem, rgElemNew, Min(cElem, cElemNew) * cbElem);
+  return rgElemNew;
 }
 
 

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xcharts0.cpp
+** Astrolog (Version 7.60) File: xcharts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -104,9 +104,9 @@ int DrawPrint(CONST char *sz, int m, int n)
 int DrawZodiac(real deg, int n)
 {
   if (us.fRound) {
-    if (us.nDegForm == 0)
+    if (us.nDegForm == dfZod)
       deg = Mod(deg + (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0));
-    else if (us.nDegForm == 1)
+    else if (us.nDegForm == dfHM)
       deg = Mod(deg + (is.fSeconds ? rRound/4.0/60.0 : rRound/4.0));
   }
   return DrawPrint(SzZodiac(deg), kSignB(SFromZ(deg)), n);
@@ -198,7 +198,7 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
       }
       if (us.fNavamsa)
         DrawPrint("Special: Navamsa mode", gi.kiLite, fFalse);
-      if (us.fMoonMove && (us.fMoons || us.nStar > 0)) {
+      if (us.fMoonMove && (us.fMoons || us.fStar)) {
         sprintf(sz, "Special: Overlay %ss",
           FStar(us.objCenter) ? "planet" : "moon");
         DrawPrint(sz, gi.kiLite, fFalse);
@@ -227,10 +227,17 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
             !(*pch2 == '\\' && pch2[1] == 'n'); pch++, pch2++) {
 #ifdef EXPRESS
             // Expand escape sequences like "\A" to that custom variable.
-            if (*pch2 == '\\' && FCapCh(pch2[1])) {
-              pch = PchFormatExpression(pch, pch2[1] - '@') + 1;
-              pch2++;
-              continue;
+            // Expand escape sequences like "\a" to that variable's string.
+            if (*pch2 == '\\') {
+              if (FCapCh(pch2[1])) {
+                pch = PchFormatExpression(pch, pch2[1] - '@') - 1;
+                pch2++;
+                continue;
+              } else if (FUncapCh(pch2[1])) {
+                pch = PchFormatString(pch, pch2[1] - '`') - 1;
+                pch2++;
+                continue;
+              }
             }
 #endif
             *pch = *pch2;
@@ -269,6 +276,7 @@ void DrawSidebar()
   ET et;
   int i, j, k, l, y, a, s;
   real r;
+  flag fSav;
 
   // Decorate the chart a little.
 
@@ -289,6 +297,8 @@ void DrawSidebar()
     // If decoration value 2, draw a moire pattern in each corner.
     k = gs.yWin * gs.nDecaSize / 200;
     l = gs.xWin * gs.nDecaSize / 200;
+    fSav = gs.fThick;
+    DrawThick(fFalse);
     for (y = 0; y <= 1; y++)
       for (i = 0; i <= 1; i++)
         for (s = 0; s <= 1; s++)
@@ -298,13 +308,14 @@ void DrawSidebar()
               s ? (i ? gs.xWin-1-a : a) : i*(gs.xWin-1),
               s ? y*(gs.yWin-1) : (y ? gs.yWin-1-a : a));
           }
+    DrawThick(fSav);
   }
 
   if (!gs.fText || us.fVelocity)    // Don't draw sidebar if -v0 flag is set.
     return;
   a = us.fAnsiChar;
   us.fAnsiChar =
-    (gs.nFont/10000 == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
+    (gs.nFontTxt == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
   DrawColor(gi.kiLite);
   i = gs.xWin-1;
   gs.xWin += xSideT;
@@ -389,7 +400,7 @@ void DrawSidebar()
       sprintf(sz, "%2d%s house: ", i, szSuffix[i]);
       y = DrawPrint(sz, kSignB(i), fTrue);
       if (!is.fSeconds && (gs.nScale == 100 ||
-        gs.nFont == 0 || !gi.fFile || gs.ft == ftBmp) && y < gs.yWin-1) {
+        gs.nFontAll == 0 || !gi.fFile || gs.ft == ftBmp) && y < gs.yWin-1) {
         s = gi.nScale;
         gi.nScale = gi.nScaleTextT;
         DrawSign(SFromZ(chouse[i]),
@@ -412,8 +423,9 @@ void DrawSidebar()
     sprintf(sz, is.fSeconds ? "%-3.3s: " : "%-4.4s: ", szObjDisp[i]);
     DrawPrint(sz, kObjB[i], fTrue);
     y = DrawZodiac(planet[i], fTrue);
-    if (!is.fSeconds && i < starLo && gi.nMode != gSector && (gs.nScale ==
-      100 || gs.nFont == 0 || !gi.fFile || gs.ft == ftBmp) && y < gs.yWin-1) {
+    if (!is.fSeconds && i < starLo && gi.nMode != gSector &&
+      (gs.nScale == 100 || gs.nFontAll == 0 || !gi.fFile || gs.ft == ftBmp) &&
+      y < gs.yWin-1) {
       // Don't draw planet glyph in PS or Metafile, since can't be resized.
       s = gi.nScale;
       gi.nScale = gi.nScaleTextT;
@@ -444,7 +456,7 @@ void DrawSidebar()
     s = rgobjList[i];
     if (!FProper(s))
       continue;
-    sprintf(sz, is.fSeconds ? "%3.3s: " : "%4.4s: ", szObjDisp[s]);
+    sprintf(sz, is.fSeconds ? "%-3.3s: " : "%-4.4s: ", szObjDisp[s]);
     DrawPrint(sz, kObjB[s], fTrue);
     DrawZodiac(planet[s], fTrue);
     DrawPrint("  ", gi.kiOn, fTrue);
@@ -499,23 +511,26 @@ void DrawSidebar()
 // Fill in the specified sector of a wheel chart at the given coordinates. The
 // sector type may be sign, house, or Gauquelin sector.
 
-void DrawFillWheel(int x, int y, int i, int typ)
+flag DrawFillWheel(int x, int y, int i, int typ)
 {
   KV kvC, kvF;
   int nTrans;
+  real rDeg;
 
   if (gs.nDecaFill <= 0)
-    return;
+    return fFalse;
 
   // Figure out what RGB colors to use to fill.
   if (!gi.fFile || gi.fBmp) {
     nTrans = (int)(gs.rBackPct * 256.0 / 100.0);
     if (nTrans <= 0)
-      return;
+      return fFalse;
     if (gs.nDecaFill == 1)
       kvC = rgbbmp[gi.kiCur];
-    else
-      kvC = KvHue((real)(i-1) * rDegMax / (real)(typ < 2 ? cSign : cSector));
+    else {
+      rDeg = (real)(i-1) * rDegMax / (real)(typ < 2 ? cSign : cSector);
+      kvC = gs.nDecaFill == 2 ? KvHue(rDeg) : KvHue2(rDeg);
+    }
     kvF = KvBlend(rgbbmp[gi.kiOff], kvC, gs.rBackPct / 100.0);
 #ifdef EXPRESS
     // Modify RGB color through AstroExpression if one defined.
@@ -532,8 +547,14 @@ void DrawFillWheel(int x, int y, int i, int typ)
 
   // Actually go fill in the area.
   DrawFill(x, y, kvF);
+
+  // Return whether glyphs drawn on filled area should be background color.
+  return (RgbR(kvF) + RgbG(kvF)*151/100 + RgbB(kvF) >= 128*3) != gs.fInverse;
 }
 
+
+CONST int objNakshatra[9+1] = {0,
+  oSou, oVen, oSun, oMoo, oMar, oNod, oJup, oSat, oMer};
 
 // This is a subprocedure of XChartWheel() and XChartWheelRelation(). Draw
 // the outer sign and house rings for a wheel chart at the specified zodiac
@@ -542,12 +563,11 @@ void DrawFillWheel(int x, int y, int i, int typ)
 void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
   real unity, real rh1, real rh2, real rs1)
 {
-  char sz[cchSzDef];
-  int nTrans = (int)(gs.rBackPct * 256.0 / 100.0), *rgRules, i, j, k, x, y,
-    nSav;
+  int nTrans = (int)(gs.rBackPct * 256.0 / 100.0), *rgRules, i, j, k, kSav,
+    x, y, nSav;
   CONST int *rgTerm;
   real rh, rs, rs2 = 0.95, r9 = 0.99, ra, rb, px, py, rDeg, hOld, h;
-  flag fVector = (gs.ft == ftPS || gs.ft == ftWmf), fSimpleDecan, fSav;
+  flag fVector = (gs.ft == ftPS || gs.ft == ftWmf), fSimpleDecan, fOff, fSav;
 
   rh = (rh1 + rh2) / 2.0; rs = (rs1 + rs2) / 2.0;
   fSimpleDecan = us.fListDecan && us.nDecanType <= ddChaldea &&
@@ -559,7 +579,8 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
   for (i = 0; i < nDegMax; i++) {
     rDeg = PZ(HousePlaceInX((real)i, 0.0));
     px = PX(rDeg); py = PY(rDeg);
-    DrawColor(i%10 ? gi.kiGray : (gs.fColorSign ? kSignB(i/30 + 1) : gi.kiOn));
+    DrawColor(i%10 > 0 ? gi.kiGray :
+      (gs.fColorSign ? kSignB(i/30 + 1) : gi.kiOn));
     k = (!gs.fColor && !fVector && i%5 > 0);
     if (i%5 > 0) {
       ra = rh2 + (rs1 - rh2) * 0.30;
@@ -607,10 +628,11 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
     DrawColor(kSignB(i));
     x = cx+POINT0(unitx, rs, PX(rDeg));
     y = cy+POINT0(unity, rs, PY(rDeg));
-    DrawFillWheel(x, y, i, 0);
+    fOff = DrawFillWheel(x, y, i, 0);
     if (nTrans >= 128)
-      DrawColor(gi.kiOn);
+      DrawColor(fOff ? gi.kiOff : gi.kiOn);
     DrawSign(i, x, y);
+
     // Draw decan rulers or other sign subdivisions if specified.
     if (us.fListDecan) {
       hOld = 0.0;
@@ -637,8 +659,8 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
           h = rDeg - (j > 0 ? 0.0 : rDeg*RFract(ZFromS(i) / rDeg));
           if (hOld + h > 30.0)
             h = 30.0 - hOld;
-          k = -100 - ((int)((ZFromS(i) + hOld + 1.0) / rDeg) + 1);
-          DrawColor(gi.kiLite);
+          k = ((int)((ZFromS(i) + hOld + 1.0) / rDeg) + 1);
+          k = -100 - k;
         } else {
           h = 30.0 / 12.0;
           k = -(us.nDecanType == dd12 ? j + 1 : Mod12(j + i));
@@ -667,14 +689,23 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
         gi.nScale = (gi.nScale + 1) >> 1;
         x = cx+POINT0(unitx, ra, PX(rDeg));
         y = cy+POINT0(unity, ra, PY(rDeg));
-        if (k >= 0 && FItem(k))
+        if (nTrans >= 128)
+          DrawColor(fOff ? gi.kiOff : gi.kiOn);
+        if (FItem(k)) {
+          if (!(nTrans >= 128))
+            DrawColor(kObjB[k]);
+          kSav = kObjB[k]; kObjB[k] = gi.kiCur;
           DrawObject(k, x, y);
-        else if (FValidSign(-k)) {
-          DrawColor(kSignB(-k));
+          kObjB[k] = kSav;
+        } else if (FValidSign(-k)) {
+          if (!(nTrans >= 128))
+            DrawColor(kSignB(-k));
           DrawSign(-k, x, y);
         } else if (k <= -100) {
-          sprintf(sz, "%d", -k-100);
-          DrawSz(sz, x, y + gi.nScaleT, dtScale2);
+          k = -k-100;
+          if (!(nTrans >= 128))
+            DrawColor(kObjA[objNakshatra[(k-1) % 9 + 1]]);
+          DrawNakshatra(k, x, y);
         }
         gi.nScale = nSav;
         if (!fSimpleDecan && hOld > 0.0) {
@@ -755,9 +786,9 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
     DrawColor(kSignB(i));
     x = cx+POINT0(unitx, rh, PX(rDeg));
     y = cy+POINT0(unity, rh, PY(rDeg));
-    DrawFillWheel(x, y, i, 1);
+    fOff = DrawFillWheel(x, y, i, 1);
     if (nTrans >= 128)
-      DrawColor(gi.kiOn);
+      DrawColor(fOff ? gi.kiOff : gi.kiOn);
     DrawHouse(i, x, y);
   }
 }
@@ -770,8 +801,8 @@ void DrawWheel(real *xsign, real *xhouse, int cx, int cy, real unitx,
 void DrawSymbolRing(real *symbol, real *xplanet, real *dir, int cx, int cy,
   real unitx, real unity, real rp, real rl1, real rl2, real rg)
 {
-  char sz[cchSzDef], rgch[oNorm1], rgf[oPlu-oMar+1][26], chT;
-  int col[oNorm1], i, j, x, y;
+  char sz[cchSzDef], rgch[oNorm1], rgf[oPlu-oMar+1][cLetter], chT;
+  int col[oNorm1], i0, i, j, x, y;
   real symbolM[oNorm1], temp, rx, ry, rT;
 
   for (i = is.nObj; i >= 0; i--) if (FProper(i)) {
@@ -801,11 +832,11 @@ void DrawSymbolRing(real *symbol, real *xplanet, real *dir, int cx, int cy,
   if (!gs.fMoonWheel)
     return;
   ClearB((pbyte)rgf, sizeof(rgf));
-  for (i = oMoo; i <= moonsHi; i += (i != oMoo ? 1 : (moonsLo - oMoo))) {
+  for (i = 0; i <= custHi; i++) {
     if (ignore[i])
       continue;
     j = ObjOrbit(i);
-    if (ignore[j] || j == us.objCenter)
+    if (ignore[j] || !FHasMoon(j) || j == us.objCenter || j == i)
       continue;
     if (!us.fMoonMove) {
       rx = space[i].x - space[j].x; ry = space[i].y - space[j].y;
@@ -828,15 +859,23 @@ void DrawSymbolRing(real *symbol, real *xplanet, real *dir, int cx, int cy,
     }
     rgch[i] = chT;
   }
-  for (i = oMar; i <= oPlu; i++)
-    if (!ignore[i])
-      FillSymbolRingM(i, symbolM,
-        (6.0 - (real)(gs.nScale / 100)) * (real)gi.nScaleTextT2 / 2.0);
-  for (i = moonsHi; i >= oMoo; i -= (i != moonsLo ? 1 : (moonsLo - oMoo))) {
+  for (i0 = 0; i0 < cHasMoons; i0++) {
+    i = rgobjHasMoons[i0];
+    if (ignore[i])
+      continue;
+    if (FCust(i)) {
+      j = ObjOrbit(i);
+      if (FHasMoon(j))
+        continue;
+    }
+    FillSymbolRingM(i, symbolM,
+      (6.0 - (real)(gs.nScale / 100)) * (real)gi.nScaleTextT2 / 2.0);
+  }
+  for (i = custHi; i >= 0; i--) {
     if (ignore[i])
       continue;
     j = ObjOrbit(i);
-    if (ignore[j] || j == us.objCenter)
+    if (ignore[j] || !FHasMoon(j) || j == us.objCenter || j == i)
       continue;
     temp = symbol[j];
     x = cx+POINT1(unitx, rg, PX(temp)); y = cy+POINT1(unity, rg, PY(temp));
@@ -908,6 +947,11 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
 
   // Assume glyph is positioned below actual point, unless say otherwise.
   for (i = 0; i < cod; i++) if (rgod[i].f) {
+    if (zEdge > 0 && !FInRect(rgod[i].x, rgod[i].y,
+      zEdge, zEdge, gs.xWin-zEdge, gs.yWin-zEdge)) {
+      rgod[i].f = fFalse;
+      continue;
+    }
     obj = rgod[i].obj;
     rgod[i].yg = rgod[i].y + (obj < moonsLo ? zGlyph : zGlyphS);
   }
@@ -930,7 +974,8 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
     // Normally, put the glyph right below the actual point. If however
     // another planet is close enough to have their glyphs overlap, and the
     // above location is better, then will draw the glyph above instead.
-    if ((k < zGlyph2 || k2 < zGlyph2) && k < k2)
+    if (((k < zGlyph2 || k2 < zGlyph2) && k < k2) ||
+      rgod[i].yg >= gs.yWin-zEdge)
       rgod[i].yg -= (obj < moonsLo ? zGlyph2 : zGlyphS2);
   }
 
@@ -950,9 +995,6 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
 
   // Draw dots for actual object location.
   for (i = cod-1; i >= 0; i--) if (rgod[i].f) {
-    if (zEdge > 0 && !FInRect(rgod[i].x, rgod[i].y,
-      zEdge, zEdge, gs.xWin-zEdge, gs.yWin-zEdge))
-      continue;
     obj = rgod[i].obj;
     DrawColor(rgod[i].kv != ~0 ? rgod[i].kv : kObjB[obj]);
     // Draw small or large dot near glyph indicating exact object location.
@@ -970,7 +1012,7 @@ void DrawObjects(ObjDraw *rgod, int cod, int zEdge)
 void DrawAspectLine(int obj1, int obj2, int cx, int cy,
   real deg1, real deg2, real rx, real ry, real rz)
 {
-  int asp = grid->n[obj1][obj2], orb = grid->v[obj1][obj2],
+  int asp = grid->n[obj1][obj2], orb = (int)(grid->v[obj1][obj2]*3600.0),
     x1, y1, x2, y2, nDash, nSav, col;
 
   // Get color of aspect. Modify it through AstroExpression if one defined.
@@ -1247,8 +1289,8 @@ flag FGlobeCalc(real x1, real y1, int *u, int *v, CONST CIRC *pcr, real deg)
   if (gi.nMode == gSphere) {
     y1 = rDegQuad - y1;
     if (!gs.fEcliptic) {
-      x1 = Mod(x1 + is.lonMC + rDegQuad);
-      EquToLocal(&x1, &y1, rDegQuad - is.latMC);
+      x1 = Mod(x1 + cp0.lonMC + rDegQuad);
+      EquToLocal(&x1, &y1, rDegQuad - Lat);
     } else {
       EclToEqu(&x1, &y1);
       x1 = Mod(Tropical(x1) - rDegQuad);
@@ -1261,7 +1303,7 @@ flag FGlobeCalc(real x1, real y1, int *u, int *v, CONST CIRC *pcr, real deg)
   if ((gi.nMode == gGlobe || gi.nMode == gPolar) && gs.fEcliptic) {
     y1 = rDegQuad - y1;
     if (!gs.fConstel) {
-      x1 = Mod(x1 + is.lonMC - rDegHalf + Lon);
+      x1 = Mod(x1 + cp0.lonMC - rDegHalf + Lon);
       EquToEcl(&x1, &y1);
       x1 = Untropical(x1);
     } else
@@ -1305,7 +1347,7 @@ flag FMapCalc(real x1, real y1, int *xp, int *yp, flag fGlobe, flag fSky,
 
   if (fSky >= 0) {
     if (!fSky)
-      x1 = is.lonMC - x1;
+      x1 = cp0.lonMC - x1;
     x1 = Mod(rDegHalf - rT - x1);
     y1 = rDegQuad - y1;
   }
@@ -1756,8 +1798,12 @@ LAfter:
       else if (x1 >= rDegMax)
         x1 -= rDegMax;
       if (!FMapCalc(x1, y1, &j, &k, fGlobe, -1, 0.0, nScl, &cr, deg)) {
-        if (gs.fLabelAsp)
-          DrawColor(KiCity(i));
+        if (gs.fLabelAsp) {
+          l = KiCity(i);
+          if (l < 0)
+            continue;
+          DrawColor(l);
+        }
         DrawPoint(j, k);
       }
     }
@@ -2039,6 +2085,11 @@ void DrawChartX()
 #else
   fSky = fFalse;
 #endif
+#ifdef EXPRESS
+  // Notify AstroExpression a chart is about to be drawn.
+  if (!us.fExpOff && FSzSet(us.szExpDisp1))
+    ParseExpression(us.szExpDisp1);
+#endif
 
   switch (gi.nMode) {
   case gWheel:
@@ -2165,7 +2216,7 @@ void DrawChartX()
     else {
       fSav = us.fAnsiChar;
       us.fAnsiChar =
-        (gs.nFont/10000 == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
+        (gs.nFontTxt == 0 || (gs.ft != ftPS && gs.ft != ftWmf)) << 1;
       i = DayOfWeek(Mon, Day, Yea);
       sprintf(sz, "%s%s%.3s %s %s (%cT Zone %s) %s%s%s",
         FSzSet(ciCore.nam) ? ciCore.nam : "", FSzSet(ciCore.nam) ? ", " : "",
@@ -2187,6 +2238,12 @@ void DrawChartX()
 
   if (fDrawBorder)
     DrawEdgeAll();
+
+#ifdef EXPRESS
+  // Notify AstroExpression a chart has just been drawn.
+  if (!us.fExpOff && FSzSet(us.szExpDisp2))
+    ParseExpression(us.szExpDisp2);
+#endif
 }
 #endif // GRAPH
 

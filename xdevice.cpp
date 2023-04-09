@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xdevice.cpp
+** Astrolog (Version 7.60) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -581,7 +581,7 @@ flag FBmpDrawMap()
     lonS = Tropical(planet[oSun]);
     latS = planetalt[oSun];
     EclToEqu(&lonS, &latS);
-    lonS = Mod(lonS - is.lonMC + rDegHalf - Lon);
+    lonS = Mod(lonS - cp0.lonMC + rDegHalf - Lon);
     for (y1 = 0; y1 < gs.yWin; y1++) {
       yi = !FOdd(gs.yWin) && y1 > yc;
       for (x1 = 0; x1 < gs.xWin; x1++) {
@@ -604,7 +604,7 @@ flag FBmpDrawMap()
           lon = Tropical(lon);
           lat = rDegQuad - lat;
           EclToEqu(&lon, &lat);
-          lon = Mod(lon - is.lonMC + rDegHalf - Lon);
+          lon = Mod(lon - cp0.lonMC + rDegHalf - Lon);
           lat = rDegQuad - lat;
         }
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
@@ -628,7 +628,7 @@ flag FBmpDrawMap()
     lonS = Tropical(planet[oSun]);
     latS = planetalt[oSun];
     EclToEqu(&lonS, &latS);
-    lonS = Mod(lonS - is.lonMC + rDegHalf - Lon);
+    lonS = Mod(lonS - cp0.lonMC + rDegHalf - Lon);
     for (y1 = 0; y1 < gs.yWin; y1++) {
       yi = !FOdd(gs.yWin) && y1 > yc;
       rT = (ryc - (real)y1) / ryc;
@@ -678,7 +678,7 @@ flag FBmpDrawMap()
           lon = Tropical(lon);
           lat = rDegQuad - lat;
           EclToEqu(&lon, &lat);
-          lon = Mod(lon - is.lonMC + rDegHalf - Lon);
+          lon = Mod(lon - cp0.lonMC + rDegHalf - Lon);
           lat = rDegQuad - lat;
         }
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
@@ -1133,7 +1133,7 @@ void PsFont(int nFont)
   CONST char *szFont;
   int z;
 
-  if (nFont == gi.nFontPS || gs.nFont == 0)
+  if (nFont == gi.nFontPS || gs.nFontAll == 0)
     return;
   szFont = rgszFontName[nFont];
   z = PSMUL*gi.nScale;
@@ -1198,7 +1198,7 @@ void PsEnd()
     fprintf(gi.file, "%%%%PageTrailer\n");
     fprintf(gi.file, "%%%%Trailer\n");
     fprintf(gi.file, "%%%%DocumentFonts: Times-Roman\n");
-    if (gs.nFont > 0)
+    if (gs.nFontAll > 0)
       for (i = 1; i < cFont; i++)
         fprintf(gi.file, "%%%%+ %s\n",
           i != fiCourier ? rgszFontName[i] : "Courier");
@@ -1308,7 +1308,7 @@ void MetaInit()
   MetaWord(9);                             // Size of header in words
   MetaWord(0x300);                         // Windows version
   MetaLong(0L);                            // Size of entire metafile in words
-  MetaWord(16*5+1+(gs.nFont>0)*(cFont-1)); // Number of objects in metafile
+  MetaWord(16*5+1+(gs.nFontAll>0)*(cFont-1)); // Number of objects in metafile
   MetaLong(17L);                           // Size of largest record in words
   MetaWord(0);                             // Not used
   // Setup
@@ -1336,7 +1336,7 @@ void MetaInit()
   }
   MetaCreateBrush(1 /* BS_NULL */, 0L);
   // Fonts
-  if (gs.nFont > 0)
+  if (gs.nFontAll > 0)
     for (i = 1; i < cFont; i++) {
       j = (CchSz(rgszFontName[i]) + 1) >> 1;
       MetaCreateFont(j, 0, i < fiCourier ? -METAMUL*gi.nScale : yFontT,
@@ -1363,7 +1363,7 @@ void WriteMeta(FILE *file)
 #if FALSE
   int i;
 
-  for (i = 16*5+1+(gs.nFont > 0)*4; i >= 0; i--) {
+  for (i = 16*5+1+(gs.nFontAll > 0)*4; i >= 0; i--) {
     MetaDeleteObject(i);
   }
 #endif
@@ -1599,7 +1599,7 @@ void WireGlobeCalc(real x1, real y1, int *u, int *v, int *w, int rz, real deg)
 
   if (gi.nMode == gSphere) {
     // Chart sphere coordinates are relative to the local horizon.
-    x1 = Mod(rDegMax - (x1 + is.lonMC) + rDegQuad);
+    x1 = Mod(rDegMax - (x1 + cp0.lonMC) + rDegQuad);
     y1 = rDegQuad - y1;
     EquToLocal(&x1, &y1, rDegQuad - Lat);
     y1 = rDegQuad - y1;
@@ -1625,7 +1625,7 @@ void WireMapCalc(real x1, real y1, int *xp, int *yp, int *zp, flag fSky,
   real rT, int rz, real deg)
 {
   if (!fSky)
-    x1 = is.lonMC - x1;
+    x1 = cp0.lonMC - x1;
   if (x1 < 0.0)
     x1 += rDegMax;
   if (x1 > rDegHalf)
@@ -1814,8 +1814,12 @@ void WireDrawGlobe(flag fSky, real deg)
       x1 = nDegHalf - is.rgae[i].lon;
       y1 = rDegQuad - is.rgae[i].lat;
       WireGlobeCalc(x1, y1, &u, &v, &w, rz, deg);
-      if (gs.fLabelAsp)
-        DrawColor(KiCity(i));
+      if (gs.fLabelAsp) {
+        j = KiCity(i);
+        if (j < 0)
+          continue;
+        DrawColor(j);
+      }
       WireSpot(u, v, w);
     }
   }
@@ -1902,7 +1906,7 @@ void WireChartOrbit()
   sx = (real)zWin/sz;
   for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
     xp = space[i].x; yp = space[i].y; zp = space[i].z;
-    if (us.nStar > 0) {
+    if (us.fStar || gs.fAllStar) {
       xp /= rLYToAU; yp /= rLYToAU; zp /= rLYToAU;
     }
     if (us.fHouse3D)
@@ -1964,15 +1968,14 @@ void WireChartOrbit()
       gi.zDefault = z[i];
       DrawColor(kDkGreenB);
 
-      // Draw rings around Saturn or Uranus.
-      if (i == oSat || i == oSaC || i == oUra || i == oUrC) {
+      // Draw rings around Saturn or other planet.
+      j = FBetween(i, oJuC, oNeC) ? i - oJuC + oJup :
+        (FBetween(i, oJup, oNep) && ignore[i + oJuC - oJup] ? i :
+        (i == oHau ? i : -1));
+      if (j >= 0) {
         PT3R vCross, ptCen;
         real tilt, rot;
-        if (i == oSat || i == oSaC) {
-          PtSet(vCross, -0.0833346, -0.4629964, -0.8824339);
-        } else {
-          PtSet(vCross, 0.2059129, 0.9691102, -0.1357401);
-        }
+        vCross = rgvObjRing[IObjRing(j)];
         // Adjust ring vector appropriately if in sidereal zodiac.
         if (is.rSid != 0.0) {
           rT = RLength2(vCross.x, vCross.y);
@@ -1985,18 +1988,13 @@ void WireChartOrbit()
         tilt = VAngleD(&vCross, &ptCen);
         vCross.z = 0.0;
         PtSet(ptCen, 1.0, 0.0, 0.0);
-        if (i == oSat || i == oSaC) {
-          rot = rDegMax - VAngleD(&vCross, &ptCen);
-          k = (int)(rSatRingA / rAUToKm * sx);
-          //DrawCircle(x[i], y[i], k, k);
-          WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
-          k = (int)(rSatRingB / rAUToKm * sx);
-          //DrawCircle(x[i], y[i], k, k);
-          WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
-        } else {
-          rot = VAngleD(&vCross, &ptCen);
-          k = (int)(rUraRing / rAUToKm * sx);
-          //DrawCircle(x[i], y[i], k, k);
+        rot = VAngleD(&vCross, &ptCen);
+        if (rgvObjRing[IObjRing(j)].y < 0.0)
+          rot = rDegMax - rot;
+        k = (int)(rgrObjRing[IObjRing(j)][0] / rAUToKm * sx);
+        WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
+        if (rgrObjRing[IObjRing(j)][1] > 0.0) {
+          k = (int)(rgrObjRing[IObjRing(j)][1] / rAUToKm * sx);
           WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
         }
       }
@@ -2040,8 +2038,7 @@ void WireChartOrbit()
     DrawColor(gi.kiGray);
     SwissComputeStar(0.0, NULL);
     while (SwissComputeStar(is.T, &es)) {
-      xp = es.space.x / rLYToAU; yp = es.space.y / rLYToAU;
-      zp = es.space.z / rLYToAU;
+      xp = es.pt.x / rLYToAU; yp = es.pt.y / rLYToAU; zp = es.pt.z / rLYToAU;
       if (us.fHouse3D)
         OrbitPlot(&xp, &yp, &zp, sz, -1, NULL);
       xT = -(int)(xp*sx); yT = (int)(yp*sx); zT = (int)(zp*sx);
@@ -2052,13 +2049,13 @@ void WireChartOrbit()
     DrawColor(gi.kiLite);
     EnumStarsLines(fTrue, NULL, NULL);
     while (EnumStarsLines(fFalse, &pes1, &pes2)) {
-      xp = pes1->space.x / rLYToAU; yp = pes1->space.y / rLYToAU;
-      zp = pes1->space.z / rLYToAU;
+      xp = pes1->pt.x / rLYToAU; yp = pes1->pt.y / rLYToAU;
+      zp = pes1->pt.z / rLYToAU;
       if (us.fHouse3D)
         OrbitPlot(&xp, &yp, &zp, sz, -1, NULL);
       xT = -(int)(xp*sx); yT = (int)(yp*sx); zT = (int)(zp*sx);
-      xp = pes2->space.x / rLYToAU; yp = pes2->space.y / rLYToAU;
-      zp = pes2->space.z / rLYToAU;
+      xp = pes2->pt.x / rLYToAU; yp = pes2->pt.y / rLYToAU;
+      zp = pes2->pt.z / rLYToAU;
       if (us.fHouse3D)
         OrbitPlot(&xp, &yp, &zp, sz, -1, NULL);
       x2 = -(int)(xp*sx); y2 = (int)(yp*sx); z2 = (int)(zp*sx);
@@ -2071,7 +2068,7 @@ void WireChartOrbit()
     DrawColor(gi.kiGray);
     SwissComputeAsteroid(0.0, NULL, fFalse);
     while (SwissComputeAsteroid(is.T, &es, fFalse)) {
-      xp = es.space.x; yp = es.space.y; zp = es.space.z;
+      xp = es.pt.x; yp = es.pt.y; zp = es.pt.z;
       if (us.fHouse3D)
         OrbitPlot(&xp, &yp, &zp, sz, -1, NULL);
       xT = -(int)(xp*sx); yT = (int)(yp*sx); zT = (int)(zp*sx);
@@ -2091,8 +2088,8 @@ void WireSphereLocal(real azi, real alt, int zr, int *xp, int *yp, int *zp)
 {
   if (gs.fEcliptic) {
     azi = Mod(azi - rDegQuad); neg(alt);
-    CoorXform(&azi, &alt, is.latMC - rDegQuad);
-    azi = Mod(is.lonMC - azi + rDegQuad);
+    CoorXform(&azi, &alt, Lat - rDegQuad);
+    azi = Mod(cp0.lonMC - azi + rDegQuad);
     EquToEcl(&azi, &alt);
     azi = rDegMax - Untropical(azi); neg(alt);
   }
@@ -2123,8 +2120,8 @@ void WireSphereZodiac(real lon, real lat, int zr, int *xp, int *yp, int *zp)
 
   lonT = Tropical(lon); latT = lat;
   EclToEqu(&lonT, &latT);
-  lonT = Mod(is.lonMC - lonT + rDegQuad);
-  EquToLocal(&lonT, &latT, rDegQuad - is.latMC);
+  lonT = Mod(cp0.lonMC - lonT + rDegQuad);
+  EquToLocal(&lonT, &latT, rDegQuad - Lat);
   WireSphereLocal(lonT + rDegQuad, -latT, zr, xp, yp, zp);
 }
 
@@ -2160,7 +2157,6 @@ void WireChartSphere()
   zGlyph = 7*gi.nScale; zGlyph2 = 14*gi.nScale;
   zr = Min(gs.xWin >> 1, gs.yWin >> 1) - zGlyph;
   cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
-  is.latMC = Lat;
 
   // Draw constellations.
   if (gs.fConstel) {
@@ -2350,7 +2346,7 @@ void WireChartSphere()
       if (gs.fColorHouse)
         DrawColor(gi.kiOn);
       WireSphereLocal((real)i, 0.0, zr + k, &xp, &yp, &zp);
-      sprintf(sz, "%c", szDir[j][0]);
+      sprintf(sz, "%c", rgszDir[j][0]);
       gi.zDefault = zp + gi.nScale;
       DrawSz(sz, xp, yp, dtCent);
     }

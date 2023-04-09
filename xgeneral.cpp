@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xgeneral.cpp
+** Astrolog (Version 7.60) File: xgeneral.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -401,7 +401,7 @@ void AdjustGlyph(int *ch, int *x, int *y, int *fi, int *nScale,
 
 #ifdef WINANY
 // Draw an astrology character from a special font on the screen. Used to draw
-// sign, planet, and aspect glyphs from these fonts within charts.
+// sign, planet, aspect, and Nakshatra glyphs from these fonts within charts.
 
 flag WinDrawGlyph(int ch, int x, int y, int fi, int nScale)
 {
@@ -413,19 +413,19 @@ flag WinDrawGlyph(int ch, int x, int y, int fi, int nScale)
   int cch = 1 + (fi == fiArial && ch < 0), nSav;
 
   // Fonts: 1=Wingdings, 2=Astro, 3=EnigmaAstrology, 4=HamburgSymbols,
-  // 5=Astronomicon, 6=Courier New, 7=Consolas, 8=Arial
+  // 5=Astronomicon, 6=Courier New, 7=Consolas, 8=Arial, 9=HanksNakshatra
   hfont = CreateFont(12*gi.nScale*nScale/100, 0, 0, 0, !gs.fThick ? 400 : 800,
-    fFalse, fFalse, fFalse, fi >= fiCourier ? DEFAULT_CHARSET :
-    (fi >= fiAstro ? ANSI_CHARSET : SYMBOL_CHARSET), OUT_DEFAULT_PRECIS,
-    CLIP_DEFAULT_PRECIS, PROOF_QUALITY, VARIABLE_PITCH | FF_DECORATIVE,
-    rgszFontName[fi]);
+    fFalse, fFalse, fFalse, FBetween(fi, fiCourier, fiArial) ?
+    DEFAULT_CHARSET : (fi >= fiAstro && fi != fiNakshatr ? ANSI_CHARSET :
+    SYMBOL_CHARSET), OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY,
+    VARIABLE_PITCH | FF_DECORATIVE, rgszFontName[fi]);
   if (hfont == NULL)
     return fFalse;
   hfontPrev = (HFONT)SelectObject(wi.hdc, hfont);
   kvSav = GetTextColor(wi.hdc);
   SetTextColor(wi.hdc, rgbbmp[gi.kiCur]);
   nSav = SetBkMode(wi.hdc, TRANSPARENT);
-  if (fi >= fiCourier && cch <= 1) {
+  if (FBetween(fi, fiCourier, fiArial) && cch <= 1) {
     wz[0] = ch; wz[1] = chNull;
     GetTextExtentPointW(wi.hdc, wz, cch, &size);
     TextOutW(wi.hdc, x - (size.cx >> 1), y - (size.cy >> 1), wz, cch);
@@ -1082,7 +1082,7 @@ void DrawFill(int x, int y, KV kv)
 
 void DrawSz(CONST char *sz, int x, int y, int dt)
 {
-  int nFont = gs.nFont/10000, nScaleSav = gi.nScale, kiSav = gi.kiCur,
+  int nFont = gs.nFontTxt, nScaleSav = gi.nScale, kiSav = gi.kiCur,
     nScale2, cch, i, dch;
   flag fBig = fFalse, fBigger = fFalse, fThin;
   wchar wch;
@@ -1207,7 +1207,7 @@ CONST uchar szSignFontHamburg[cSign+3] = "asdfghjklzxcv";
 
 void DrawSign(int i, int x, int y)
 {
-  int nFont = gs.nFont/1000%10, ch = -1, nScale = 100;
+  int nFont = gs.nFontSig, ch = -1, nScale = 100;
   flag fDoThin;
 
   if (nFont == fiWingding)
@@ -1215,13 +1215,13 @@ void DrawSign(int i, int x, int y)
   else if (nFont == fiAstro)
     ch = 'A' + i - 1;
   else if (nFont == fiEnigma) {
-    ch = szSignFontEnigma[i == sCap && gs.nGlyphs/10000 > 1 ? cSign : i-1];
+    ch = szSignFontEnigma[i == sCap && gs.nGlyphCap > 1 ? cSign : i-1];
     y -= gi.nScale;
   } else if (nFont == fiHamburg) {
-    ch = szSignFontHamburg[i == sCap && gs.nGlyphs/10000 > 1 ? cSign : i-1];
+    ch = szSignFontHamburg[i == sCap && gs.nGlyphCap > 1 ? cSign : i-1];
     y += gi.nScale;
   } else if (nFont == fiAstronom) {
-    ch = (i == sCap && gs.nGlyphs/10000 <= 1) ? '\\' : ('A' + i - 1);
+    ch = (i == sCap && gs.nGlyphCap <= 1) ? '\\' : ('A' + i - 1);
     if (FBetween(i, sLeo, sSco))
       y -= gi.nScale;
   } else if (nFont >= fiCourier && gs.ft != ftPS && gs.ft != ftWmf)
@@ -1258,7 +1258,7 @@ void DrawSign(int i, int x, int y)
     return;
   }
 #endif
-  if (i == sCap && gs.nGlyphs/10000 > 1)
+  if (i == sCap && gs.nGlyphCap > 1)
     i = cSign+1;
   if (gi.nScale % 3 == 0 && szDrawSign3[i][0]) {
     gi.nScale /= 3;
@@ -1280,7 +1280,7 @@ void DrawSign(int i, int x, int y)
 
 void DrawHouse(int i, int x, int y)
 {
-  int nFont = gs.nFont/100%10, ch = -1, nScale = 100;
+  int nFont = gs.nFontHou, ch = -1, nScale = 100;
   flag fDoThin;
 
   if (nFont == fiAstronom)
@@ -1391,7 +1391,7 @@ void DrawObject(int obj, int x, int y)
 #endif
   DrawColor(col);
 
-  nFont = gs.nFont/10%10;
+  nFont = gs.nFontObj;
   ch = -1;
   nScale = 100;
   if (nFont == fiAstro && obj <= cuspHi && szObjectFontAstro[obj] > ' ')
@@ -1399,22 +1399,24 @@ void DrawObject(int obj, int x, int y)
   else if (nFont == fiEnigma && obj <= dwarfHi &&
     szObjectFontEnigma[obj] > ' ') {
     ch = szObjectFontEnigma[obj];
+    if (obj == oEri && gs.nGlyphEri == 2)
+      ch = 236;
     y -= gi.nScale;
   } else if (nFont == fiHamburg && obj <= uranHi &&
     szObjectFontHamburg[obj] > ' ') {
     ch = szObjectFontHamburg[obj];
-    if (obj == oLil && gs.nGlyphs/10%10 == 2)
+    if (obj == oLil && gs.nGlyphLil == 2)
       ch = '`';
-    else if (obj == oVtx && gs.nGlyphs%10 == 2)
+    else if (obj == oVtx && gs.nGlyphVer == 2)
       ch = 149;
     y += gi.nScale;
   } else if (nFont == fiAstronom && obj <= dwarfHi) {
     ch = szObjectFontAstronomicon[obj];
-    if (obj == oUra && gs.nGlyphs/1000%10 == 2)
+    if (obj == oUra && gs.nGlyphUra == 2)
       ch = 'a';
-    else if (obj == oPlu && gs.nGlyphs/100%10 == 2)
+    else if (obj == oPlu && gs.nGlyphPlu == 2)
       ch = '_';
-    else if (obj == oPlu && gs.nGlyphs/100%10 == 3)
+    else if (obj == oPlu && gs.nGlyphPlu == 3)
       ch = '`';
     else if (us.fHouseAngle && FCusp(obj))
       ch = '1' + obj - cuspLo;
@@ -1463,19 +1465,22 @@ void DrawObject(int obj, int x, int y)
   // Adjust glyph to alternate versions of it, if necessary.
   if (szDrawObject[obj] == szDrawObjectDef[obj]) {
     if (obj == oUra) {
-      if ((gs.nGlyphs/1000)%10 > 1)
+      if (gs.nGlyphUra > 1)
         obj = cObj + 1;
     } else if (obj == oPlu) {
-      if ((gs.nGlyphs/100)%10 > 1)
-        obj = cObj + (((gs.nGlyphs/100)%10 > 2) ? 5 : 2);
+      if (gs.nGlyphPlu > 1)
+        obj = cObj + 2 + (gs.nGlyphPlu > 2);
     } else if (obj == oLil) {
-      if (gs.nGlyphs/10%10 > 1)
-        obj = cObj + 3;
-    } else if (obj == oVtx) {
-      if (gs.nGlyphs%10 > 1)
+      if (gs.nGlyphLil > 1)
         obj = cObj + 4;
+    } else if (obj == oVtx) {
+      if (gs.nGlyphVer > 1)
+        obj = cObj + 5;
+    } else if (obj == oEri) {
+      if (gs.nGlyphEri > 1)
+        obj = cObj + 6;
     } else if (us.fHouseAngle && FAngle(obj))
-      obj = cObj + 6 + ((obj - cuspLo) / 3);
+      obj = cObj + 7 + ((obj - cuspLo) / 3);
   }
 
   // Draw the object's glyph.
@@ -1500,16 +1505,6 @@ void DrawObject(int obj, int x, int y)
   if (fNoText)
     goto LDone;
   sprintf(szGlyph, "%.3s", szObjDisp[obj]);
-#ifdef CONSTEL
-  // If doing constellations, give stars more correct astronomical names.
-
-  if (gs.fConstel) {
-    if (obj == oOri && szObjDisp[oOri] == szObjName[oOri])
-      sprintf(szGlyph, "Aln");    // Alnilam, normally "Orion"
-    else if (obj == oAnd && szObjDisp[oAnd] == szObjName[oAnd])
-      sprintf(szGlyph, "M31");    // M31, normally "Andromeda"
-  }
-#endif
   DrawSz(szGlyph, x, y, dtCent | dtScale2);
 LDone:
   if (fDoThin)
@@ -1598,8 +1593,8 @@ CONST uchar szAspectFontHamburg[cAspect2+1] =
 // COSTSisssq___b___ssnbbtqP___C___
   "qwretoiyu\230\232       \233\234";
 CONST uchar szAspectFontAstronomicon[cAspect2+1] =
-// C_OSTSisssqbss___n___b___b___t___q___PC
-  "!\"#$%&'()*+,\252\256\257\253\254\260/-";
+// C_OSTSisssq___bss___n___b___b___t___q___PC
+  "!\"#$%&'()\267*,\252\256\257\253\254\260/-";
 CONST wchar wzAspectFontUnicode[cAspect2] = {
   0x260c, 0x260d, 0x25a1, 0x25b3, 0x04ff, 0, 0, 0, 0,
   'Q', 0x00b1, 0, 0, 0, 0, 0, 0, 0};
@@ -1609,7 +1604,7 @@ CONST wchar wzAspectFontUnicode[cAspect2] = {
 
 void DrawAspect(int asp, int x, int y)
 {
-  int nFont = gs.nFont%10, ch = -1, nScale = 100;
+  int nFont = gs.nFontAsp, ch = -1, nScale = 100;
   flag fEclipse = fFalse, fDoThin;
 
   if (us.fParallel && asp <= aOpp)
@@ -1677,6 +1672,65 @@ void DrawAspect(int asp, int x, int y)
     DrawTurtle(szDrawAspect2[asp], x, y);  // Special hi-res aspect glyphs.
     gi.nScale <<= 1;
   }
+  if (fDoThin)
+    DrawThick(fTrue);
+}
+
+
+// Draw a Nakshatra glyph or number at particular coordinates on the screen.
+
+void DrawNakshatra(int i, int x, int y)
+{
+  char sz[3];
+  int nFont = gs.nFontNak, ch = -1, nScale = 100, nSav;
+  flag fDoThin;
+
+  if (nFont == fiNakshatr)
+    ch = 34 + i + (i >= 12) + (i >= 22);
+  else if (nFont == fiArial)
+    ch = (i <= 9 ? '0' + i : -i);
+#ifdef EXPRESS
+  AdjustGlyph(&ch, &x, &y, &nFont, &nScale, i, us.szExpFontHou);
+  if (!FBetween(nFont, 0, cFont-1))
+    ch = -1;
+#endif
+  fDoThin = gs.fThick && nFont == 0 && ch <= 0 && gi.nScale <= gi.nScaleT;
+  if (fDoThin)
+    DrawThick(fFalse);
+#ifdef WINANY
+  if (!gi.fFile && ch != -1) {
+    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+      return;
+  }
+#endif
+#ifdef PS
+  if (gs.ft == ftPS && nFont > 0 && ch > 0) {
+    PsFont(nFont);
+    if (nFont < fiCourier)
+      fprintf(gi.file, "%d %d(%s%c)center\n", x, y, PsEscape(ch), ch);
+    else
+      fprintf(gi.file, "%d %d(%d)center\n", x, y, i);
+    return;
+  }
+#endif
+#ifdef META
+  if (gs.ft == ftWmf && nFont > 0 && (ch > 0 || nFont >= fiCourier)) {
+    gi.nFontDes = nFont;
+    gi.kiTextDes = gi.kiCur;
+    gi.nAlignDes = 0x6 | 0x8 /* Center | Bottom */;
+    MetaSelect();
+    MetaTextOut(x, y+4*gi.nScale, 1 + (nFont >= fiCourier && i > 9));
+    if (nFont < fiCourier)
+      MetaWord(WFromBB(ch, 0));
+    else
+      MetaWord(WFromBB(i > 9 ? '1' : '0'+i, i > 9 ? '0'+i-10 : 0));
+    return;
+  }
+#endif
+  sprintf(sz, "%d", i);
+  nSav = gs.nFontTxt; gs.nFontTxt = gs.nFontNak;
+  DrawSz(sz, x, y + gi.nScaleT, dtScale2);
+  gs.nFontTxt = nSav;
   if (fDoThin)
     DrawThick(fTrue);
 }
@@ -1828,9 +1882,22 @@ int KiCity(int iae)
       ki = kMagentaB;
   } else
     ki = kRainbowB[iae % 7 + 1];
+#ifdef EXPRESS
+  // Adjust color if AstroExpression says to do so.
+  if (!us.fExpOff && FSzSet(us.szExpCity)) {
+    ExpSetN(iLetterW, iae);
+    ExpSetR(iLetterX, is.rgae[iae].lon);
+    ExpSetR(iLetterY, is.rgae[iae].lat);
+    ExpSetN(iLetterZ, ki);
+    ParseExpression(us.szExpCity);
+    ki = NExpGet(iLetterZ);
+    if (!FValidColor(ki))
+      ki = -1;
+  }
+#endif
   return ki;
 }
-#endif
+#endif // ATLAS
 #endif // GRAPH
 
 /* xgeneral.cpp */

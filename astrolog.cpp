@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: astrolog.cpp
+** Astrolog (Version 7.60) File: astrolog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -170,8 +170,8 @@ LNextLine:
   InitColors();
   AnsiColor(kDefault);
 
-  // First adjust the restriction status of the cusps, Uranians, and stars
-  // based on whether -C, -u, and -U switches are in effect.
+  // First adjust the restriction status of the cusps, Uranians, stars, and so
+  // on, based on whether -C, -u, and -U switches are in effect.
 
   if (!us.fCusp)
     for (i = cuspLo; i <= cuspHi; i++)
@@ -188,7 +188,7 @@ LNextLine:
   if (!us.fCOB)
     for (i = cobLo; i <= cobHi; i++)
       ignore[i] = ignore2[i] = fTrue;
-  if (!us.nStar)
+  if (!us.fStar)
     for (i = starLo; i <= starHi; i++)
       ignore[i] = ignore2[i] = fTrue;
 
@@ -201,11 +201,6 @@ LNextLine:
 
   // Here either do a normal chart or some kind of relationship chart.
 
-#ifdef EXPRESS
-  // Notify AstroExpression a chart is about to be drawn.
-  if (!us.fExpOff && FSzSet(us.szExpDisp1))
-    ParseExpression(us.szExpDisp1);
-#endif
   if (!us.nRel) {
 #ifndef WIN
     // If chart info not in memory yet, then prompt the user for it.
@@ -244,7 +239,17 @@ LNextLine:
       AnsiColor(kDefault);
     }
 #endif
+#ifdef EXPRESS
+  // Notify AstroExpression a chart is about to be drawn.
+  if (!us.fExpOff && FSzSet(us.szExpDisp1))
+    ParseExpression(us.szExpDisp1);
+#endif
     PrintChart(is.fProgress);
+#ifdef EXPRESS
+  // Notify AstroExpression a chart has just been drawn.
+  if (!us.fExpOff && FSzSet(us.szExpDisp2))
+    ParseExpression(us.szExpDisp2);
+#endif
 #ifdef GRAPH
     if (gs.fInverse) {
       SwapN(kBlackA, kWhiteA);
@@ -252,11 +257,6 @@ LNextLine:
     }
 #endif
   }
-#ifdef EXPRESS
-  // Notify AstroExpression a chart has just been drawn.
-  if (!us.fExpOff && FSzSet(us.szExpDisp2))
-    ParseExpression(us.szExpDisp2);
-#endif
 
 LDone:
   iLine++;
@@ -492,8 +492,7 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     break;
 
   case 's':
-    if (argc > 1 && ((r = RFromSz(argv[1])) != 0.0 || FNumCh(argv[1][0]) ||
-      argv[1][0] == '~')) {
+    if (argc > 1 && (r = RParseSz(argv[1], pmOffset)) != rLarge) {
       if (FErrorValR("Ys", !FValidOffset(r), r, 0))
         return fFalse;
       us.rZodiacOffsetAll = r;
@@ -636,6 +635,16 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     us.objRot1 = i;
     us.objRot2 = j;
     darg += 2;
+    break;
+
+  case 'Z':
+    if (FErrorArgc("YZ", argc, 1))
+      return tcError;
+    i = NFromSz(argv[1]);
+    if (FErrorValN("YZ", !FBetween(i, 0, 7), i, 0))
+      return tcError;
+    us.nHorizon = i;
+    darg++;
     break;
 
   case 'l':
@@ -993,7 +1002,7 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       return tcError;
     i = NParseSz(argv[1],
       ch1 == 'A' ? pmAspect : (ch1 == chNull ? pmObject : pmSign));
-    j = ch1 == 'A' ? cAspect : (ch1 == chNull ? oNorm : cSign);
+    j = ch1 == 'A' ? cAspect : (ch1 == chNull ? (int)cObj : (int)cSign);
     if (FErrorValN("YI", !FBetween(i, (int)(ch1 != chNull), j), i, 1))
       return tcError;
     if (ch1 == 'A' && ch2 == '0')
@@ -1122,6 +1131,23 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     break;
 
   case '5':
+    if (ch1 == 'i') {
+      if (FErrorArgc("Y5i", argc, 1))
+        return tcError;
+      us.szADB = SzPersist(argv[1]);
+      darg++;
+      break;
+    } else if (ch1 == 'I') {
+      if (FErrorArgc("Y5I", argc, 2))
+        return tcError;
+      i = NFromSz(argv[1]);
+      if (FErrorValN("Y5I", i < 0, i, 1))
+        return tcError;
+      us.iExpADB = i;
+      us.cExpADB = NFromSz(argv[2]);
+      darg += 2;
+      break;
+    }
     i = 1 + (ch1 == '2') + (ch1 == '3')*2 + (ch1 == '4')*3;
     FEnumerateCIList(i);
     break;
@@ -1131,7 +1157,13 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       if (FErrorArgc("YYt", argc, 1))
         return tcError;
       if (!us.fGraphics)
-        PrintSzFormat(argv[1]);
+        PrintSzFormat(argv[1], fFalse);
+      darg++;
+      break;
+    } else if (ch1 == 'T') {
+      if (FErrorArgc("YYT", argc, 1))
+        return tcError;
+      PrintSzFormat(argv[1], fTrue);
       darg++;
       break;
     }
@@ -1314,6 +1346,8 @@ flag FProcessSwitches(int argc, char **argv)
         us.nAppSep = FSwitchF(us.nAppSep) * 2;
       else if (ch1 == 'p')
         SwitchF(us.fParallel);
+      else if (ch1 == 'd')
+        SwitchF(us.fDistance);
 #ifdef X11
       else if (ch1 == 'e') {
         if (FErrorArgc("geometry", argc, 1))
@@ -1348,6 +1382,9 @@ flag FProcessSwitches(int argc, char **argv)
         ch1 = ch2;
       } else if (ch1 == 'p') {
         SwitchF(us.fParallel);
+        ch1 = ch2;
+      } else if (ch1 == 'd') {
+        SwitchF(us.fDistance);
         ch1 = ch2;
       }
       switch (ch1) {
@@ -1536,7 +1573,8 @@ flag FProcessSwitches(int argc, char **argv)
       if (j) {
         ch1 = argv[1][0];
         if (ch1) {
-          us.nEphemRate = ch1 == 'm' ? 1 : (ch1 == 'y' ? 2 : 0);
+          us.nEphemRate =
+            ch1 == 'h' ? -1 : (ch1 == 'm' ? 1 : (ch1 == 'y' ? 2 : 0));
           i = NFromSz(&argv[1][1]);
           us.nEphemFactor = Max(i, 1);
         }
@@ -1545,7 +1583,9 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case '8':
-      if (FErrorSubswitch("8", ch1, ch1 != chNull))
+      if (ch1 == '0')
+        SwitchF(us.fMoonChartSep);
+      else if (FErrorSubswitch("8", ch1, ch1 != chNull))
         return fFalse;
       SwitchF(us.fMoonChart);
       break;
@@ -1557,7 +1597,7 @@ flag FProcessSwitches(int argc, char **argv)
       SwitchF(us.fInfluence); SwitchF(us.fEsoteric); SwitchF(us.fAstroGraph);
       SwitchF(us.fCalendar); SwitchF(us.fHorizonSearch);
       SwitchF(us.fInDay); SwitchF(us.fInDayInf); SwitchF(us.fInDayGra);
-      SwitchF(us.fEphemeris); SwitchF(us.nArabic); SwitchF(us.fMoonChart);
+      SwitchF(us.fEphemeris); SwitchF(us.fArabic); SwitchF(us.fMoonChart);
       break;
 
     case 't':
@@ -1639,7 +1679,7 @@ flag FProcessSwitches(int argc, char **argv)
       MonT = NParseSz(argv[1], pmMon);
       DayT = NParseSz(argv[2], pmDay);
       YeaT = NParseSz(argv[3], pmYea);
-      TimT = i > 0 ? RParseSz(argv[4], pmTim) : Tim;
+      TimT = i > 0 ? RParseSz(argv[4], pmTim) : 0.0;
       if (FErrorValN("T", !FValidMon(MonT), MonT, 1))
         return fFalse;
       else if (FErrorValN("T", !FValidYea(YeaT), YeaT, 3))
@@ -1739,11 +1779,11 @@ flag FProcessSwitches(int argc, char **argv)
           return fFalse;
         us.nArabicParts = i;
       }
-      if (ch1 == 'z' || ch1 == 'n' || ch1 == 'f') {
-        us.nArabic = ch1;
+      if (ch1 == 'i' || ch1 == 'z' || ch1 == 'n' || ch1 == 'f') {
+        us.nArabicSort = (ch1 != 'i' ? ch1 : 0);
         ch1 = ch2;
-      } else
-        SwitchF(us.nArabic);
+      }
+      SwitchF(us.fArabic);
       if (ch1 == '0')
         SwitchF(us.fArabicFlip);
       break;
@@ -2166,15 +2206,14 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case 'U':
-      j = us.nStar;
-      if (ch1 == 'z' || ch1 == 'l' || ch1 == 'n' || ch1 == 'b' ||
-        ch1 == 'd' || ch1 == 'v')
-        us.nStar = ch1;
-      else
-        SwitchF(us.nStar);
-      if ((j != 0) != (us.nStar != 0))
+      j = us.fStar;
+      if (ch1 == 'i' || ch1 == 'z' || ch1 == 'l' || ch1 == 'n' ||
+        ch1 == 'b' || ch1 == 'd' || ch1 == 'v')
+        us.nStarSort = (ch1 != 'i' ? ch1 : 0);
+      SwitchF(us.fStar);
+      if (j != us.fStar)
         for (i = starLo; i <= starHi; i++)
-          ignore[i] = (j != 0);
+          ignore[i] = j;
       AdjustRestrictions();
       break;
 
@@ -2274,8 +2313,7 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case 's':
-      if (argc > 1 && ((rT = RFromSz(argv[1])) != 0.0 || FNumCh(argv[1][0]) ||
-        argv[1][0] == '~')) {
+      if (argc > 1 && (rT = RParseSz(argv[1], pmOffset)) != rLarge) {
         if (FErrorValR("s", !FValidOffset(rT), rT, 0))
           return fFalse;
         argc--; argv++;
@@ -2286,14 +2324,14 @@ flag FProcessSwitches(int argc, char **argv)
           SwitchF(us.fEquator);
         SwitchF(us.fEquator2);
       } else if (ch1 == 'z')
-        us.nDegForm = 0;
+        us.nDegForm = dfZod;
       else if (ch1 == 'h')
-        us.nDegForm = 1;
+        us.nDegForm = dfHM;
       else if (ch1 == 'd')
-        us.nDegForm = 2;
+        us.nDegForm = df360;
       else if (ch1 == 'n')
-        us.nDegForm = 3;
-#ifdef WIN
+        us.nDegForm = dfNak;
+#ifdef WSETUP
       else if (ch1 == 'e')    // -setup switch for Windows
         i = FCreateProgramGroup(fFalse) && FCreateDesktopIcon() &&
           FRegisterExtensions();
@@ -2313,14 +2351,32 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case 'p':
-      if (fAnd) {
-        us.fProgress = fFalse;
-        break;
-      }
-      SwitchF(us.fProgress);
       us.nProgress = (ch1 == '0') + 2*(ch1 == '1');
       if (us.nProgress)
         ch1 = argv[0][++ich];
+      if (fAnd) {
+        us.fProgress = fFalse;
+        break;
+      } else if (ch1 == 'd') {
+        if (FErrorArgc("pd", argc, 1))
+          return fFalse;
+        rT = RFromSz(argv[1]);
+        if (FErrorValR("pd", rT == 0.0, rT, 0))
+          return fFalse;
+        us.rProgDay = rT;
+        argc--; argv++;
+        break;
+      } else if (ch1 == 'C') {
+        if (FErrorArgc("pC", argc, 1))
+          return fFalse;
+        rT = RFromSz(argv[1]);
+        if (FErrorValR("pC", rT == 0.0, rT, 0))
+          return fFalse;
+        us.rProgCusp = rT;
+        argc--; argv++;
+        break;
+      }
+      SwitchF(us.fProgress);
 #ifdef TIME
       if (ch1 == 'n') {
         GetTimeNow(&MonT, &DayT, &YeaT, &TimT, us.dstDef, us.zonDef);
@@ -2328,23 +2384,6 @@ flag FProcessSwitches(int argc, char **argv)
         break;
       }
 #endif
-      if (ch1 == 'd') {
-        if (FErrorArgc("pd", argc, 1))
-          return fFalse;
-        us.rProgDay = RFromSz(argv[1]);
-        if (FErrorValR("pd", us.rProgDay == 0.0, us.rProgDay, 0))
-          return fFalse;
-        argc--; argv++;
-        break;
-      } else if (ch1 == 'C') {
-        if (FErrorArgc("pC", argc, 1))
-          return fFalse;
-        us.rProgCusp = RFromSz(argv[1]);
-        if (FErrorValR("pC", us.rProgCusp == 0.0, us.rProgCusp, 0))
-          return fFalse;
-        argc--; argv++;
-        break;
-      }
       i = 3 + (ch1 == 't');
       if (FErrorArgc("p", argc, i))
         return fFalse;
@@ -2689,7 +2728,7 @@ flag FProcessSwitches(int argc, char **argv)
         SwitchF(us.fExpOff);
         break;
       }
-      i = 1 + (ch1 == 'M');
+      i = 1 + (ch1 == 'M' || ch1 == '2');
       if (FErrorArgc("~", argc, i))
         return fFalse;
       ppch = NULL;
@@ -2741,8 +2780,14 @@ flag FProcessSwitches(int argc, char **argv)
         ppch = (ch2 != '3' ? &us.szExpSort : &us.szExpDecan);
       else if (ch1 == 'U')
         ppch = (ch2 != '0' ? &us.szExpStar : &us.szExpAst);
+      else if (ch1 == 'X' && ch2 == 'L')
+        ppch = &us.szExpCity;
       else if (ch1 == 'X' && ch2 == 't')
         ppch = &us.szExpSidebar;
+      else if (ch1 == 'X' && ch2 == 'Q')
+        ppch = &us.szExpKey;
+      else if (ch1 == 'W' && ch2 == 'Q')
+        ppch = &us.szExpMenu;
       else if (ch1 == 'q' && ch2 == '1')
         ppch = &us.szExpCast1;
       else if (ch1 == 'q' && ch2 == '2')
@@ -2751,19 +2796,30 @@ flag FProcessSwitches(int argc, char **argv)
         ppch = &us.szExpDisp1;
       else if (ch1 == 'Q' && ch2 == '2')
         ppch = &us.szExpDisp2;
+      else if (ch1 == 'Q' && ch2 == '3')
+        ppch = &us.szExpDisp3;
       else if (ch1 == '5' && ch2 == 's')
         ppch = &us.szExpListS;
       else if (ch1 == '5' && ch2 == 'f')
         ppch = &us.szExpListF;
       else if (ch1 == '5' && ch2 == 'Y')
         ppch = &us.szExpListY;
+      else if (ch1 == '5' && ch2 == 'i')
+        ppch = &us.szExpADB;
       else if (ch1 == 'M') {
         j = NFromSz(argv[1]);
-        if (FErrorValN("~M", !FBetween(j, 0, iLetterZ), j, 1))
+        if (FErrorValN("~M", j < 0, j, 1))
           return fFalse;
-        rgszExpMacro[j] = SzPersist(argv[2]);
+        ExpSetMacro(j, SzPersist(argv[2]));
       } else if (ch1 == '1')
         ParseExpression(argv[1]);
+      else if (ch1 == '2') {
+        j = NFromSz(argv[1]);
+        if (FErrorValN("~2", j < 0, j, 1))
+          return fFalse;
+        ExpSetString(j, argv[2], ch2 == '0');
+      } else if (FErrorSubswitch("~", ch1, ch1 != chNull))
+        return fFalse;
       else
         ShowParseExpression(argv[1]);
       if (ppch != NULL)
@@ -2825,9 +2881,6 @@ void InitProgram()
   }
   ClearB((pbyte)rgPntSwiss, sizeof(rgPntSwiss));
   ClearB((pbyte)rgFlgSwiss, sizeof(rgFlgSwiss));
-#endif
-#ifdef EXPRESS
-  ExpInit();
 #endif
 #ifdef GRAPH
   InitColorPalette(-1);
@@ -2914,8 +2967,7 @@ void FinalizeProgram(flag fSkip)
     DeallocateP(is.rgzonCol);
 #endif
 #ifdef EXPRESS
-  if (is.rgsTrieFun != NULL)
-    DeallocateP(is.rgsTrieFun);
+  ExpFinalize();
 #endif
 #ifdef GRAPH
   if (gi.bm != NULL)
@@ -2982,6 +3034,7 @@ int main()
   is.szProgName = argv[0];
 #endif
   FProcessSwitchFile(DEFAULT_INFOFILE, NULL);
+  ciTran = ciHexa = ciFive = ciFour = ciThre = ciTwin = ciMain = ciCore;
 #ifdef BETA
   sprintf(szBeta, "This is a beta version of %s %s! "
     "That means changes are still being made and testing is not complete. "

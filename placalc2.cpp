@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: placalc2.cpp
+** Astrolog (Version 7.60) File: placalc2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "placalc.h"
@@ -80,7 +80,7 @@
 // translation to Placalc indices and formats.
 
 flag FPlacalcPlanet(int ind, real jd, flag fHelio,
-  real *obj, real *objalt, real *dir, real *space, real *diry, real *dirz)
+  real *obj, real *objalt, real *dir, real *dist, real *diry, real *dirz)
 {
   int iobj, flag;
   REAL8 jd_ad, rlng, rrad, rlat, rspeed;
@@ -113,7 +113,7 @@ flag FPlacalcPlanet(int ind, real jd, flag fHelio,
     *obj    = rlng;
     *objalt = rlat;
     *dir    = rspeed;
-    *space  = rrad;
+    *dist   = rrad;
     *diry   = 0.0;
     *dirz   = 0.0;
     return fTrue;

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.50) File: xcharts2.cpp
+** Astrolog (Version 7.60) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2022 by
+** not enumerated below used in this program are Copyright (C) 1991-2023 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 9/9/2022.
+** Last code change made 4/8/2023.
 */
 
 #include "astrolog.h"
@@ -69,12 +69,17 @@
 flag FProper(int i)
 {
   flag f;
+  int j;
 
   f = !ignore[i];
-  if (gi.nMode == gWheel || gi.nMode == gHouse)
-    f &= (!gs.fMoonWheel || (!FMoons(i) && i != oMoo) ||
-      ObjOrbit(i) == us.objCenter);
-  else if (gi.nMode == gOrbit)
+  if (gi.nMode == gWheel || gi.nMode == gHouse) {
+    if (gs.fMoonWheel) {
+      // Planetary moons will be drawn separately, so don't display here.
+      j = ObjOrbit(i);
+      if (!ignore[j] && FHasMoon(j) && j != us.objCenter)
+        f = fFalse;
+    }
+  } else if (gi.nMode == gOrbit)
     f &= FThing(i) && (us.fEphemFiles || !FGeo(i));
   else if (fMap || gi.nMode == gGlobe || gi.nMode == gPolar)
     f &= FThing2(i);
@@ -175,11 +180,11 @@ void FillSymbolRingM(int obj, real *symbol, real factor)
 
   for (l = 0; fMoved && l < us.nDivision*2; l++) {
     fMoved = fFalse;
-    for (i = moonsLo; i <= moonsHi; i++) {
+    for (i = custLo; i <= custHi; i++) {
       if (ignore[i] || ObjOrbit(i) != obj)
         continue;
       k1 = rLarge; k2 = -rLarge;
-      for (j = moonsLo; j <= moonsHi; j++) {
+      for (j = custLo; j <= custHi; j++) {
         if (ignore[j] || i == j || ObjOrbit(j) != obj)
           continue;
         temp = symbol[j]-symbol[i];
@@ -605,16 +610,17 @@ void XChartWheelMulti()
 void XChartGridRelation()
 {
   char sz[cchSzDef], szT[cchSzDef];
-  int nScale, unit, siz, x, y, i, j, i0, j0, k, l;
+  int nScale, unit, siz, x, y, i, j, i0, j0, k;
   KI c;
 
   nScale = gi.nScale/gi.nScaleT;
   unit = CELLSIZE*gi.nScale; siz = (gi.nGridCell+1)*unit;
   *szT = chNull;
   i = us.fSmartCusp; us.fSmartCusp = fFalse;
+  j = us.objRequire; us.objRequire = -1;
   if (!FCreateGridRelation(gs.fAlt != us.fGridMidpoint))
     return;
-  us.fSmartCusp = i;
+  us.fSmartCusp = i; us.objRequire = j;
 
   // Loop through each cell in each row and column of grid.
 
@@ -641,7 +647,7 @@ void XChartGridRelation()
       if (i0 <= is.nObj) {
         gi.xTurtle = x*unit+unit/2;
         gi.yTurtle = y*unit+unit/2 - (nScale > 2 ? 5*gi.nScaleT : 0);
-        k = i >= 0 && j >= 0 ? grid->n[i][j] : 0;
+        k = (i >= 0 && j >= 0 ? grid->n[i][j] : 0);
 
         // If current cell is on top row or left hand column, draw glyph of
         // planet owning the particular row or column in question.
@@ -674,42 +680,22 @@ void XChartGridRelation()
 
           // For top and left edges, print sign and degree of the planet.
           if (y == 0 || x == 0) {
-            if (x+y > 0) {
-              k = SFromZ(y == 0 ? cp2.obj[i] : cp1.obj[j]);
-              l = (int)((y == 0 ? cp2.obj[i] : cp1.obj[j])-ZFromS(k));
-              c = kSignB(k);
-              if (nScale > 3 && is.fSeconds)
-                sprintf(szT, "%c%02d", chDegL,
-                  (int)((y == 0 ? cp2.obj[i] : cp1.obj[j])*60.0)%60);
-              sprintf(sz, "%.3s %02d%s", szSignName[k], l, szT);
-
+            if (x > 0 || y > 0) {
+              c = FormatGridCell(sz, -2-(y == 0), y == 0 ? i : j, 0,
+                nScale > 3 && us.fSeconds);
+            } else {
               // For extreme upper left corner, print some little arrows
               // pointing out chart1's planets and chart2's planets.
-            } else {
               c = gi.kiLite;
               sprintf(sz, "1v 2->");
             }
           } else {
-            l = NAbs(grid->v[i][j]); k = l / 60; l %= 60;
-            if (nScale > 3 && is.fSeconds)
-              sprintf(szT, "%02d", l);
-
-            // For aspect cells, print the orb in degrees and minutes.
-            if (gs.fAlt == us.fGridMidpoint) {
-              if (grid->n[i][j]) {
-                sprintf(sz, "%c%d%c%02d'%s",
-                  rgchAppSep[us.nAppSep*2 + (grid->v[i][j] >= 0)],
-                  k/60, chDegL, k%60, szT);
-                if (nScale == 3)
-                  sz[7] = chNull;
-              } else
-                *sz = chNull;
-
-            // For midpoint cells, print degree and minute.
-            } else
-              sprintf(sz, "%2d%c%02d'%s", k/60, chDegL, k%60, szT);
+            // Print aspect or midpoint cells.
+            c = FormatGridCell(sz, i, j, 1 + (gs.fAlt != us.fGridMidpoint),
+              nScale > 3 && us.fSeconds);
           }
-          DrawColor(c);
+          if (c >= 0)
+            DrawColor(c);
           DrawSz(sz, x*unit+unit/2, (y+1)*unit-3*gi.nScaleT, dtBottom);
         }
       }
@@ -1194,8 +1180,7 @@ void XChartTransit(flag fTrans, flag fProg)
           cRow++;
         } else
           pw = *ppw;
-        n = grid->v[x][y];
-        rT = (real)NAbs(n) / 3600.0;
+        rT = RAbs(grid->v[x][y]);
         rT /= GetOrb(x, y, asp);
         pw[iw] = 65535 - (int)(rT * (65536.0 - rSmall));
 

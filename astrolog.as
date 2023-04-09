@@ -1,4 +1,4 @@
-@AD750  ; Astrolog 7.50 default settings file astrolog.as
+@AD760  ; Astrolog 7.60 default settings file astrolog.as
 
 ; The contents of this file can be automatically generated with the
 ; "File / Save Settings" menu command, or with the -od command switch.
@@ -14,7 +14,7 @@
 ;-n      ; Comment out this line to not start with chart for "now".
 
 _s      ; Which zodiac to use       ["_s" is tropical, "=s" is sidereal]
-:s 0.0  ; Sidereal zodiac offset    [Change "0.0" to desired ayanamsa  ]
+:s Faga ; Sidereal zodiac offset    [Change "Faga" to desired ayanamsa ]
 :sz     ; Zodiac display format     ["z" is sign, "d" is 0-360 deg, etc]
 -A 5    ; Number of aspects         [Change "5" to desired number      ]
 -c Plac ; House system              [Change "Plac" to desired system   ]
@@ -23,12 +23,14 @@ _k      ; Ansi color text           ["=k" is color, "_k" is monochrome ]
 :d 48   ; Searching divisions       [Change "48" to desired divisions  ]
 _b0     ; Print zodiac seconds      ["_b0" to minute, "=b0" to second  ]
 =b      ; Use ephemeris files       ["=b" uses them, "_b" doesn't      ]
-=0b     ; Disable old calculations  ["=0b" disables them, "_0b" allows ]
+_0b     ; Disable old calculations  ["=0b" disables them, "_0b" allows ]
 :w 0    ; Wheel chart text rows     [Change "0" to desired wheel rows  ]
 :I 80   ; Text screen columns       [Change "80" to desired columns    ]
 -YQ 0   ; Text screen scroll limit  [Change "24" or set to "0" for none]
-_Yn     ; Which Nodes and Lilith    ["_Yn" shows mean, "=Yn" shows true]
 _sr0    ; Latitudes or declinations ["_sr0" shows lat., "=sr0" declin. ]
+_Ys     ; Use plane of solar system ["_Ys" is ecliptic, "=Ys" is solar ]
+_Yn     ; Which Nodes and Lilith    ["_Yn" shows mean, "=Yn" shows true]
+=Yu0    ; Show eclipse information  ["=Yu0" shows, "_Yu0" doesn't show ]
 _Yr     ; Show rounded positions    ["=Yr" rounds, "_Yr" doesn't       ]
 _Yd     ; European date format      ["_Yd" is M/D/Y, "=Yd" is D-M-Y    ]
 _Yt     ; European time format      ["_Yt" is AM/PM, "=Yt" is 24 hour  ]
@@ -38,8 +40,7 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 =Y8     ; Clip text to end of line  ["=Y8" clips, "_Y8" doesn't clip   ]
 -Ya0    ; Input character encoding  [0-3 is Default, IBM, Latin-1, UTF8]
 -YP 0   ; Arabic part formula       ["1" is fixed, "0" checks if night ]
-=Yu0    ; Show eclipse information  ["=Yu0" shows, "_Yu0" doesn't show ]
-=0n     ; Internet Web queries      ["=0n" disables them, "_0n" allows ]
+_0n     ; Internet Web queries      ["=0n" disables them, "_0n" allows ]
 
 :pd 365.24219 ; Progression degrees per day    [365 is secondary]
 :pC 1.0       ; Progressed cusp movement ratio [1.0 is quotidian]
@@ -48,8 +49,8 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 ; FILE PATHS (-Yi1 through -Yi9):
 ; For example, point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.
 
--Yi1 "C:\ASTROLOG\EPHEM"
--Yi2 "C:\ASTROLOG\CHARTS"
+-Yi1 "ephem"
+-Yi2 "source"
 
 
 ; DEFAULT RESTRICTIONS:
@@ -59,13 +60,17 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 ; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos
 ; 43-51: Hyg Pho Eri Hau Mak Gon Qua Sed Orc
 ; 52-83: Planetary moons
-; 84-130: Fixed stars
+; 84-133: Fixed stars
 
 -YR 0 10     1 0 0 0 0 0 0 0 0 0 0    ; Planets
 -YR 11 21    1 1 1 1 1 0 1 1 1 1 1    ; Minor planets
 -YR 22 33    0 1 1 1 1 1 1 1 1 0 1 1  ; House cusps
 -YR 34 42    1 1 1 1 1 1 1 1 1        ; Uranians
 -YR 43 51    1 1 1 1 1 1 1 1 1        ; Dwarfs
+-YR 52 78    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Moons
+-YR 79 83    1 1 1 1 1                ; Centers of Body
+-YR 84 108   1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Fixed stars
+-YR 109 133  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Fixed stars
 
 ; DEFAULT TRANSIT RESTRICTIONS:
 
@@ -74,6 +79,10 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 -YRT 22 33   1 1 1 1 1 1 1 1 1 1 1 1  ; House cusps
 -YRT 34 42   1 1 1 1 1 1 1 1 1        ; Uranians
 -YRT 43 51   1 1 1 1 1 1 1 1 1        ; Dwarfs
+-YR 52 78    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Moons
+-YR 79 83    1 1 1 1 1                ; Centers of Body
+-YR 84 108   1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Fixed stars
+-YR 109 133  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  ; Fixed stars
 
 -YR0 0 0  ; Restrict sign changes, direction changes
 -YR1 1 1  ; Restrict latitude direction changes, distance direction changes
@@ -177,6 +186,11 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 ; [No objects are different from defaults]
 
 
+; STAR CUSTOMIZATION:
+
+; [No star objects are different from defaults]
+
+
 ; GRAPHICS DEFAULTS:
 
 _XJ              ; Indian type wheels ["_XJ" is Western, "=XJ" is Indian  ]
@@ -190,12 +204,12 @@ _Xr              ; Reverse background ["_Xr" is black, "=Xr" is white     ]
 :Xv 1            ; Wheel fill    ["0" for none, "1" for standard, "2" rainbow]
 _Xx              ; Thicker lines ["=Xx" is thicker, "_Xx" is thinner         ]
 :Xbw             ; Bitmap file type   ["Xbw" is Windows .bmp, "Xbn" is X11   ]
-:YXG 11122       ; Glyph selections [Capricorn, Uranus, Pluto, Lilith, Vertex]
+:YXG 111221      ; Glyphs for [Capricorn, Uranus, Pluto, Lilith, Vertex, Eris]
 :YXg 0           ; Aspect grid cells  ["0" for autodetect  ]
 :YXS 0.0         ; Orbit radius in AU ["0.0" for autodetect]
 :YXj 0           ; Orbit trail count
 :YX7 600         ; Esoteric ray column influence width
-:YXf 00000       ; System fonts to use [text, signs, houses, planets, aspects]
+:YXf 000000      ; Fonts to use [text, signs, houses, planets, aspects, naks.]
 :YXp 0           ; PostScript paper orientation ["-1" portrait, "1" landscape]
 :YXp0 8.5in 11in ; PostScript paper X and Y sizes
 
