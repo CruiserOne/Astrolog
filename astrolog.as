@@ -49,8 +49,8 @@ _0n     ; Internet Web queries      ["=0n" disables them, "_0n" allows ]
 ; FILE PATHS (-Yi1 through -Yi9):
 ; For example, point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.
 
--Yi1 "ephem"
--Yi2 "source"
+-Yi1 "C:\Astrolog\ephem"
+-Yi2 "C:\Astrolog\source"
 
 
 ; DEFAULT RESTRICTIONS:
