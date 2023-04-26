@@ -23,14 +23,25 @@ OBJS = astrolog.o atlas.o calc.o charts0.o charts1.o charts2.o charts3.o\
  swecl.o swedate.o swehouse.o swejpl.o swemmoon.o swemplan.o sweph.o\
  swephlib.o
 
+# If you don't have X windows or are not using XCAIRO comment out the following
+# XCAIRO_DEBUG outputs (once) found fonts and ignores unavailable fonts.
+# For XCAIRO_DEBUG add "-lfontconfig" to the following.
+XCAIRO = -lcairo
+
 # If you don't have X windows, delete the "-lX11" part from the line below:
 # If not compiling with GNUC, delete the "-ldl" part from the line below:
-LIBS = -lm -lX11 -ldl -s
-CPPFLAGS = -O -Wno-write-strings -Wno-narrowing -Wno-comment
+LIBS = -lm -lX11 -ldl $(XCAIRO)
+
+OPT = -O -s
+#OPT = -g -O0
+WARN = -Wno-write-strings -Wno-narrowing -Wno-comment \
+       -Wno-register
+
+CPPFLAGS = $(OPT) $(WARN)
 RM = rm -f
 
 $(NAME): $(OBJS)
-	cc -o $(NAME) $(OBJS) $(LIBS)
+	cc -o $(NAME) $(OBJS) $(LIBS) $(OPT)
 
 clean:
 	$(RM) $(OBJS) $(NAME)

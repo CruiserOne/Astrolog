@@ -69,6 +69,10 @@
 #define X11 /* Comment out this #define if you don't have X windows, or */
             /* else have them and don't wish to compile in X graphics.  */
 
+#define XCAIRO /* Comment out this #define if you don't have X windows,   */
+               /* or if you don't want to use the X cairo library to      */
+               /* to use and display "Astrology fonts". And see Makefile. */
+
 //#define WIN /* Comment out this #define if you don't have MS Windows, or */
             /* else have them but want a command line version instead.   */
 
@@ -326,6 +330,9 @@
 #define ISG
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#ifdef XCAIRO
+#include <cairo/cairo-xlib.h>
+#endif
 #endif
 #ifdef WIN
 #define ISG
@@ -395,6 +402,12 @@
 #error "If 'X11' is defined 'PC' must not be as well"
 #endif
 #endif // X11
+
+#ifdef XCAIRO
+#ifndef X11
+#error "If 'XCAIRO' is defined 'X11' must be too"
+#endif
+#endif // XCAIRO
 
 #ifdef WIN
 #ifndef GRAPH
@@ -1148,6 +1161,9 @@ enum _terminationcode {
 #define RgbR(l) BLo(l)
 #define RgbG(l) BHi(l)
 #define RgbB(l) ((byte)((dword)(l) >> 16 & 0xFF))
+#define RgbR01(l) ((real)RgbR(l) / 255.0)
+#define RgbG01(l) ((real)RgbG(l) / 255.0)
+#define RgbB01(l) ((real)RgbB(l) / 255.0)
 #define ChHex(n) (char)((n) < 10 ? '0' + (n) : 'a' + (n) - 10)
 
 #define Max(v1, v2) ((v1) > (v2) ? (v1) : (v2))
@@ -2065,6 +2081,9 @@ typedef struct _GraphicsInternal {
   Window wind, root;
   int screen;
   int depth;          // Number of active color bits.
+#ifdef XCAIRO
+  cairo_t *cr;        // For drawing astrology font characters on X windows.
+#endif
 #endif
 #ifdef PS             // Variables used by the PostScript generator.
   flag fEps;          // Are we doing Encapsulated PostScript.

@@ -95,6 +95,9 @@ GI gi = {
 #endif
 #ifdef X11
   NULL, 0, 0, 0, 0, 0, 0, 0, 0,
+#ifdef XCAIRO
+  NULL,
+#endif
 #endif
 #ifdef PS
   fFalse, 0, fFalse, 0, 0, 1.0,
