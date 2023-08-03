@@ -256,7 +256,7 @@ extern REAL8 test_near_zero(REAL8);
 extern REAL8 deltat(double);
 extern void to_mean_ekl();
 extern int afl2planet();
-extern void disturb(register struct kor *, REAL8 *, REAL8 *, REAL8, REAL8,
+extern void disturb(struct kor *, REAL8 *, REAL8 *, REAL8, REAL8,
   REAL8);
 extern REAL8 fnu(REAL8, REAL8, REAL8);
 

@@ -561,8 +561,8 @@ int hel(int planet, REAL8 t, REAL8 *al, REAL8 *ar, REAL8 *az, REAL8 *alp,
 /* speed in radius, AU per day */
 /* speed in z, AU per day */
 {
-  register struct elements *e;
-  register struct eledata  *d;
+  struct elements *e;
+  struct eledata  *d;
   REAL8 lk = 0.0;
   REAL8 rk = 0.0;
   REAL8 b, h1, sini, sinv, cosi, cosu, cosv, man, truanom, esquare,
@@ -686,7 +686,7 @@ int hel(int planet, REAL8 t, REAL8 *al, REAL8 *ar, REAL8 *az, REAL8 *alp,
 }
 
 
-void disturb(register struct kor *k, REAL8 *al, REAL8 *ar, REAL8 lk, REAL8 rk,
+void disturb(struct kor *k, REAL8 *al, REAL8 *ar, REAL8 lk, REAL8 rk,
   REAL8 man)
 /* ENDMARK-terminated array of struct kor */
 /* longitude in degrees, use a pointer to return value */
