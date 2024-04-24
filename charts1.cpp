@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: charts1.cpp
+** Astrolog (Version 7.70) File: charts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -74,7 +74,7 @@ void PrintHeader(int nSpace)
     return;
   }
 
-  fNam = *ciMain.nam > chNull; fLoc = *ciMain.loc > chNull;
+  fNam = FSzSet(ciMain.nam); fLoc = FSzSet(ciMain.loc);
   AnsiColor(kWhiteA);
   sprintf(sz, "%s %s", szAppName, szVersionCore); PrintSz(sz);
   if (!is.fSeconds || fNam)
@@ -88,35 +88,38 @@ void PrintHeader(int nSpace)
   else {
     if (!is.fSeconds || fNam)
       PrintSz("for ");
-    sprintf(sz, "%s%s", ciMain.nam, fNam ? "\n" : ""); PrintSz(sz);
+    sprintf(sz, "%s%s", fNam ? ciMain.nam : "", fNam ? "\n" : "");
+    PrintSz(sz);
     day = DayOfWeek(Mon, Day, Yea);
     sprintf(sz, "%.3s %s %s (%cT Zone %s)", szDay[day],
       SzDate(Mon, Day, Yea, 3), SzTim(Tim), ChDst(Dst),
       SzZone(Zon)); PrintSz(sz);
-    sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ', ciMain.loc,
-      fLoc ? " " : "", SzLocation(Lon, Lat)); PrintSz(sz);
+    sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ',
+      fLoc ? ciMain.loc : "", fLoc ? " " : "", SzLocation(Lon, Lat));
+    PrintSz(sz);
     if (us.fProgress) {
-      sprintf(sz, "Progressed To: %.3s %s %s (%cT Zone %s)\n", szDay[day],
-        SzDate(MonT, DayT, YeaT, 3), SzTim(TimT), ChDst(us.dstDef),
-        SzZone(us.zonDef)); PrintSz(sz);
+      sprintf(sz, "Progressed To: %.3s %s %s (%cT Zone %s)\n",
+        szDay[DayOfWeek(MonT, DayT, YeaT)], SzDate(MonT, DayT, YeaT, 3),
+        SzTim(TimT), ChDst(ciDefa.dst), SzZone(ciDefa.zon)); PrintSz(sz);
     }
   }
 
   // Print second set of chart information.
   if (us.nRel < rcNone || us.nRel == rcSynastry) {
     AnsiColor(kDkGray);
-    fNam = *ciTwin.nam > chNull; fLoc = *ciTwin.loc > chNull;
+    fNam = FSzSet(ciTwin.nam); fLoc = FSzSet(ciTwin.loc);
     fProg = us.nRel == rcProgress;
     sprintf(sz, "Chart %s %s%s", !is.fSeconds || fNam ?
       (!fProg ? "#2 comparison for" : "#2 progressed for") :
-      (!fProg ? "Number2:" : "Progr.2:"), ciTwin.nam, fNam ? "\n" : "");
-    PrintSz(sz);
+      (!fProg ? "Number2:" : "Progr.2:"), fNam ? ciTwin.nam : "",
+      fNam ? "\n" : ""); PrintSz(sz);
     day = DayOfWeek(Mon, Day, Yea);
     sprintf(sz, "%.3s %s %s (%cT Zone %s)", szDay[day],
       SzDate(ciTwin.mon, ciTwin.day, ciTwin.yea, 3), SzTim(ciTwin.tim),
       ChDst(ciTwin.dst), SzZone(ciTwin.zon)); PrintSz(sz);
-    sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ', ciTwin.loc,
-      fLoc ? " " : "", SzLocation(ciTwin.lon, ciTwin.lat)); PrintSz(sz);
+    sprintf(sz, "%c%s%s%s\n", fLoc && !fNam ? '\n' : ' ',
+      fLoc ? ciTwin.loc : "", fLoc ? " " : "",
+      SzLocation(ciTwin.lon, ciTwin.lat)); PrintSz(sz);
   }
 
   AnsiColor(kDefault);
@@ -132,11 +135,10 @@ void ChartListing(void)
 {
   ET et;
   char sz[cchSzMax];
-  int i, j, k, l, fNam, fLoc;
+  int i, j, k, l;
   real rT;
 
   CreateElemTable(&et);
-  fNam = *ciMain.nam > chNull; fLoc = *ciMain.loc > chNull;
 
   PrintHeader(0);    // Show time and date of the chart being displayed.
 
@@ -163,7 +165,7 @@ void ChartListing(void)
       us.fEquator2 ? "Decl" : "Lati", us.fHouse3D ? "3D " : "",
       szSystem[is.nHouseSystem]); PrintSz(sz);
   }
-  if (!fNam && !fLoc)
+  if (!FSzSet(ciMain.nam) && !FSzSet(ciMain.loc))
     PrintL();
 
   // Ok, now print out the location of each object.
@@ -655,14 +657,15 @@ void PrintWheelCenter(int irow)
 {
   char sz[cchSzDef], szT[cchSzDef];
   int cch, nT;
+  flag fNam = FSzSet(ciMain.nam), fLoc = FSzSet(ciMain.loc);
 
   if (is.nWheelRows > 4)                     // Try to center lines.
     irow -= (is.nWheelRows - 4);
-  if (*ciMain.nam == chNull && *ciMain.loc == chNull && is.nWheelRows >= 4)
-    irow--;                                  
-  if (*ciMain.nam == chNull && irow >= 1)    // Don't have blank lines if the
-    irow++;                                  // name and/or location strings
-  if (*ciMain.loc == chNull && irow >= 3)    // are empty.
+  if (!fNam && !fLoc && is.nWheelRows >= 4)
+    irow--;
+  if (!fNam && irow >= 1)    // Don't have blank lines if the name
+    irow++;                  // and/or location strings are empty.
+  if (!fLoc && irow >= 3)
     irow++;
 
   switch (irow) {
@@ -690,11 +693,13 @@ void PrintWheelCenter(int irow)
       SzLocation(Lon, Lat));
     break;
   case 5:
-    nT = us.fEuroTime; us.fEuroTime = fTrue;
-    sprintf(szT, "%s", SzTim(cp0.lonMC * (24.0/rDegMax)));
-    sprintf(sz, "UT: %s, Sid.T: %s",
-      SzTim(Tim+Zon-(us.dstDef != dstAuto ? Dst : is.fDst)), szT);
-    us.fEuroTime = nT;
+    if (!us.fProgress) {
+      nT = us.fEuroTime; us.fEuroTime = fTrue;
+      sprintf(szT, "%s", SzTim(cp0.lonMC * (24.0/rDegMax)));
+      sprintf(sz, "UT: %s, Sid.T: %s", SzTim(Tim + GetOffsetCI(&ciMain)), szT);
+      us.fEuroTime = nT;
+    } else
+      sprintf(sz, "Prog: %s %s", SzDate(MonT, DayT, YeaT, 2), SzTim(TimT));
     break;
   case 6:
     sprintf(sz, "%s%s Houses", us.fHouse3D ? "3D " : "",
@@ -1520,7 +1525,7 @@ void ChartOrbit(void)
 // Display a chart showing esoteric astrology information, as in the -7
 // switch. This includes Rays, esoteric rulerships, and Ray influences.
 
-void ChartEsoteric(void)
+int ChartEsoteric(flag fGetRay)
 {
   char sz[cchSzDef], *pch;
   int nRay1[cRay+1], nRay2[cRay+1], rank1[cRay+1], rank2[cRay+1],
@@ -1531,9 +1536,9 @@ void ChartEsoteric(void)
 
   EnsureRay();
 #ifdef INTERPRET
-  if (us.fInterpret) {      // Print an interpretation if -I in effect.
-    InterpretEsoteric();
-    return;
+  if (us.fInterpret && !fGetRay) {    // Print interpretation if -I in effect.
+    InterpretEsoteric(fFalse);
+    return 0;
   }
 #endif
 
@@ -1561,6 +1566,16 @@ void ChartEsoteric(void)
   }
   SortRank(power, rank, is.nObj, fTrue);
   SortRank(rRay1, rank1, cRay, fFalse); SortRank(rRay2, rank2, cRay, fFalse);
+  if (fGetRay) {
+    n = 0;
+    for (i = 1; i <= cRay; i++) {
+      if (rank1[i] == 1)
+        n += i*10;
+      else if (rank1[i] == 2)
+        n += i;
+    }
+    return n;
+  }
 
   // Print planet table.
   for (i = 0; i < rrMax; i++) {
@@ -1641,6 +1656,7 @@ void ChartEsoteric(void)
   sprintf(sz, "Tot:%5d%7.1f      100.0%% %c%6.2f%7.1f      100.0%%\n",
     n1, r1, chV, (real)n2 / 420.0, r2);
   PrintSz(sz);
+  return 0;
 }
 
 
@@ -2686,7 +2702,7 @@ void PrintChart(flag fProg)
   }
   if (us.fEsoteric) {
     PrintHeader(is.fMult ? -1 : 1);
-    ChartEsoteric();
+    ChartEsoteric(fFalse);
     is.fMult = fTrue;
   }
   if (us.fAstroGraph) {
@@ -2713,7 +2729,7 @@ void PrintChart(flag fProg)
   if (us.fHorizonSearch) {
     if (is.fMult)
       PrintL2();
-    ChartInDayHorizon();
+    ChartHorizonRising();
     is.fMult = fTrue;
   }
   if (us.fInDay) {
@@ -2775,6 +2791,11 @@ void PrintChart(flag fProg)
   if (us.fMoonChart) {
     PrintHeader(is.fMult ? -1 : 1);
     ChartMoons();
+    is.fMult = fTrue;
+  }
+  if (us.fExoTransit) {
+    PrintHeader(is.fMult ? -1 : 1);
+    ChartExoplanet(fFalse);
     is.fMult = fTrue;
   }
 

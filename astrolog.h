@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: astrolog.h
+** Astrolog (Version 7.70) File: astrolog.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/2/2024.
 */
 
 /*
@@ -180,8 +180,8 @@
   // as accessed with the -b switch. This is normally the default dir above
   // but may be changed to be somewhere else.
 
-#define DEFAULT_LONG DM(122,20) 
-#define DEFAULT_LAT  DM(47, 36)
+#define DEFAULT_LONG DMS(122, 19, 55)
+#define DEFAULT_LAT  DMS(47,  36, 22)
   // Change numbers to longitude and latitude of your current location. Use
   // negative values for eastern or southern degrees.
 
@@ -292,7 +292,7 @@
 ** One shouldn't ever need to change anything below this line to compile.
 */
 
-//#define BETA  // Uncomment to compile in beta message on startup.
+#define BETA  // Uncomment to compile in beta message on startup.
 #define ASTROLOG
 #ifdef _DEBUG
 #define DEBUG
@@ -467,9 +467,9 @@
 #define fTrue  TRUE
 
 #define szAppNameCore "Astrolog"
-#define szVersionCore "7.60"
-#define szVerCore     "760"
-#define szDateCore    "April 2023"
+#define szVersionCore "7.70"
+#define szVerCore     "770"
+#define szDateCore    "April 2024"
 #define szAddressCore \
   "Astara@msn.com - http://www.astrolog.org/astrolog.htm"
 #define szNowCore     "now"
@@ -478,25 +478,25 @@
 #define szNulCore     "nul"
 #define szObjUnknown  "???"
 
-#define cchSzDef   80
-#define cchSzMax   255
-#define cchSzLine  (cchSzMax*4)
-#define dwCanary   0x87654321
-#define nDegMax    360
-#define nDegHalf   180
-#define nMillion   1000000
-#define nLarge     9999999
-#define nNegative  -1000
-#define yeaJ2G     1582
-#define monJ2G     mOct
-#define dayJ2G1    4
-#define dayJ2G2    15
-#define zonLMT     24.0
-#define zonLAT     23.0
-#define dstAuto    24.0
-#define rStarLite  -1.46
-#define rStarSpan  7.0
-#define rStarNot   999.99
+#define cchSzDef  80
+#define cchSzMax  255
+#define cchSzLine (cchSzMax*4)
+#define dwCanary  0x87654321
+#define nDegMax   360
+#define nDegHalf  180
+#define nMillion  1000000
+#define nLarge    9999999
+#define nNegative -1000
+#define yeaJ2G    1582
+#define monJ2G    mOct
+#define dayJ2G1   4
+#define dayJ2G2   15
+#define zonLMT    24.0
+#define zonLAT    23.0
+#define dstAuto   24.0
+#define rStarLite -1.46
+#define rStarSpan 7.0
+#define rStarNot  999.99
 
 // Math and conversion constants
 
@@ -836,16 +836,16 @@ enum _relationshipchart {
   rcNone       = 0,
   rcSynastry   = 1,
   rcComposite  = 2,
-  rcMidpoint   = 3,
-  rcDifference = 4,
+  rcMidpoint   = 3,   // Time space midpoint
+  rcDifference = 4,   // Date difference
   rcBiorhythm  = 5,
-  rcDual       = -1,
+  rcDual       = -1,  // Bi-wheel
   rcTriWheel   = -2,
   rcQuadWheel  = -3,
   rcQuinWheel  = -4,
   rcHexaWheel  = -5,
-  rcTransit    = -6,
-  rcProgress   = -7,
+  rcTransit    = -6,  // Transit and natal
+  rcProgress   = -7,  // Progressed and natal
 };
 
 // Aspect configurations
@@ -947,60 +947,61 @@ enum _graphicschart {
   gTraTraGra  = 15,
   gTraNatGra  = 16,
   gMoons      = 17,
-  gSphere     = 18,
-  gWorldMap   = 19,
-  gGlobe      = 20,
-  gPolar      = 21,
-  gTelescope  = 22,
-  gBiorhythm  = 23,
+  gExo        = 18,
+  gSphere     = 19,
+  gWorldMap   = 20,
+  gGlobe      = 21,
+  gPolar      = 22,
+  gTelescope  = 23,
+  gBiorhythm  = 24,
 #ifdef WIN
-  gAspect     = 24,
-  gArabic     = 25,
-  gTraTraTim  = 26,
-  gTraTraInf  = 27,
-  gTraNatTim  = 28,
-  gTraNatInf  = 29,
-  gSign       = 30,
-  gObject     = 31,
-  gHelpAsp    = 32,
-  gConstel    = 33,
-  gPlanet     = 34,
-  gRay        = 35,
-  gMeaning    = 36,
-  gSwitch     = 37,
-  gObscure    = 38,
-  gKeystroke  = 39,
-  gCredit     = 40,
-  gMax        = 41,
+  gAspect     = 25,
+  gArabic     = 26,
+  gTraTraTim  = 27,
+  gTraTraInf  = 28,
+  gTraNatTim  = 29,
+  gTraNatInf  = 30,
+  gSign       = 31,
+  gObject     = 32,
+  gHelpAsp    = 33,
+  gConstel    = 34,
+  gPlanet     = 35,
+  gRay        = 36,
+  gMeaning    = 37,
+  gSwitch     = 38,
+  gObscure    = 39,
+  gKeystroke  = 40,
+  gCredit     = 41,
+  gMax        = 42,
 #endif
 };
 
 // Colors
 
 enum _colors {
-  kReverse = -2,
-  kDefault = -1,
-  kBlack   = 0,
-  kMaroon  = 1,
-  kDkGreen = 2,
-  kOrange  = 3,
-  kDkBlue  = 4,
-  kPurple  = 5,
-  kDkCyan  = 6,
-  kLtGray  = 7,
-  kDkGray  = 8,
-  kRed     = 9,
-  kGreen   = 10,
-  kYellow  = 11,
-  kBlue    = 12,
-  kMagenta = 13,
-  kCyan    = 14,
-  kWhite   = 15,
-  kElement = 16,
-  kRay     = 17,
-  kStar    = 18,
-  kPlanet  = 19,
-  kNull    = 16,
+  kReverse = -2,  // Reverse video
+  kDefault = -1,  // Default color
+  kBlack   = 0,   // Black
+  kMaroon  = 1,   // Dark Red
+  kDkGreen = 2,   // Dark Green
+  kOrange  = 3,   // Dark Yellow
+  kDkBlue  = 4,   // Dark Blue
+  kPurple  = 5,   // Purple
+  kDkCyan  = 6,   // Dark Cyan
+  kLtGray  = 7,   // Light Gray
+  kDkGray  = 8,   // Dark Gray
+  kRed     = 9,   // Red
+  kGreen   = 10,  // Green
+  kYellow  = 11,  // Yellow
+  kBlue    = 12,  // Blue
+  kMagenta = 13,  // Magenta
+  kCyan    = 14,  // Cyan
+  kWhite   = 15,  // White
+  kElement = 16,  // Color of element
+  kRay     = 17,  // Color of Ray
+  kStar    = 18,  // Color of star's brightness
+  kPlanet  = 19,  // Color of planet orbited
+  kNull    = 16,  // Invalid color
 };
 
 // Arabic parts
@@ -1167,6 +1168,7 @@ enum _terminationcode {
 #define NHex(ch) ((int)((ch) <= '9' ? (ch) - '0' : (ch) - 'a' + 10) & 15)
 #define NHex2(ch) ((int)((ch) <= '9' ? (ch) - '0' : (ch) - 'A' + 10) & 15)
 #define FSzSet(sz) ((sz) != NULL && *(sz) != chNull)
+#define SzSet(sz) ((sz) != NULL ? (sz) : "")
 #define NMultDiv(n1, n2, n3) ((int)((long)(n1) * (n2) / (n3)))
 #define Ratio(v1, v2, v3) ((v1) + ((v2) - (v1)) * (v3))
 #define ZFromS(s) ((real)(((s)-1)*30))
@@ -1260,10 +1262,10 @@ enum _terminationcode {
 #define FValidDwad(n) FBetween(n, 0, 12)
 #define FValidBioday(n) FBetween(n, 1, 199)
 #define FValidScreen(n) FBetween(n, 20, 200)
-#define FValidMacro(n) FBetween(n, 1, 48)
+#define FValidMacro(n) ((n) >= 0)
 #define FValidList(n) FBetween(n, 0, is.cci-1)
 #define FValidGlyphs(n) FBetween(n, 0, 223222)
-#define FValidDecaType(n) FBetween(n, 0, 2)
+#define FValidDecaType(n) FBetween(n, 0, 5)
 #define FValidDecaSize(n) FBetween(n, 0, 100)
 #define FValidDecaLine(n) FBetween(n, 1, 1000)
 #define FValidGrid(n) FBetween(n, 0, cObj)
@@ -1300,10 +1302,10 @@ enum _terminationcode {
 #define kModeB(m) kElemB[(m) <= 1 ? (m) : eWat]
 #define FInterpretObj(obj) (szMindPart[obj][0] != chNull)
 #define FInterpretAsp(asp) ((asp) > 0 && szInteract[asp][0])
-#define szPerson  (ciMain.nam[0] ? ciMain.nam : "This person")
-#define szPerson0 (ciMain.nam[0] ? ciMain.nam : "the person")
-#define szPerson1 (ciMain.nam[0] ? ciMain.nam : "Person1")
-#define szPerson2 (ciTwin.nam[0] ? ciTwin.nam : "Person2")
+#define szPerson  (FSzSet(ciMain.nam) ? ciMain.nam : "This person")
+#define szPerson0 (FSzSet(ciMain.nam) ? ciMain.nam : "the person")
+#define szPerson1 (FSzSet(ciMain.nam) ? ciMain.nam : "Person1")
+#define szPerson2 (FSzSet(ciTwin.nam) ? ciTwin.nam : "Person2")
 #define FIgnore(i) ignore[i]
 #define FIgnore2(i) ignore2[i]
 #define FAllow(i) (us.objRequire < 0 || (i) == us.objRequire)
@@ -1327,6 +1329,7 @@ enum _terminationcode {
 #define CONST const
 #define PAllocateCore(cb) malloc(cb)
 #define DeallocatePCore(p) free(p)
+#define DeallocatePIf(p) if ((p) != NULL) DeallocateP(p);
 #define ldTime 2440588L
 #ifndef PC
 #define chDirSep '/'
@@ -1353,7 +1356,7 @@ enum _terminationcode {
 #endif
 
 // Should an object in the outer wheel be restricted?
-#define FProper2(i) (!(us.nRel == rcTransit ? ignore2[i] : ignore[i]))
+#define FProper2(i) (!(us.nRel <= rcTransit ? ignore2[i] : ignore[i]))
 
 // Are particular coordinates on the chart?
 #define FInRect(x, y, x1, y1, x2, y2) \
@@ -1506,6 +1509,20 @@ typedef struct _TransInfo {
   real retT;     // Transiting planet's zodiac position velocity
 } TransInfo;
 
+typedef struct _ExoplanetData {
+  char *sz;      // The name of the exoplanet
+  real ra;       // RA of exoplanet's location
+  real dec;      // Declination of exoplanet's location
+  real mag;      // Magnitude of exoplanet's star
+  real epoch;    // Epoch of middle of exoplanet transit
+  real epochU;   // Uncertainty offset of exoplanet epoch
+  real period;   // Period of exoplanet transit in days
+  real periodU;  // Uncertainty of exoplanet period in days
+  real dur;      // Duration of exoplanet transit in hours
+  real JDLoop;   // Time of current exoplanet transit
+  KI kiLoop;     // Color used for current exoplanet transit
+} ExoData;
+
 typedef struct _AtlasEntry {
   real lon;              // Longitude of city
   real lat;              // Latitude of city
@@ -1611,6 +1628,7 @@ typedef struct _UserSettings {
   flag fAtlasNear;      // -Nl
   flag fZoneChange;     // -Nz
   flag fMoonChart;      // -8
+  flag fExoTransit;     // -Ux
 
   // Chart suboptions
   flag fVelocity;       // -v0
@@ -1697,6 +1715,7 @@ typedef struct _UserSettings {
   flag fSidereal2;     // -Ys
   flag fTrueNode;      // -Yn
   flag fNoNutation;    // -Yn0
+  flag fNaturalNode;   // -Yn1
   flag fEuroDate;      // -Yd
   flag fEuroTime;      // -Yt
   flag fEuroDist;      // -Yv
@@ -1720,6 +1739,7 @@ typedef struct _UserSettings {
   flag fStarsList;     // -YRU0
   flag fStarMagDist;   // -YUb
   flag fStarMagAbs;    // -YUb0
+  flag fNoDisplay;     // -Y0
   flag fNoWrite;       // -0o
   flag fNoRead;        // -0i
   flag fNoQuit;        // -0q
@@ -1753,19 +1773,14 @@ typedef struct _UserSettings {
   int   nScreenWidth;  // -I
   int   nWriteFormat;  // -o
   int   nListAll;      // -5e
-  real  dstDef;        // -z0
-  real  zonDef;        // -z
-  real  lonDef;        // -zl
-  real  latDef;        // -zl
   real  elvDef;        // -zv
   real  tmpDef;        // -zf
-  char *namDef;        // -zj
-  char *locDef;        // -zj
   char *rgszPath[10];  // -Yi
   char *szADB;         // -Y5i
   char *szAstColor;    // -YkE
   char *szStarsColor;  // -YkU
   char *szStarsList;   // -YRU
+  char *szExoList;     // -YUx
 
   // Value subsettings
   int   nWheelRows;        // Number of rows per house to use for -w wheel.
@@ -1824,10 +1839,17 @@ typedef struct _UserSettings {
   char *szExpFontHou;  // -~FC
   char *szExpFontObj;  // -~FO
   char *szExpFontAsp;  // -~FA
+  char *szExpFontNak;  // -~FN
   char *szExpSort;     // -~v
   char *szExpDecan;    // -~v3
+  char *szExpDegree;   // -~sd
   char *szExpStar;     // -~U
   char *szExpAst;      // -~U0
+  char *szExpExo;      // -~Ux
+  char *szExpIntV;     // -~Iv
+  char *szExpIntV2;    // -~IV
+  char *szExpIntA;     // -~Ia
+  char *szExpIntA2;    // -~IA
   char *szExpCity;     // -~XL
   char *szExpSidebar;  // -~Xt
   char *szExpKey;      // -~XQ
@@ -1850,7 +1872,6 @@ typedef struct _InternalSettings {
   flag fReturn;        // Are we doing a transit chart for returns?
   flag fMult;          // Have we already printed at least one text chart?
   flag fSeconds;       // Do we print locations to nearest second?
-  flag fSzPersist;     // Are parameter strings persistent when processing?
   flag fSzInteract;    // Are we in middle of chart so some setting fixed?
   flag fNoEphFile;     // Have we already had a ephem file not found error?
   flag fSwissPathSet;  // Has the Swiss Ephemeris path been set yet?
@@ -1878,6 +1899,8 @@ typedef struct _InternalSettings {
   int iciCur;          // Index of most recently used chart in chart list.
   int iciIndex1;       // Index into chart list used for chart #1 with -5e.
   int iciIndex2;       // Index into chart list used for chart #2 with -5e3.
+  int cexod;           // Number of exoplanet transit stars loaded from file.
+  int cszMacro;        // Number of command switch macro strings in list.
   int cAlloc;          // Number of memory allocations currently allocated.
   int cAllocTotal;     // Total memory allocations allocated this session.
   int cbAllocSize;     // Total bytes in all memory allocations allocated.
@@ -1892,6 +1915,8 @@ typedef struct _InternalSettings {
   RuleEntry *rgrue;    // List of all Daylight Saving change rule entries.
   real *rgzonCol;      // Cache of time zone offsets for each zone area.
   CI *rgci;            // List of chart information records for chart list.
+  ExoData *rgexod;     // List of exoplanet transit stars loaded from file.
+  char **rgszMacro;    // List of command switch macro strings.
   FILE *fileIn;        // The switch file currently being read from.
   FILE *S;             // File to write text to.
   real T;              // Julian time for chart.
@@ -1906,7 +1931,6 @@ typedef struct _InternalSettings {
   real rNut;           // Nutation offset.
 } IS;
 
-#ifdef SWISS
 typedef struct _ExtraStar {
   real lon;           // Zodiac position.
   real lat;           // Vertical latitude.
@@ -1919,7 +1943,6 @@ typedef struct _ExtraStar {
   char *pchBest;      // Best available name.
   KI ki;              // Color to use for star.
 } ES;
-#endif
 
 #ifdef GRAPH
 typedef struct _Bitmap {
@@ -1955,6 +1978,7 @@ typedef struct _GraphicsSettings {
   flag fEquator;     // Are we showing equator on maps/globes (-Xe set).
   flag fEcliptic;    // Are we drawing oriented to ecliptic (-YXe set).
   flag fAllStar;     // Are we drawing all sefstars.txt stars (-XU set).
+  flag fAllExo;      // Are we drawing astexo.csv exoplanets (-XUx set).
   flag fHouseExtra;  // Are we showing additional house info (-XC set).
   flag fPrintMap;    // Are we printing globe names on draw (-XPv set).
   flag fKeepSquare;  // Are we preserving chart aspect ratio (-XQ set).
@@ -2134,6 +2158,7 @@ typedef struct _OrbitalElements {
 } OE;
 
 #define szFileJPLCore  "astrolog.jpl"
+#define szFileExoCore  "astexo.csv"
 #ifdef WIN
 #define szFileTempCore "astrolog.tmp"
 #define szFileAutoCore "astrolog.bmp"

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xdevice.cpp
+** Astrolog (Version 7.70) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -118,8 +118,7 @@ flag FAllocateBmp(Bitmap *b, int x, int y)
     rgb = (byte *)PAllocate(cb, "color bitmap");
     if (rgb == NULL)
       return fFalse;
-    if (b->rgb != NULL)
-      DeallocateP(b->rgb);
+    DeallocatePIf(b->rgb);
     b->rgb = rgb;
   }
   b->x = x; b->y = y;
@@ -933,7 +932,7 @@ flag BeginFileX()
         gs.ft == ftBmp ? "bitmap" : (gs.ft == ftPS ? "PostScript" :
         (gs.ft == ftWmf ? "metafile" : "wireframe")));
       InputString(sz, sz);
-      gi.szFileOut = SzCopy(sz);
+      FCloneSz(sz, &gi.szFileOut);
    }
 #else
     // If autosaving in potentially rapid succession, ensure the file isn't
@@ -955,7 +954,7 @@ flag BeginFileX()
 #endif
     sprintf(sz, "Couldn't create output file: %s", gi.szFileOut);
     PrintWarning(sz);
-    gi.szFileOut = NULL;
+    FCloneSz(NULL, &gi.szFileOut);
 #ifdef WIN
     break;
 #endif
@@ -1137,9 +1136,9 @@ void PsFont(int nFont)
     return;
   szFont = rgszFontName[nFont];
   z = PSMUL*gi.nScale;
-  if (nFont == fiAstrolog) {
+  if (nFont == fiArial) {
     szFont = "Times-Roman"; z = 4*PSMUL*gi.nScaleText;
-  } else if (nFont == fiCourier) {
+  } else if (nFont == fiCourier || nFont == fiAstrolog) {
     szFont = "Courier"; z = 5*PSMUL*gi.nScaleText;
   }
   fprintf(gi.file, "/%s[%d 0 0 -%d 0 0]sf\n", szFont, z, z);
@@ -1536,7 +1535,7 @@ void WireSphere(int x, int y, int z, int r)
     rgz[i] = z + (int)((real)r * rgx[i]);
     rgr[i] = (real)r * rgy[i];
   }
-  for (j = 0; j <= 6; j++) {
+  for (j = 1; j <= 6; j++) {
     x2 = x + (int)rgr[j]; y2 = y;
     for (i = 0; i < 12; i++) {
       x1 = x2; y1 = y2;
@@ -1544,8 +1543,6 @@ void WireSphere(int x, int y, int z, int r)
       y2 = y + (int)(rgr[j] * rgy[i+1]);
       if (j < 6)
         WireLine(x1, y1, rgz[j], x2, y2, rgz[j]);
-      if (j <= 0)
-        continue;
       x1 = x + (int)(rgr[j-1] * rgx[i+1]);
       y1 = y + (int)(rgr[j-1] * rgy[i+1]);
       WireLine(x2, y2, rgz[j], x1, y1, rgz[j-1]);
@@ -1554,7 +1551,6 @@ void WireSphere(int x, int y, int z, int r)
 }
 
 
-#ifdef SWISS
 // Add a fixed star to the current wireframe file.
 
 void WireStar(int x, int y, int z, ES *pes)
@@ -1585,7 +1581,6 @@ void WireStar(int x, int y, int z, ES *pes)
   gi.zDefault = z + 8*gi.nScaleT;
   DrawSz(pes->pchBest, x, y, dtCent);
 }
-#endif
 
 
 // Given longitude and latitude values on a globe, return the 3D pixel
@@ -1647,9 +1642,7 @@ void WireDrawGlobe(flag fSky, real deg)
     rz, unit = 12*gi.nScale,
     x, y, z, xold, yold, zold, m, n, o, u, v, w, i, j, k, l;
   real planet1[objMax], planet2[objMax], x1, y1, rT;
-#ifdef SWISS
   ES es;
-#endif
 
   // Set up some variables.
   rz = Min(gs.xWin/2, gs.yWin/2);
@@ -1683,11 +1676,13 @@ void WireDrawGlobe(flag fSky, real deg)
     }
     // For globes, have to do a complicated transformation.
     WireGlobeCalc((real)xold, (real)yold, &m, &n, &o, rz, rT);
+#ifdef CONSTEL
     if (fSky && i > 0) {
       gi.zDefault = o;
       DrawSz(szCnstlAbbrev[i], m, n, dtCent | dtScale2);
       continue;
     }
+#endif
     WireGlobeCalc((real)x, (real)y, &u, &v, &w, rz, rT);
     WireLine(m, n, o, u, v, w);
   }
@@ -1798,6 +1793,17 @@ void WireDrawGlobe(flag fSky, real deg)
     }
   }
 #endif
+
+  // Draw exoplanets.
+
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      x1 = es.lon; y1 = es.lat;
+      WireMapCalc(x1, y1, &j, &k, &l, fSky, rT, rz, deg);
+        WireStar(j, k, l, &es);
+    }
+  }
 
   // Draw grid of triangles or squares over the planet.
 
@@ -1971,11 +1977,12 @@ void WireChartOrbit()
       // Draw rings around Saturn or other planet.
       j = FBetween(i, oJuC, oNeC) ? i - oJuC + oJup :
         (FBetween(i, oJup, oNep) && ignore[i + oJuC - oJup] ? i :
-        (i == oHau ? i : -1));
+        (i == oHau || i == oQua ? i : -1));
       if (j >= 0) {
         PT3R vCross, ptCen;
         real tilt, rot;
-        vCross = rgvObjRing[IObjRing(j)];
+        j = IObjRing(j);
+        vCross = rgvObjRing[j];
         // Adjust ring vector appropriately if in sidereal zodiac.
         if (is.rSid != 0.0) {
           rT = RLength2(vCross.x, vCross.y);
@@ -1989,12 +1996,12 @@ void WireChartOrbit()
         vCross.z = 0.0;
         PtSet(ptCen, 1.0, 0.0, 0.0);
         rot = VAngleD(&vCross, &ptCen);
-        if (rgvObjRing[IObjRing(j)].y < 0.0)
+        if (rgvObjRing[j].y < 0.0)
           rot = rDegMax - rot;
-        k = (int)(rgrObjRing[IObjRing(j)][0] / rAUToKm * sx);
+        k = (int)(rgrObjRing[j][0] / rAUToKm * sx);
         WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
-        if (rgrObjRing[IObjRing(j)][1] > 0.0) {
-          k = (int)(rgrObjRing[IObjRing(j)][1] / rAUToKm * sx);
+        if (rgrObjRing[j][1] > 0.0) {
+          k = (int)(rgrObjRing[j][1] / rAUToKm * sx);
           WireCircle(x[i], y[i], z[i], (real)k, tilt, rot);
         }
       }
@@ -2139,14 +2146,16 @@ void WireSphereEarth(real azi, real alt, int zr, int *xp, int *yp, int *zp)
 void WireChartSphere()
 {
   char sz[cchSzDef];
-  int rgx[objMax], rgy[objMax], rgz[objMax], zGlyph, zGlyph2,
+  int rgx[objMax], rgy[objMax], rgz[objMax], zGlyph,
     cChart, iChart, zr, xo = 0, yo = 0, zo = 0, xp, yp, zp, i, j, k, k2, nSav;
   flag fHouse3D = !us.fHouse3D, fNoHorizon;
   real rT;
   CONST CP *pcp;
   CP cpSav;
+  byte ignoreSav[objMax];
+  ES es;
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
 #endif
 
   // Initialize variables.
@@ -2154,14 +2163,19 @@ void WireChartSphere()
     gs.xWin -= xSideT;
 
   fNoHorizon = ignorez[0] && ignorez[1] && ignorez[2] && ignorez[3];
-  zGlyph = 7*gi.nScale; zGlyph2 = 14*gi.nScale;
+  zGlyph = 7*gi.nScale;
   zr = Min(gs.xWin >> 1, gs.yWin >> 1) - zGlyph;
-  cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
+  if (!(us.nRel <= rcTransit))
+    cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
+  else {
+    cChart = 2;
+    CopyRgb(ignore, ignoreSav, sizeof(ignore));
+  }
 
   // Draw constellations.
   if (gs.fConstel) {
     neg(gs.rTilt);
-    WireDrawGlobe(fTrue, rDegMax - gs.rRot);
+    WireDrawGlobe(fTrue, gs.rRot);
     neg(gs.rTilt);
   }
 
@@ -2347,14 +2361,14 @@ void WireChartSphere()
         DrawColor(gi.kiOn);
       WireSphereLocal((real)i, 0.0, zr + k, &xp, &yp, &zp);
       sprintf(sz, "%c", rgszDir[j][0]);
-      gi.zDefault = zp + gi.nScale;
+      gi.zDefault = zp;
       DrawSz(sz, xp, yp, dtCent);
     }
     for (j = -90; j <= 90; j += nDegHalf) {
       WireSphereLocal(0.0, (real)j, zr + k, &xp, &yp, &zp);
       DrawColor(gs.fColorHouse ? gi.kiOn : (kObjB[j <= 0 ? oMC : oNad]));
       sprintf(sz, "%c", j <= 0 ? 'Z' : 'N');
-      gi.zDefault = zp + gi.nScale;
+      gi.zDefault = zp;
       DrawSz(sz, xp, yp, dtCent);
     }
   }
@@ -2390,9 +2404,21 @@ void WireChartSphere()
   }
 #endif
 
+  // Draw exoplanets.
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      EquToEcl(&es.lon, &es.lat);
+      WireSphereZodiac(es.lon, es.lat, zr, &xp, &yp, &zp);
+      WireStar(xp, yp, zp, &es);
+    }
+  }
+
   // Determine set of planet data to use.
   for (iChart = 1; iChart <= cChart; iChart++) {
     FProcessCommandLine(szWheelX[iChart]);
+    if (iChart == 2 && us.nRel <= rcTransit)
+      CopyRgb(ignore2, ignore, sizeof(ignore));
     if (iChart <= 1)
       pcp = rgpcp[us.nRel <= rcDual];
     else
@@ -2400,27 +2426,34 @@ void WireChartSphere()
     cpSav = cp0;
     cp0 = *pcp;
 
-  // Draw planet glyphs, and spots for actual local location.
-  for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
-    WireSphereZodiac(planet[i], planetalt[i], zr, &xp, &yp, &zp);
-    rgx[i] = xp; rgy[i] = yp; rgz[i] = zp;
-    gi.zDefault = rgz[i] - zGlyph2;
-    DrawObject(i, rgx[i], rgy[i]);
-    DrawColor(kObjB[i]);
-    WireOctahedron(rgx[i], rgy[i], rgz[i], gi.nScale);
-  }
+    // Draw planet glyphs, and spots for actual local location.
+    for (i = 0; i <= is.nObj; i++) if (FProper(i)) {
+      WireSphereZodiac(planet[i], planetalt[i], zr, &xp, &yp, &zp);
+      rgx[i] = xp; rgy[i] = yp; rgz[i] = zp;
+      gi.zDefault = rgz[i] - zGlyph;
+      DrawObject(i, rgx[i], rgy[i]);
+      DrawColor(kObjB[i]);
+      WireOctahedron(rgx[i], rgy[i], rgz[i], gi.nScale);
+    }
 
-  // Draw lines connecting planets which have aspects between them.
-  if (!FCreateGrid(fFalse))
-    return;
-  for (j = is.nObj; j >= 1; j--)
-    for (i = j-1; i >= 0; i--)
-      if (grid->n[i][j] && FProper(i) && FProper(j)) {
-        DrawColor(kAspB[grid->n[i][j]]);
-        WireLine(rgx[i], rgy[i], rgz[i], rgx[j], rgy[j], rgz[j]);
-      }
+    // Draw lines connecting planets which have aspects between them.
+    if (!FCreateGrid(fFalse))
+      return;
+    for (j = is.nObj; j >= 1; j--)
+      for (i = j-1; i >= 0; i--)
+        if (grid->n[i][j] && FProper(i) && FProper(j)) {
+          DrawColor(kAspB[grid->n[i][j]]);
+          WireLine(rgx[i], rgy[i], rgz[i], rgx[j], rgy[j], rgz[j]);
+          if (gs.fLabelAsp) {
+            gi.zDefault = (rgz[i] + rgz[j]) >> 1;
+            DrawAspect(grid->n[i][j],
+              (rgx[i] + rgx[j]) >> 1, (rgy[i] + rgy[j]) >> 1);
+          }
+        }
 
     cp0 = cpSav;
+    if (iChart == 2 && us.nRel <= rcTransit)
+      CopyRgb(ignoreSav, ignore, sizeof(ignore));
   } // iChart
   FProcessCommandLine(szWheelX[0]);
 

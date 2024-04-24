@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: charts3.cpp
+** Astrolog (Version 7.70) File: charts3.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -60,13 +60,19 @@
 ******************************************************************************
 */
 
+#ifdef GRAPH
+#define RgzCalendar() gi.rgzCalendar
+#else
+#define RgzCalendar() NULL
+#endif
+
 // Display a list of transit events. Called from ChartInDaySearch().
 
 void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
 {
   char sz[cchSzDef];
   int fVoid, nVoid, nSkip = 0, i, j, k, s1, s2, s3;
-  CI ciCast, ciEvent;
+  CI ciCast = ciSave, ciEvent;
 #ifdef EXPRESS
   int nEclipse;
   real rEclipse;
@@ -75,9 +81,9 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
   int nEclipse2;
 #endif
 
-  i = (gi.rgzCalendar == NULL ? -1 : occurcount);
+  i = (RgzCalendar() == NULL ? -1 : occurcount);
   loop {
-    i += (gi.rgzCalendar == NULL ? 1 : -1);
+    i += (RgzCalendar() == NULL ? 1 : -1);
     if (!FBetween(i, 0, occurcount-1))
       break;
 
@@ -87,7 +93,7 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     nVoid = -1;
     fVoid = FAspectVoid(pid[i].source, pid[i].dest, pid[i].aspect);
 #ifdef EXPRESS
-    if (gi.rgzCalendar != NULL &&
+    if (RgzCalendar() != NULL &&
       (i >= occurcount || pid[i].day != pid[i+1].day))
       nSkip = 0;
     // Adjust whether this aspect can be going v/c if AstroExpression says so.
@@ -173,7 +179,7 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     ciSave = ciCast;
 #ifdef GRAPH
     // May want to draw current event within a graphic calendar box.
-    if (gi.rgzCalendar != NULL) {
+    if (RgzCalendar() != NULL) {
       for (j = i; j >= 0 && pid[j].day == pid[i].day; j--)
         ;
       for (k = i; k < occurcount && pid[k].day == pid[i].day; k++)
@@ -215,8 +221,8 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
           szObjDisp[pid[i].dest]);
       else
         Assert(fFalse);
-      ciEvent.nam = SzCopy(sz);
-      ciEvent.loc = us.locDef;
+      ciEvent.nam = SzClone(sz);
+      ciEvent.loc = ciDefa.loc;
       FAppendCIList(&ciEvent);
     }
     k = DayOfWeek(pid[i].mon, pid[i].day, pid[i].yea);
@@ -247,11 +253,12 @@ void ChartInDaySearch(flag fProg)
     i, j, k, l, s1, s2;
   real divsiz, d1, d2, e1, e2, f1, f2, g;
   flag fYear, fVoid, fPrint = fTrue;
+  CP cpA, cpB;
 
   // If parameter 'fProg' is set, look for changes in a progressed chart.
 
 #ifdef GRAPH
-  fPrint &= (gi.rgzCalendar == NULL);
+  fPrint &= (RgzCalendar() == NULL);
 #endif
   fYear = us.fInDayMonth && us.fInDayYear;
   fVoid = !FIgnore(oMoo) && !us.fIgnoreSign && us.fInDayMonth;
@@ -303,7 +310,7 @@ void ChartInDaySearch(flag fProg)
       ciCore = ciMain;
     }
     CastChart(-1);
-    cp2 = cp0;
+    cpB = cp0;
 
     // Now divide the day into segments and search each segment in turn.
     // More segments is slower, but has slightly better time accuracy.
@@ -320,14 +327,14 @@ void ChartInDaySearch(flag fProg)
         ciCore = ciMain;
       }
       CastChart(-1);
-      cp1 = cp2; cp2 = cp0;
+      cpA = cpB; cpB = cp0;
 
       // Now search through the present segment for anything exciting.
 
       for (i = 0; i <= is.nObj; i++)
         if (!FIgnore(i) && (fProg || us.fGraphAll || FThing(i))) {
-        s1 = SFromZ(cp1.obj[i])-1;
-        s2 = SFromZ(cp2.obj[i])-1;
+        s1 = SFromZ(cpA.obj[i])-1;
+        s2 = SFromZ(cpB.obj[i])-1;
 
         // Does the current planet change into the next or previous sign?
 
@@ -337,12 +344,12 @@ void ChartInDaySearch(flag fProg)
             pid[occurcount].source = i;
             pid[occurcount].aspect = aSig;
             pid[occurcount].dest = s2+1;
-            pid[occurcount].time = MinDistance(cp1.obj[i],
-              (real)(cp1.dir[i] >= 0.0 ? s2 : s1) * 30.0) / MinDistance(
-              cp1.obj[i], cp2.obj[i])*divsiz + (real)(div-1)*divsiz;
+            pid[occurcount].time = MinDistance(cpA.obj[i],
+              (real)(cpA.dir[i] >= 0.0 ? s2 : s1) * 30.0) / MinDistance(
+              cpA.obj[i], cpB.obj[i])*divsiz + (real)(div-1)*divsiz;
             pid[occurcount].pos1 = pid[occurcount].pos2 = ZFromS(s1+1);
-            pid[occurcount].ret1 = cp1.dir[i];
-            pid[occurcount].ret2 = cp2.dir[i];
+            pid[occurcount].ret1 = cpA.dir[i];
+            pid[occurcount].ret2 = cpB.dir[i];
             pid[occurcount].mon = mon0;
             pid[occurcount].day = day0;
             pid[occurcount].yea = yea0;
@@ -351,8 +358,8 @@ void ChartInDaySearch(flag fProg)
           // Does the current planet change into next or previous degree?
 
           } else if (us.nSignDiv > 1) {
-            j = (int)(cp1.obj[i] / (rDegMax / (real)divSign));
-            k = (int)(cp2.obj[i] / (rDegMax / (real)divSign));
+            j = (int)(cpA.obj[i] / (rDegMax / (real)divSign));
+            k = (int)(cpB.obj[i] / (rDegMax / (real)divSign));
             l = NAbs(j-k);
             if (j != k && (l == 1 || l == divSign-1)) {
               l = k;
@@ -361,10 +368,10 @@ void ChartInDaySearch(flag fProg)
               pid[occurcount].source = i;
               pid[occurcount].aspect = aDeg;
               pid[occurcount].dest = l;
-              pid[occurcount].time = MinDistance(cp1.obj[i],
-                (real)l * (rDegMax / (real)divSign)) / MinDistance(cp1.obj[i],
-                cp2.obj[i])*divsiz + (real)(div-1)*divsiz;
-              pid[occurcount].pos1 = pid[occurcount].pos2 = cp1.obj[i];
+              pid[occurcount].time = MinDistance(cpA.obj[i],
+                (real)l * (rDegMax / (real)divSign)) / MinDistance(cpA.obj[i],
+                cpB.obj[i])*divsiz + (real)(div-1)*divsiz;
+              pid[occurcount].pos1 = pid[occurcount].pos2 = cpA.obj[i];
               pid[occurcount].ret1 = pid[occurcount].ret2 =
                 (l == k) ? 1.0 : -1.0;
               pid[occurcount].mon = mon0;
@@ -377,16 +384,16 @@ void ChartInDaySearch(flag fProg)
 
         // Does the current planet go retrograde or direct?
 
-        if (!us.fIgnoreDir && (cp1.dir[i] < 0.0) != (cp2.dir[i] < 0.0) &&
+        if (!us.fIgnoreDir && (cpA.dir[i] < 0.0) != (cpB.dir[i] < 0.0) &&
           FAllow(i) && occurcount < maxinday) {
           pid[occurcount].source = i;
           pid[occurcount].aspect = aDir;
-          pid[occurcount].dest = cp2.dir[i] < 0.0;
-          pid[occurcount].time = RAbs(cp1.dir[i])/(RAbs(cp1.dir[i])+
-            RAbs(cp2.dir[i]))*divsiz + (real)(div-1)*divsiz;
+          pid[occurcount].dest = cpB.dir[i] < 0.0;
+          pid[occurcount].time = RAbs(cpA.dir[i])/(RAbs(cpA.dir[i])+
+            RAbs(cpB.dir[i]))*divsiz + (real)(div-1)*divsiz;
           pid[occurcount].pos1 = pid[occurcount].pos2 =
-            RAbs(cp1.dir[i])/(RAbs(cp1.dir[i])+RAbs(cp2.dir[i])) *
-            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
+            RAbs(cpA.dir[i])/(RAbs(cpA.dir[i])+RAbs(cpB.dir[i])) *
+            (cpB.obj[i]-cpA.obj[i]) + cpA.obj[i];
           pid[occurcount].ret1 = pid[occurcount].ret2 = 0.0;
           pid[occurcount].mon = mon0;
           pid[occurcount].day = day0;
@@ -396,17 +403,17 @@ void ChartInDaySearch(flag fProg)
 
         // Does the current planet reach maximum or minimum latitude?
 
-        if (!us.fIgnoreDiralt && (cp1.diralt[i] < 0.0) != (cp2.diralt[i] < 0.0)
+        if (!us.fIgnoreDiralt && (cpA.diralt[i] < 0.0) != (cpB.diralt[i] < 0.0)
           && FAllow(i) && occurcount < maxinday) {
           pid[occurcount].source = i;
           pid[occurcount].aspect = aAlt;
-          pid[occurcount].dest = cp2.diralt[i] < 0.0;
-          pid[occurcount].time = RAbs(cp1.diralt[i])/(RAbs(cp1.diralt[i])+
-            RAbs(cp2.diralt[i]))*divsiz + (real)(div-1)*divsiz;
+          pid[occurcount].dest = cpB.diralt[i] < 0.0;
+          pid[occurcount].time = RAbs(cpA.diralt[i])/(RAbs(cpA.diralt[i])+
+            RAbs(cpB.diralt[i]))*divsiz + (real)(div-1)*divsiz;
           pid[occurcount].pos1 = pid[occurcount].pos2 =
-            RAbs(cp1.diralt[i])/(RAbs(cp1.diralt[i])+RAbs(cp2.diralt[i])) *
-            (cp2.alt[i]-cp1.alt[i]) + cp1.alt[i];
-          pid[occurcount].ret1 = cp1.dir[i]; pid[occurcount].ret2 = cp2.dir[i];
+            RAbs(cpA.diralt[i])/(RAbs(cpA.diralt[i])+RAbs(cpB.diralt[i])) *
+            (cpB.alt[i]-cpA.alt[i]) + cpA.alt[i];
+          pid[occurcount].ret1 = cpA.dir[i]; pid[occurcount].ret2 = cpB.dir[i];
           pid[occurcount].mon = mon0;
           pid[occurcount].day = day0;
           pid[occurcount].yea = yea0;
@@ -415,17 +422,17 @@ void ChartInDaySearch(flag fProg)
 
         // Does the current planet reach maximum or minimum distance?
 
-        if (!us.fIgnoreDirlen && (cp1.dirlen[i] < 0.0) != (cp2.dirlen[i] < 0.0)
+        if (!us.fIgnoreDirlen && (cpA.dirlen[i] < 0.0) != (cpB.dirlen[i] < 0.0)
           && FAllow(i) && occurcount < maxinday) {
           pid[occurcount].source = i;
           pid[occurcount].aspect = aLen;
-          pid[occurcount].dest = (cp2.dirlen[i] < 0.0);
-          pid[occurcount].time = RAbs(cp1.dirlen[i])/(RAbs(cp1.dirlen[i])+
-            RAbs(cp2.dirlen[i]))*divsiz + (real)(div-1)*divsiz;
+          pid[occurcount].dest = (cpB.dirlen[i] < 0.0);
+          pid[occurcount].time = RAbs(cpA.dirlen[i])/(RAbs(cpA.dirlen[i])+
+            RAbs(cpB.dirlen[i]))*divsiz + (real)(div-1)*divsiz;
           pid[occurcount].pos1 = pid[occurcount].pos2 =
-            RAbs(cp1.dirlen[i])/(RAbs(cp1.dirlen[i])+RAbs(cp2.dirlen[i])) *
-            (cp2.obj[i]-cp1.obj[i]) + cp1.obj[i];
-          pid[occurcount].ret1 = cp1.dir[i]; pid[occurcount].ret2 = cp2.dir[i];
+            RAbs(cpA.dirlen[i])/(RAbs(cpA.dirlen[i])+RAbs(cpB.dirlen[i])) *
+            (cpB.obj[i]-cpA.obj[i]) + cpA.obj[i];
+          pid[occurcount].ret1 = cpA.dir[i]; pid[occurcount].ret2 = cpB.dir[i];
           pid[occurcount].mon = mon0;
           pid[occurcount].day = day0;
           pid[occurcount].yea = yea0;
@@ -434,18 +441,18 @@ void ChartInDaySearch(flag fProg)
 
         // Does the current planet cross zero latitude?
 
-        if (!us.fIgnoreAlt0 && ((cp1.alt[i] < 0.0 && cp2.alt[i] >= 0.0) ||
-          (cp1.alt[i] >= 0.0 && cp2.alt[i] < 0.0)) &&
+        if (!us.fIgnoreAlt0 && ((cpA.alt[i] < 0.0 && cpB.alt[i] >= 0.0) ||
+          (cpA.alt[i] >= 0.0 && cpB.alt[i] < 0.0)) &&
           FAllow(i) && occurcount < maxinday) {
           pid[occurcount].source = i;
           pid[occurcount].aspect = aNod;
-          pid[occurcount].dest = (cp1.alt[i] >= 0.0);
-          pid[occurcount].time = cp1.alt[i]/(cp1.alt[i]-cp2.alt[i])*divsiz +
+          pid[occurcount].dest = (cpA.alt[i] >= 0.0);
+          pid[occurcount].time = cpA.alt[i]/(cpA.alt[i]-cpB.alt[i])*divsiz +
             (real)(div-1)*divsiz;
           pid[occurcount].pos1 = pid[occurcount].pos2 =
-            Mod(cp1.obj[i] + cp1.alt[i]/(cp1.alt[i]-cp2.alt[i]) *
-            MinDifference(cp1.obj[i], cp2.obj[i]));
-          pid[occurcount].ret1 = cp1.dir[i]; pid[occurcount].ret2 = cp2.dir[i];
+            Mod(cpA.obj[i] + cpA.alt[i]/(cpA.alt[i]-cpB.alt[i]) *
+            MinDifference(cpA.obj[i], cpB.obj[i]));
+          pid[occurcount].ret1 = cpA.dir[i]; pid[occurcount].ret2 = cpB.dir[i];
           pid[occurcount].mon = mon0;
           pid[occurcount].day = day0;
           pid[occurcount].yea = yea0;
@@ -459,8 +466,8 @@ void ChartInDaySearch(flag fProg)
           if (!us.fParallel) {
 
           for (k = 1; k <= us.nAsp; k++) if (FAcceptAspect(i, -k, j)) {
-            d1 = cp1.obj[i]; d2 = cp2.obj[i];
-            e1 = cp1.obj[j]; e2 = cp2.obj[j];
+            d1 = cpA.obj[i]; d2 = cpB.obj[i];
+            e1 = cpA.obj[j]; e2 = cpB.obj[j];
             if (MinDistance(d1, d2) < MinDistance(e1, e2)) {
               SwapR(&d1, &e1);
               SwapR(&d2, &e2);
@@ -511,16 +518,16 @@ void ChartInDaySearch(flag fProg)
               g = (RAbs(d1-e1) > rDegHalf ?
                 (d1-e1)-RSgn(d1-e1)*rDegMax : d1-e1)/(f2-f1);
               pid[occurcount].time = g*divsiz + (real)(div-1)*divsiz;
-              pid[occurcount].pos1 = Mod(cp1.obj[i] +
-                RSgn(cp2.obj[i]-cp1.obj[i])*
-                (RAbs(cp2.obj[i]-cp1.obj[i]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[i], cp2.obj[i]));
-              pid[occurcount].pos2 = Mod(cp1.obj[j] +
-                RSgn(cp2.obj[j]-cp1.obj[j])*
-                (RAbs(cp2.obj[j]-cp1.obj[j]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[j], cp2.obj[j]));
-              pid[occurcount].ret1 = (cp1.dir[i] + cp2.dir[i]) / 2.0;
-              pid[occurcount].ret2 = (cp1.dir[j] + cp2.dir[j]) / 2.0;
+              pid[occurcount].pos1 = Mod(cpA.obj[i] +
+                RSgn(cpB.obj[i]-cpA.obj[i])*
+                (RAbs(cpB.obj[i]-cpA.obj[i]) > rDegHalf ? -1 : 1)*
+                RAbs(g)*MinDistance(cpA.obj[i], cpB.obj[i]));
+              pid[occurcount].pos2 = Mod(cpA.obj[j] +
+                RSgn(cpB.obj[j]-cpA.obj[j])*
+                (RAbs(cpB.obj[j]-cpA.obj[j]) > rDegHalf ? -1 : 1)*
+                RAbs(g)*MinDistance(cpA.obj[j], cpB.obj[j]));
+              pid[occurcount].ret1 = (cpA.dir[i] + cpB.dir[i]) / 2.0;
+              pid[occurcount].ret2 = (cpA.dir[j] + cpB.dir[j]) / 2.0;
               occurcount++;
             }
           }
@@ -530,20 +537,20 @@ void ChartInDaySearch(flag fProg)
           for (k = 1; k <= Min(us.nAsp, aOpp); k++)
             if (FAcceptAspect(i, -k, j)) {
 
-            d1 = cp1.alt[i]; d2 = cp2.alt[i];
-            e1 = cp1.alt[j]; e2 = cp2.alt[j];
+            d1 = cpA.alt[i]; d2 = cpB.alt[i];
+            e1 = cpA.alt[j]; e2 = cpB.alt[j];
             if (!us.fEquator2 && !us.fParallel2) {
               // If have ecliptic latitude and want declination, convert.
-              g = cp1.obj[i]; EclToEqu(&g, &d1);
-              g = cp2.obj[i]; EclToEqu(&g, &d2);
-              g = cp1.obj[j]; EclToEqu(&g, &e1);
-              g = cp2.obj[j]; EclToEqu(&g, &e2);
+              g = cpA.obj[i]; EclToEqu(&g, &d1);
+              g = cpB.obj[i]; EclToEqu(&g, &d2);
+              g = cpA.obj[j]; EclToEqu(&g, &e1);
+              g = cpB.obj[j]; EclToEqu(&g, &e2);
             } else if (us.fEquator2 && us.fParallel2) {
               // If have equatorial declination and want latitude, convert.
-              g = cp1.obj[i]; EquToEcl(&g, &d1);
-              g = cp2.obj[i]; EquToEcl(&g, &d2);
-              g = cp1.obj[j]; EquToEcl(&g, &e1);
-              g = cp2.obj[j]; EquToEcl(&g, &e2);
+              g = cpA.obj[i]; EquToEcl(&g, &d1);
+              g = cpB.obj[i]; EquToEcl(&g, &d2);
+              g = cpA.obj[j]; EquToEcl(&g, &e1);
+              g = cpB.obj[j]; EquToEcl(&g, &e2);
             }
 
             // Search each potential aspect in turn. Negate the sign of the
@@ -581,8 +588,8 @@ void ChartInDaySearch(flag fProg)
               pid[occurcount].time = g*divsiz + (real)(div-1)*divsiz;
               pid[occurcount].pos1 = d1 + (d2 - d1)*g;
               pid[occurcount].pos2 = e1 + (e2 - e1)*g;
-              pid[occurcount].ret1 = (cp1.diralt[i] + cp2.diralt[i]) / 2.0;
-              pid[occurcount].ret2 = (cp1.diralt[j] + cp2.diralt[j]) / 2.0;
+              pid[occurcount].ret1 = (cpA.diralt[i] + cpB.diralt[i]) / 2.0;
+              pid[occurcount].ret2 = (cpA.diralt[j] + cpB.diralt[j]) / 2.0;
               occurcount++;
             }
           }
@@ -591,8 +598,8 @@ void ChartInDaySearch(flag fProg)
           // Check for planet pairs equidistant from each other.
 
           if (!us.fIgnoreDisequ) {
-            d1 = cp1.dist[i]; d2 = cp2.dist[i];
-            e1 = cp1.dist[j]; e2 = cp2.dist[j];
+            d1 = cpA.dist[i]; d2 = cpB.dist[i];
+            e1 = cpA.dist[j]; e2 = cpB.dist[j];
             f1 = e1-d1; f2 = e2-d2;
             if (RSgn(f1) != RSgn(f2) && occurcount < maxinday) {
               pid[occurcount].source = i;
@@ -604,16 +611,16 @@ void ChartInDaySearch(flag fProg)
               f1 = d2-d1; f2 = e2-e1;
               g = (d1-e1)/(f2-f1);
               pid[occurcount].time = g*divsiz + (real)(div-1)*divsiz;
-              pid[occurcount].pos1 = Mod(cp1.obj[i] +
-                RSgn(cp2.obj[i]-cp1.obj[i])*
-                (RAbs(cp2.obj[i]-cp1.obj[i]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[i], cp2.obj[i]));
-              pid[occurcount].pos2 = Mod(cp1.obj[j] +
-                RSgn(cp2.obj[j]-cp1.obj[j])*
-                (RAbs(cp2.obj[j]-cp1.obj[j]) > rDegHalf ? -1 : 1)*
-                RAbs(g)*MinDistance(cp1.obj[j], cp2.obj[j]));
-              pid[occurcount].ret1 = (cp1.dir[i] + cp2.dir[i]) / 2.0;
-              pid[occurcount].ret2 = (cp1.dir[j] + cp2.dir[j]) / 2.0;
+              pid[occurcount].pos1 = Mod(cpA.obj[i] +
+                RSgn(cpB.obj[i]-cpA.obj[i])*
+                (RAbs(cpB.obj[i]-cpA.obj[i]) > rDegHalf ? -1 : 1)*
+                RAbs(g)*MinDistance(cpA.obj[i], cpB.obj[i]));
+              pid[occurcount].pos2 = Mod(cpA.obj[j] +
+                RSgn(cpB.obj[j]-cpA.obj[j])*
+                (RAbs(cpB.obj[j]-cpA.obj[j]) > rDegHalf ? -1 : 1)*
+                RAbs(g)*MinDistance(cpA.obj[j], cpB.obj[j]));
+              pid[occurcount].ret1 = (cpA.dir[i] + cpB.dir[i]) / 2.0;
+              pid[occurcount].ret2 = (cpA.dir[j] + cpB.dir[j]) / 2.0;
               occurcount++;
             }
           }
@@ -647,7 +654,7 @@ void ChartInDaySearch(flag fProg)
       j = MAXINDAY >> 2;
       if (pid - id > j << 1) {
 #ifdef GRAPH
-        if (gi.rgzCalendar != NULL && id[j].day != id[0].day) {
+        if (RgzCalendar() != NULL && id[j].day != id[0].day) {
           // Don't split day when drawing within calendar boxes.
           while (j > 0 && id[j].day == id[j-1].day)
             j--;
@@ -689,14 +696,14 @@ void ChartTransitSearch(flag fProg)
     nSkip = 0, i, j, k, s1, s2, s3, s4, s1prev = 0;
   real divsiz, daysiz, d, e1, e2, f1, f2, mc = is.MC, ob = is.OB;
   flag fPrint = fTrue;
-  CP cpN = cp0;
-  CI ciSav, ciCast, ciEvent;
+  CP cpA, cpB, cpN = cp0;
+  CI ciSav, ciCast = ciSave, ciEvent;
 
   // Save away natal chart and initialize things.
 
 #ifdef GRAPH
   InDayInfo idT;
-  fPrint &= (gi.rgzCalendar == NULL);
+  fPrint &= (RgzCalendar() == NULL);
 #endif
   ciSav = ciTran;
   if (fProg)
@@ -751,7 +758,7 @@ void ChartTransitSearch(flag fProg)
     CastChart(-1);
     for (i = 0; i <= is.nObj; i++)
       SwapN(ignore[i], ignore2[i]);
-    cp2 = cp0;
+    cpB = cp0;
 
     // Divide month into segments and then search each segment in turn.
 
@@ -776,7 +783,7 @@ void ChartTransitSearch(flag fProg)
       CastChart(-1);
       for (i = 0; i <= oNorm; i++)
         SwapN(ignore[i], ignore2[i]);
-      cp1 = cp2; cp2 = cp0;
+      cpA = cpB; cpB = cp0;
 
       // Now search through the present segment for any transits. Note that
       // stars can be transited, but they can't make transits themselves.
@@ -787,8 +794,8 @@ void ChartTransitSearch(flag fProg)
 
         if (us.fHouse3D && !us.fIgnoreSign && !FIgnore2(i)) {
           is.MC = mc; is.OB = ob;
-          e1 = cp1.obj[i]; f1 = RHousePlaceIn3D(e1, cp1.alt[i]);
-          e2 = cp2.obj[i]; f2 = RHousePlaceIn3D(e2, cp2.alt[i]);
+          e1 = cpA.obj[i]; f1 = RHousePlaceIn3D(e1, cpA.alt[i]);
+          e2 = cpB.obj[i]; f2 = RHousePlaceIn3D(e2, cpB.alt[i]);
           s1 = SFromZ(f1)-1; s2 = SFromZ(f2)-1;
           k = NAbs(s1-s2);
           if (s1 != s2 && (k == 1 || k == cSign-1) && !FIgnore(cuspLo+s2) &&
@@ -797,11 +804,11 @@ void ChartTransitSearch(flag fProg)
             pti->aspect = aHou;
             pti->dest = s2+1;
             pti->time = MinDistance(f1,
-              (real)(cp1.dir[i] >= 0.0 ? s2 : s1) * 30.0) /
+              (real)(cpA.dir[i] >= 0.0 ? s2 : s1) * 30.0) /
               MinDistance(f1, f2)*divsiz + (real)(div-1)*divsiz;
-            pti->posT = cp1.obj[i];
+            pti->posT = cpA.obj[i];
             pti->posN = cpN.obj[i];
-            pti->retT = (cp1.dir[i] + cp2.dir[i]) / 2.0;
+            pti->retT = (cpA.dir[i] + cpB.dir[i]) / 2.0;
             occurcount++, pti++;
           }
         }
@@ -817,7 +824,7 @@ void ChartTransitSearch(flag fProg)
           if (!us.fParallel) {
 
           for (k = 1; k <= nAsp; k++) if (FAcceptAspect(i, k, j)) {
-            d = cpN.obj[i]; e1 = cp1.obj[j]; e2 = cp2.obj[j];
+            d = cpN.obj[i]; e1 = cpA.obj[j]; e2 = cpB.obj[j];
             if (MinDistance(e1, Mod(d-rAspAngle[k])) <
                 MinDistance(e2, Mod(d+rAspAngle[k]))) {
               e1 = Mod(e1+rAspAngle[k]);
@@ -847,11 +854,11 @@ void ChartTransitSearch(flag fProg)
               pti->dest = i;
               pti->time = RAbs(f1)/(RAbs(f1)+RAbs(f2))*divsiz +
                 (real)(div-1)*divsiz;
-              pti->posT = Mod(MinDistance(cp1.obj[j], Mod(d-rAspAngle[k])) <
-                              MinDistance(cp2.obj[j], Mod(d+rAspAngle[k])) ?
+              pti->posT = Mod(MinDistance(cpA.obj[j], Mod(d-rAspAngle[k])) <
+                              MinDistance(cpB.obj[j], Mod(d+rAspAngle[k])) ?
                 d-rAspAngle[k] : d+rAspAngle[k]);
               pti->posN = cpN.obj[i];
-              pti->retT = (cp1.dir[j] + cp2.dir[j]) / 2.0;
+              pti->retT = (cpA.dir[j] + cpB.dir[j]) / 2.0;
               occurcount++, pti++;
             }
           }
@@ -859,17 +866,17 @@ void ChartTransitSearch(flag fProg)
           } else {
 
           for (k = 1; k <= nAsp; k++) if (FAcceptAspect(i, k, j)) {
-            d = cpN.alt[i]; e1 = cp1.alt[j]; e2 = cp2.alt[j];
+            d = cpN.alt[i]; e1 = cpA.alt[j]; e2 = cpB.alt[j];
             if (!us.fEquator2 && !us.fParallel2) {
               // If have ecliptic latitude and want declination, convert.
               f1 = cpN.obj[i]; EclToEqu(&f1, &d);
-              f1 = cp1.obj[j]; EclToEqu(&f1, &e1);
-              f2 = cp2.obj[j]; EclToEqu(&f2, &e2);
+              f1 = cpA.obj[j]; EclToEqu(&f1, &e1);
+              f2 = cpB.obj[j]; EclToEqu(&f2, &e2);
             } else if (us.fEquator2 && us.fParallel2) {
               // If have equatorial declination and want latitude, convert.
               f1 = cpN.obj[i]; EquToEcl(&f1, &d);
-              f1 = cp1.obj[j]; EquToEcl(&f1, &e1);
-              f2 = cp2.obj[j]; EquToEcl(&f2, &e2);
+              f1 = cpA.obj[j]; EquToEcl(&f1, &e1);
+              f2 = cpB.obj[j]; EquToEcl(&f2, &e2);
             }
 
             if (k == aOpp) {
@@ -897,7 +904,7 @@ void ChartTransitSearch(flag fProg)
                 (real)(div-1)*divsiz;
               pti->posT = e1 + (e2 - e1)*RAbs(f1)/(RAbs(f1)+RAbs(f2));
               pti->posN = d;
-              pti->retT = (cp1.diralt[j] + cp2.diralt[j]) / 2.0;
+              pti->retT = (cpA.diralt[j] + cpB.diralt[j]) / 2.0;
               occurcount++, pti++;
             }
           }
@@ -906,7 +913,7 @@ void ChartTransitSearch(flag fProg)
           // Check for planet pairs equidistant from each other.
 
           if (!us.fIgnoreDisequ) {
-            d = cpN.dist[i]; e1 = cp1.dist[j]; e2 = cp2.dist[j];
+            d = cpN.dist[i]; e1 = cpA.dist[j]; e2 = cpB.dist[j];
             if (((d > e1 && d < e2) || (d > e2 && d < e1)) &&
               occurcount < MAXINDAY) {
               f1 = d-e1; f2 = e2-d;
@@ -915,10 +922,10 @@ void ChartTransitSearch(flag fProg)
               pti->dest = i;
               pti->time = RAbs(f1)/(RAbs(f1)+RAbs(f2))*divsiz +
                 (real)(div-1)*divsiz;
-              pti->posT = Mod(cp1.obj[j] + RAbs(f1)/(RAbs(f1)+RAbs(f2)) *
-                MinDifference(cp1.obj[j], cp2.obj[j]));
+              pti->posT = Mod(cpA.obj[j] + RAbs(f1)/(RAbs(f1)+RAbs(f2)) *
+                MinDifference(cpA.obj[j], cpB.obj[j]));
               pti->posN = cpN.obj[i];
-              pti->retT = (cp1.dir[j] + cp2.dir[j]) / 2.0;
+              pti->retT = (cpA.dir[j] + cpB.dir[j]) / 2.0;
               occurcount++, pti++;
             }
           }
@@ -927,7 +934,7 @@ void ChartTransitSearch(flag fProg)
 
 #ifdef GRAPH
       // May want to draw current transit event within a graphic calendar box.
-      if (gi.rgzCalendar != NULL && div < division)
+      if (RgzCalendar() != NULL && div < division)
         continue;
 #endif
 
@@ -943,9 +950,9 @@ void ChartTransitSearch(flag fProg)
 
       // Now loop through list and display all the transits.
 
-      i = (gi.rgzCalendar == NULL ? -1 : occurcount);
+      i = (RgzCalendar() == NULL ? -1 : occurcount);
       loop {
-        i += (gi.rgzCalendar == NULL ? 1 : -1);
+        i += (RgzCalendar() == NULL ? 1 : -1);
         if (!FBetween(i, 0, occurcount-1))
           break;
 
@@ -963,7 +970,7 @@ void ChartTransitSearch(flag fProg)
         SetCI(ciCast, MonT, s1+1, YeaT, (real)j / (60.0*60.0),
           DstT, ZonT, LonT, LatT);
 #ifdef EXPRESS
-        if (gi.rgzCalendar != NULL && (i >= occurcount || s1 != s1prev))
+        if (RgzCalendar() != NULL && (i >= occurcount || s1 != s1prev))
           nSkip = 0;
         s1prev = s1;
         // May want to skip this transit if AstroExpression says to do so.
@@ -982,7 +989,7 @@ void ChartTransitSearch(flag fProg)
         ciSave = ciCast;
 #ifdef GRAPH
         // May want to draw current transit within a graphic calendar box.
-        if (gi.rgzCalendar != NULL) {
+        if (RgzCalendar() != NULL) {
           for (j = i; j >= 0 && (int)ti[j].time/(24*60)+1 == ciSave.day; j--)
             ;
           for (k = i; k < occurcount &&
@@ -1011,8 +1018,8 @@ void ChartTransitSearch(flag fProg)
               szObjDisp[pti->source], szObjDisp[pti->dest]);
           else
             Assert(fFalse);
-          ciEvent.nam = SzCopy(sz);
-          ciEvent.loc = us.locDef;
+          ciEvent.nam = SzClone(sz);
+          ciEvent.loc = ciDefa.loc;
           FAppendCIList(&ciEvent);
         }
         if (us.fSeconds) {
@@ -1346,16 +1353,13 @@ LDone:
     for (x = 0; x < (fTrans ? is.nObj+1 : y); x++)
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
-        if (pw != NULL)
-          DeallocateP(pw);
+        DeallocatePIf(pw);
         if (fEclipse) {
           pw2 = (*rgEph)[y][x][asp];
-          if (pw2 != NULL)
-            DeallocateP(pw2);
+          DeallocatePIf(pw2);
         }
       }
-  if (rgEph != NULL)
-    DeallocateP(rgEph);
+  DeallocatePIf(rgEph);
   ciCore = ciMain;
   us.fProgress = fFalse;
   CastChart(1);
@@ -1371,7 +1375,7 @@ CONST char *rgszHorizon[4] = {"rises", "zeniths", "sets", "nadirs"};
 // (transits meridian in South half of sky), and nadirs (transits meridian in
 // North), is displayed.
 
-void ChartInDayHorizon(void)
+void ChartHorizonRising(void)
 {
   char sz[cchSzDef];
   int source[MAXINDAY], type[MAXINDAY], fRet[MAXINDAY],
@@ -1515,8 +1519,8 @@ void ChartInDayHorizon(void)
       // May want to add chart for current event to chart list.
       ciEvent = ciSave;
       sprintf(sz, "%s %s", szObjDisp[source[i]], rgszHorizon[type[i]-1]);
-      ciEvent.nam = SzCopy(sz);
-      ciEvent.loc = us.locDef;
+      ciEvent.nam = SzClone(sz);
+      ciEvent.loc = ciDefa.loc;
       FAppendCIList(&ciEvent);
     }
     j = DayOfWeek(mon0, day0, yea0);
@@ -1588,8 +1592,8 @@ void ChartInDayHorizon(void)
 }
 
 
-// Print out an ephemeris - the positions of the planets (at the time in the
-// current chart) each day during a specified month, as done with the -E
+// Print out an ephemeris, i.e. the positions of the planets (at the time in
+// the current chart) each day during a specified month, as done with the -E
 // switch. Display the ephemeris for the whole year if -Ey is in effect.
 
 void ChartEphemeris(void)
@@ -1728,6 +1732,280 @@ void ChartEphemeris(void)
 
   ciCore = ciMain;    // Recast original chart.
   CastChart(1);
+}
+
+
+// Print a list of exoplanet transits, i.e. when planets pass in front of
+// their star, as displayed with the -Ux switch. Can also produce a colored
+// list of exoplanet transit locations for displaying in graphics charts.
+
+flag ChartExoplanet(flag fColor)
+{
+  char szLine[cchSzLine], sz[cchSzDef], szT[cchSzDef], *pch;
+  ExoData *pexod;
+  real jd1, jd2, jd, off, jdMin, jda, jdb, jdChart, lon, lat, rT;
+  int cexod, count = 0, dTrans, mon, day, yea, mon2, day2, yea2, hr, min, sec,
+    i, j, n;
+  CI ci = ciMain, ci2 = ciMain, ci3 = ciMain, ci4 = ciMain, ci5 = ciMain;
+  flag fInstant = !us.fParallel || fColor, fNoOverlap = !us.fHouse3D,
+    fMonth = us.fInDayMonth, fYear = us.fInDayYear, fOverlap;
+  static flag fTOI = fFalse;
+  FILE *file;
+
+  // Read in exoplanet data file
+  if (is.rgexod == NULL) {
+    file = FileOpen(szFileExoCore, 0, NULL);
+    if (file == NULL)
+      return fFalse;
+    for (i = 0; !feof(file); i++)
+      fgets(szLine, cchSzLine, file);
+    fseek(file, 0, SEEK_SET);
+    fgets(szLine, cchSzLine, file);
+    fTOI = CchSz(szLine) > 100;
+    cexod = i-2;
+    is.rgexod = RgAllocate(cexod, ExoData, "exoplanet list");
+    if (is.rgexod == NULL)
+      return fFalse;
+    is.cexod = cexod;
+    ClearB((pbyte)is.rgexod, sizeof(ExoData) * cexod);
+    for (i = 0; i < cexod; i++) {
+      // Read in data for next exoplanet
+      fgets(szLine, cchSzLine, file);
+      pexod = &is.rgexod[i];
+      for (pch = szLine; *pch && *pch != ','; pch++)
+        ;
+      if (pch > szLine)
+        pch[-1] = chNull;
+      if (!FCloneSz(szLine + (szLine[0] != chNull), &pexod->sz))
+        return fFalse;
+      pch++;
+      hr = atoi(pch); min = atoi(pch+3); lon = atof(pch+6);
+      pexod->ra = (real)NAbs(hr) + (real)min/60.0 + lon/3600.0;
+      if (hr < 0)
+        neg(pexod->ra);
+      AdvancePast(',');
+      hr = atoi(pch); min = atoi(pch+4); lat = atof(pch+7);
+      pexod->dec = (real)NAbs(hr) + (real)min/60.0 + lat/3600.0;
+      if (hr < 0)
+        neg(pexod->dec);
+      AdvancePast(',');
+      if (fTOI) {
+        AdvancePast(',');
+      }
+      pexod->mag = atof(pch);
+      AdvancePast(',');
+      pexod->epoch = atof(pch);
+      AdvancePast(',');
+      pexod->epochU = atof(pch);
+      AdvancePast(',');
+      pexod->period = atof(pch);
+      AdvancePast(',');
+      pexod->periodU = atof(pch);
+      AdvancePast(',');
+      pexod->dur = atof(pch);
+    }
+    fclose(file);
+  } else
+    cexod = is.cexod;
+
+  // Determine range of dates to scan over
+  day = day2 = mon = mon2 = 1;
+  yea = yea2 = Yea;
+  if (!fMonth || fInstant) {
+    day = Day; day2 = Day+1;
+    mon = mon2 = Mon;
+    sprintf(szT, "1 day");
+  } else if (!fYear) {
+    mon = Mon; mon2 = Mon+1;
+    sprintf(szT, "1 month");
+  } else if (us.nEphemYears <= 1) {
+    yea2 = Yea+1;
+    sprintf(szT, "1 year");
+  } else {
+    yea2 = Yea + us.nEphemYears;
+    sprintf(szT, "%d year", us.nEphemYears);
+  }
+  jd1 = MdytszToJulian(mon, day, yea, 0.0, Dst, Zon) - 0.5;
+  jd2 = MdytszToJulian(mon2, day2, yea2, 0.0, Dst, Zon) - 0.5;
+  jdChart = MdytszToJulian(Mon, Day, Yea, Tim, Dst, Zon);
+  if (!fColor) {
+    PrintSz("Exoplanet transits ");
+    if (fInstant)
+      sprintf(sz, "taking place at chart time");
+    else
+      sprintf(sz, "over a %s period", szT);
+    PrintSz(sz);
+    PrintSz(":\nName");
+    PrintTab(' ', !fTOI ? 11 : 14);
+    PrintSz("Location");
+    PrintTab(' ', !us.fSeconds ? 7 : 14);
+    PrintSz("Mag.                 Start");
+    PrintTab(' ', (!us.fSeconds ? 11 : 17) - us.fEuroTime*4);
+    PrintSz("Middle");
+    PrintTab(' ', (!us.fSeconds ? 10 : 16) - us.fEuroTime*4);
+    PrintSz("End");
+    PrintTab(' ', 5 - us.fEuroTime*2);
+    if (!us.fSeconds)
+      PrintSz("Dur.  Unc");
+    else
+      PrintSz("   Durat.   Uncert");
+    PrintSz(".\n\n");
+  }
+
+  if (fInstant) {
+    jd1 -= 1.0;
+    jd2 += 1.0;
+  }
+  for (i = 0; i < cexod; i++) {
+    pexod = &is.rgexod[i];
+    dTrans = (int)((pexod->epoch - jd1) / pexod->period);
+    is.rgexod[i].JDLoop = pexod->epoch - (real)dTrans * pexod->period;
+    is.rgexod[i].kiLoop = kRed;
+  }
+
+  loop {
+    // Find the next most recent exoplanet transit
+    jdMin = 1.0E+20; j = -1;
+    for (i = 0; i < cexod; i++) {
+      jd = is.rgexod[i].JDLoop;
+      if (jd < jdMin && jd < jd2) {
+        jdMin = jd;
+        j = i;
+      }
+    }
+    if (j < 0)
+      break;
+
+    // Display current exoplanet transit
+    pexod = &is.rgexod[j];
+    is.rgexod[j].JDLoop += pexod->period;
+    jd = jdMin;
+    if (jd < jd1)
+      continue;
+    // For example: -YUx "TOI-2180 b;Kepler-1580 b"
+    if (FSzSet(us.szExoList) &&
+      SzInList(pexod->sz, us.szExoList, NULL) == NULL)
+      continue;
+    dTrans = (int)(RAbs(pexod->epoch - jd) / pexod->period + rRound);
+    off = (pexod->epochU + pexod->periodU * (real)dTrans) * 24.0;
+    fOverlap = (off > pexod->dur/2.0);
+    if (fNoOverlap && fOverlap && !fColor)
+      continue;
+#ifdef EXPRESS
+    // May want to skip this exoplanet if AstroExpression says to do so.
+    if (!us.fExpOff && FSzSet(us.szExpExo)) {
+      ExpSetR(iLetterW, pexod->mag);
+      ExpSetR(iLetterX, pexod->period);
+      ExpSetR(iLetterY, pexod->dur);
+      ExpSetR(iLetterZ, jd);
+      if (!NParseExpression(us.szExpExo))
+        continue;
+    }
+#endif
+
+    JulianToMdy(jd, &ci.mon, &ci.day, &ci.yea);
+
+    ci.tim = RFract(jd - 0.5) * 24.0 -
+      (Zon - (Dst == dstAuto ? (real)is.fDst : Dst)) - (pexod->dur/2.0 + off);
+    AddTime(&ci, 2, 0);     // Sanitize time if hour out of range
+    ci2 = ci; ci2.tim += (off*2.0);
+    AddTime(&ci2, 2, 0);    // Sanitize time if hour out of range
+    ci3 = ci2; ci3.tim += (pexod->dur/2.0 - off);
+    AddTime(&ci3, 2, 0);    // Sanitize time if hour out of range
+    ci4 = ci3; ci4.tim += (pexod->dur/2.0 - off);
+    AddTime(&ci4, 2, 0);    // Sanitize time if hour out of range
+    ci5 = ci4; ci5.tim += (off*2.0);
+    AddTime(&ci5, 2, 0);    // Sanitize time if hour out of range
+
+    // Check for whether current exoplanet transit overlaps chart time
+    if (fInstant) {
+      if (fColor) {
+        jda = MdytszToJulian(ci.mon,  ci.day,  ci.yea,  ci.tim,  Dst, Zon);
+        jdb = MdytszToJulian(ci5.mon, ci5.day, ci5.yea, ci5.tim, Dst, Zon);
+        if (FBetween(jdChart, jda, jdb))
+          is.rgexod[j].kiLoop = kYellow;
+      }
+      jda = MdytszToJulian(ci2.mon, ci2.day, ci2.yea, ci2.tim, Dst, Zon);
+      jdb = MdytszToJulian(ci4.mon, ci4.day, ci4.yea, ci4.tim, Dst, Zon);
+      if (!FBetween(jdChart, jda, jdb))
+        continue;
+      is.rgexod[j].kiLoop = kGreen;
+    }
+
+    count++;
+    if (fColor)
+      continue;
+
+    // Print current exoplanet transit event
+    sprintf(sz, fTOI ? "%-16.16s" : "%-13.13s", pexod->sz); PrintSz(sz);
+    PrintCh(' ');
+    lon = pexod->ra * rDegMax / 24.0; lat = pexod->dec;
+    if (!us.fEquator || !us.fEquator2) {
+      if (us.fEquator && !us.fEquator2) {
+        rT = lon; EquToEcl(&rT, &lat);
+      } else if (!us.fEquator && us.fEquator2) {
+        rT = lat; EquToEcl(&lon, &rT);
+      } else
+        EquToEcl(&lon, &lat);
+    }
+    lon = Mod(Untropical(lon));
+    PrintZodiac(lon);
+    PrintCh(' ');
+    PrintAltitude(lat);
+    sprintf(sz, " %4.1f", pexod->mag); PrintSz(sz);
+    n = DayOfWeek(ci.mon, ci.day, ci.yea);
+    AnsiColor(kRainbowA[n + 1]);
+    sprintf(sz, " %.3s", szDay[n]); PrintSz(sz);
+    AnsiColor(kDefault);
+    sprintf(sz, " %s", SzDate(ci.mon, ci.day, ci.yea, fFalse)); PrintSz(sz);
+    AnsiColor(kRedA);
+    sprintf(sz, " %s", SzTim(ci.tim)); PrintSz(sz);
+
+    AnsiColor(fOverlap ? kBlackA :
+      (ci2.day != ci.day || ci2.mon != ci.mon ? kWhiteA : kYellowA));
+    sprintf(sz, " %s", SzTim(ci2.tim));
+    if (fOverlap)
+      for (pch = sz; *pch; pch++)
+        *pch = ' ';
+    PrintSz(sz);
+
+    AnsiColor(fOverlap ?
+      (ci3.day != ci.day || ci3.mon != ci.mon ? kWhiteA : kYellowA) :
+      (ci3.day != ci2.day || ci3.mon != ci2.mon ? kWhiteA : kGreenA));
+    sprintf(sz, " %s", SzTim(ci3.tim)); PrintSz(sz);
+
+    AnsiColor(fOverlap ? kBlackA :
+      (ci4.day != ci3.day || ci4.mon != ci3.mon ? kWhiteA : kYellowA));
+    sprintf(sz, " %s", SzTim(ci4.tim));
+    if (fOverlap)
+      for (pch = sz; *pch; pch++)
+        *pch = ' ';
+    PrintSz(sz);
+
+    AnsiColor(fOverlap ?
+      (ci5.day != ci3.day || ci5.mon != ci3.mon ? kWhiteA : kRedA) :
+      (ci5.day != ci4.day || ci5.mon != ci4.mon ? kWhiteA : kRedA));
+    sprintf(sz, " %s", SzTim(ci5.tim)); PrintSz(sz);
+
+    // Print duration and overall uncertainty of this transit
+    AnsiColor(kDefault);
+    for (n = 0; n <= 1; n++) {
+      sec = (int)((n ? off : pexod->dur) * 3600.0);
+      hr = sec / 3600;
+      min = sec / 60 % 60;
+      sec %= 60;
+      sprintf(sz, " %2d:%02d", hr, min); PrintSz(sz);
+      if (us.fSeconds) {
+        sprintf(sz, ":%02d", sec); PrintSz(sz);
+      }
+    }
+    PrintL();
+    if (us.fMidAspect)
+      PrintAspectsToPoint(lon, -1, 0.0, "Exoplanet");
+  }
+  if (count == 0 && !fColor)
+    PrintSz("No exoplanet transits found.\n");
+  return fTrue;
 }
 
 /* charts3.cpp */

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: charts0.cpp
+** Astrolog (Version 7.70) File: charts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -105,7 +105,11 @@ void DisplayCredits(void)
   *szT = chNull;
 #endif
   sprintf(sz, "** %s version %s%s **", szAppName, szVersionCore, szT);
+#ifdef WIN
+  PrintW(sz, gs.fInverse ? kBlackA : kWhiteA);
+#else
   PrintW(sz, kWhiteA);
+#endif
   sprintf(sz, "Released %s - By Walter D. Pullen", szDateCore);
   PrintW(sz, kLtGrayA);
   PrintW(szAddressCore, kCyanA);
@@ -314,7 +318,7 @@ void DisplaySwitches(void)
   PrintS(" _dp <month> <year>: Print aspects within progressed chart.");
   PrintS(" _dpy <year>: Like _dp but search for aspects within entire year.");
   PrintS(" _dpY <year> <years>: Like _dp but search within number of years.");
-  PrintS(" _dp[y]n: Search for progressed aspects in current month/year.");
+  PrintS(" _dp[0y]n: Search for progressed aspects in current month/year.");
   PrintS(" _D: Like _d but display aspects by influence instead of time.");
   PrintS(" _B: Like _d but graph all aspects occurring in a day.");
   PrintS(" _B[m,y,Y]: Like _B but for entire month, year, or five years.");
@@ -325,7 +329,10 @@ void DisplaySwitches(void)
   PrintS(" _E[]0 <step>: Display ephemeris times for days, months, or years.");
   PrintS(" _8: Display planetary moons chart showing placements and aspects.");
   PrintS(" _80: Like _8 but compute true planetcentric positions separately.");
-  PrintS(" _e: Display all charts (_v_w_g_a_m_Z_S_l_K_j_7_L_E_P_Zd_d_D_B_8).");
+  PrintS(" _Ux: Display exoplanets chart listing exact times of transits.");
+  PrintS(" _Ux[d,m,y,Y]: Like _Ux but for day, month, year, or five years.");
+  PrintS(
+    " _e: Display all charts (_v_w_g_a_m_Z_S_l_K_j_7_L_E_P_Zd_d_D_B_8_Ux).");
   PrintS(
     " _t <month> <year>: Compute all transits to natal planets in month.");
   PrintS(
@@ -386,7 +393,7 @@ void DisplaySwitches(void)
   PrintS(
     " _zN <city>: Lookup city in atlas and set zone, Daylight, and location.");
 #endif
-  PrintS(" _q <month> <day> <year> <time>: Compute chart with defaults.");
+  PrintS(" _q <month> <day> <year> <time>: Compute chart for time of day.");
   PrintS(" _qd <month> <day> <year>: Compute chart for noon on date.");
   PrintS(" _qm <month> <year>: Compute chart for first of month.");
   PrintS(" _qy <year>: Compute chart for first day of year.");
@@ -411,6 +418,7 @@ void DisplaySwitches(void)
   PrintS(" _oa <file>: Write current chart or chart list to AAF format file.");
   PrintS(" _oq <file>: Write current chart list to Quick*Chart format file.");
   PrintS(" _od <file>: Output program's current settings to switch file.");
+  PrintS(" _ox <file>: Output star positions to Daedalus script format file.");
   PrintS(" _os <file>, > <file>: Redirect output of text charts to file.");
   PrintS(" _5: Set whether transit event charts autopopulate chart list.");
   PrintS(" _5e[2-4]: Display text charts for all charts in chart list.");
@@ -426,6 +434,7 @@ void DisplaySwitches(void)
     " _R[C,u,u0,8,U]: Restrict all cusps, Uranians, Dwarfs, moons, or stars.");
   PrintS(" _RT[0,1,C,u,u0,8,U] [..]: Restrict transiting planets in charts.");
   PrintS(" _RA [<asp1> ..]: Restrict specific aspects from displays.");
+  PrintS(" _RA0 [<asp1> ..]: Like _RA but restrict everything first.");
   PrintS(" _RO <obj>: Require object to be present in aspects.");
   PrintS(" _C: Include angular and non-angular house cusps in charts.");
   PrintS(" _u: Include Uranian/transneptunian bodies in charts.");
@@ -529,7 +538,8 @@ void DisplaySwitches(void)
   PrintS(" _rp[0] <file1> <file2>: Like _r0 but do file1 progr. to file2.");
   PrintS(" _rt <file1> <file2>: Like _r0 but treat file2 as transiting.");
 #ifdef GRAPH
-  PrintS(" _r[2-6]: Make graphics wheel chart tri-wheel, quad-wheel, etc.");
+  PrintS(" _r[1-6]: Make graphics wheel chart tri-wheel, quad-wheel, etc.");
+  PrintS(" _rP [2-6]: Make ring within multi-wheel be progressed.");
 #endif
 #ifdef TIME
   PrintS(" _y <file>: Display current house transits for particular chart.");
@@ -575,6 +585,7 @@ void DisplaySwitchesRare(void)
     " _Ys [<offset>]: Sidereal zodiac positions in plane of solar system.");
   PrintS(" _Yn: Compute location of true instead of mean nodes and Lilith.");
   PrintS(" _Yn0: Don't consider nutation in tropical zodiac positions.");
+  PrintS(" _Ynn: Compute location of natural Lilith instead of true or mean.");
   PrintS(" _Yu: Display eclipse and occultation information in charts.");
   PrintS(" _Yu0: Like _Yu but detect maximum eclipse anywhere on Earth.");
   PrintS(" _Yd: Display dates in D/M/Y instead of M/D/Y format.");
@@ -640,6 +651,7 @@ void DisplaySwitchesRare(void)
     " _YUb: Adjust star brightness to apparent magnitude based on distance.");
   PrintS(
     " _YUb0: Set brightness to distance independent absolute magnitude.");
+  PrintS(" _YUx <exolist>: Set filter string of exoplanet names.");
   PrintS(" _YS <obj> <size>: Set diameter of object to be specified size.");
   PrintS(
     " _YR <obj1> <obj2> <flag1>..<flag2>: Set restrictions for object range.");
@@ -683,12 +695,12 @@ void DisplaySwitchesRare(void)
   PrintS(
     " _Yj7 <inf1> <inf2> <inf3> <inf4> <inf5> <inf6>: Set influences for in");
   PrintS(
-    "  esoteric, hierarchical, Ray ruling sign, plus same for ruling house.");
+    "  esoteric, Hierarchical, Ray ruling sign, plus same for ruling house.");
   PrintS(" _YJ <obj> <sign> <cosign>: Set sign planet rules and co-rules.");
   PrintS(" _YJ0 <obj> <sign>: Set zodiac sign given planet exalts in.");
   PrintS(" _YJ7 <obj> <sign> <cosign>: Set signs planet esoterically rules.");
   PrintS(
-    " _YJ70 <obj> <sign> <cosign>: Set signs planet hierarchically rules.");
+    " _YJ70 <obj> <sign> <cosign>: Set signs planet Hierarchically rules.");
   PrintS(" _Y7O <obj1> <obj2> <ray1>..<ray2>: Customize object rays.");
   PrintS(" _Y7C <sign1> <sign2> <rays1>..<rays2>: Customize sign rays.");
   PrintS(" _YI <obj> <string>: Customize interpretation for object.");
@@ -748,6 +760,7 @@ void DisplaySwitchesRare(void)
 #endif // GRAPH
   PrintS("\nSwitches to access obscure system options:");
   PrintS(" _YB: Make a beep sound at the time this switch is processed.");
+  PrintS(" _Y0: Disable all chart text output.");
   PrintS(
     " _Y5[2-4]: Enumerate all charts in chart list via ~5Y AstroExpression.");
   PrintS(" _Y5i <string>: Set filter string for ADB XML file format load.");
@@ -760,6 +773,7 @@ void DisplaySwitchesRare(void)
     " _YY3 <rows>: Load atlas time zone to zone change mappings from file.");
   PrintS(" _YYt <text>: Output formatted text string in current context.");
   PrintS(" _YYT <text>: Popup formatted text string in current context.");
+  PrintS(" _YYI <text>: Output text string in interpretation context.");
   PrintS(" _0[o,i,q,X,n,b,~]: Permanently disable file output/input, program");
   PrintS(
     "  exiting, all graphics, internet, old formulas, or AstroExpressions.");
@@ -789,10 +803,11 @@ void DisplaySwitchesRare(void)
   PrintS(" _~kO <string>: Set adjustment for object colors.");
   PrintS(" _~kA <string>: Set adjustment for aspect colors.");
   PrintS(" _~kv <string>: Set adjustment for wheel chart fill colors.");
-  PrintS(" _~F[O,C,A] <string>: "
-    "Set adjustment for sign/object/house/aspect fonts.");
+  PrintS(" _~F[O,C,A,N] <string>: "
+    "Adjust for sign/object/house/aspect/Nakshatra fonts.");
   PrintS(" _~v <string>: Set adjustment for object display ordering.");
   PrintS(" _~v3 <string>: Set adjustment for wheel chart decan markings.");
+  PrintS(" _~sd <string>: Set adjustment for _sd switch degree numbers.");
   PrintS(" _~XL <string>: Set adjustment for atlas city coloring.");
   PrintS(" _~Xt <string>: Set notification before sidebar drawn.");
 #ifdef ISG
@@ -803,13 +818,18 @@ void DisplaySwitchesRare(void)
 #endif
   PrintS(" _~U <string>: Set filter for extra stars.");
   PrintS(" _~U0 <string>: Set filter for extra asteroids.");
+  PrintS(" _~Ux <string>: Set filter for exoplanet transits.");
+  PrintS(" _~Iv <string>: Pre-notification for location interpretation.");
+  PrintS(" _~IV <string>: Post-notification for location interpretation.");
+  PrintS(" _~Ia <string>: Pre-notification for aspect interpretation.");
+  PrintS(" _~IA <string>: Post-notification for aspect interpretation.");
   PrintS(" _~q[1-2] <string>: Set notification before/after chart cast.");
   PrintS(" _~Q[1-3] <string>: Set notification before/after chart displayed.");
   PrintS(" _~5s <string>: Set sort order method for charts in chart list.");
   PrintS(" _~5f <string>: Set filter for charts in chart list.");
   PrintS(" _~5Y <string>: Set notification for chart enumeration via _Y5.");
   PrintS(" _~5i <string>: Set filter for ADB XML file format load via _Y5I.");
-  PrintS(" _~M <0-26> <string>: Define the specified AstroExpression macro.");
+  PrintS(" _~M <index> <string>: Define the specified AstroExpression macro.");
   PrintS(" _~1 <string>: Simply parse AstroExpression (don't show result).");
   PrintS(" _~2[0] <var> <string>: Set AstroExpression custom string(s).");
   PrintS(" _~0: Disable all automatic AstroExpression checks in the program.");
@@ -1726,6 +1746,7 @@ void DisplaySwitchesX(void)
   PrintS(" _XU: Draw all stars from sefstars.txt file in certain charts.");
   PrintS(
     " _XU[0-3]: Like _XU but set whether to show larger star dot and name.");
+  PrintS(" _XUx: Draw transiting exoplanets in certain charts.");
   PrintS(" _XE <low> <high>: Draw range of asteroids in certain charts.");
   PrintS(
     " _XE[0-3] [..]: Like _XE but set whether to label ast number and name.");

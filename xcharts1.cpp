@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xcharts1.cpp
+** Astrolog (Version 7.70) File: xcharts1.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -665,11 +665,12 @@ void XChartHorizon()
   ObjDraw rgod[objMax];
   char sz[cchSzDef];
   flag fHouse3D = !us.fHouse3D, fFlip = gs.fEcliptic && us.rHarmonic < 0.0;
+  ES es;
 #ifdef CONSTEL
   int m1, n1, m2, n2, xpT, ypT;
 #endif
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
   int xp2, yp2;
 #endif
 
@@ -932,6 +933,16 @@ void XChartHorizon()
   }
 #endif
 
+  // Draw exoplanets.
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      EquToEcl(&es.lon, &es.lat);
+      EclToHorizon(es.lon, es.lat, x1, y1, xs, ys, &xp, &yp);
+      DrawStar(xp, yp, &es);
+    }
+  }
+
   // Draw lines connecting planets which have aspects between them.
   if (gs.fLabelCity) {
     if (!FCreateGrid(fFalse))
@@ -975,8 +986,10 @@ void PlotHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
     else if (lon < 135.0 || lon >= rDegMax-135.0)
       s = 1.0 + (s - 1.0) * (((ry + y)/RAbs(RCosD(lon-90.0))-ry) / ry);
   }
-  *xp = pcr->xc + (int)(rx*s*RCosD(rDegHalf+lon)+rRound);
-  *yp = pcr->yc + (int)(ry*s*RSinD(rDegHalf+lon)+rRound);
+  *xp = pcr->xc + (!gs.fEcliptic && FOdd(us.nHorizon) ? -1 : 1) *
+    (int)(rx*s*RCosD(rDegHalf+lon)+rRound);
+  *yp = pcr->yc + (!gs.fEcliptic && (us.nHorizon >= 4) ? -1 : 1) *
+    (int)(ry*s*RSinD(rDegHalf+lon)+rRound);
 }
 
 void LocToHorizonSky(real lon, real lat, CONST CIRC *pcr, int *xp, int *yp)
@@ -1057,11 +1070,12 @@ void XChartHorizonSky()
   CIRC cr;
   ObjDraw rgod[objMax];
   flag fHouse3D = !us.fHouse3D, fFlip = gs.fEcliptic && us.rHarmonic < 0.0;
+  ES es;
 #ifdef CONSTEL
   int m1, n1, m2, n2, xpT, ypT;
 #endif
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
   int xp2, yp2;
 #endif
 
@@ -1261,10 +1275,12 @@ void XChartHorizonSky()
     DrawLine(x2-j, y2, x2-j, y2-k);
   }
   i = gi.nScaleT;
-  DrawSz(!gs.fEcliptic ? "N" : (!fFlip ? "Can" : "Cap"), cx, y1-2*i,
-    dtBottom | dtScale2);
-  DrawSz(!gs.fEcliptic ? "E" : "r", x1/2, cy+2*i, dtCent | dtScale2);
-  DrawSz(!gs.fEcliptic ? "W" : "i", (gs.xWin+x2)/2, cy+2*i, dtCent | dtScale2);
+  DrawSz(!gs.fEcliptic ? (us.nHorizon >= 4 ? "S" : "N") :
+    (!fFlip ? "Can" : "Cap"), cx, y1-2*i, dtBottom | dtScale2);
+  DrawSz(!gs.fEcliptic ? (FOdd(us.nHorizon) ? "W" : "E") : "r",
+    x1/2, cy+2*i, dtCent | dtScale2);
+  DrawSz(!gs.fEcliptic ? (FOdd(us.nHorizon) ? "E" : "W") : "i",
+    (gs.xWin+x2)/2, cy+2*i, dtCent | dtScale2);
   if (gs.fEcliptic) {
     DrawSz("A", x1/2, cy+2*i-yFontT, dtCent | dtScale2);
     DrawSz("i", x1/2, cy+2*i+yFontT, dtCent | dtScale2);
@@ -1272,8 +1288,8 @@ void XChartHorizonSky()
     DrawSz("b", (gs.xWin+x2)/2, cy+2*i+yFontT, dtCent | dtScale2);
   }
   if (!gs.fText)
-    DrawSz(!gs.fEcliptic ? "S" : (!fFlip ? "Cap" : "Can"), cx, gs.yWin-3*i,
-      dtBottom | dtScale2);
+    DrawSz(!gs.fEcliptic ? (us.nHorizon >= 4 ? "N" : "S") :
+      (!fFlip ? "Cap" : "Can"), cx, gs.yWin-3*i, dtBottom | dtScale2);
   DrawColor(gi.kiOn);
   DrawEdge(x1, y1, x2, y2);
   DrawCircle(cx, cy, rx, ry);
@@ -1313,6 +1329,16 @@ void XChartHorizonSky()
     }
   }
 #endif
+
+  // Draw exoplanets.
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      EquToEcl(&es.lon, &es.lat);
+      EclToHorizonSky(es.lon, es.lat, &cr, &xp, &yp);
+      DrawStar(xp, yp, &es);
+    }
+  }
 
   // Draw lines connecting planets which have aspects between them.
   if (gs.fLabelCity) {
@@ -1440,11 +1466,12 @@ void XChartTelescope()
   flag fFlip = gs.fEcliptic && us.rHarmonic < 0.0, fShowLabel, fShowUmbra,
     fSav;
   TELE te;
+  ES es;
 #ifdef CONSTEL
   int m1, n1, m2, n2;
 #endif
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
 #endif
   // Variables for Saturn's or other planet's rings
   real radi2, len2, ang2, theta2, dRing, xr2, yr2, radi3;
@@ -1783,7 +1810,7 @@ void XChartTelescope()
 
             // Draw surrounding ellipse to indicate extent of Saturn's rings.
             iRng = (i == iSat ? oSat : (i == iUra ? oUra : (i == iNep ? oNep :
-              (i == iJup ? oJup : (i == oHau ? i : -1)))));
+              (i == iJup ? oJup : (i == oHau || i == oQua ? i : -1)))));
             if (iRng >= 0) {
               radi2 = radi * (rgrObjRing[IObjRing(iRng)][0] * 2.0) / diam;
               xd2 = (int)(radi2 * 2.0); xT2 = (int)(xr - radi2 + rRound);
@@ -1796,7 +1823,7 @@ void XChartTelescope()
                 xd3 = 0;
               ptSat = space[i];
 #if FALSE
-              // Calculate plane of Haumea's rings based on its moons.
+              // Calculate plane of Quaoar's rings based on its moon.
               static PT3R vSum = {0.0, 0.0, 0.0};
               static PT3R vSav[6];
               static int cv = 0;
@@ -1974,6 +2001,18 @@ void XChartTelescope()
   }
 #endif
 
+  // Draw exoplanets.
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      EquToEcl(&es.lon, &es.lat);
+      EclToTelescope(es.lon, es.lat, &te, &xp, &yp, &xr, &yr);
+      if (!FBetween(xp, x1, x2) || !FBetween(yp, y1, y2))
+        continue;
+      DrawStar(xp, yp, &es);
+    }
+  }
+
   // Label degree points on vertical axis.
   DrawColor(gi.kiLite);
   k = (xFontT * N012(nShowMinute, 4, 7, 10)) >> 1;
@@ -2004,9 +2043,9 @@ void XChartTelescope()
 
   // Label degree points on horizontal axis.
   j = us.nDegForm == dfNak ? 8 + (nShowMinute > 0)*2 : N012(nShowMinute,
-    (us.nDegForm == dfZod ? 5 : (us.nDegForm == dfHM ? 7 : 4)),
-    (us.nDegForm == dfZod ? 7 : (us.nDegForm == dfHM ? 11 : 6)),
-    (us.nDegForm == dfZod ? 10 : (us.nDegForm == dfHM ? 11 : 9)));
+    (us.nDegForm == dfZod ? 6 : (us.nDegForm == dfHM ? 8 : 5)),
+    (us.nDegForm == dfZod ? 8 : (us.nDegForm == dfHM ? 12 : 7)),
+    (us.nDegForm == dfZod ? 11 : (us.nDegForm == dfHM ? 12 : 10)));
   j = j*xFontT / Max((int)xScale2, 1) + 1;
   for (i = (int)(xBase2 - xi); i <= (int)(xBase2 + xi); i++) {
     xp = xc + (int)(((real)i - xBase2) * xScale2);
@@ -2465,7 +2504,7 @@ void XChartOrbit()
         // Draw rings around Saturn or other planet.
         l = FBetween(i, oJuC, oNeC) ? i - oJuC + oJup :
           (FBetween(i, oJup, oNep) && ignore[i + oJuC - oJup] ? i :
-          (i == oHau ? i : -1));
+          (i == oHau || i == oQua ? i : -1));
         if (l >= 0) {
           l = IObjRing(l);
           j = (int)(rgrObjRing[l][0] / rAUToKm * sx);
@@ -3996,8 +4035,10 @@ void XChartSphere()
   CONST CP *pcp;
   CP cpSav;
   ObjDraw rgod[objMax];
+  byte ignoreSav[objMax];
+  ES es;
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
 #endif
 
   // Initialize variables.
@@ -4012,7 +4053,12 @@ void XChartSphere()
   cr.xr = cr.xc - zGlyph; cr.yr = cr.yc - zGlyph;
   cr2 = cr;
   cr2.xr += zGlyph >> 1; cr2.yr += zGlyph >> 1;
-  cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
+  if (!(us.nRel <= rcTransit))
+    cChart = 1 - (FBetween(us.nRel, rcHexaWheel, rcDual) ? us.nRel : 0);
+  else {
+    cChart = 2;
+    CopyRgb(ignore, ignoreSav, sizeof(ignore));
+  }
   fSav = us.fRefract; us.fRefract = fFalse;
 
   if (us.nRel < rcNone)
@@ -4303,54 +4349,69 @@ void XChartSphere()
   }
 #endif
 
+  // Draw exoplanets.
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      EquToEcl(&es.lon, &es.lat);
+      f = FSphereZodiac(es.lon, es.lat, &cr, &xp, &yp) ^ fDir;
+      if (f)
+        DrawStar(xp, yp, &es);
+    }
+  }
+
   // Determine set of planet data to use.
   for (iChart = cChart; iChart >= 1; iChart--) {
     FProcessCommandLine(szWheelX[iChart]);
+    if (iChart == 2 && us.nRel <= rcTransit)
+      CopyRgb(ignore2, ignore, sizeof(ignore));
     if (iChart <= 1)
       pcp = rgpcp[us.nRel <= rcDual];
     else
       pcp = rgpcp[iChart];
 
-  // Calculate planet coordinates.
-  us.fRefract = fSav;
-  for (i = 0; i <= is.nObj; i++) {
-    f = FProper(i);
-    if (f) {
-      f = FSphereZodiac(pcp->obj[i], pcp->alt[i], &cr, &xp, &yp) ^ fDir;
-      rgod[i].obj = i;
-      rgod[i].x = xp; rgod[i].y = yp;
-      rgod[i].kv = f ? ~0 : gi.kiGray;
-      rgod[i].f = fAny || f;
-    } else
-      rgod[i].f = fFalse;
-  }
+    // Calculate planet coordinates.
+    us.fRefract = fSav;
+    for (i = 0; i <= is.nObj; i++) {
+      f = FProper(i);
+      if (f) {
+        f = FSphereZodiac(pcp->obj[i], pcp->alt[i], &cr, &xp, &yp) ^ fDir;
+        rgod[i].obj = i;
+        rgod[i].x = xp; rgod[i].y = yp;
+        rgod[i].kv = f ? ~0 : gi.kiGray;
+        rgod[i].f = fAny || f;
+      } else
+        rgod[i].f = fFalse;
+    }
 
-  // Draw lines connecting planets which have aspects between them.
-  cpSav = cp0;
-  cp0 = *pcp;
-  if (!FCreateGrid(fFalse))
-    return;
-  cp0 = cpSav;
-  nSav = gi.nScale;
-  gi.nScale = gi.nScaleTextT;
-  for (j = is.nObj; j >= 1; j--)
-    for (i = j-1; i >= 0; i--)
-      if (grid->n[i][j] && FProper(i) && FProper(j) &&
-        (fAny || (rgod[i].f && rgod[j].f))) {
-        DrawColor(rgod[i].kv == ~0 && rgod[j].kv == ~0 ?
-          kAspB[grid->n[i][j]] : gi.kiGray);
-        DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
-          NDashAspect(i, j, grid->n[i][j], grid->v[i][j]) +
-          ((rgod[i].kv != ~0) + (rgod[j].kv != ~0))*2);
-        if (gs.fLabelAsp)
-          DrawAspect(grid->n[i][j],
-            (rgod[i].x + rgod[j].x) >> 1, (rgod[i].y + rgod[j].y) >> 1);
-      }
-  gi.nScale = nSav;
+    // Draw lines connecting planets which have aspects between them.
+    cpSav = cp0;
+    cp0 = *pcp;
+    if (!FCreateGrid(fFalse))
+      return;
+    cp0 = cpSav;
+    nSav = gi.nScale;
+    gi.nScale = gi.nScaleTextT;
+    for (j = is.nObj; j >= 1; j--)
+      for (i = j-1; i >= 0; i--)
+        if (grid->n[i][j] && FProper(i) && FProper(j) &&
+          (fAny || (rgod[i].f && rgod[j].f))) {
+          DrawColor(rgod[i].kv == ~0 && rgod[j].kv == ~0 ?
+            kAspB[grid->n[i][j]] : gi.kiGray);
+          DrawDash(rgod[i].x, rgod[i].y, rgod[j].x, rgod[j].y,
+            NDashAspect(i, j, grid->n[i][j], grid->v[i][j]) +
+            ((rgod[i].kv != ~0) + (rgod[j].kv != ~0))*2);
+          if (gs.fLabelAsp)
+            DrawAspect(grid->n[i][j],
+              (rgod[i].x + rgod[j].x) >> 1, (rgod[i].y + rgod[j].y) >> 1);
+        }
+    gi.nScale = nSav;
 
-  // Draw planet glyphs, and spots for actual planet locations.
-  DrawObjects(rgod, is.nObj+1, 0);
+    // Draw planet glyphs, and spots for actual planet locations.
+    DrawObjects(rgod, is.nObj+1, 0);
 
+    if (iChart == 2 && us.nRel <= rcTransit)
+      CopyRgb(ignoreSav, ignore, sizeof(ignore));
   } // iChart
   FProcessCommandLine(szWheelX[0]);
 

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xcharts2.cpp
+** Astrolog (Version 7.70) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -433,6 +433,8 @@ void XChartWheelMulti()
   real xsign[cSign+1], xhouse1[cSign+1], xplanet1[objMax], xplanet2[objMax],
     xplanet3[objMax], xplanet4[objMax], xplanet5[objMax], xplanet6[objMax],
     symbol[objMax], ri2, rp, rl1, rl2, rg, rT;
+  CP *pcp[cRing+1];
+  real *pxp[cRing+1];
   int cx, cy, i, fQuad, fQuin, fHexa, nRing;
   real unitx, unity, base, base2, off;
 
@@ -454,6 +456,12 @@ void XChartWheelMulti()
   base = (fHexa ? 0.11 : (fQuin ? 0.22 : (fQuad ? 0.23 : 0.36)));
   base2 = base + (fQuin ? 0.01 : 0.02);
   off = fQuin ? 0.11 : 0.13;
+  pxp[1] = xplanet6; pxp[2] = xplanet5; pxp[3] = xplanet4;
+  pxp[4] = xplanet3; pxp[5] = xplanet2; pxp[6] = xplanet1;
+  for (i = 1; i <= nRing; i++) {
+    pcp[i] = rgpcp[nRing+1 - i];
+    pxp[i] = pxp[i + cRing - nRing];
+  }
 
   // Fill out arrays with the degrees of the cusps and sign glyphs, and the
   // positions of the planet rings.
@@ -469,15 +477,15 @@ void XChartWheelMulti()
   for (i = 1; i <= cSign; i++)
     xsign[i] = PZ(HousePlaceInX(ZFromS(i), 0.0));
   for (i = 0; i <= is.nObj; i++) {
-    xplanet1[i] = PZ(HousePlaceInX(cp1.obj[i], cp1.alt[i]));
-    xplanet2[i] = PZ(HousePlaceInX(cp2.obj[i], cp2.alt[i]));
-    xplanet3[i] = PZ(HousePlaceInX(cp3.obj[i], cp3.alt[i]));
+    xplanet1[i] = PZ(HousePlaceInX(pcp[1]->obj[i], pcp[1]->alt[i]));
+    xplanet2[i] = PZ(HousePlaceInX(pcp[2]->obj[i], pcp[2]->alt[i]));
+    xplanet3[i] = PZ(HousePlaceInX(pcp[3]->obj[i], pcp[3]->alt[i]));
     if (fQuad) {
-      xplanet4[i] = PZ(HousePlaceInX(cp4.obj[i], cp4.alt[i]));
+      xplanet4[i] = PZ(HousePlaceInX(pcp[4]->obj[i], pcp[4]->alt[i]));
       if (fQuin) {
-        xplanet5[i] = PZ(HousePlaceInX(cp5.obj[i], cp5.alt[i]));
+        xplanet5[i] = PZ(HousePlaceInX(pcp[5]->obj[i], pcp[5]->alt[i]));
         if (fHexa)
-          xplanet6[i] = PZ(HousePlaceInX(cp6.obj[i], cp6.alt[i]));
+          xplanet6[i] = PZ(HousePlaceInX(pcp[6]->obj[i], pcp[6]->alt[i]));
       }
     }
   }
@@ -572,24 +580,24 @@ void XChartWheelMulti()
 
   if (!gs.fEquator) {
     base -= 0.02;
-    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, base);
-    DrawAspectRelation(1, 3, xplanet1, xplanet3, cx, cy, base);
-    DrawAspectRelation(2, 3, xplanet2, xplanet3, cx, cy, base);
+    DrawAspectRelation(1, 2, pxp[1], pxp[2], cx, cy, base);
+    DrawAspectRelation(1, 3, pxp[1], pxp[3], cx, cy, base);
+    DrawAspectRelation(2, 3, pxp[2], pxp[3], cx, cy, base);
     if (fQuad) {
-      DrawAspectRelation(1, 4, xplanet1, xplanet4, cx, cy, base);
-      DrawAspectRelation(2, 4, xplanet2, xplanet4, cx, cy, base);
-      DrawAspectRelation(3, 4, xplanet3, xplanet4, cx, cy, base);
+      DrawAspectRelation(1, 4, pxp[1], pxp[4], cx, cy, base);
+      DrawAspectRelation(2, 4, pxp[2], pxp[4], cx, cy, base);
+      DrawAspectRelation(3, 4, pxp[3], pxp[4], cx, cy, base);
       if (fQuin) {
-        DrawAspectRelation(1, 5, xplanet1, xplanet5, cx, cy, base);
-        DrawAspectRelation(2, 5, xplanet2, xplanet5, cx, cy, base);
-        DrawAspectRelation(3, 5, xplanet3, xplanet5, cx, cy, base);
-        DrawAspectRelation(4, 5, xplanet4, xplanet5, cx, cy, base);
+        DrawAspectRelation(1, 5, pxp[1], pxp[5], cx, cy, base);
+        DrawAspectRelation(2, 5, pxp[2], pxp[5], cx, cy, base);
+        DrawAspectRelation(3, 5, pxp[3], pxp[5], cx, cy, base);
+        DrawAspectRelation(4, 5, pxp[4], pxp[5], cx, cy, base);
         if (fHexa) {
-          DrawAspectRelation(1, 6, xplanet1, xplanet6, cx, cy, base);
-          DrawAspectRelation(2, 6, xplanet2, xplanet6, cx, cy, base);
-          DrawAspectRelation(3, 6, xplanet3, xplanet6, cx, cy, base);
-          DrawAspectRelation(4, 6, xplanet4, xplanet6, cx, cy, base);
-          DrawAspectRelation(5, 6, xplanet5, xplanet6, cx, cy, base);
+          DrawAspectRelation(1, 6, pxp[1], pxp[6], cx, cy, base);
+          DrawAspectRelation(2, 6, pxp[2], pxp[6], cx, cy, base);
+          DrawAspectRelation(3, 6, pxp[3], pxp[6], cx, cy, base);
+          DrawAspectRelation(4, 6, pxp[4], pxp[6], cx, cy, base);
+          DrawAspectRelation(5, 6, pxp[5], pxp[6], cx, cy, base);
         }
       }
     }
@@ -790,8 +798,9 @@ void XChartEphemeris()
     ciCore = ciMain;
     if (cYea) {
       MM = mon; DD = day; YY = yea;
-    } else
-      DD = d;
+    } else {
+      MM = mon0; DD = d; YY = yea0;
+    }
     if (us.fProgress) {
       is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
       ciCore = ciMain;
@@ -808,8 +817,9 @@ void XChartEphemeris()
     // Draw planet glyphs along top of chart.
     if (d <= 1) {
       for (i = 0; i <= is.nObj; i++) {
-        j = !FProper(i);
+        j = !FProperEphem2(i);
         symbol[i*2] = (j || us.nRel > rcDual) ? -rLarge : cp2.obj[i];
+        j = !FProper(i);
         symbol[i*2+1] = (j ? -rLarge : planet[i]);
       }
       FillSymbolLine(symbol);
@@ -822,7 +832,7 @@ void XChartEphemeris()
       gs.fLabel = fSav;
       if (us.nRel <= rcDual) {
         for (i = is.nObj; i >= 0; i--) {
-          if (!FProper(i))
+          if (!FProperEphem2(i))
             continue;
           j = x1 + (int)((real)xs * cp2.obj[i] / rDegMax);
           DrawColor(kObjB[i]);
@@ -1371,16 +1381,13 @@ LDone:
     for (x = 0; x < (fTrans ? is.nObj+1 : y); x++)
       for (asp = 1; asp <= cAsp; asp++) {
         pw = (*rgEph)[x][y][asp];
-        if (pw != NULL)
-          DeallocateP(pw);
+        DeallocatePIf(pw);
         if (fEclipse) {
           pw2 = (*rgEph)[y][x][asp];
-          if (pw2 != NULL)
-            DeallocateP(pw2);
+          DeallocatePIf(pw2);
         }
       }
-  if (rgEph != NULL)
-    DeallocateP(rgEph);
+  DeallocatePIf(rgEph);
   ciCore = ciMain;
   us.fProgress = fFalse;
   CastChart(1);

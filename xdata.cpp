@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xdata.cpp
+** Astrolog (Version 7.70) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -67,9 +67,10 @@ GS gs = {
 #else
   ftBmp,
 #endif
-  fTrue, fTrue, fFalse, fFalse, fTrue, 000000, 0, 0, 0, 0, 0, 0, fFalse,
-  fTrue, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, fFalse, fFalse, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse,
+  fTrue, fTrue, fFalse, fFalse, fTrue, 000000, 0, 0, 0, 0, 0, 0,
+  fFalse, fTrue, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
+  fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fTrue, fFalse, fFalse,
+  fFalse, fFalse,
   DEFAULTX, DEFAULTY,
 #ifdef WIN
   -10,
@@ -97,7 +98,7 @@ GI gi = {
   NULL, 0, 0, 0, 0, 0, 0, 0, 0,
 #endif
 #ifdef PS
-  fFalse, 0, fFalse, 0, 0, 1.0,
+  fFalse, 0, fFalse, 0, -1, 1.0,
 #endif
 #ifdef META
   NULL, MAXMETA, NULL, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -172,8 +173,8 @@ CONST int rgcmdMode[gMax] = {0,
   cmdChartList, cmdChartWheel, cmdChartGrid, cmdChartMidpoint, cmdChartHorizon,
   cmdChartOrbit, cmdChartSector, cmdChartCalendar, cmdChartInfluence,
   cmdChartEsoteric, cmdChartAstroGraph, cmdChartEphemeris, cmdChartRising,
-  cmdChartLocal, cmdTransit, cmdTransit, cmdChartMoons, cmdChartSphere,
-  cmdChartMap, cmdChartGlobe, cmdChartPolar, cmdChartTelescope,
+  cmdChartLocal, cmdTransit, cmdTransit, cmdChartMoons, cmdChartExo,
+  cmdChartSphere, cmdChartMap, cmdChartGlobe, cmdChartPolar, cmdChartTelescope,
   0/*cmdRelBiorhythm*/, cmdChartAspect, cmdChartArabic, cmdTransit, cmdTransit,
   cmdTransit, cmdTransit, cmdHelpSign, cmdHelpObject, cmdHelpAspect,
   cmdHelpConstellation, cmdHelpPlanetInfo, cmdHelpRay, cmdHelpMeaning,
@@ -194,18 +195,20 @@ CONST char *rgszFontName[cFont] = {szAppNameCore, "Wingdings", "Astro",
 CONST char rgszFontAllow[6][cFont+1] = {"0-----67--", "0123456---",
   "0----5678-", "0-234567--", "0-2345678-", "0-----6789"};
 
-CONST real rgrObjRing[oNep-oJup+2][2] = {
+CONST real rgrObjRing[oNep-oJup+3][2] = {
   {129000.0, 0.0},      // Jupiter main ring outer radius
   {136780.0, 92000.0},  // Saturn "A" ring outer, "B" ring inner radius
   {51149.0,  0.0},      // Uranus "E" ring outer radius
   {53200.0,  62932.0},  // Neptune Adams ring, Lassell ring inner radius
-  {2287.0,   0.0}};     // Haumea ring radius
-CONST PT3R rgvObjRing[oNep-oJup+2] = {
+  {2287.0,   0.0},      // Haumea ring radius
+  {2520.0,   4057.0}};  // Quaoar ring radius
+CONST PT3R rgvObjRing[oNep-oJup+3] = {
   {-0.0133361,  0.0359933, -0.9992630},   // Jupiter ring vector
   {-0.0833346, -0.4629964, -0.8824339},   // Saturn  ring vector
   { 0.2059129,  0.9691102, -0.1357401},   // Uranus  ring vector
   {-0.3617850,  0.3226569, -0.8746452},   // Neptune ring vector
-  {-0.3664383,  0.7179139, -0.5918805}};  // Haumea  ring vector
+  {-0.3664383,  0.7179139, -0.5918805},   // Haumea  ring vector
+  {-0.2104611, -0.3787784, -0.9012397}};  // Quaoar  ring vector
 
 #ifdef X11
 // Some X window variables dealing with the window itself.

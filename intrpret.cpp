@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: intrpret.cpp
+** Astrolog (Version 7.70) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -204,6 +204,14 @@ void InterpretLocation(void)
     sprintf(sz, "and %d%s House:", inhouse[i], szSuffix[inhouse[i]]);
     FieldWord(sz);
     sprintf(sz, "%s's", szPerson); FieldWord(sz);
+#ifdef EXPRESS
+    // Prepend interpretation text if AstroExpression set to do so.
+    if (!us.fExpOff && FSzSet(us.szExpIntV)) {
+      ExpSetN(iLetterZ, i);
+      if (!NParseExpression(us.szExpIntV))
+        goto LAfter;
+    }
+#endif
     FieldWord(szMindPart[i]); FieldWord("is");
     // First 10 degrees or decan of sign is more emphasized by that sign.
     if (((int)planet[i]) % 30 < 10)
@@ -240,6 +248,14 @@ void InterpretLocation(void)
         ch == 'Y' ? "strong" : "weak", ch == 'Y' ? '!' : '.');
       FieldWord(sz);
     }
+#ifdef EXPRESS
+LAfter:
+    // Append interpretation text if AstroExpression set to do so.
+    if (!us.fExpOff && FSzSet(us.szExpIntV2)) {
+      ExpSetN(iLetterZ, i);
+      ParseExpression(us.szExpIntV2);
+    }
+#endif
     FieldWord(NULL);
   }
 }
@@ -256,6 +272,16 @@ void InterpretAspectCore(int x, int asp, int y, int nOrb)
   AnsiColor(kAspA[asp]);
   sprintf(sz, "%s %s %s: %s's",
     szObjDisp[x], SzAspect(asp), szObjDisp[y], szPerson);
+#ifdef EXPRESS
+  // Prepend interpretation text if AstroExpression set to do so.
+  if (!us.fExpOff && FSzSet(us.szExpIntA)) {
+    ExpSetN(iLetterX, x);
+    ExpSetN(iLetterY, asp);
+    ExpSetN(iLetterZ, y);
+    if (!NParseExpression(us.szExpIntA))
+      goto LAfter;
+  }
+#endif
   FieldWord(sz); FieldWord(szMindPart[x]);
   sprintf(sz, szInteract[asp], szModify[Min(nOrb, 2)][asp-1]);
   FieldWord(sz);
@@ -263,6 +289,16 @@ void InterpretAspectCore(int x, int asp, int y, int nOrb)
   if (szTherefore[asp][0]) {
     sprintf(sz, "%s.", szTherefore[asp]); FieldWord(sz);
   }
+#ifdef EXPRESS
+LAfter:
+  // Append interpretation text if AstroExpression set to do so.
+  if (!us.fExpOff && FSzSet(us.szExpIntA2)) {
+    ExpSetN(iLetterX, x);
+    ExpSetN(iLetterY, asp);
+    ExpSetN(iLetterZ, y);
+    ParseExpression(us.szExpIntA2);
+  }
+#endif
   FieldWord(NULL);
 }
 
@@ -765,10 +801,10 @@ CONST char *rgEsoObj[oNorm1] = {
 // house), along with Ray chart clues based on astrological influences, as
 // specified with the -7 -I switches.
 
-void InterpretEsoteric()
+int InterpretEsoteric(flag fGetRays)
 {
   char sz[cchSzMax*2], szName[cchSzDef], *pch;
-  int i, j, sig, hou, ray;
+  int i, j, sig, hou, ray, rays = 0;
   int rgcRay[cRay+1], rgcObjRay[oVul+1][cRay+1], rgnSort[cRay+1],
     rgcTot[cRayArea], *rgRules, *pcRay = rgcRay, bod, nObj, nDec, nLin, k, l;
   flag fIgnore7Sav[rrMax];
@@ -779,7 +815,8 @@ void InterpretEsoteric()
   }
 
   // Determine Ray chart
-  PrintSz("Ray chart clues based on astrological influences only:\n");
+  if (!fGetRays)
+    PrintSz("Ray chart clues based on astrological influences only:\n");
   EnsureRay();
   for (bod = cRayArea-1; bod >= 0; bod--) {
     ClearB((pbyte)rgcRay, sizeof(rgcRay));
@@ -851,6 +888,12 @@ void InterpretEsoteric()
       }
     }
     rgcTot[bod] = rgnSort[1];
+    if (fGetRays) {
+      rays = rays*10 + rgnSort[1];
+      if (bod <= 0)
+        return rays;
+      continue;
+    }
     // Print all seven Rays and their points for this vehicle.
     AnsiColor(kRayA[rgnSort[1]]);
     sprintf(sz, "%-4.4s Ray:", rgEsoRayArea[bod]); PrintSz(sz);
@@ -1044,6 +1087,7 @@ void InterpretEsoteric()
 
   for (i = 0; i < rrMax; i++)
     ignore7[i] = fIgnore7Sav[i];
+  return 0;
 }
 
 
@@ -1281,7 +1325,7 @@ void ChartInfluence(void)
 
   // Now, print out a list of power values and relative rankings, based on the
   // power of each sign of the zodiac, as indicated by the placement of the
-  // planets above, in the chart, as specified with the -j0 switch.
+  // planets above, as specified with the -j0 switch.
 
   if (!us.fInfluenceSign)
     return;

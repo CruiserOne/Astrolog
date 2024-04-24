@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: extern.h
+** Astrolog (Version 7.70) File: extern.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 /*
@@ -133,6 +133,8 @@ extern void FinalizeProgram P((flag));
 #define DEFAULT_LOC DMS(122, 19, 55), DMS(47, 36, 22)
 #define FProperGraph(o) !(!us.fGraphAll && (FCusp(o) || \
   (us.fInDayMonth && ((o) == oMoo || (us.fInDayYear && (o) <= oMar)))))
+#define FProperEphem2(o) (!(us.nRel <= rcTransit ? ignore2[o] : ignore[o]) && \
+  !(gs.fAlt && ((o) == oMoo || (o) == oFor)))
 
 #define FCmSwissAny() (us.fEphemFiles && !us.fPlacalcPla)
 #define FCmSwissEph() (us.fEphemFiles && !us.fPlacalcPla && us.nSwissEph <= 0)
@@ -146,10 +148,11 @@ extern void FinalizeProgram P((flag));
 extern US us;
 extern IS is;
 extern CI ciCore, ciMain, ciTwin, ciThre, ciFour, ciFive, ciHexa,
-  ciTran, ciSave, ciGreg;
+  ciDefa, ciTran, ciSave, ciGreg;
 extern CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 extern CP * CONST rgpcp[cRing+1];
 extern CI * CONST rgpci[cRing+1];
+extern flag rgfProg[cRing+1];
 
 extern real force[objMax];
 extern GridInfo *grid;
@@ -203,9 +206,11 @@ extern CONST char *szObjName[objMax+4], *szCnstlName[cCnstl+1],
   *szCnstlAbbrev[cCnstl+1], *szCnstlMeaning[cCnstl+1],
   *szCnstlGenitive[cCnstl+1];
 extern CONST real rStarBrightMatrix[cStar+1], rStarData[cStar*6];
-extern char *szMindPart[objMax], *szDesc[cSign+1], *szDesire[cSign+1],
-  *szLifeArea[cSign+1], *szInteract[cAspect+1], *szTherefore[cAspect+1],
-  *szModify[3][cAspect];
+extern CONST char *szMindPartDef[objMax], *szDescDef[cSign+1],
+  *szDesireDef[cSign+1], *szLifeAreaDef[cSign+1], *szInteractDef[cAspect+1],
+  *szThereforeDef[cAspect+1], *szModify[3][cAspect];
+extern CONST char *szMindPart[objMax], *szDesc[cSign+1], *szDesire[cSign+1],
+  *szLifeArea[cSign+1], *szInteract[cAspect+1], *szTherefore[cAspect+1];
 extern CONST StrLook rgObjName[], rgSystem[], rgAspectName[];
 extern CONST StrLookR rgZodiacOffset[];
 extern CONST char *szNakshatra[27+1], *szEclipse[etMax], rgchEclipse[etMax+1],
@@ -224,7 +229,7 @@ extern CONST int cSatellite[oPlu+1], nMooMap[6][8], rgobjHasMoons[cHasMoons];
 
 extern CONST AI ai[cPart];
 
-extern char *szMacro[48], *szWheel[cRing+1];
+extern char *szWheel[cRing+1];
 extern CONST char *szColor[cColor+4], *szColorHTML[cColor];
 
 extern int rgObjRay[oNorm+1], rgSignRay[cSign+1], rgSignRay2[cSign+1][cRay+1],
@@ -239,6 +244,7 @@ extern CONST char *szRayName[cRay+1], *szRayWill[cRay+1];
 #define FEqSz(sz1, sz2) (NCompareSz(sz1, sz2) == 0)
 #define FEqSzI(sz1, sz2) (NCompareSzI(sz1, sz2) == 0)
 #define RgAllocate(n, t, sz) ((t *)PAllocate((n) * sizeof(t), sz))
+#define FCloneSz(szSrc, pszDst) FCloneSzCore(szSrc, pszDst, fFalse)
 #define PrintAltitude(deg) PrintSz(SzAltitude(deg))
 #define FEqCI(ci1, ci2) (\
   ci1.mon == ci2.mon && ci1.day == ci2.day && ci1.yea == ci2.yea && \
@@ -298,6 +304,7 @@ extern int DaysInMonth P((int, int));
 extern int DayOfWeek P((int, int, int));
 extern int AddDay P((int, int, int, int));
 extern void AddTime P((CI *, int, int));
+extern real GetOffsetCI P((CONST CI *));
 extern real GetOrb P((int, int, int));
 extern CONST char *SzAspect P((int));
 extern CONST char *SzAspectAbbrev P((int));
@@ -356,11 +363,12 @@ extern void UTF8ToLatinSz P((char *));
 extern void UTF8ToIBMSz P((char *));
 extern void ConvertSzFromUTF8 P((char *));
 extern CONST char *ConvertSzToLatin P((CONST char *, char *, int));
-extern char *SzPersist P((char *));
-extern char *SzCopy P((char *));
+extern flag FCloneSzCore P((CONST char *, char **, flag));
+extern char *SzClone P((char *));
 extern pbyte PAllocate P((long, CONST char *));
 extern void DeallocateP P((void *));
 extern pbyte RgReallocate P((void *, int, int, int, CONST char *));
+extern flag FEnsureMacro P((int));
 #ifdef DEBUG
 extern void Assert P((flag));
 #else
@@ -372,6 +380,8 @@ extern void Terminate P((int));
 // From io.cpp
 
 #define getbyte() BRead(file)
+#define AdvancePast(ch) while (*pch && *pch != (ch)) pch++; \
+  if (*pch == (ch)) pch++;
 
 extern FILE *FileOpen P((CONST char *, int, char *));
 extern byte BRead P((FILE *));
@@ -568,6 +578,7 @@ extern void PrintMidpointSummary P((int *, int, real));
 extern void ChartMidpoint P((void));
 extern void ChartHorizon P((void));
 extern void ChartOrbit P((void));
+extern int ChartEsoteric P((flag));
 extern void ChartSector P((void));
 extern flag ChartAstroGraph P((void));
 extern void PrintChart P((flag));
@@ -601,14 +612,16 @@ extern void DisplayRelation P((void));
 
 extern void ChartInDaySearch P((flag));
 extern void ChartTransitSearch P((flag));
-extern void ChartInDayHorizon P((void));
+extern void ChartHorizonRising P((void));
 extern void ChartEphemeris P((void));
+extern flag ChartExoplanet P((flag));
 
 
 // From intrpret.cpp
 
 #define RObjInf(i) rObjInf[Min(i, oNorm1)]
 #define RTransitInf(i) rTransitInf[Min(i, oNorm1)]
+extern CONST char *rgEsoRayArea[5];
 
 #ifdef INTERPRET
 extern void FieldWord P((CONST char *));
@@ -626,7 +639,7 @@ extern void InterpretAspectRelation P((int, int));
 extern void InterpretGridRelation P((void));
 extern void InterpretMidpointRelation P((int, int));
 extern void InterpretAstroGraph P((int, int, int, int));
-extern void InterpretEsoteric P((void));
+extern int InterpretEsoteric P((flag));
 extern void PrintEsoteric P((void));
 #endif
 extern void SortRank P((real *, int *, int, flag));
@@ -698,8 +711,8 @@ extern KV rgbbmp[cColor];
 extern KI kMainB[9], kRainbowB[cRainbow+1], kElemB[cElem], kAspB[cAspect+1],
   kObjB[objMax], kRayB[cRay+2];
 extern CONST char *rgszFontName[cFont], rgszFontAllow[6][cFont+1];
-extern CONST real rgrObjRing[oNep-oJup+2][2];
-extern CONST PT3R rgvObjRing[oNep-oJup+2];
+extern CONST real rgrObjRing[oNep-oJup+3][2];
+extern CONST PT3R rgvObjRing[oNep-oJup+3];
 extern CONST char
   *szDrawSign[cSign+2], *szDrawSign2[cSign+2], *szDrawSign3[cSign+2],
   *szDrawObjectDef[objMaxG], *szDrawObjectDef2[objMaxG],
@@ -730,7 +743,8 @@ extern CONST char *szDrawObject[objMaxG], *szDrawObject2[objMaxG],
 
 #define KStarB(mag) \
   ((mag) < 2.0 ? gi.kiOn : ((mag) < 4.0 ? gi.kiLite : gi.kiGray))
-#define IObjRing(i) ((i) < oHau ? (i)-oJup : (i)-oHau+oNep-oJup+1)
+#define IObjRing(i) ((i) < oHau ? (i)-oJup : \
+  ((i) == oHau ? (i)-oHau+oNep-oJup+1 : (i)-oQua+oNep-oJup+2))
 #define nGlyphAll (gs.nGlyphCap*100000 + gs.nGlyphUra*10000 + \
   gs.nGlyphPlu*1000 + gs.nGlyphLil*100 + gs.nGlyphVer*10 + gs.nGlyphEri)
 
@@ -777,9 +791,7 @@ extern void DrawSz P((CONST char *, int, int, int));
 extern void DrawSign P((int, int, int));
 extern void DrawHouse P((int, int, int));
 extern void DrawObject P((int, int, int));
-#ifdef SWISS
 extern void DrawStar P((int, int, CONST ES *));
-#endif
 extern void DrawAspect P((int, int, int));
 extern void DrawNakshatra P((int, int, int));
 extern int NFromPch P((CONST char **));
@@ -901,6 +913,7 @@ extern flag FGlobeCalc P((real, real, int *, int *, CONST CIRC *, real));
 #ifdef SWISS
 extern flag EnumStarsLines P((flag, ES **, ES **));
 #endif
+extern flag EnumExoplanets P((ES *));
 
 extern void DrawLeyLine P((real, real, real, real));
 extern void DrawLeyLines P((real));

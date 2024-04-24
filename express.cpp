@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: express.cpp
+** Astrolog (Version 7.70) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -61,7 +61,7 @@
 ******************************************************************************
 */
 
-#define cfunA 415
+#define cfunA 449
 #ifdef GRAPH
 #define cfunX 68
 #else
@@ -103,8 +103,9 @@
 #define I_EEE  P4(I_, E_, E_, E_)
 #define R_I    P2(R_, I_)
 #define R_II   P3(R_, I_, I_)
-#define R_IIII P5(R_, I_, I_, I_, I_)
 #define R_IR   P3(R_, I_, R_)
+#define R_IIII P5(R_, I_, I_, I_, I_)
+#define R_IIIR P5(R_, I_, I_, I_, R_)
 #define R_R    P2(R_, R_)
 #define R_RR   P3(R_, R_, R_)
 #define R_RRR  P4(R_, R_, R_, R_)
@@ -156,6 +157,7 @@ XI xi = {NULL, NULL, 0, NULL, 0, NULL, 0};
 extern int ILookupTrie P((CONST TRIE, CONST char *, int, flag));
 extern CONST char *PchGetParameter P((CONST char *, PAR *, int, int, flag));
 extern void GetParameter P((CONST char *, PAR *));
+extern void FormatSz P((CONST char *, char *));
 extern flag FEnsureParVar P((int));
 
 // Functions
@@ -166,6 +168,7 @@ enum _functionindex {
   funTrue,
   funInt,
   funReal,
+  funBool,
   funType,
   funAdd,
   funSub,
@@ -189,6 +192,8 @@ enum _functionindex {
   funInv,
   funShftL,
   funShftR,
+  funAndL,
+  funOrL,
   funOdd,
   funAbs,
   funSgn,
@@ -200,6 +205,7 @@ enum _functionindex {
   funSqu,
   funSqr,
   funDist,
+  funDist3,
   funLn,
   funLog10,
   funSin,
@@ -243,9 +249,11 @@ enum _functionindex {
   funMonN, funDayN, funYeaN, funTimN, funDstN, funZonN, funLonN, funLatN,
   funMonL, funDayL, funYeaL, funTimL, funDstL, funZonL, funLonL, funLatL,
   funMonS, funDayS, funYeaS, funTimS, funDstS, funZonS, funLonS, funLatS,
-  funMonT, funDayT, funYeaT, funTimT,
+  funMonT, funDayT, funYeaT, funTimT, funDstT,
   funMonG, funDayG, funYeaG,
   funDstD, funZonD, funLonD, funLatD,
+  funOff,  funOff1, funOff2, funOff3, funOff4, funOff5, funOff6,
+  funOffN, funOffL, funOffS, funOffT, funOffD,
   funObjLon,  funObjLat,  funObjDir,  funObjDirY,  funObjDirL,  funObjHou,
   funObjLon1, funObjLat1, funObjDir1, funObjDirY1, funObjDirL1, funObjHou1,
   funObjLon2, funObjLat2, funObjDir2, funObjDirY2, funObjDirL2, funObjHou2,
@@ -254,6 +262,8 @@ enum _functionindex {
   funObjLon5, funObjLat5, funObjDir5, funObjDirY5, funObjDirL5, funObjHou5,
   funObjLon6, funObjLat6, funObjDir6, funObjDirY6, funObjDirL6, funObjHou6,
   funObjLonN, funObjLatN, funObjDirN, funObjDirYN, funObjDirLN, funObjHouN,
+  funObjLen,  funObjLen1, funObjLen2, funObjLen3,
+  funObjLen4, funObjLen5, funObjLen6, funObjLenN,
   funObjX,
   funObjY,
   funObjZ,
@@ -279,6 +289,7 @@ enum _functionindex {
   funObjYear,
   funObjDiam,
   funObjDay,
+  funAspOn,
   funAspAng,
   funAspOrb,
   funAspInf,
@@ -288,6 +299,8 @@ enum _functionindex {
   funCusp2, funCusp3D2,
   funCusp3, funCusp3D3,
   funCusp4, funCusp3D4,
+  funCusp5, funCusp3D5,
+  funCusp6, funCusp3D6,
   funCuspInf,
   funSector,
   funSigRul,
@@ -312,6 +325,7 @@ enum _functionindex {
   funLonTerm,
   funDayWeek,
   funJulianT,
+  funJulianD,
   funLatLmt,
   funSphDist,
   funOblique,
@@ -335,6 +349,9 @@ enum _functionindex {
   funTiltXY,
   funContext,
   funVersion,
+  funAlloc,
+  funAllocT,
+  funAllocS,
   funAsnObj,
   funAsnHou,
 
@@ -547,6 +564,7 @@ CONST FUN rgfun[cfun] = {
 {funTrue,  "True",  0, I_},
 {funInt,   "Int",   1, I_I},
 {funReal,  "Real",  1, R_R},
+{funBool,  "Bool",  1, I_I},
 {funType,  "Type",  1, I_E},
 {funAdd,   "Add",   2, E_EE},
 {funSub,   "Sub",   2, E_EE},
@@ -570,6 +588,8 @@ CONST FUN rgfun[cfun] = {
 {funInv,   "Inv",   1, I_I},
 {funShftL, "<<",    2, I_II},
 {funShftR, ">>",    2, I_II},
+{funAndL,  "&&",    2, I_II},
+{funOrL,   "||",    2, I_II},
 {funOdd,   "Odd",   1, I_I},
 {funAbs,   "Abs",   1, E_E},
 {funSgn,   "Sgn",   1, E_E},
@@ -581,6 +601,7 @@ CONST FUN rgfun[cfun] = {
 {funSqu,   "Squ",   1, E_E},
 {funSqr,   "Sqr",   1, R_R},
 {funDist,  "Dist",  2, R_RR},
+{funDist3, "Dist3", 3, R_RRR},
 {funLn,    "Ln",    1, R_R},
 {funLog10, "Log10", 1, R_R},
 {funSin,   "Sin",   1, R_R},
@@ -698,6 +719,7 @@ CONST FUN rgfun[cfun] = {
 {funDayT,    "DayT",     0, I_},
 {funYeaT,    "YeaT",     0, I_},
 {funTimT,    "TimT",     0, R_},
+{funDstT,    "DstT",     0, R_},
 {funMonG,    "MonG",     0, I_},
 {funDayG,    "DayG",     0, I_},
 {funYeaG,    "YeaG",     0, I_},
@@ -705,60 +727,80 @@ CONST FUN rgfun[cfun] = {
 {funZonD,    "ZonD",     0, R_},
 {funLonD,    "LonD",     0, R_},
 {funLatD,    "LatD",     0, R_},
-{funObjLon,   "ObjLon",    1, R_I}, 
+{funOff,     "Off",      0, R_},
+{funOff1,    "Off1",     0, R_},
+{funOff2,    "Off2",     0, R_},
+{funOff3,    "Off3",     0, R_},
+{funOff4,    "Off4",     0, R_},
+{funOff5,    "Off5",     0, R_},
+{funOff6,    "Off6",     0, R_},
+{funOffN,    "OffN",     1, R_I},
+{funOffL,    "OffL",     1, R_I},
+{funOffS,    "OffS",     0, R_},
+{funOffT,    "OffT",     0, R_},
+{funOffD,    "OffD",     0, R_},
+{funObjLon,   "ObjLon",    1, R_I},
 {funObjLat,   "ObjLat",    1, R_I},
 {funObjDir,   "ObjDir",    1, R_I},
 {funObjDirY,  "ObjDirY",   1, R_I},
 {funObjDirL,  "ObjDirL",   1, R_I},
 {funObjHou,   "ObjHouse",  1, I_I},
-{funObjLon1,  "ObjLon1",   1, R_I}, 
+{funObjLon1,  "ObjLon1",   1, R_I},
 {funObjLat1,  "ObjLat1",   1, R_I},
 {funObjDir1,  "ObjDir1",   1, R_I},
 {funObjDirY1, "ObjDirY1",  1, R_I},
 {funObjDirL1, "ObjDirL1",  1, R_I},
 {funObjHou1,  "ObjHouse1", 1, I_I},
-{funObjLon2,  "ObjLon2",   1, R_I}, 
+{funObjLon2,  "ObjLon2",   1, R_I},
 {funObjLat2,  "ObjLat2",   1, R_I},
 {funObjDir2,  "ObjDir2",   1, R_I},
 {funObjDirY2, "ObjDirY2",  1, R_I},
 {funObjDirL2, "ObjDirL2",  1, R_I},
 {funObjHou2,  "ObjHouse2", 1, I_I},
-{funObjLon3,  "ObjLon3",   1, R_I}, 
+{funObjLon3,  "ObjLon3",   1, R_I},
 {funObjLat3,  "ObjLat3",   1, R_I},
 {funObjDir3,  "ObjDir3",   1, R_I},
 {funObjDirY3, "ObjDirY3",  1, R_I},
 {funObjDirL3, "ObjDirL3",  1, R_I},
 {funObjHou3,  "ObjHouse3", 1, I_I},
-{funObjLon4,  "ObjLon4",   1, R_I}, 
+{funObjLon4,  "ObjLon4",   1, R_I},
 {funObjLat4,  "ObjLat4",   1, R_I},
 {funObjDir4,  "ObjDir4",   1, R_I},
 {funObjDirY4, "ObjDirY4",  1, R_I},
 {funObjDirL4, "ObjDirL4",  1, R_I},
 {funObjHou4,  "ObjHouse4", 1, I_I},
-{funObjLon5,  "ObjLon5",   1, R_I}, 
+{funObjLon5,  "ObjLon5",   1, R_I},
 {funObjLat5,  "ObjLat5",   1, R_I},
 {funObjDir5,  "ObjDir5",   1, R_I},
 {funObjDirY5, "ObjDirY5",  1, R_I},
 {funObjDirL5, "ObjDirL5",  1, R_I},
 {funObjHou5,  "ObjHouse5", 1, I_I},
-{funObjLon6,  "ObjLon6",   1, R_I}, 
+{funObjLon6,  "ObjLon6",   1, R_I},
 {funObjLat6,  "ObjLat6",   1, R_I},
 {funObjDir6,  "ObjDir6",   1, R_I},
 {funObjDirY6, "ObjDirY6",  1, R_I},
 {funObjDirL6, "ObjDirL6",  1, R_I},
 {funObjHou6,  "ObjHouse6", 1, I_I},
-{funObjLonN,  "ObjLonN",   2, R_II}, 
+{funObjLonN,  "ObjLonN",   2, R_II},
 {funObjLatN,  "ObjLatN",   2, R_II},
 {funObjDirN,  "ObjDirN",   2, R_II},
 {funObjDirYN, "ObjDirYN",  2, R_II},
 {funObjDirLN, "ObjDirLN",  2, R_II},
 {funObjHouN,  "ObjHouseN", 2, I_II},
+{funObjLen,  "ObjLen",   1, R_I},
+{funObjLen1, "ObjLen1",  1, R_I},
+{funObjLen2, "ObjLen2",  1, R_I},
+{funObjLen3, "ObjLen3",  1, R_I},
+{funObjLen4, "ObjLen4",  1, R_I},
+{funObjLen5, "ObjLen5",  1, R_I},
+{funObjLen6, "ObjLen6",  1, R_I},
+{funObjLenN, "ObjLenN",  1, R_II},
 {funObjX,    "ObjX",     1, R_I},
 {funObjY,    "ObjY",     1, R_I},
 {funObjZ,    "ObjZ",     1, R_I},
-{funObjXN,   "ObjXN",    1, R_I},
-{funObjYN,   "ObjYN",    1, R_I},
-{funObjZN,   "ObjZN",    1, R_I},
+{funObjXN,   "ObjXN",    2, R_II},
+{funObjYN,   "ObjYN",    2, R_II},
+{funObjZN,   "ObjZN",    2, R_II},
 {funObjOn,   "ObjOn",    1, I_I},
 {funObjOnT,  "ObjOnT",   1, I_I},
 {funObjOrb,  "ObjOrb",   1, R_I},
@@ -778,6 +820,7 @@ CONST FUN rgfun[cfun] = {
 {funObjYear, "ObjYear",  1, R_I},
 {funObjDiam, "ObjDiam",  1, R_I},
 {funObjDay,  "ObjDay",   1, R_I},
+{funAspOn,   "AspOn",    1, I_I},
 {funAspAng,  "AspAngle", 1, R_I},
 {funAspOrb,  "AspOrb",   1, R_I},
 {funAspInf,  "AspInf",   1, R_I},
@@ -792,6 +835,10 @@ CONST FUN rgfun[cfun] = {
 {funCusp3D3, "Cusp3D3",  1, R_I},
 {funCusp4,   "Cusp4",    1, R_I},
 {funCusp3D4, "Cusp3D4",  1, R_I},
+{funCusp5,   "Cusp5",    1, R_I},
+{funCusp3D5, "Cusp3D5",  1, R_I},
+{funCusp6,   "Cusp6",    1, R_I},
+{funCusp3D6, "Cusp3D6",  1, R_I},
 {funCuspInf, "HouseInf", 1, R_I},
 {funSector,  "PlusZone", 1, I_I},
 {funSigRul,  "SignRul",  1, I_I},
@@ -816,6 +863,7 @@ CONST FUN rgfun[cfun] = {
 {funLonTerm, "LonTerm",  2, I_RI},
 {funDayWeek, "DayWeek",  3, I_III},
 {funJulianT, "JulianT",  0, R_},
+{funJulianD, "JulianD",  4, R_IIIR},
 {funLatLmt,  "LATLMT",   0, R_},
 {funSphDist, "PolDist",  4, R_RRRR},
 {funOblique, "Oblique",  0, R_},
@@ -839,6 +887,9 @@ CONST FUN rgfun[cfun] = {
 {funTiltXY,  "TiltXY",   2, R_IR},
 {funContext, "Context",  0, I_},
 {funVersion, "Version",  0, R_},
+{funAlloc,   "Alloc",    0, I_},
+{funAllocT,  "AllocTot", 0, I_},
+{funAllocS,  "AllocSiz", 0, I_},
 {funAsnObj,  "=Obj",     4, R_IIII},
 {funAsnHou,  "=Hou",     4, R_IIII},
 
@@ -1170,6 +1221,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funTrue:  n = fTrue;  break;
   case funInt:   n = n1;     break;
   case funReal:  r = r1;     break;
+  case funBool:  n = (n1 != 0); break;
   case funType:  n = fOptReal; break;
   case funAdd:   EIR(n1 + n2, r1 + r2); break;
   case funSub:   EIR(n1 - n2, r1 - r2); break;
@@ -1194,6 +1246,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funInv:   n = ~n1;      break;
   case funShftL: n = n1 << n2; break;
   case funShftR: n = n1 >> n2; break;
+  case funAndL:  n = n1 && n2; break;
+  case funOrL:   n = n1 || n2; break;
   case funOdd:   n = FOdd(n1); break;
   case funAbs:   EIR(NAbs(n1), RAbs(r1)); break;
   case funSgn:   EIR(NSgn(n1), RSgn(r1)); break;
@@ -1205,6 +1259,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funSqu:   EIR(Sq(n1), Sq(r1)); break;
   case funSqr:   r = RSqr(r1); break;
   case funDist:  r = RSqr(Sq(r1)+Sq(r2)); break;
+  case funDist3: r = RSqr(Sq(r1)+Sq(r2)+Sq(r3)); break;
   case funLn:    r = RLog(r1); break;
   case funLog10: r = RLog10(r1); break;
   case funSin:   r = RSin(r1); break;
@@ -1323,13 +1378,28 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funDayT: n = ciTran.day; break;
   case funYeaT: n = ciTran.yea; break;
   case funTimT: r = ciTran.tim; break;
+  case funDstT: r = ciTran.dst; break;
   case funMonG: n = ciGreg.mon; break;
   case funDayG: n = ciGreg.day; break;
   case funYeaG: n = ciGreg.yea; break;
-  case funDstD: r = us.dstDef; break;
-  case funZonD: r = us.zonDef; break;
-  case funLonD: r = us.lonDef; break;
-  case funLatD: r = us.latDef; break;
+  case funDstD: r = ciDefa.dst; break;
+  case funZonD: r = ciDefa.zon; break;
+  case funLonD: r = ciDefa.lon; break;
+  case funLatD: r = ciDefa.lat; break;
+  case funOff:  r = GetOffsetCI(&ciCore); break;
+  case funOff1: r = GetOffsetCI(&ciMain); break;
+  case funOff2: r = GetOffsetCI(&ciTwin); break;
+  case funOff3: r = GetOffsetCI(&ciThre); break;
+  case funOff4: r = GetOffsetCI(&ciFour); break;
+  case funOff5: r = GetOffsetCI(&ciFive); break;
+  case funOff6: r = GetOffsetCI(&ciHexa); break;
+  case funOffN: r = FBetween(n1, 0, cRing) ? GetOffsetCI(rgpci[n1]) :
+    0.0; break;
+  case funOffL: r = FBetween(n1, 0, is.cci-1) ? GetOffsetCI(&is.rgci[n1]) :
+    0.0; break;
+  case funOffS: r = GetOffsetCI(&ciSave); break;
+  case funOffT: r = GetOffsetCI(&ciTran); break;
+  case funOffD: r = GetOffsetCI(&ciDefa); break;
   case funObjLon:   r = FValidObj(n1) ? planet[n1]     : 0.0; break;
   case funObjLat:   r = FValidObj(n1) ? planetalt[n1]  : 0.0; break;
   case funObjDir:   r = FValidObj(n1) ? ret[n1]        : 0.0; break;
@@ -1378,6 +1448,14 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funObjDirYN: r = FRingObj(n1, n2) ? rgpcp[n1]->diralt[n2] : 0.0; break;
   case funObjDirLN: r = FRingObj(n1, n2) ? rgpcp[n1]->dirlen[n2] : 0.0; break;
   case funObjHouN:  n = FRingObj(n1, n2) ? rgpcp[n1]->house[n2]  : 0;   break;
+  case funObjLen:   r = FValidObj(n1) ? cp0.dist[n1] : 0.0; break;
+  case funObjLen1:  r = FValidObj(n1) ? cp1.dist[n1] : 0.0; break;
+  case funObjLen2:  r = FValidObj(n1) ? cp2.dist[n1] : 0.0; break;
+  case funObjLen3:  r = FValidObj(n1) ? cp3.dist[n1] : 0.0; break;
+  case funObjLen4:  r = FValidObj(n1) ? cp4.dist[n1] : 0.0; break;
+  case funObjLen5:  r = FValidObj(n1) ? cp5.dist[n1] : 0.0; break;
+  case funObjLen6:  r = FValidObj(n1) ? cp6.dist[n1] : 0.0; break;
+  case funObjLenN:  r = FRingObj(n1, n2) ? rgpcp[n1]->dist[n2] : 0.0; break;
   case funObjX:    r = FValidObj(n1)    ? space[n1].x   : 0.0; break;
   case funObjY:    r = FValidObj(n1)    ? space[n1].y   : 0.0; break;
   case funObjZ:    r = FValidObj(n1)    ? space[n1].z   : 0.0; break;
@@ -1403,6 +1481,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funObjYear: r = FNorm(n1)        ? rObjYear[n1]  : 0.0; break;
   case funObjDiam: r = RObjDiam(n1); break;
   case funObjDay:  r = FNorm(n1)        ? rObjDay[n1]   : 0.0; break;
+  case funAspOn:   n = FValidAspect(n1) ? FIgnoreA(n1)  : 0;   break;
   case funAspAng:  r = FValidAspect(n1) ? rAspAngle[n1] : 0.0; break;
   case funAspOrb:  r = FValidAspect(n1) ? rAspOrb[n1]   : 0.0; break;
   case funAspInf:  r = FValidAspect(n1) ? rAspInf[n1]   : 0.0; break;
@@ -1417,6 +1496,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funCusp3D3: r = FValidSign(n1)   ? cp3.cusp3[n1] : 0.0; break;
   case funCusp4:   r = FValidSign(n1)   ? cp4.cusp[n1]  : 0.0; break;
   case funCusp3D4: r = FValidSign(n1)   ? cp4.cusp3[n1] : 0.0; break;
+  case funCusp5:   r = FValidSign(n1)   ? cp5.cusp[n1]  : 0.0; break;
+  case funCusp3D5: r = FValidSign(n1)   ? cp5.cusp3[n1] : 0.0; break;
+  case funCusp6:   r = FValidSign(n1)   ? cp6.cusp[n1]  : 0.0; break;
+  case funCusp3D6: r = FValidSign(n1)   ? cp6.cusp3[n1] : 0.0; break;
   case funCuspInf: r = FBetween(n1, 1, cSign+5) ? rHouseInf[n1] : 0.0; break;
   case funSector:  n = FSector(n1)    ? pluszone[n1]   : 0;  break;
   case funSigRul:  n = FValidSign(n1) ? rules[n1]      : -1; break;
@@ -1442,6 +1525,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funLonTerm: n = ObjTerm(r1, n2); break;
   case funDayWeek: n = DayOfWeek(n1, n2, n3); break;
   case funJulianT: r = JulianDayFromTime(is.T); break;
+  case funJulianD: r = MdytszToJulian(n1, n2, n3, r4, 0.0, 0.0); break;
   case funLatLmt:  r = SwissLatLmt(JulianDayFromTime(is.T)); break;
   case funSphDist: r = SphDistance(r1, r2, r3, r4); break;
   case funOblique: r = is.OB; break;
@@ -1478,21 +1562,26 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     break;
   case funContext: n = is.nContext;  break;
   case funVersion: r = atof(szVersionCore); break;
+  case funAlloc:   n = is.cAlloc;      break;
+  case funAllocT:  n = is.cAllocTotal; break;
+  case funAllocS:  n = is.cbAllocSize; break;
   case funAsnObj:
     if (FRingObj(n1, n2) && FRingObj(n3, n4)) {
       r = rgpcp[n1]->obj[n2] = rgpcp[n3]->obj[n4];
-      rgpcp[n1]->alt[n2] = rgpcp[n3]->alt[n4];
-      rgpcp[n1]->dir[n2] = rgpcp[n3]->dir[n4];
-      rgpcp[n1]->diralt[n2] = rgpcp[n3]->diralt[n4];
-      rgpcp[n1]->dirlen[n2] = rgpcp[n3]->dirlen[n4];
-      rgpcp[n1]->house[n2] = rgpcp[n3]->house[n4];
+      rgpcp[n1]->alt[n2]     = rgpcp[n3]->alt[n4];
+      rgpcp[n1]->dir[n2]     = rgpcp[n3]->dir[n4];
+      rgpcp[n1]->diralt[n2]  = rgpcp[n3]->diralt[n4];
+      rgpcp[n1]->dirlen[n2]  = rgpcp[n3]->dirlen[n4];
+      rgpcp[n1]->house[n2]   = rgpcp[n3]->house[n4];
+      rgpcp[n1]->pt[n2]      = rgpcp[n3]->pt[n4];
+      rgpcp[n1]->dist[n2]    = rgpcp[n3]->dist[n4];
     } else
       r = 0.0;
     break;
   case funAsnHou:
     if (FRingObj(n1, n2) && FRingObj(n3, n4)) {
       r = rgpcp[n1]->cusp[n2] = rgpcp[n3]->cusp[n4];
-      rgpcp[n1]->cusp3[n2] = rgpcp[n3]->cusp3[n4];
+      rgpcp[n1]->cusp3[n2]    = rgpcp[n3]->cusp3[n4];
     } else
       r = 0.0;
     break;
@@ -1647,8 +1736,10 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     n = gi.kiCur;
     break;
   case funDText:
-    if (FBetween(n1, 0, xi.cszExpStr-1))
-      DrawSz(xi.rgszExpStr[n1], n2, n3, dtCent);
+    if (FBetween(n1, 0, xi.cszExpStr-1)) {
+      FormatSz(xi.rgszExpStr[n1], sz);
+      DrawSz(sz, n2, n3, dtCent);
+    }
     n = n1; break;
   case funDSign:  if (FValidSign(n1)) DrawSign(n1, n2, n3);
     n = gi.kiCur; break;
@@ -1812,7 +1903,8 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
       n = 0;
     break;
   case funSwitch:
-    n = FValidMacro(n1) && FProcessCommandLine(szMacro[n1-1]);
+    n = is.rgszMacro != NULL && FBetween(n1, 0, is.cszMacro) &&
+      FSzSet(is.rgszMacro[n1]) && FProcessCommandLine(is.rgszMacro[n1]);
     break;
   case funRndSeed:
     srand(n1);
@@ -2341,6 +2433,35 @@ flag FCreateTries()
 ******************************************************************************
 */
 
+// Format a string, in which expand escape sequences like "\n" to a newline,
+// "\A" to AstroExpression custom variable @a, and "\a" to the AstroExpression
+// custom string indexed by custom variable @a.
+
+void FormatSz(CONST char *szIn, char *szFormat)
+{
+  char *pch2;
+  CONST char *pch;
+
+  for (pch = szIn, pch2 = szFormat; *pch; pch++, pch2++) {
+    *pch2 = *pch;
+    if (*pch == '\\') {
+      if (pch[1] == '\\')
+        pch++;
+      else if (FCapCh(pch[1])) {
+        pch2 = PchFormatExpression(pch2, pch[1] - '@') - 1;
+        pch++;
+        continue;
+      } else if (FUncapCh(pch[1])) {
+        pch2 = PchFormatString(pch2, pch[1] - '`') - 1;
+        pch++;
+        continue;
+      }
+    }
+  }
+  *pch2 = chNull;
+}
+
+
 // Ensure there are at least the given number of slots available in the custom
 // variable array, reallocating if needed.
 
@@ -2357,8 +2478,7 @@ flag FEnsureParVar(int cparNew)
     "variable list");
   if (pparT == NULL)
     return fFalse;
-  if (xi.rgparVar != NULL)
-    DeallocateP(xi.rgparVar);
+  DeallocatePIf(xi.rgparVar);
   xi.rgparVar = pparT;
   xi.cparVar = cparNew;
   return fTrue;
@@ -2381,8 +2501,7 @@ flag FEnsureExpMacro(int cszNew)
     sizeof(char *), cszNew, "macro list");
   if (rgszT == NULL)
     return fFalse;
-  if (xi.rgszExpMacro != NULL)
-    DeallocateP(xi.rgszExpMacro);
+  DeallocatePIf(xi.rgszExpMacro);
   xi.rgszExpMacro = rgszT;
   xi.cszExpMacro = cszNew;
   return fTrue;
@@ -2405,8 +2524,7 @@ flag FEnsureExpStr(int cszNew)
     sizeof(char *), cszNew, "string list");
   if (rgszT == NULL)
     return fFalse;
-  if (xi.rgszExpStr != NULL)
-    DeallocateP(xi.rgszExpStr);
+  DeallocatePIf(xi.rgszExpStr);
   xi.rgszExpStr = rgszT;
   xi.cszExpStr = cszNew;
   return fTrue;
@@ -2515,7 +2633,7 @@ flag ExpSetMacro(int i, char *sz)
 {
   if (!FEnsureExpMacro(i+1))
     return fFalse;
-  xi.rgszExpMacro[i] = sz;
+  FCloneSz(sz, &xi.rgszExpMacro[i]);
   return fTrue;
 }
 
@@ -2525,23 +2643,23 @@ flag ExpSetMacro(int i, char *sz)
 flag ExpSetString(int i, char *sz, flag fList)
 {
   int csz, j;
-  char *pch, *pchT;
+  char *szAlloc = NULL, *pch, *pchT;
 
   // Simple case: Simply assign input string to AstroExpression string.
   if (!FEnsureExpStr(i+1))
     return fFalse;
-  sz = SzPersist(sz);
   if (!fList) {
-    xi.rgszExpStr[i] = sz;
+    FCloneSz(sz, &xi.rgszExpStr[i]);
     return fTrue;
-  }
+  } else
+    FCloneSz(sz, &szAlloc);
 
   // Complex case: Use first character as delimeter within list of strings.
   for (pch = sz, csz = 0; *pch; pch++)
     if (*pch == sz[0])
       csz++;
   if (csz <= 0)
-    return fTrue;
+    goto LDone;
   pch = sz + 1;
   for (j = 0; j < csz; j++) {
     for (pchT = pch; *pchT && *pchT != sz[0]; pchT++)
@@ -2551,6 +2669,8 @@ flag ExpSetString(int i, char *sz, flag fList)
       break;
     pch = pchT + 1;
   }
+LDone:
+  DeallocateP(szAlloc);
   return fTrue;
 }
 
@@ -2607,14 +2727,20 @@ char *PchFormatString(char *sz, int i)
 
 void ExpFinalize(void)
 {
-  if (xi.rgsTrieFun != NULL)
-    DeallocateP(xi.rgsTrieFun);
-  if (xi.rgparVar != NULL)
-    DeallocateP(xi.rgparVar);
-  if (xi.rgszExpMacro != NULL)
+  int i;
+
+  DeallocatePIf(xi.rgsTrieFun);
+  DeallocatePIf(xi.rgparVar);
+  if (xi.rgszExpMacro != NULL) {
+    for (i = 0; i < xi.cszExpMacro; i++)
+      DeallocatePIf(xi.rgszExpMacro[i]);
     DeallocateP(xi.rgszExpMacro);
-  if (xi.rgszExpStr != NULL)
+  }
+  if (xi.rgszExpStr != NULL) {
+    for (i = 0; i < xi.cszExpStr; i++)
+      DeallocatePIf(xi.rgszExpStr[i]);
     DeallocateP(xi.rgszExpStr);
+  }
 }
 #endif // EXPRESS
 

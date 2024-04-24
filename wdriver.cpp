@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: wdriver.cpp
+** Astrolog (Version 7.70) File: wdriver.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -310,6 +310,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdConstellation,   gs.fConstel);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
+    CheckPopup(cmdGraphicsExo,     gs.fAllExo);
     CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
@@ -411,6 +412,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdConstellation,   gs.fConstel);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
+    CheckPopup(cmdGraphicsExo,     gs.fAllExo);
     CheckPopup(cmdGraphicsAxis,    gs.fEcliptic);
     break;
   case menuXG:
@@ -420,6 +422,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
+    CheckPopup(cmdGraphicsExo,     gs.fAllExo);
     CheckPopup(cmdGraphicsAxis,    gs.fEcliptic);
     CheckPopup(cmdGraphicsCity,    gs.fLabelCity);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
@@ -435,6 +438,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsLabel,   gs.fLabel);
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
     CheckPopup(cmdGraphicsAllStar, gs.fAllStar);
+    CheckPopup(cmdGraphicsExo,     gs.fAllExo);
     CheckPopup(cmdGraphicsCity,    gs.fLabelCity);
     CheckPopup(cmdGraphicsAxis,    gs.fEcliptic);
     break;
@@ -471,6 +475,10 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
   case menu_E: case menu_D: case menu_8:
     CheckPopup(cmdSecond,   us.fSeconds);
     CheckPopup(cmdParallel, us.fParallel);
+    break;
+  case menu_Ux:
+    CheckPopup(cmdParallel,   !us.fParallel);
+    CheckPopup(cmdHouseSet3D, !us.fHouse3D);
     break;
   case menu_B:
     CheckPopup(cmdParallel, us.fParallel);
@@ -545,7 +553,8 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   DeleteMenu(wi.hmenu, cmdChartArabic, MF_BYCOMMAND);
 #endif
 #ifndef CONSTEL
-  DeleteMenu(wi.hmenu, cmdConstellation, MF_BYCOMMAND);
+  DeleteMenu(wi.hmenu, cmdConstellation,     MF_BYCOMMAND);
+  DeleteMenu(wi.hmenu, cmdHelpConstellation, MF_BYCOMMAND);
 #endif
 #ifndef BIORHYTHM
   DeleteMenu(wi.hmenu, cmdRelBiorhythm, MF_BYCOMMAND);
@@ -617,8 +626,8 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   // Process the astrolog.as file and the Windows command line.
 
   FProcessSwitchFile(DEFAULT_INFOFILE, NULL);
-  FProcessCommandLine(lpszCmdLine);
   ciTran = ciHexa = ciFive = ciFour = ciThre = ciTwin = ciMain = ciCore;
+  FProcessCommandLine(lpszCmdLine);
 
   // Actually bring up and display the window for the first time.
 
@@ -892,24 +901,25 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
         case gTraTraGra: case gTraNatGra: DoPopup(menuB, hwnd, lParam); break;
         }
       } else {
-        if (us.nRel == rcBiorhythm) DoPopup(menu_Y, hwnd, lParam);
-        else if (us.fListing)       DoPopup(menu_V, hwnd, lParam);
-        else if (us.fWheel)         DoPopup(menu_W, hwnd, lParam);
-        else if (us.fGrid)          DoPopup(menu_G, hwnd, lParam);
-        else if (us.fAspList)       DoPopup(menu_A, hwnd, lParam);
-        else if (us.fMidpoint)      DoPopup(menu_M, hwnd, lParam);
-        else if (us.fHorizon)       DoPopup(menu_Z, hwnd, lParam);
-        else if (us.fOrbit)         DoPopup(menu_S, hwnd, lParam);
-        else if (us.fSector)        DoPopup(menu_H, hwnd, lParam);
-        else if (us.fCalendar)      DoPopup(menu_K, hwnd, lParam);
-        else if (us.fInfluence)     DoPopup(menu_J, hwnd, lParam);
-        else if (us.fEsoteric)      DoPopup(menu_7, hwnd, lParam);
-        else if (us.fAstroGraph)    DoPopup(menu_L, hwnd, lParam);
-        else if (us.fEphemeris)     DoPopup(menu_E, hwnd, lParam);
-        else if (us.fArabic)        DoPopup(menu_P, hwnd, lParam);
-        else if (us.fHorizonSearch) DoPopup(menu_I, hwnd, lParam);
-        else if (us.fAtlasNear)     DoPopup(menu_N, hwnd, lParam);
-        else if (us.fMoonChart)     DoPopup(menu_8, hwnd, lParam);
+        if (us.nRel == rcBiorhythm) DoPopup(menu_Y,  hwnd, lParam);
+        else if (us.fListing)       DoPopup(menu_V,  hwnd, lParam);
+        else if (us.fWheel)         DoPopup(menu_W,  hwnd, lParam);
+        else if (us.fGrid)          DoPopup(menu_G,  hwnd, lParam);
+        else if (us.fAspList)       DoPopup(menu_A,  hwnd, lParam);
+        else if (us.fMidpoint)      DoPopup(menu_M,  hwnd, lParam);
+        else if (us.fHorizon)       DoPopup(menu_Z,  hwnd, lParam);
+        else if (us.fOrbit)         DoPopup(menu_S,  hwnd, lParam);
+        else if (us.fSector)        DoPopup(menu_H,  hwnd, lParam);
+        else if (us.fCalendar)      DoPopup(menu_K,  hwnd, lParam);
+        else if (us.fInfluence)     DoPopup(menu_J,  hwnd, lParam);
+        else if (us.fEsoteric)      DoPopup(menu_7,  hwnd, lParam);
+        else if (us.fAstroGraph)    DoPopup(menu_L,  hwnd, lParam);
+        else if (us.fEphemeris)     DoPopup(menu_E,  hwnd, lParam);
+        else if (us.fArabic)        DoPopup(menu_P,  hwnd, lParam);
+        else if (us.fHorizonSearch) DoPopup(menu_I,  hwnd, lParam);
+        else if (us.fAtlasNear)     DoPopup(menu_N,  hwnd, lParam);
+        else if (us.fMoonChart)     DoPopup(menu_8,  hwnd, lParam);
+        else if (us.fExoTransit)    DoPopup(menu_Ux, hwnd, lParam);
         else if (us.fInDay    || us.fTransit)    DoPopup(menu_D, hwnd, lParam);
         else if (us.fInDayInf || us.fTransitInf) DoPopup(menu_T, hwnd, lParam);
         else if (us.fInDayGra || us.fTransitGra) DoPopup(menu_B, hwnd, lParam);
@@ -1099,6 +1109,7 @@ void ProcessState()
       case gMidpoint:   us.fMidpoint   = fTrue; break;
       case gArabic:     us.fArabic     = fTrue; break;
       case gMoons:      us.fMoonChart  = fTrue; break;
+      case gExo:        us.fExoTransit = fTrue; break;
       case gTraTraTim:  us.fInDay      = fTrue; break;
       case gTraTraInf:  us.fInDayInf   = fTrue; break;
       case gTraTraGra:  us.fInDayGra   = fTrue; break;
@@ -1250,7 +1261,7 @@ int NWmCommand(WORD wCmd)
     break;
 
   case cmdCopyText:
-    is.szFileScreen = szFileTemp;
+    FCloneSz(szFileTemp, &is.szFileScreen);
     us.fGraphics = fFalse;
     wi.fRedraw = fTrue;
     break;
@@ -1267,7 +1278,7 @@ int NWmCommand(WORD wCmd)
 #endif
     if (us.fNoWrite)
       break;
-    gi.szFileOut = szFileTemp;
+    FCloneSz(szFileTemp, &gi.szFileOut);
     switch (wCmd) {
     case cmdCopyBitmap:  gs.ft = ftBmp; gs.chBmpMode = 'B'; break;
     case cmdCopyPicture: gs.ft = ftWmf;  break;
@@ -1627,6 +1638,11 @@ int NWmCommand(WORD wCmd)
     wi.nMode = gMoons;
     break;
 
+  case cmdChartExo:
+    wi.nMode = gExo;
+    us.fGraphics = fFalse;
+    break;
+
   case cmdMoons:
     WiDoDialog(DlgMoons, dlgMoons);
     break;
@@ -1947,6 +1963,12 @@ int NWmCommand(WORD wCmd)
     us.fGraphics = wi.fRedraw = fTrue;
     break;
 
+  case cmdGraphicsExo:
+    inv(gs.fAllExo);
+    WiCheckMenu(cmdGraphicsExo, gs.fAllExo);
+    us.fGraphics = wi.fRedraw = fTrue;
+    break;
+
   case cmdGraphicsHouse:
     inv(gs.fHouseExtra);
     WiCheckMenu(cmdGraphicsHouse, gs.fHouseExtra);
@@ -2256,6 +2278,10 @@ int NWmCommand(WORD wCmd)
     BootExternal("Notepad", "seorbel.txt");
     break;
 
+  case cmdDocExo:
+    BootExternal("Notepad", szFileExoCore);
+    break;
+
   case cmdHelpSign:
     wi.nMode = gSign;
     us.fGraphics = fFalse;
@@ -2344,18 +2370,18 @@ int NWmCommand(WORD wCmd)
 
   default:
     if (FBetween(wCmd, cmdMacro01, cmdMacro48)) {
-      i = (int)(wCmd - cmdMacro01);
-      if (szMacro[i]) {
-        FProcessCommandLine(szMacro[i]);
+      i = (int)wCmd - cmdMacro01 + 1;
+      if (is.rgszMacro != NULL && is.rgszMacro[i]) {
+        FProcessCommandLine(is.rgszMacro[i]);
         wi.fCast = wi.fMenuAll = fTrue;
-      } else if (i == 0/*F1*/ || i == 39/*Alt+F4*/) {
+      } else if (i == 1/*F1*/ || i == 40/*Alt+F4*/) {
         // F1 shows help if macro not already defined for it.
-        if (i == 0)
+        if (i == 1)
           BootExternal(NULL, "astrolog.htm");
-        else if (i == 39)
+        else if (i == 40)
           return -1;
       } else {
-        sprintf(sz, "Macro number %d is not defined.", i+1);
+        sprintf(sz, "Macro number %d is not defined.", i);
         PrintWarning(sz);
       }
       break;
@@ -2431,12 +2457,12 @@ void API RedoMenu()
   CheckMenu(cmdGraphicsAxis, gs.fEcliptic);
   CheckMenu(cmdGraphicsReverse, gs.fInverse);
   CheckMenu(cmdGraphicsMonochrome, !gs.fColor);
+  RadioMenu(cmdScale1, cmdScale4, cmdScale1 + gs.nScale/100 - 1);
   CheckMenu(cmdGraphicsBorder, gs.fBorder);
   CheckMenu(cmdGraphicsText, gs.fText);
   CheckMenu(cmdGraphicsSidebar, !us.fVelocity);
   CheckMenu(cmdGraphicsLabel, gs.fLabel);
   CheckMenu(cmdGraphicsThick, gs.fThick);
-  RadioMenu(cmdScale1, cmdScale4, cmdScale1 + gs.nScale/100 - 1);
   CheckMenu(cmdGraphicsModify, gs.fAlt);
   RadioMenu(cmdPen00, cmdPen15, cmdPen00 + wi.kiPen);
   CheckMenu(cmdAnimateNo, gs.nAnim > 0);
@@ -2674,18 +2700,19 @@ flag API FRedraw(void)
     (!wi.fAutoSaveWire ? gs.ft != ftBmp : gs.ft != ftWire)) {
     gs.ft = !wi.fAutoSaveWire ? ftBmp : ftWire;
     if (!wi.fAutoSaveNum)
-      gi.szFileOut = !wi.fAutoSaveWire ? szFileAutoCore : "astrolog.dw";
+      sprintf(szFile, "%s",
+        !wi.fAutoSaveWire ? szFileAutoCore : "astrolog.dw");
     else {
-      gi.szFileOut = szFile;
       sprintf(szFile, "ast%05d.%s",
         wi.nAutoSaveNum, !wi.fAutoSaveWire ? "bmp" : "dw");
       wi.nAutoSaveNum++;
     }
+    FCloneSz(szFile, &gi.szFileOut);
     Action();
+    FCloneSz(NULL, &gi.szFileOut);
     if (gs.ft == ftWire) {
       gs.xWin /= WIREMUL; gs.yWin /= WIREMUL; gs.nScale /= WIREMUL;
     }
-    gi.szFileOut = NULL;
     gs.ft = ftNone;
   }
 
@@ -2736,7 +2763,7 @@ flag API FRedraw(void)
   // it on screen. If were in file mode, cleanup things here.
 
   if (is.szFileScreen != NULL || gs.ft != ftNone) {
-    is.szFileScreen = NULL;
+    FCloneSz(NULL, &is.szFileScreen);
     if (gs.ft == ftWmf) {
       gs.xWin /= METAMUL; gs.yWin /= METAMUL; gs.nScale /= METAMUL;
     } else if (gs.ft == ftPS) {
@@ -2960,6 +2987,7 @@ flag FCreateProgramGroup(flag fAll)
   DeleteShortcut(szDir, "Astrolog 7.30");
   DeleteShortcut(szDir, "Astrolog 7.40");
   DeleteShortcut(szDir, "Astrolog 7.50");
+  DeleteShortcut(szDir, "Astrolog 7.60");
 
   // Add main shortcuts in folder.
   sprintf(szName, "%s %s", szAppName, szVersionCore);

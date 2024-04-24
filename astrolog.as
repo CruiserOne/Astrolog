@@ -1,7 +1,7 @@
-@AD760  ; Astrolog 7.60 default settings file astrolog.as
+@AD770  ; Astrolog 7.70 default settings file astrolog.as
 
 ; The contents of this file can be automatically generated with the
-; "File / Save Settings" menu command, or with the -od command switch.
+; "File / Save Program Settings" menu command, or with the -od command switch.
 
 -z 8:00W                ; Default time zone     [hours W or E of UTC   ]
 -z0 Autodetect          ; Default Daylight time [0 standard, 1 daylight]
@@ -49,8 +49,8 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 ; FILE PATHS (-Yi1 through -Yi9):
 ; For example, point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.
 
--Yi1 "C:\Astrolog\ephem"
--Yi2 "C:\Astrolog\source"
+-Yi1 "ephem"
+-Yi2 "source"
 
 
 ; DEFAULT RESTRICTIONS:
@@ -147,6 +147,31 @@ _Yv     ; European length units     ["_Yv" is imperial, "=Yv" is metric]
 
 -Yj0 20 10 15 5  ; In ruling sign, exalted sign, ruling house, exalted house
 -Yj7 10 10 10 5 5 5  ; In Esoteric, Hierarchical, Ray ruling (signs, houses)
+
+
+; DEFAULT RULERSHIPS & EXALTATIONS:
+
+-YJ Sun Leo 0
+-YJ Moo Can 0
+-YJ Mer Gem Vir
+-YJ Ven Lib Tau
+-YJ Mar Ari Sco
+-YJ Jup Sag Pis
+-YJ Sat Cap Aqu
+-YJ Ura Aqu 0
+-YJ Nep Pis 0
+-YJ Plu Sco 0
+
+-YJ0 Sun Ari
+-YJ0 Moo Tau
+-YJ0 Mer Vir
+-YJ0 Ven Pis
+-YJ0 Mar Cap
+-YJ0 Jup Can
+-YJ0 Sat Lib
+-YJ0 Ura Sco
+-YJ0 Nep Can
+-YJ0 Plu Aqu
 
 
 ; DEFAULT RAYS:

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: general.cpp
+** Astrolog (Version 7.70) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -104,6 +104,8 @@ int CwchSz(CONST char *sz)
 
 int NCompareSz(CONST char *sz1, CONST char *sz2)
 {
+  if (sz1 == NULL || sz2 == NULL)
+    return (sz1 == sz2);
   while (*sz1 && *sz1 == *sz2)
     sz1++, sz2++;
   return (int)*sz1 - *sz2;
@@ -115,6 +117,8 @@ int NCompareSz(CONST char *sz1, CONST char *sz2)
 
 int NCompareSzI(CONST char *sz1, CONST char *sz2)
 {
+  if (sz1 == NULL || sz2 == NULL)
+    return (sz1 == sz2);
   while (*sz1 && ChCap(*sz1) == ChCap(*sz2))
     sz1++, sz2++;
   return (int)ChCap(*sz1) - ChCap(*sz2);
@@ -826,6 +830,24 @@ void AddTime(CI *pci, int mode, int toadd)
 }
 
 
+// Given a set of chart information, return the offset of its time in hours
+// before UTC. This is normally (time zone - daylight offset), however check
+// for special case time zones and Daylight autodetection.
+
+real GetOffsetCI(CONST CI *pci)
+{
+  real zon = pci->zon, dst = pci->dst;
+
+  if (zon == zonLMT)
+    zon = pci->lon / 15.0;
+  else if (zon == zonLAT)
+    zon = pci->lon / 15.0 - SwissLatLmt(is.JD);
+  if (dst == dstAuto)
+    dst = (real)is.fDst;
+  return zon - dst;
+}
+
+
 // Given an aspect and two objects making that aspect with each other, return
 // the maximum orb allowed for such an aspect. Normally this only depends on
 // the aspect itself, but some objects require narrow orbs, and some allow
@@ -1037,6 +1059,8 @@ void PrintSz(CONST char *sz)
   int fT;
 #endif
 
+  if (us.fNoDisplay)
+    return;
 #ifdef WINANY
   if (is.S == stdout)
     fWantIBM = fTrue;
@@ -1619,6 +1643,15 @@ char *SzZodiac(real deg)
   case df360:
     // Or, if -sd in effect, format position as a simple degree.
 
+#ifdef EXPRESS
+    if (!us.fExpOff && FSzSet(us.szExpDegree)) {
+      ExpSetR(iLetterZ, deg);
+      deg = RParseExpression(us.szExpDegree);
+      sprintf(szZod, "%11.11f", deg);
+      szZod[is.fSeconds ? 11 : 7] = chNull;
+      break;
+    }
+#endif
     sprintf(szZod, is.fSeconds ? "%11.7f" : "%7.3f", deg);
     break;
 
@@ -2000,11 +2033,11 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
     dh = NAbs(st.wHour - lt.wHour);
     if (dh > 12)
       dh = 24-dh;
-    is.fDst = (dh == us.zonDef-1);
+    is.fDst = (dh == ciDefa.zon-1);
     dst = (real)is.fDst;
   }
-  if (zon == zonLMT)
-    zon = us.lonDef / 15.0;
+  if (zon == zonLMT || zon == zonLAT)
+    zon = ciDefa.lon / 15.0;
   jd = MdytszToJulian(st.wMonth, st.wDay, st.wYear,
     (real)(((st.wHour * 60 + st.wMinute + us.lTimeAddition) * 60 +
     st.wSecond) * 1000 + st.wMilliseconds) / (60.0 * 60.0 * 1000.0),
@@ -2022,8 +2055,8 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
   curtimer = curtimer / 60 + us.lTimeAddition;
   min = (int)(curtimer % 60);
   curtimer /= 60;
-  if (zon == zonLMT)
-    zon = us.lonDef / 15.0;
+  if (zon == zonLMT || zon == zonLAT)
+    zon = ciDefa.lon / 15.0;
   hr = (real)(curtimer % 24) - (zon - (dst == dstAuto ? 0.0 : dst));
   curtimer /= 24;
   while (hr < 0.0) {
@@ -2040,8 +2073,8 @@ void GetTimeNow(int *mon, int *day, int *yea, real *tim, real dst, real zon)
   if (dst == dstAuto) {
     // Daylight field of 24 means autodetect whether Daylight Saving Time.
 
-    SetCI(ci, *mon, *day, *yea, *tim, 0.0, zon, us.lonDef, us.latDef);
-    if (DisplayAtlasLookup(us.locDef, 0, &i) &&
+    SetCI(ci, *mon, *day, *yea, *tim, 0.0, zon, ciDefa.lon, ciDefa.lat);
+    if (DisplayAtlasLookup(ciDefa.loc, 0, &i) &&
       DisplayTimezoneChanges(is.rgae[i].izn, 0, &ci)) {
       hr += ci.dst;
       while (hr < 0.0) {
@@ -2112,10 +2145,10 @@ flag FAppendCIList(CONST CI *pci)
     pciNew = (CI *)RgAllocate(cciAlloc, CI, "chart list");
     if (pciNew == NULL)
       return fFalse;
-    if (is.rgci != NULL)
+    if (is.rgci != NULL) {
       CopyRgb((pbyte)is.rgci, (pbyte)pciNew, sizeof(CI)*is.cci);
-    if (is.rgci != NULL)
       DeallocateP(is.rgci);
+    }
     is.rgci = pciNew;
     is.cciAlloc = cciAlloc;
   }
@@ -2215,8 +2248,7 @@ flag FSortCIList(int nMethod)
         rgr[j] = rT;
     }
   }
-  if (rgr != NULL)
-    DeallocateP(rgr);
+  DeallocatePIf(rgr);
   return fTrue;
 }
 
@@ -2575,44 +2607,58 @@ CONST char *ConvertSzToLatin(CONST char *sz, char *szBuf, int cchBuf)
 ******************************************************************************
 */
 
+// Copy a source string to a destination location, taking care of destination
+// buffer reallocation and frees when needed.
+
+flag FCloneSzCore(CONST char *szSrc, char **pszDst, flag fDestConst)
+{
+  char *szNew;
+  int cbDst, cbNew;
+
+  Assert(pszDst != NULL);
+  if (szSrc != NULL) {
+    cbNew = CchSz(szSrc)+1;
+    if (*pszDst != NULL && !fDestConst) {
+      // If destination buffer large enough, just use it instead.
+      cbDst = CchSz(*pszDst)+1;
+      if (cbDst >= cbNew) {
+        CopyRgb((pbyte)szSrc, (pbyte)*pszDst, cbNew);
+        return fTrue;
+      }
+    }
+    // Allocate new buffer for string to be cloned.
+    szNew = (char *)PAllocate(cbNew, "string");
+    if (szNew == NULL)
+      return fFalse;
+    CopyRgb((pbyte)szSrc, (pbyte)szNew, cbNew);
+  } else
+    szNew = NULL;
+  if (*pszDst != NULL && !fDestConst)
+    DeallocateP(*pszDst);
+  *pszDst = szNew;
+  return fTrue;
+}
+
 
 // Given a string, return a pointer to a persistent version of it, in which
 // "persistent" means its contents won't be invalidated when the stack frame
-// changes. Strings such as macros and such need to be in their own space and
-// can't just be local variables in a function reading them in.
+// changes. Strings such as chart names and locations need to be in their own
+// space and can't just be local variables in a function reading them in.
 
-char *SzPersist(char *szSrc)
+char *SzClone(char *szSrc)
 {
   char *szNew;
   int cb;
 
-  // Some strings such as outer level command line parameter arguments
-  // already persist, so can just return the same string passed in.
-  if (is.fSzPersist)
-    return szSrc;
-
-  // Otherwise make a copy of the string and use it.
+  // Make a copy of the string and use it.
   cb = CchSz(szSrc)+1;
   szNew = (char *)PAllocate(cb, "string");
   if (szNew != NULL) {
     CopyRgb((pbyte)szSrc, (pbyte)szNew, cb);
     is.cAlloc--;
+    is.cAllocTotal--;
+    is.cbAllocSize -= cb;
   }
-  return szNew;
-}
-
-
-// Like SzPersist() but used in contexts in which always want to make a copy
-// of the string.
-
-char *SzCopy(char *szSrc)
-{
-  char *szNew;
-  flag fSav = is.fSzPersist;
-
-  is.fSzPersist = fFalse;
-  szNew = SzPersist(szSrc);
-  is.fSzPersist = fSav;
   return szNew;
 }
 
@@ -2672,6 +2718,7 @@ void DeallocateP(void *pv)
   lcb = *(dword *)(pbSys + sizeof(dword));
   dw = *(dword *)((pbyte)pv + lcb);
   Assert(dw == dwCanary);
+  is.cbAllocSize -= lcb;
   DeallocatePCore(pbSys);
 #else
   DeallocatePCore(pv);
@@ -2695,6 +2742,29 @@ pbyte RgReallocate(void *rgElem, int cElem, int cbElem, int cElemNew,
   if (rgElem != NULL)
     CopyRgb((pbyte)rgElem, rgElemNew, Min(cElem, cElemNew) * cbElem);
   return rgElemNew;
+}
+
+
+// Ensure there are at least the given number of slots available in the
+// command switch macro string array, reallocating if needed.
+
+flag FEnsureMacro(int cszNew)
+{
+  char **rgszT;
+
+  if (cszNew <= is.cszMacro)
+    return fTrue;
+
+  if (cszNew <= 48)
+    cszNew = 48 + 1;
+  rgszT = (char **)RgReallocate(is.rgszMacro, is.cszMacro,
+    sizeof(char *), cszNew, "macro list");
+  if (rgszT == NULL)
+    return fFalse;
+  DeallocatePIf(is.rgszMacro);
+  is.rgszMacro = rgszT;
+  is.cszMacro = cszNew;
+  return fTrue;
 }
 
 

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xcharts0.cpp
+** Astrolog (Version 7.70) File: xcharts0.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -122,7 +122,7 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
 
   if (szHeader != NULL)
     DrawPrint(szHeader, gi.kiOn, fFalse);
-  if (*pci->nam)
+  if (FSzSet(pci->nam))
     DrawPrint(pci->nam, gi.kiLite, fFalse);
 
   if (FNoTimeOrSpace(*pci))
@@ -139,7 +139,7 @@ void DrawInfo(CI *pci, CONST char *szHeader, flag fAll)
     sprintf(sz, " %s%cT Zone %s%s", is.fSeconds ? "" : "(", ChDst(pci->dst),
       SzZone(pci->zon), is.fSeconds ? "" : ")");
     DrawPrint(sz, gi.kiLite, fFalse);
-    if (*pci->loc)
+    if (FSzSet(pci->loc))
       DrawPrint(pci->loc, gi.kiLite, fFalse);
     DrawPrint(SzLocation(pci->lon, pci->lat), gi.kiLite, fFalse);
     if (fAll) {
@@ -274,41 +274,77 @@ void DrawSidebar()
 {
   char sz[cchSzDef];
   ET et;
-  int i, j, k, l, y, a, s;
+  int i, j, k, l, y, a, s, rays, nSav;
   real r;
   flag fSav;
 
   // Decorate the chart a little.
 
-  if (gs.nDecaType == 1) {
+  if (!gs.fIndianWheel) {
+    if (gs.nDecaType == 1) {
 
-    // If decoration value 1, draw spider web lines in each corner.
-    DrawColor(gi.kiGray);
-    j = gs.nDecaLine + 1;
-    k = gs.yWin * gs.nDecaSize / 100;
-    l = gs.xWin * gs.nDecaSize / 100;
-    for (y = 0; y <= 1; y++)
-      for (i = 0; i <= 1; i++)
-        for (a = 1; a < j; a++)
-          DrawLine(i*(gs.xWin-1), y ? (gs.yWin-1-a*k/j) : a*k/j,
-            i ? gs.xWin-1-l+a*l/j : l-a*l/j, y*(gs.yWin-1));
-  } else if (gs.nDecaType == 2) {
+      // If decoration value 1, draw spider web lines in each corner.
+      DrawColor(gi.kiGray);
+      j = gs.nDecaLine + 1;
+      k = gs.yWin * gs.nDecaSize / 100;
+      l = gs.xWin * gs.nDecaSize / 100;
+      for (y = 0; y <= 1; y++)
+        for (i = 0; i <= 1; i++)
+          for (a = 1; a < j; a++)
+            DrawLine(i*(gs.xWin-1), y ? (gs.yWin-1-a*k/j) : a*k/j,
+              i ? gs.xWin-1-l+a*l/j : l-a*l/j, y*(gs.yWin-1));
+    } else if (gs.nDecaType == 2) {
 
-    // If decoration value 2, draw a moire pattern in each corner.
-    k = gs.yWin * gs.nDecaSize / 200;
-    l = gs.xWin * gs.nDecaSize / 200;
-    fSav = gs.fThick;
-    DrawThick(fFalse);
-    for (y = 0; y <= 1; y++)
-      for (i = 0; i <= 1; i++)
-        for (s = 0; s <= 1; s++)
-          for (a = 1; a < (s ? l : k)*2; a++) {
-            DrawColor(FOdd(a) ? gi.kiGray : gi.kiOff);
-            DrawLine(i ? gs.xWin-1-l : l, y ? gs.yWin-1-k : k,
-              s ? (i ? gs.xWin-1-a : a) : i*(gs.xWin-1),
-              s ? y*(gs.yWin-1) : (y ? gs.yWin-1-a : a));
+      // If decoration value 2, draw a moire pattern in each corner.
+      k = gs.yWin * gs.nDecaSize / 200;
+      l = gs.xWin * gs.nDecaSize / 200;
+      fSav = gs.fThick;
+      DrawThick(fFalse);
+      for (y = 0; y <= 1; y++)
+        for (i = 0; i <= 1; i++)
+          for (s = 0; s <= 1; s++)
+            for (a = 1; a < (s ? l : k)*2; a++) {
+              DrawColor(FOdd(a) ? gi.kiGray : gi.kiOff);
+              DrawLine(i ? gs.xWin-1-l : l, y ? gs.yWin-1-k : k,
+                s ? (i ? gs.xWin-1-a : a) : i*(gs.xWin-1),
+                s ? y*(gs.yWin-1) : (y ? gs.yWin-1-a : a));
+            }
+      DrawThick(fSav);
+    }
+
+    // Print dominant Ray(s) in upper left corner of wheel.
+    else if (gs.nDecaType >= 3) {
+      nSav = gi.nScale;
+      if (gs.nDecaType <= 4) {
+        gi.nScale = gs.yWin / 160;
+        if (gi.nScale > 0) {
+          rays = ChartEsoteric(fTrue);
+          sprintf(sz, "Ray %d", rays/10);
+          DrawColor(kRayB[rays/10]);
+          DrawSz(sz, 7, 7, dtLeft | dtTop | dtScale);
+          if (gs.nDecaType >= 4) {
+            sprintf(sz, ".%d", rays%10);
+            DrawColor(kRayB[rays%10]);
+            DrawSz(sz, 7+5*gi.nScale*xFont, 7, dtLeft | dtTop | dtScale);
           }
-    DrawThick(fSav);
+        }
+      }
+#ifdef INTRPRET
+      else {
+        gi.nScale = gs.yWin / 400;
+        if (gi.nScale > 0) {
+          rays = InterpretEsoteric(fTrue);
+          for (i = 0; i < 5; i++) {
+            sprintf(sz, "%-4.4s: Ray %d", rgEsoRayArea[i], rays%10);
+            DrawColor(kRayB[rays%10]);
+            DrawSz(sz, 7, 7+(4-i)*gi.nScale*yFont, dtLeft | dtTop | dtScale);
+            rays /= 10;
+          }
+        }
+      }
+#endif
+      gi.nScale = nSav;
+    }
   }
 
   if (!gs.fText || us.fVelocity)    // Don't draw sidebar if -v0 flag is set.
@@ -346,42 +382,42 @@ void DrawSidebar()
     DrawInfoSphere(ciTwin, "#2: Outer Ring + Planets", szC2);
   } else if (us.nRel == rcTriWheel &&
     !(FEqCI(ciMain, ciTwin) && FEqCI(ciTwin, ciThre))) {
-    DrawInfoSphere(ciMain, "#1: Outer Ring + Houses", szC1 " + Houses");
+    DrawInfoSphere(ciMain, "#1: Inner Ring + Houses", szC1 " + Houses");
     DrawPrint("", gi.kiLite, fFalse);
     DrawInfoSphere(ciTwin, "#2: Middle Ring", szC2);
     DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciThre, "#3: Inner Ring + Planets", szC3);
+    DrawInfoSphere(ciThre, "#3: Outer Ring + Planets", szC3);
   } else if (us.nRel == rcQuadWheel && !(FEqCI(ciMain, ciTwin) &&
     FEqCI(ciTwin, ciThre) && FEqCI(ciThre, ciFour))) {
-    DrawInfoSphere(ciMain, "#1: Outer Ring + Houses", szC1 " + Houses");
+    DrawInfoSphere(ciMain, "#1: Inner Ring + Houses", szC1 " + Houses");
     DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciTwin, "#2: Middle Outer Ring", szC2);
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciThre, "#3: Middle Inner Ring", szC3);
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciFour, "#4: Inner Ring + Planets", szC4);
-  } else if (us.nRel == rcQuinWheel) {
-    DrawInfoSphere(ciMain, "#1: Outer Ring + Houses", szC1 " + Houses");
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciTwin, "#2: Middle Outer Ring", szC2);
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciThre, "#3: Middle Ring", szC3);
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciFour, "#4: Middle Inner Ring", szC4);
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciFive, "#5: Inner Ring + Planets", szC5);
-  } else if (us.nRel == rcHexaWheel) {
-    DrawInfoSphere(ciMain, "#1: Outer Ring + Houses", szC1 " + Houses");
-    DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciTwin, "#2: Second Outer Ring", szC2);
+    DrawInfoSphere(ciTwin, "#2: Middle Inner Ring", szC2);
     DrawPrint("", gi.kiLite, fFalse);
     DrawInfoSphere(ciThre, "#3: Middle Outer Ring", szC3);
     DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciFour, "#4: Middle Inner Ring", szC4);
+    DrawInfoSphere(ciFour, "#4: Outer Ring + Planets", szC4);
+  } else if (us.nRel == rcQuinWheel) {
+    DrawInfoSphere(ciMain, "#1: Inner Ring + Houses", szC1 " + Houses");
     DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciFive, "#5: Second Inner Ring", szC5);
+    DrawInfoSphere(ciTwin, "#2: Middle Inner Ring", szC2);
     DrawPrint("", gi.kiLite, fFalse);
-    DrawInfoSphere(ciHexa, "#6: Inner Ring + Planets", szC6);
+    DrawInfoSphere(ciThre, "#3: Middle Ring", szC3);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciFour, "#4: Middle Outer Ring", szC4);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciFive, "#5: Outer Ring + Planets", szC5);
+  } else if (us.nRel == rcHexaWheel) {
+    DrawInfoSphere(ciMain, "#1: Inner Ring + Houses", szC1 " + Houses");
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciTwin, "#2: Second Inner Ring", szC2);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciThre, "#3: Middle Inner Ring", szC3);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciFour, "#4: Middle Outer Ring", szC4);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciFive, "#5: Second Outer Ring", szC5);
+    DrawPrint("", gi.kiLite, fFalse);
+    DrawInfoSphere(ciHexa, "#6: Outer Ring + Planets", szC6);
   } else if (us.nRel == rcTransit || us.nRel == rcProgress) {
     DrawInfoSphere(ciMain, "#1: Inner Ring (Natal)", szC1 ": Natal");
     DrawPrint("", gi.kiLite, fFalse);
@@ -1599,11 +1635,12 @@ void DrawMap(flag fSky, flag fGlobe, real deg)
   real planet1[objMax], planet2[objMax], x1, y1, rT;
   ObjDraw rgod[objMax * arMax];
   CIRC cr;
+  ES es;
 #ifdef CONSTEL
   int xT, yT;
 #endif
 #ifdef SWISS
-  ES es, *pes1, *pes2;
+  ES *pes1, *pes2;
   int xp, yp, xp2, yp2;
 #endif
 
@@ -1915,6 +1952,17 @@ LAfter:
   }
 #endif
 
+  // Draw exoplanets.
+
+  if (gs.fAllExo) {
+    EnumExoplanets(NULL);
+    while (EnumExoplanets(&es)) {
+      x1 = es.lon; y1 = es.lat;
+      if (!FMapCalc(x1, y1, &j, &k, fGlobe, fSky, rT, nScl, &cr, deg))
+        DrawStar(j, k, &es);
+    }
+  }
+
   // Draw MC, IC, Asc, and Des lines for each object, as great circles around
   // the globe. The result is a (3D for globes) astro-graph chart.
 
@@ -2055,6 +2103,39 @@ flag EnumStarsLines(flag fInit, ES **ppes1, ES **ppes2)
   return fTrue;
 }
 #endif
+
+
+// Enumerate the list of exoplanets to display in graphics charts.
+
+flag EnumExoplanets(ES *pes)
+{
+  static int iexo = 0;
+  KI ki;
+
+  // Check for list initialization case.
+  if (pes == NULL) {
+    ChartExoplanet(fTrue);
+    iexo = 0;
+    return fTrue;
+  }
+
+LNext:
+  if (iexo >= is.cexod)
+    return fFalse;
+  ki = is.rgexod[iexo].kiLoop;
+  if (ki == kRed) {
+    // Skip over points that are guaranteed not to be transits at chart time.
+    iexo++;
+    goto LNext;
+  }
+
+  pes->lon = is.rgexod[iexo].ra * rDegMax / 24.0;
+  pes->lat = is.rgexod[iexo].dec;
+  pes->ki = (ki == kGreen ? kGreenB : kYellowB);
+  pes->pchBest = is.rgexod[iexo].sz;
+  iexo++;
+  return fTrue;
+}
 
 
 /*

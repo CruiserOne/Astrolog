@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: calc.cpp
+** Astrolog (Version 7.70) File: calc.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -128,7 +128,7 @@ void JulianToMdy(real JD, int *mon, int *day, int *yea)
     return;
   }
 #endif
-  *mon = mJan; *day = 1; *yea = 2023;
+  *mon = mJan; *day = 1; *yea = 2024;
 }
 
 
@@ -1419,7 +1419,7 @@ real CastChart(int nContext)
   if (us.objOnAsc) {
     r = planet[NAbs(us.objOnAsc)-1];
     if (us.fSolarWhole)
-      r = (real)((SFromZ(r)-1)*30);
+      r = ZFromS(SFromZ(r));
     r -= (us.objOnAsc > 0 ? is.Asc : is.MC);
     for (i = 1; i <= cSign; i++)
       chouse[i] = Mod(chouse[i] + r + rSmall);
@@ -1541,7 +1541,7 @@ void CastSectors()
 
   // If not approximating sectors, then they need to be computed the formal
   // way: based on a planet's nearest rising and setting times. The code below
-  // is similar to ChartInDayHorizon() accessed by the -Zd switch.
+  // is similar to ChartHorizonRising() accessed by the -Zd switch.
 
   fT = us.fSidereal; us.fSidereal = fFalse;
   division = us.nDivision * 4;
@@ -2312,43 +2312,69 @@ void SwissEnsurePath()
 {
   char szPath[AS_MAXCH];
 #ifdef ENVIRON
-  char szT[cchSzDef], *env, *pch;
+  char szExe[cchSzMax], szT[cchSzMax], *env, *pch;
 #endif
   int i;
 
-  if (!is.fSwissPathSet) {
-    // First look for the file in the current directory.
-    sprintf(szPath, ".");
-    // Next look in the directories indicated by the -Yi switch.
-    for (i = 0; i < 10; i++)
-      if (us.rgszPath[i] && *us.rgszPath[i])
-        sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR,
-          us.rgszPath[i]);
-#ifdef ENVIRON
-    // Next look for the file in the directory indicated by the version
-    // specific system environment variable.
-    sprintf(szT, "%s%s", ENVIRONVER, szVersionCore);
-    for (pch = szT; *pch && *pch != '.'; pch++)
-      ;
-    while (*pch && (*pch = pch[1]) != chNull)
-      pch++;
-    env = getenv(szT);
-    if (env && *env)
-      sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
-    // Next look in the directory in the general environment variable.
-    env = getenv(ENVIRONALL);
-    if (env && *env)
-      sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
-    // Next look in the directory in the version prefix environment variable.
-    env = getenv(ENVIRONVER);
-    if (env && *env)
-      sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  if (is.fSwissPathSet)
+    return;
+
+  // Get directory containing Astrolog executable.
+#ifdef WIN
+  GetModuleFileName(wi.hinst, szExe, cchSzMax);
+#else
+  sprintf(szExe, "%s", is.szProgName != NULL ? is.szProgName : "");
 #endif
-    // Finally look in a directory specified at compile time.
-    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, EPHE_DIR);
-    swe_set_ephe_path(szPath);
-    is.fSwissPathSet = fTrue;
+  for (pch = szExe; *pch; pch++)
+    ;
+  while (pch > szExe && *pch != chDirSep)
+    pch--;
+  if (*pch == chDirSep)
+    pch++;
+  *pch = chNull;
+
+  // First look for the file in the current directory, and that of executable.
+  sprintf(szPath, ".%s%s", PATH_SEPARATOR, szExe);
+  // Next look in the directories indicated by the -Yi switch.
+  for (i = 0; i < 10; i++) {
+    pch = us.rgszPath[i];
+    if (FSzSet(pch)) {
+      if ((FCapCh(*pch) || FUncapCh(*pch) || FNumCh(*pch)) &&
+        !(pch[1] == ':')) {
+        // If dir is relative path, then prepend the path to executable.
+        sprintf(szT, "%s", szExe);
+        for (pch = szT; *pch; pch++)
+          ;
+      } else
+        pch = szT;
+      sprintf(pch, "%s", us.rgszPath[i]);
+      sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, szT);
+    }
   }
+#ifdef ENVIRON
+  // Next look for the file in the directory indicated by the version
+  // specific system environment variable.
+  sprintf(szT, "%s%s", ENVIRONVER, szVersionCore);
+  for (pch = szT; *pch && *pch != '.'; pch++)
+    ;
+  while (*pch && (*pch = pch[1]) != chNull)
+    pch++;
+  env = getenv(szT);
+  if (env && *env)
+    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  // Next look in the directory in the general environment variable.
+  env = getenv(ENVIRONALL);
+  if (env && *env)
+    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  // Next look in the directory in the version prefix environment variable.
+  env = getenv(ENVIRONVER);
+  if (env && *env)
+    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+#endif
+  // Finally look in a directory specified at compile time.
+  sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, EPHE_DIR);
+  swe_set_ephe_path(szPath);
+  is.fSwissPathSet = fTrue;
 }
 
 
@@ -2412,9 +2438,10 @@ flag FSwissPlanet(int ind, real jd, int indCent,
     iobj = us.fTrueNode ? SE_TRUE_NODE : SE_MEAN_NODE;
   else if (ind == oSou)
     return fFalse;
-  else if (ind == oLil)
-    iobj = us.fTrueNode ? SE_OSCU_APOG : SE_MEAN_APOG;
-  else if (FCust(ind)) {
+  else if (ind == oLil) {
+    iobj = us.fNaturalNode ? SE_INTP_APOG :
+      (us.fTrueNode ? SE_OSCU_APOG : SE_MEAN_APOG);
+  } else if (FCust(ind)) {
     iobj = rgObjSwiss[ind - custLo];
     nTyp = rgTypSwiss[ind - custLo];
     nPnt = rgPntSwiss[ind - custLo];
@@ -2441,18 +2468,12 @@ flag FSwissPlanet(int ind, real jd, int indCent,
         return fFalse;
     }
     if (nFlg > 0) {
-      if (nFlg & 1)
-        inv(fHelio);
-      if (nFlg & 2)
-        inv(us.fSidereal);
-      if (nFlg & 4)
-        inv(us.fBarycenter);
-      if (nFlg & 8)
-        inv(us.fTrueNode);
-      if (nFlg & 16)
-        inv(us.fTruePos);
-      if (nFlg & 32)
-        inv(us.fTopoPos);
+      if (nFlg & 1)  inv(fHelio);
+      if (nFlg & 2)  inv(us.fSidereal);
+      if (nFlg & 4)  inv(us.fBarycenter);
+      if (nFlg & 8)  inv(us.fTrueNode);
+      if (nFlg & 16) inv(us.fTruePos);
+      if (nFlg & 32) inv(us.fTopoPos);
     }
   } else
     iobj = ind;
@@ -2545,16 +2566,11 @@ flag FSwissPlanet(int ind, real jd, int indCent,
 
   // Clean up and return position.
   if (nFlg > 0) {
-    if (nFlg & 2)
-      inv(us.fSidereal);
-    if (nFlg & 4)
-      inv(us.fBarycenter);
-    if (nFlg & 8)
-      inv(us.fTrueNode);
-    if (nFlg & 16)
-      inv(us.fTruePos);
-    if (nFlg & 32)
-      inv(us.fTopoPos);
+    if (nFlg & 2)  inv(us.fSidereal);
+    if (nFlg & 4)  inv(us.fBarycenter);
+    if (nFlg & 8)  inv(us.fTrueNode);
+    if (nFlg & 16) inv(us.fTruePos);
+    if (nFlg & 32) inv(us.fTopoPos);
   }
   if (nRet < 0) {
     if (!is.fNoEphFile) {
@@ -2774,7 +2790,7 @@ void SwissComputeStars(real jd, flag fInitBright)
 
 flag SwissComputeStar(real jd, ES *pes)
 {
-  char serr[AS_MAXCH], *pch;
+  char serr[AS_MAXCH], *pch, *pchT, chT;
   int iflag, isz = 0, i;
   double xx[6], dist1, dist2;
   static real lonPrev = 0.0, latPrev = 0.0;
@@ -2891,16 +2907,21 @@ LNext:
   }
 
   // Check for if should do anything special with this star?
-  if (*us.szStarsList &&
+  if (FSzSet(us.szStarsList) &&
     ((*pes->pchDes && SzInList(pes->pchDes, us.szStarsList, NULL) != NULL) ||
     (*pes->pchNam && SzInList(pes->pchNam, us.szStarsList, NULL) != NULL)) !=
     us.fStarsList)
     goto LNext;
   pes->ki = kDefault;
-  if (*us.szStarsColor) {
+  if (FSzSet(us.szStarsColor)) {
     pch = (char *)SzInList(pes->pchBest, us.szStarsColor, NULL);
-    if (FSzSet(pch))
+    if (FSzSet(pch)) {
+      for (pchT = pch; *pchT && *pchT != chSep && *pchT != chSep2; pchT++)
+        ;
+      chT = *pchT; *pchT = chNull;      
       pes->ki = NParseSz(pch, pmColor);
+      *pchT = chT;
+    }
   }
 #ifdef GRAPH
   if (FSzSet(gs.szStarsLin)) {
@@ -2945,7 +2966,7 @@ flag SwissComputeAsteroid(real jd, ES *pes, flag fBack)
 {
   int iflag, isz = 0, i;
   real r1, r2, r3, r4, r5, r6, rDiff;
-  char sz[cchSzDef], *pch;
+  char sz[cchSzDef], *pch, *pchT, chT;
   static int iast = 1;
 
   // Determine Swiss Ephemeris flags.
@@ -3042,14 +3063,19 @@ LNext:
   rDiff = gs.nAstHi <= gs.nAstLo ? 1.0 : (real)(gs.nAstHi - gs.nAstLo);
   pes->mag = ((real)(iast - gs.nAstLo) / rDiff * rStarSpan) + rStarLite;
   pes->ki = kDefault;
-  if (*us.szAstColor) {
+  if (FSzSet(us.szAstColor)) {
     pch = (char *)SzInList(pes->pchBest, us.szAstColor, NULL);
     if (!FSzSet(pch)) {
       sprintf(sz, "%d", iast);
       pch = (char *)SzInList(sz, us.szAstColor, NULL);
     }
-    if (FSzSet(pch))
+    if (FSzSet(pch)) {
+      for (pchT = pch; *pchT && *pchT != chSep && *pchT != chSep2; pchT++)
+        ;
+      chT = *pchT; *pchT = chNull;      
       pes->ki = NParseSz(pch, pmColor);
+      *pchT = chT;
+    }
   }
 
   iast += (fBack ? -1 : 1);

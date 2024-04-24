@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: data.cpp
+** Astrolog (Version 7.70) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -63,7 +63,7 @@
 US us = {
 
   // Chart types
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Chart suboptions
   0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
@@ -104,8 +104,8 @@ US us = {
   0, 0, 0, 0, 0, 0, 0,
 
   // Obscure flags
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-  1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+  1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Value settings
   ddDecanR,
@@ -132,18 +132,13 @@ US us = {
   0,
   0,
   0.0,
-  DEFAULT_ZONE,
-  DEFAULT_LONG,
-  DEFAULT_LAT,
-  0.0,
   15.0,
-  "",
-  "",
-  {0,0,0,0,0,0,0,0,0,0},
-  "",
-  "",
-  "",
-  "",
+  {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
 
   // Value subsettings
   0, 5, 200, cPart, 22, 0.0, 0.0, rDayInYear, 1.0, 1, 1, ccNone, ccNone,
@@ -153,31 +148,34 @@ US us = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL};
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL};
 
 IS is = {
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  fFalse, NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
-  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0, 0,
+  NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
+  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0, 0, 0, 0,
   0.0, 0.0, 0.0, 0.0, 0.0,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0, rInvalid, 0.0};
 
-CI ciCore = {11, 19, 1971, HM(11, 1),     0.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciMain = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTwin = {9,  11, 1991, HMS(0, 0, 38), 0.0, 0.0, DEFAULT_LOC, "", ""};
-CI ciThre = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFour = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciFive = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciHexa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciTran = {1,  1,  2023, 0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
-CI ciSave = {4,  9,  2023, HMS(1, 9, 11), 0.0, 8.0, DEFAULT_LOC, "", ""};
-CI ciGreg = {10, 15, 1582, 0.0,           0.0, 0.0, 0.0, 0.0,    "", ""};
+CI ciCore = {11, 19, 1971, HM(11, 1),     0.0, 8.0, DEFAULT_LOC, NULL, NULL};
+CI ciMain = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciTwin = {9,  11, 1991, HMS(0, 0, 38), 0.0, 0.0, DEFAULT_LOC, NULL, NULL};
+CI ciThre = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciFour = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciFive = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciHexa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciDefa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciTran = {1,  1,  2024, 0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciSave = {4,  23, 2024, HMS(16,48,58), 1.0, 8.0, DEFAULT_LOC, NULL, NULL};
+CI ciGreg = {10, 15, 1582, 0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
 CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 
 CI * CONST rgpci[cRing+1] = {&ciCore,
   &ciMain, &ciTwin, &ciThre, &ciFour, &ciFive, &ciHexa};
 CP * CONST rgpcp[cRing+1] = {&cp0, &cp1, &cp2, &cp3, &cp4, &cp5, &cp6};
+flag rgfProg[cRing+1] = {0, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse};
 
 
 /*
@@ -189,7 +187,7 @@ CP * CONST rgpcp[cRing+1] = {&cp0, &cp1, &cp2, &cp3, &cp4, &cp5, &cp6};
 real force[objMax];
 GridInfo *grid = NULL;
 int rgobjList[objMax], rgobjList2[objMax], starname[cStar+1], kObjA[objMax];
-char *szMacro[48], *szWheel[cRing+1] = {"", "", "", "", "", "", ""};
+char *szWheel[cRing+1] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 real rStarBrightDef[cStar+1] = {-1.0}, rStarBright[cStar+1],
   rStarBrightDistDef[cStar+1];
 char *szStarCustom[cStar+1];
@@ -464,10 +462,10 @@ real rObjAdd[oNorm+2] = {0.0,
 
 int ruler1[oNorm+1] = {sSag,
   sLeo, sCan, sGem, sLib, sAri, sSag, sCap, sAqu, sPis, sSco,
-  sPis, sTau, sVir, sLib, sSco, sAqu, sLeo, sSco, sPis, sLib, sAri,
+  sPis, sVir, sAqu, sLib, sSco, sAqu, sLeo, sSco, sPis, sLib, sAri,
   sAri, sTau, sGem, sCan, sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis,
   sVir, sLib, sSco, sLeo, sCap, sSag, sVir, sAri, sSag,
-  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, sLib, sCan, sLeo, sAri, sTau, sGem, sCap,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int ruler2[oNorm+1] = {0,
@@ -480,10 +478,10 @@ int ruler2[oNorm+1] = {0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int exalt[oNorm+1] = {sGem,
   sAri, sTau, sVir, sPis, sCap, sCan, sLib, sSco, sCan, sAqu,
-  sCan, sCan, sCap, sLeo, sAqu, sGem, sSag, sPis, sSag, sPis, sCap,
+  sCan, sTau, sCap, sLeo, sVir, sGem, sSag, sPis, sSag, sPis, sCap,
   sLeo, sVir, sLib, sSco, sSag, sCap, sAqu, sPis, sAri, sTau, sGem, sCan,
   sCap, sGem, sVir, sAri, sSag, sAqu, sSco, sLeo, sPis,
-  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, sGem, sVir, sCap, sSco, sLib, sPis, sAqu,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -988,7 +986,7 @@ CONST char *szCnstlGenitive[cCnstl+1] = {"",
 ******************************************************************************
 */
 
-char *szMindPart[objMax] = {"arena of practical life experience",
+CONST char *szMindPartDef[objMax] = {"arena of practical life experience",
   "spirit, ego, image of self, and sense of aliveness",
   "emotional nature, moods, feelings, and caring tendencies",
   "thoughts, intellect, and communicative activity",
@@ -1071,8 +1069,9 @@ char *szMindPart[objMax] = {"arena of practical life experience",
   "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
   "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
   "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""};
+CONST char *szMindPart[objMax];
 
-char *szDesc[cSign+1] = {"",
+CONST char *szDescDef[cSign+1] = {"",
   "forceful, energetic, direct, courageous",
   "practical, often skeptical and stubborn",
   "inquisitive, witty, perceptive, adaptable",
@@ -1085,8 +1084,9 @@ char *szDesc[cSign+1] = {"",
   "industrious, practical, disciplined",
   "progressive, erratic, revolutionary, idealistic, humanitarian, inventive",
   "imaginative, other worldly, impressionable"};
+CONST char *szDesc[cSign+1];
 
-char *szDesire[cSign+1] = {"",
+CONST char *szDesireDef[cSign+1] = {"",
   "seeks adventure and challenge",
   "loves serenity and inner peace",
   "seeks out information",
@@ -1099,8 +1099,9 @@ char *szDesire[cSign+1] = {"",
   "works for solitude and personal integrity",
   "desires individuality",
   "seeks transcendence of self"};
+CONST char *szDesire[cSign+1];
 
-char *szLifeArea[cSign+1] = {"",
+CONST char *szLifeAreaDef[cSign+1] = {"",
   "establishment of personal identity",
   "self image, self worth, and material security",
   "communicating to and receiving from the environment",
@@ -1113,8 +1114,9 @@ char *szLifeArea[cSign+1] = {"",
   "career, social stature, and destiny",
   "the future, life goals, and association with friends and groups",
   "things that disrupt or cause disassociation with the personality"};
+CONST char *szLifeArea[cSign+1];
 
-char *szInteract[cAspect+1] = {"",
+CONST char *szInteractDef[cAspect+1] = {"",
   "is %sconnected and fused together with",
   "%sopposes and creates tension with",
   "is %sin conflict with",
@@ -1127,16 +1129,18 @@ char *szInteract[cAspect+1] = {"",
   "%screatively relates externally with",
   "%screatively relates internally with",
   "", "", "", "", "", "", "", "", "", "", "", "", ""};
+CONST char *szInteract[cAspect+1];
 
-char *szTherefore[cAspect+1] = {"",
+CONST char *szThereforeDef[cAspect+1] = {"",
   "Both parts are prominent in their psyche", "Balance is needed",
   "Adaptation is required by both sides", "", "",
   "They can often relate in a discordant way", "", "", "", "", "",
   "", "", "", "", "", "", ""};
+CONST char *szTherefore[cAspect+1];
 
 // Modifier array makes the interpretation stronger for narrower orbs.
 
-char *szModify[3][cAspect] =
+CONST char *szModify[3][cAspect] =
   {{"always ", "always ", "irreconcilably ", "always ", "much ",
   "completely ", "often ", "often ", "often ", "often ", "often ",
   "", "", "", "", "", "", "", "", "", "", "", "", ""},

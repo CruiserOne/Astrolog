@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: charts2.cpp
+** Astrolog (Version 7.70) File: charts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -426,69 +426,49 @@ void ChartMidpointRelation(void)
 void CastRelation(void)
 {
   byte ignoreSav[objMax];
-  int i, j;
+  int i, j, cChart;
   real ratio, t1, t2, t, rSav;
   flag fSav;
 
-  // Cast the first chart.
+  // Cast the six charts.
 
-  ciCore = ciMain;
-  if (us.nRel == rcProgress) {
-    fSav = us.fProgress;
-    us.fProgress = fFalse;
-  }
+  fSav = us.fProgress;
+  cChart = 2 - (FBetween(us.nRel, rcHexaWheel, rcTriWheel) ? us.nRel+1 : 0);
+
+  for (i = 1; i <= cChart; i++) {
+    ciCore = *rgpci[i];
 #ifdef WIN
-  else if (us.nRel == rcMidpoint)
-    ciCore = ciMain = ciSave;
+    if (i == 1 && us.nRel == rcMidpoint)
+      ciCore = ciMain = ciSave;
 #endif
-  FProcessCommandLine(szWheel[1]);
-  if (FNoTimeOrSpace(ciCore)) {
-    cp0 = cp1;
-    t1 = 0.0;
-  } else {
-    t1 = CastChart(1);
-    cp1 = cp0;
-  }
-  rSav = is.MC;
-
-  // Cast the second chart.
-
-  ciCore = ciTwin;
-  if (us.nRel == rcTransit) {
-    CopyRgb(ignore, ignoreSav, sizeof(ignore));
-    for (i = 0; i <= is.nObj; i++)
-      ignore[i] = ignore[i] && ignore2[i];
-  } else if (us.nRel == rcProgress) {
-    us.fProgress = fTrue;
-    is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
-    ciCore = ciMain;
-  }
-  FProcessCommandLine(szWheel[2]);
-  if (FNoTimeOrSpace(ciCore)) {
-    cp0 = cp2;
-    t2 = 0.0;
-  } else {
-    t2 = CastChart(2);
-    cp2 = cp0;
-  }
-  if (us.nRel == rcTransit)
-    CopyRgb(ignoreSav, ignore, sizeof(ignore));
-  else if (us.nRel == rcProgress)
-    us.fProgress = fSav;
-
-  // Cast the third through sixth charts.
-
-  if (FBetween(us.nRel, rcHexaWheel, rcTriWheel)) {
-    j = 2-(us.nRel+1);
-    for (i = 3; i <= j; i++) {
-      ciCore = *rgpci[i];
-      FProcessCommandLine(szWheel[i]);
-      if (FNoTimeOrSpace(ciCore))
-        cp0 = *rgpcp[i];
-      CastChart(i);
-      *rgpcp[i] = cp0;
+    if (i == 2 && us.nRel <= rcTransit) {
+      CopyRgb(ignore, ignoreSav, sizeof(ignore));
+      for (j = 0; j <= is.nObj; j++)
+        ignore[j] = ignore[j] && ignore2[j];
     }
+    us.fProgress = (i == 1 && us.nRel == rcProgress ? fFalse :
+      (i == 2 && us.nRel == rcProgress ? fTrue : rgfProg[i]));
+    if (us.fProgress) {
+      is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
+      ciCore = ciMain;
+    }
+    FProcessCommandLine(szWheel[i]);
+    if (FNoTimeOrSpace(ciCore)) {
+      cp0 = *rgpcp[i];
+      t = 0.0;
+    } else
+      t = CastChart(i);
+    if (i == 1) {
+      t1 = t;
+      rSav = is.MC;
+    } else if (i == 2)
+      t2 = t;
+    *rgpcp[i] = cp0;
+    if (i == 2 && us.nRel <= rcTransit)
+      CopyRgb(ignoreSav, ignore, sizeof(ignore));
   }
+
+  us.fProgress = fSav;
   ciCore = ciMain;
   FProcessCommandLine(szWheel[0]);
   is.MC = rSav;
@@ -1006,8 +986,7 @@ void ChartTransitInfluence(flag fProg)
   CopyRgb(ignore, ignoreSav, sizeof(ignore));
   for (i = 0; i <= is.nObj; i++)
     ignore[i] = ignore2[i];
-  SetCI(ciCore, ciTran.mon, ciTran.day, ciTran.yea, ciTran.tim,
-    Dst, Zon, Lon, Lat);
+  ciCore = ciTran;
   if (us.fProgress = fProg) {
     is.JDp = MdytszToJulian(MM, DD, YY, TT, SS, ZZ);
     ciCore = ciMain;

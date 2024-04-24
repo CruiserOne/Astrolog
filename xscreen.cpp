@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xscreen.cpp
+** Astrolog (Version 7.70) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -62,9 +62,9 @@
 */
 
 #ifdef X11
-// This information used to define Astrolog's X icon (ringed planet with
-// moons) is similar to the output format used by the bitmap program. You
-// could extract this section and run "xsetroot -bitmap" on it.
+// This information used to define Astrolog's X Windows icon (ringed planet
+// with moons) is similar to the output format used by the bitmap program.
+// You could extract this section and run "xsetroot -bitmap" on it.
 
 #define icon_width 48
 #define icon_height 48
@@ -483,7 +483,7 @@ LNotNow:
     ciTran = ciCore;
     ciCore = ciMain;
     if (us.fProgress)
-      is.JDp = MdytszToJulian(MonT, DayT, YeaT, TimT, us.dstDef, us.zonDef);
+      is.JDp = MdytszToJulian(MonT, DayT, YeaT, TimT, ciDefa.dst, ciDefa.zon);
   } else
     ciMain = ciCore;
   if (us.nRel)
@@ -524,11 +524,7 @@ void CommandLineX()
   is.fSzInteract = fFalse;
   us.fLoop = fT;
   ciMain = ciCore;
-#ifndef WCLI
-  BeginX();
-#else
   InitColorsX();
-#endif
 }
 #endif // WIN
 
@@ -1179,10 +1175,8 @@ void InteractX()
             us.nScrollRow = 0;
             PrintL();
             if (key == 'v') {
-              if (us.nRel < rcNone)
-                ChartListingRelation();
-              else
-                ChartListing();
+              is.fMult = fFalse;
+              PrintChart(us.fProgress);
             } else
               DisplayKeysX();
             us.nScrollRow = length;
@@ -1220,8 +1214,8 @@ void InteractX()
               break;
             } else if (FBetween(key, 201, 248)) {
               is.fSzInteract = fTrue;
-              if (szMacro[key-201]) {
-                FProcessCommandLine(szMacro[key-201]);
+              if (is.rgszMacro != NULL && is.rgszMacro[key-200]) {
+                FProcessCommandLine(is.rgszMacro[key-200]);
                 fResize = fCast = fTrue;
               }
               is.fSzInteract = fFalse;
@@ -1319,7 +1313,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       if (FErrorArgc("XM", argc, i))
         return tcError;
       for (j = 1; j <= i; j++)
-        szWheelX[(ch2 == '0' && j >= i) ? 0 : j] = SzPersist(argv[j]);
+        FCloneSz(argv[j], &szWheelX[(ch2 == '0' && j >= i) ? 0 : j]);
       darg += i;
       break;
     }
@@ -1360,7 +1354,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       return tcError;
     if (gs.ft == ftNone)
       gs.ft = ftBmp;
-    gi.szFileOut = SzPersist(argv[1]);
+    FCloneSz(argv[1], &gi.szFileOut);
     darg++;
     break;
 
@@ -1492,6 +1486,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     break;
 
   case 'U':
+    if (ch1 == 'x') {
+      SwitchF(gs.fAllExo);
+      break;
+    }
     SwitchF(gs.fAllStar);
     if (FBetween(ch1, '0', '3'))
       gs.nAllStar = (ch1 - '0');
@@ -1555,7 +1553,7 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     }
     if (FErrorArgc("Xd", argc, 1))
       return tcError;
-    gs.szDisplay = SzPersist(argv[1]);
+    FCloneSz(argv[1], &gs.szDisplay);
     darg++;
     break;
 #endif
@@ -1788,12 +1786,14 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
       j = NParseSz(argv[2], pmObject);
       if (FErrorValN("YXDD", !FItem(j), j, 2))
         return tcError;
-      szDrawObject[i]  = szDrawObject[j];
-      szDrawObject2[i] = szDrawObject2[j];
+      FCloneSz(szDrawObject[j], (char **)&szDrawObject[i]);
+      FCloneSz(szDrawObject2[j], (char **)&szDrawObject2[i]);
     } else {
-      szDrawObject[i] = argv[2][0] ? SzPersist(argv[2]) : szDrawObjectDef[i];
-      szDrawObject2[i] = (ch1 == '1' ? "" : (argv[3][0] ? SzPersist(argv[3]) :
-        szDrawObjectDef2[i]));
+      FCloneSzCore(argv[2][0] ? argv[2] : szDrawObjectDef[i],
+        (char **)&szDrawObject[i], szDrawObject[i] == szDrawObjectDef[i]);
+      FCloneSzCore(
+        ch1 == '1' ? "" : (argv[3][0] ? argv[3] : szDrawObjectDef2[i]),
+        (char **)&szDrawObject2[i], szDrawObject2[i] == szDrawObjectDef2[i]);
     }
     darg += 3 - (ch1 == '1' || ch1 == 'D');
     break;
@@ -1804,9 +1804,11 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
     i = NParseSz(argv[1], pmAspect);
     if (FErrorValN("YXA", !FAspect3(i), i, 0))
       return tcError;
-    szDrawAspect[i] = argv[2][0] ? SzPersist(argv[2]) : szDrawAspectDef[i];
-    szDrawAspect2[i] = (ch1 == '1' ? "" : (argv[3][0] ? SzPersist(argv[3]) :
-      szDrawAspectDef2[i]));
+    FCloneSzCore(argv[2][0] ? argv[2] : szDrawAspectDef[i],
+      (char **)&szDrawAspect[i], szDrawAspect[i] == szDrawAspectDef[i]);
+    FCloneSzCore(
+      ch1 == '1' ? "" : (argv[3][0] ? argv[3] : szDrawAspectDef2[i]),
+      (char **)&szDrawAspect2[i], szDrawAspect2[i] == szDrawAspectDef2[i]);
     darg += 3 - (ch1 == '1');
     break;
 
@@ -1837,7 +1839,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
   case 't':
     if (FErrorArgc("YXt", argc, 1))
       return tcError;
-    gs.szSidebar = SzPersist(argv[1]);
+    FCloneSz(argv[1], &gs.szSidebar);
     darg++;
     break;
 
@@ -1938,8 +1940,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
       sprintf(pch, "%s;%s", gs.szStarsLin, argv[1]);
     else
       sprintf(pch, "%s", argv[1]);
-    if (gs.szStarsLin)
-      DeallocateP(gs.szStarsLin);
+    DeallocatePIf(gs.szStarsLin);
     gs.szStarsLin = pch;
     // Allocate or extend allocation of star link list.
     pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLnk) + 1 : 0) +
@@ -1950,8 +1951,7 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
       sprintf(pch, "%s;%s", gs.szStarsLnk, argv[2]);
     else
       sprintf(pch, "%s", argv[2]);
-    if (gs.szStarsLnk)
-      DeallocateP(gs.szStarsLnk);
+    DeallocatePIf(gs.szStarsLnk);
     gs.szStarsLnk = pch;
     // Count total number of star names present, and reserve that many slots.
     gi.cStarsLin = *gs.szStarsLin != chNull;

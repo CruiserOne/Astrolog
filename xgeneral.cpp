@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.60) File: xgeneral.cpp
+** Astrolog (Version 7.70) File: xgeneral.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2023 by
+** not enumerated below used in this program are Copyright (C) 1991-2024 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -10,8 +10,8 @@
 **
 ** The main ephemeris databases and calculation routines are from the
 ** library SWISS EPHEMERIS and are programmed and copyright 1997-2008 by
-** Astrodienst AG. The use of that source code is subject to the license for
-** Swiss Ephemeris Free Edition, available at http://www.astro.com/swisseph.
+** Astrodienst AG. Use of that source code is subject to license for Swiss
+** Ephemeris Free Edition at https://www.astro.com/swisseph/swephinfo_e.htm.
 ** This copyright notice must not be changed or removed by any user of this
 ** program.
 **
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/8/2023.
+** Last code change made 4/22/2024.
 */
 
 #include "astrolog.h"
@@ -315,8 +315,8 @@ void DrawBlock(int x1, int y1, int x2, int y2)
     else if (gs.ft == ftWmf) {
       gi.kiFillDes = gi.kiCur;
       MetaSelect();
-      MetaRectangle(x1-gi.nPenWid/2, y1-gi.nPenWid/2,
-        x2+gi.nPenWid/2, y2+gi.nPenWid/2);
+      MetaRectangle(x1-gi.nPenWid, y1-gi.nPenWid,
+        x2+gi.nPenWid, y2+gi.nPenWid);
     }
 #endif
 #ifdef WIRE
@@ -403,7 +403,7 @@ void AdjustGlyph(int *ch, int *x, int *y, int *fi, int *nScale,
 // Draw an astrology character from a special font on the screen. Used to draw
 // sign, planet, aspect, and Nakshatra glyphs from these fonts within charts.
 
-flag WinDrawGlyph(int ch, int x, int y, int fi, int nScale)
+flag DrawGlyph(int ch, int x, int y, int fi, int nScale)
 {
   HFONT hfont, hfontPrev;
   SIZE size;
@@ -463,28 +463,36 @@ void WinClearScreen(KI ki)
 void DrawClearScreen()
 {
 #ifdef PS
+  real rT;
+
   if (gs.ft == ftPS) {
+    gs.nScale *= PSMUL; gs.xWin *= PSMUL; gs.yWin *= PSMUL; gi.nScale *= PSMUL;
     // For PostScript charts first output page orientation information.
     if (!gi.fEps) {
       if (gs.nOrient == 0)
         gs.nOrient = gs.xWin > gs.yWin ? -1 : 1;
       if (gs.nOrient < 0) {
         // Values chartx and charty are reversed for Landscape mode.
+        rT = gs.xInch/(real)gs.yWin < gs.yInch/(real)gs.xWin ?
+          gs.xInch*72.0/(real)gs.yWin : gs.yInch*72.0/(real)gs.xWin;
         fprintf(gi.file, "%d %d translate\n",
-          ((int)(gs.xInch*72.0+rRound) + gs.yWin)/2,
-          ((int)(gs.yInch*72.0+rRound) + gs.xWin)/2);
+          (int)(gs.xInch*72.0 + gs.yWin*rT)/2,
+          (int)(gs.yInch*72.0 + gs.xWin*rT)/2);
         fprintf(gi.file, "-90 rotate\n");
       } else {
         // Most charts are in Portrait mode.
+        rT = gs.xInch/(real)gs.xWin < gs.yInch/(real)gs.yWin ?
+          gs.xInch*72.0/(real)gs.xWin : gs.yInch*72.0/(real)gs.yWin;
         fprintf(gi.file, "%d %d translate\n",
-          ((int)(gs.xInch*72.0+rRound) - gs.xWin)/2,
-          ((int)(gs.yInch*72.0+rRound) + gs.yWin)/2);
+          (int)(gs.xInch*72.0 - gs.xWin*rT)/2,
+          (int)(gs.yInch*72.0 + gs.yWin*rT)/2);
       }
-    } else
+    } else {
       fprintf(gi.file, "0 %d translate\n", gs.yWin);
+      rT = 1.0 / (real)PSMUL;
+    }
     fprintf(gi.file, "1 -1 scale\n");
-    gs.nScale *= PSMUL; gs.xWin *= PSMUL; gs.yWin *= PSMUL; gi.nScale *= PSMUL;
-    fprintf(gi.file, "1 %d div dup scale\n", PSMUL);
+    fprintf(gi.file, "%f dup scale\n", rT);
   }
 #endif
 #ifdef META
@@ -1124,7 +1132,7 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
   DrawColor(kiSav);
 #ifdef PS
   if (gs.ft == ftPS && nFont > 0) {
-    PsFont(nFont != fiConsolas ? nFont : fiAstrolog);
+    PsFont(nFont);
     pch = ConvertSzToLatin(sz, sz2, cchSzMax);
     fprintf(gi.file, "%d %d(%s)center\n", x + xFontT*cch/2, y + yFontT/2, pch);
     gi.nScale = nScaleSav;
@@ -1236,7 +1244,7 @@ void DrawSign(int i, int x, int y)
     DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
-    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+    if (DrawGlyph(ch, x, y, nFont, nScale))
       return;
   }
 #endif
@@ -1299,7 +1307,7 @@ void DrawHouse(int i, int x, int y)
   if (!gi.fFile && ch > 0) {
     if (nFont == fiArial)
       ch = (i <= 9 ? '0' + i : -i);
-    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+    if (DrawGlyph(ch, x, y, nFont, nScale))
       return;
   }
 #endif
@@ -1439,7 +1447,7 @@ void DrawObject(int obj, int x, int y)
     DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
-    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+    if (DrawGlyph(ch, x, y, nFont, nScale))
       return;
   }
 #endif
@@ -1512,7 +1520,6 @@ LDone:
 }
 
 
-#ifdef SWISS
 // Set a single point on the screen, whose color is a grayscale based on the
 // passed in star magnitude. This is one of the few areas in the program that
 // works with more than a 16 color palette.
@@ -1581,7 +1588,6 @@ LAfter:
     DrawColor(KStarB(pes->mag));
   DrawSz(pes->pchBest, x, y + 9*gi.nScaleT, dtCent);
 }
-#endif
 
 
 //                                           C_OSTSisssqbssnbbtqPC
@@ -1641,7 +1647,7 @@ void DrawAspect(int asp, int x, int y)
     DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch > 0) {
-    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+    if (DrawGlyph(ch, x, y, nFont, nScale))
       return;
   }
 #endif
@@ -1690,7 +1696,7 @@ void DrawNakshatra(int i, int x, int y)
   else if (nFont == fiArial)
     ch = (i <= 9 ? '0' + i : -i);
 #ifdef EXPRESS
-  AdjustGlyph(&ch, &x, &y, &nFont, &nScale, i, us.szExpFontHou);
+  AdjustGlyph(&ch, &x, &y, &nFont, &nScale, i, us.szExpFontNak);
   if (!FBetween(nFont, 0, cFont-1))
     ch = -1;
 #endif
@@ -1699,7 +1705,7 @@ void DrawNakshatra(int i, int x, int y)
     DrawThick(fFalse);
 #ifdef WINANY
   if (!gi.fFile && ch != -1) {
-    if (WinDrawGlyph(ch, x, y, nFont, nScale))
+    if (DrawGlyph(ch, x, y, nFont, nScale))
       return;
   }
 #endif
@@ -1873,7 +1879,7 @@ int KiCity(int iae)
       zon = is.rgzonCol[i];
     else
       zon = ZondefFromIzn(i);
-    if (zon == zonLMT)
+    if (zon == zonLMT || zon == zonLAT)
       ki = kDkGrayB;
     else if (zon == RFloor(zon)) {
       i = (int)(zon + rDegMax) % 6;
