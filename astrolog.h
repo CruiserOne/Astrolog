@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/2/2024.
+** Last code change made 4/22/2024.
 */
 
 /*
@@ -292,7 +292,7 @@
 ** One shouldn't ever need to change anything below this line to compile.
 */
 
-#define BETA  // Uncomment to compile in beta message on startup.
+//#define BETA  // Uncomment to compile in beta message on startup.
 #define ASTROLOG
 #ifdef _DEBUG
 #define DEBUG
@@ -1715,7 +1715,7 @@ typedef struct _UserSettings {
   flag fSidereal2;     // -Ys
   flag fTrueNode;      // -Yn
   flag fNoNutation;    // -Yn0
-  flag fNaturalNode;   // -Yn1
+  flag fNaturalNode;   // -Ynn
   flag fEuroDate;      // -Yd
   flag fEuroTime;      // -Yt
   flag fEuroDist;      // -Yv
