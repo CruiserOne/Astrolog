@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: wdriver.cpp
+** Astrolog (Version 7.80) File: wdriver.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -277,7 +277,8 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
-    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    CheckPopup(cmdGraphicsCity,    gs.fLabelCity);
+    CheckPopup(cmdGraphicsSidebar, gs.fDoSidebar);
     break;
   case menuV2:
     CheckPopup(cmdChartIndianS,    gi.nMode == gWheel && !gs.fHouseExtra);
@@ -287,7 +288,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
     CheckPopup(cmdGraphicsLabel,   !gs.fLabel);
-    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    CheckPopup(cmdGraphicsSidebar, gs.fDoSidebar);
     break;
   case menuG:
     CheckPopup(cmdParallel,       us.fParallel);
@@ -302,7 +303,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsCity,    !gs.fLabelCity);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
-    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    CheckPopup(cmdGraphicsSidebar, gs.fDoSidebar);
     break;
   case menuZ:
     CheckPopup(cmdChartModify,     us.fPrimeVert);
@@ -330,11 +331,11 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     break;
   case menuH:
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
-    CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdGraphicsAspect,  gs.fLabelAsp);
+    CheckPopup(cmdGraphicsModify,  gs.fAlt);
     CheckPopup(cmdHouseSetIndian,  us.fIndian);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
-    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    CheckPopup(cmdGraphicsSidebar, gs.fDoSidebar);
     break;
   case menuK:
     CheckPopup(cmdChartModify,    us.fCalendarYear);
@@ -358,6 +359,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdGraphicsEquator, !gs.fEquator);
     break;
   case menuL:
+    CheckPopup(cmdHouseSet3D,     us.fHouse3D);
     CheckPopup(cmdGraphicsBmp,    gi.fBmp);
     CheckPopup(cmdChartModify,    us.fLatitudeCross);
     CheckPopup(cmdGraphicsModify, gs.fAlt);
@@ -379,6 +381,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     break;
   case menuN:
     CheckPopup(cmdHouseSetIndian,  !us.fIndian);
+    CheckPopup(cmdChartModify,     gs.fSouth);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsCity,    !gs.fLabelCity);
@@ -404,7 +407,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
   case menuXX:
     CheckPopup(cmdChartModify,     gs.fSouth);
     CheckPopup(cmdGraphicsModify,  gs.fAlt);
-    CheckPopup(cmdGraphicsSidebar, !us.fVelocity);
+    CheckPopup(cmdGraphicsSidebar, gs.fDoSidebar);
     CheckPopup(cmdHouseSetIndian,  !us.fIndian);
     CheckPopup(cmdGraphicsHouse,   !gs.fHouseExtra);
     CheckPopup(cmdHouseSet3D,      !us.fHouse3D);
@@ -418,6 +421,7 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
   case menuXG:
     CheckPopup(cmdGraphicsModify,  !gs.fAlt);
     CheckPopup(cmdConstellation,   gs.fConstel);
+    CheckPopup(cmdHouseSet3D,      us.fHouse3D);
     CheckPopup(cmdGraphicsBmp,     gi.fBmp);
     CheckPopup(cmdGraphicsHouse,   gs.fHouseExtra);
     CheckPopup(cmdGraphicsEquator, gs.fEquator);
@@ -468,8 +472,12 @@ void DoPopup(int imenu, HWND hwnd, LPARAM lParam)
     CheckPopup(cmdSecond,     us.fSeconds);
     CheckPopup(cmdHouseSet3D, us.fHouse3D);
     break;
-  case menu_S: case menu_H: case menu_J: case menu_L: case menu_P:
-  case menu_I: case menu_N:
+  case menu_L:
+    CheckPopup(cmdHouseSet3D, us.fHouse3D);
+    CheckPopup(cmdSecond,     us.fSeconds);
+    break;
+  case menu_S: case menu_H: case menu_J: case menu_P: case menu_I:
+  case menu_N:
     CheckPopup(cmdSecond, us.fSeconds);
     break;
   case menu_E: case menu_D: case menu_8:
@@ -554,6 +562,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 #endif
 #ifndef CONSTEL
   DeleteMenu(wi.hmenu, cmdConstellation,     MF_BYCOMMAND);
+  DeleteMenu(wi.hmenu, cmdGraphicsStarLine,  MF_BYCOMMAND);
   DeleteMenu(wi.hmenu, cmdHelpConstellation, MF_BYCOMMAND);
 #endif
 #ifndef BIORHYTHM
@@ -561,6 +570,8 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 #endif
 #ifndef ATLAS
   DeleteMenu(wi.hmenu, cmdGraphicsCity, MF_BYCOMMAND);
+  DeleteMenu(wi.hmenu, cmdDocAtlas,     MF_BYCOMMAND);
+  DeleteMenu(wi.hmenu, cmdDocTimezone,  MF_BYCOMMAND);
 #endif
 #ifndef WSETUP
   DeleteMenu(wi.hmenu, cmdOpenDir,        MF_BYCOMMAND);
@@ -602,7 +613,6 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   ofn.lpstrFileTitle = szFileTitle;
   prd.hwndOwner = wi.hwndMain;
   wi.haccel = LoadAccelerators(wi.hinst, MAKEINTRESOURCE(accelerator));
-  wi.kiPen = gi.kiLite;
 
   // Check for being used as a Windows screen saver.
 
@@ -628,6 +638,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   FProcessSwitchFile(DEFAULT_INFOFILE, NULL);
   ciTran = ciHexa = ciFive = ciFour = ciThre = ciTwin = ciMain = ciCore;
   FProcessCommandLine(lpszCmdLine);
+  InitRestrictions(fTrue);
 
   // Actually bring up and display the window for the first time.
 
@@ -841,7 +852,7 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
       }
       hdc = GetDC(hwnd);
       hpen = (HPEN)CreatePen(PS_SOLID, !gs.fThick ? 0 : 2,
-        (COLORREF)rgbbmp[wi.kiPen]);
+        (COLORREF)rgbbmp[gi.kiPen]);
       hpenOld = (HPEN)SelectObject(hdc, hpen);
 
       // Ctrl+click means draw a rectangle. Ctrl+Shift+click does ellipse.
@@ -864,7 +875,7 @@ LRESULT API WndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
       // A simple click means set a pixel and remember that location.
       } else {
-        SetPixel(hdc, x, y, (COLORREF)rgbbmp[wi.kiPen]);
+        SetPixel(hdc, x, y, (COLORREF)rgbbmp[gi.kiPen]);
         wi.xMouse = x; wi.yMouse = y;
       }
       SelectObject(hdc, hpenOld);
@@ -1164,10 +1175,14 @@ int NWmCommand(WORD wCmd)
   DLGPROC dlgproc;
   RECT rc;
   POINT pt;
+  CI ci;
   int i;
   long l;
   real r;
   flag fGraphicsSav, fRestoreSize = fFalse, fT;
+#ifdef CONSTEL
+  CONST char **ppch;
+#endif
 
 #ifdef EXPRESS
   // May want to adjust current command if AstroExpression says to do so.
@@ -1416,7 +1431,6 @@ int NWmCommand(WORD wCmd)
 
   case cmdSecond:
     inv(us.fSeconds);
-    is.fSeconds = us.fSeconds;
     WiCheckMenu(cmdSecond, us.fSeconds);
     wi.fRedraw = fTrue;
     break;
@@ -1483,6 +1497,11 @@ int NWmCommand(WORD wCmd)
       ciCore = is.rgci[i];
       wi.fCast = fTrue;
     }
+    break;
+
+  case cmdSwap12:
+    SwapTemp(ciCore, ciTwin, ci);
+    wi.fCast = fTrue;
     break;
 
   case cmdRelNo:
@@ -1903,6 +1922,20 @@ int NWmCommand(WORD wCmd)
     }
     break;
 
+  case cmdTextDecrease:
+    if (gs.nScaleText > 100) {
+      gs.nScaleText -= 50;
+      wi.fRedraw = fTrue;
+    }
+    break;
+
+  case cmdTextIncrease:
+    if (gs.nScaleText < 400) {
+      gs.nScaleText += 50;
+      wi.fRedraw = fTrue;
+    }
+    break;
+
   case cmdGraphicsBorder:
     inv(gs.fBorder);
     WiCheckMenu(cmdGraphicsBorder, gs.fBorder);
@@ -1916,12 +1949,12 @@ int NWmCommand(WORD wCmd)
     break;
 
   case cmdGraphicsSidebar:
-    inv(us.fVelocity);
-    if (!us.fVelocity) {
+    inv(gs.fDoSidebar);
+    if (gs.fDoSidebar) {
       gs.fText = fTrue;
       WiCheckMenu(cmdGraphicsText, fTrue);
     }
-    WiCheckMenu(cmdGraphicsSidebar, !us.fVelocity);
+    WiCheckMenu(cmdGraphicsSidebar, gs.fDoSidebar);
     if (wi.nMode != gWheel && gi.nMode != gHouse && gi.nMode != gMidpoint &&
       gi.nMode != gSector && gi.nMode != gSphere)
       wi.nMode = gWheel;
@@ -1931,6 +1964,14 @@ int NWmCommand(WORD wCmd)
   case cmdGraphicsThick:
     inv(gs.fThick);
     WiCheckMenu(cmdGraphicsThick, gs.fThick);
+    if (gs.nFontTxt <= 0)
+      us.fGraphics = fTrue;
+    wi.fRedraw = fTrue;
+    break;
+
+  case cmdGraphicsAntialias:
+    inv(gs.fAntialias);
+    WiCheckMenu(cmdGraphicsAntialias, gs.fAntialias);
     us.fGraphics = wi.fRedraw = fTrue;
     break;
 
@@ -1968,6 +2009,24 @@ int NWmCommand(WORD wCmd)
     WiCheckMenu(cmdGraphicsExo, gs.fAllExo);
     us.fGraphics = wi.fRedraw = fTrue;
     break;
+
+#ifdef CONSTEL
+  case cmdGraphicsStarLine:
+    inv(wi.fStarLine);
+    if (wi.fStarLine) {
+      for (ppch = szDrawConstelLine; *ppch != NULL; ppch += 2)
+        if (!FProcessYXU(ppch[0], ppch[1], ppch != szDrawConstelLine))
+          break;
+      if (!gs.fAllStar) {
+        gs.fAllStar = fTrue;
+        WiCheckMenu(cmdGraphicsAllStar, fTrue);
+      }
+    } else
+      FProcessYXU("", "", fFalse);
+    WiCheckMenu(cmdGraphicsStarLine, wi.fStarLine);
+    us.fGraphics = wi.fRedraw = fTrue;
+    break;
+#endif
 
   case cmdGraphicsHouse:
     inv(gs.fHouseExtra);
@@ -2149,7 +2208,7 @@ int NWmCommand(WORD wCmd)
   case cmdPen13:
   case cmdPen14:
   case cmdPen15:
-    wi.kiPen = (int)(wCmd - cmdPen00);
+    gi.kiPen = (int)(wCmd - cmdPen00);
     WiRadioMenu(cmdPen00, cmdPen15, wCmd);
     break;
 
@@ -2178,8 +2237,11 @@ int NWmCommand(WORD wCmd)
   case cmdAnimateNo7:
   case cmdAnimateNo8:
   case cmdAnimateNo9:
+  case cmdAnimateNo_11:
+  case cmdAnimateNo_12:
+  case cmdAnimateNo_13:
     gs.nAnim = (gs.nAnim < 0 ? -1 : 1)*((int)(wCmd - cmdAnimateNo1) + 1);
-    WiRadioMenu(cmdAnimateNo1, cmdAnimateNow, wCmd);
+    WiRadioMenu(cmdAnimateNo1, cmdAnimateNo_13, wCmd);
     break;
 
   case cmdAnimateF1:
@@ -2218,12 +2280,12 @@ int NWmCommand(WORD wCmd)
     break;
 
   case cmdStepForward:
-    Animate(NAbs(gs.nAnim) >= 10 ? 4 : gs.nAnim, NAbs(gi.nDir));
+    Animate(NAbs(gs.nAnim) == iAnimNow ? iAnimDay : gs.nAnim, NAbs(gi.nDir));
     wi.fCast = fTrue;
     break;
 
   case cmdStepBackward:
-    Animate(NAbs(gs.nAnim) >= 10 ? 4 : gs.nAnim, -NAbs(gi.nDir));
+    Animate(NAbs(gs.nAnim) == iAnimNow ? iAnimDay : gs.nAnim, -NAbs(gi.nDir));
     wi.fCast = fTrue;
     break;
 
@@ -2445,28 +2507,32 @@ void API RedoMenu()
   CheckMenu(cmdResCOB, us.fCOB);
   CheckMenu(cmdResStar, us.fStar);
   CheckMenu(cmdProgress, us.fProgress);
-  CheckMenu(cmdChartIndian, gs.fIndianWheel);
-#ifdef CONSTEL
-  CheckMenu(cmdConstellation, gs.fConstel);
-#endif
-  CheckMenu(cmdGraphicsAllStar, gs.fAllStar);
-  CheckMenu(cmdGraphicsHouse, gs.fHouseExtra);
-  CheckMenu(cmdGraphicsEquator, gs.fEquator);
-  CheckMenu(cmdGraphicsCity, gs.fLabelCity);
-  CheckMenu(cmdGraphicsBmp, gi.fBmp);
-  CheckMenu(cmdGraphicsAxis, gs.fEcliptic);
   CheckMenu(cmdGraphicsReverse, gs.fInverse);
   CheckMenu(cmdGraphicsMonochrome, !gs.fColor);
   RadioMenu(cmdScale1, cmdScale4, cmdScale1 + gs.nScale/100 - 1);
   CheckMenu(cmdGraphicsBorder, gs.fBorder);
   CheckMenu(cmdGraphicsText, gs.fText);
-  CheckMenu(cmdGraphicsSidebar, !us.fVelocity);
-  CheckMenu(cmdGraphicsLabel, gs.fLabel);
+  CheckMenu(cmdGraphicsSidebar, gs.fDoSidebar);
   CheckMenu(cmdGraphicsThick, gs.fThick);
+  CheckMenu(cmdGraphicsAntialias, gs.fAntialias);
+  CheckMenu(cmdGraphicsLabel, gs.fLabel);
+  CheckMenu(cmdGraphicsAspect, gs.fLabelAsp);
+#ifdef CONSTEL
+  CheckMenu(cmdConstellation, gs.fConstel);
+#endif
+  CheckMenu(cmdGraphicsAllStar, gs.fAllStar);
+  CheckMenu(cmdGraphicsExo, gs.fAllExo);
+  CheckMenu(cmdGraphicsStarLine, wi.fStarLine);
+  CheckMenu(cmdGraphicsHouse, gs.fHouseExtra);
+  CheckMenu(cmdGraphicsEquator, gs.fEquator);
+  CheckMenu(cmdGraphicsCity, gs.fLabelCity);
+  CheckMenu(cmdGraphicsBmp, gi.fBmp);
+  CheckMenu(cmdGraphicsAxis, gs.fEcliptic);
+  CheckMenu(cmdChartIndian, gs.fIndianWheel);
   CheckMenu(cmdGraphicsModify, gs.fAlt);
-  RadioMenu(cmdPen00, cmdPen15, cmdPen00 + wi.kiPen);
+  RadioMenu(cmdPen00, cmdPen15, cmdPen00 + gi.kiPen);
   CheckMenu(cmdAnimateNo, gs.nAnim > 0);
-  RadioMenu(cmdAnimateNo1, cmdAnimateNow, cmdAnimateNo + NAbs(gs.nAnim));
+  RadioMenu(cmdAnimateNo1, cmdAnimateNo_13, cmdAnimateNo + NAbs(gs.nAnim));
   RadioMenu(cmdAnimateF1, cmdAnimateF9, cmdAnimateF1 + NAbs(gi.nDir) - 1);
   CheckMenu(cmdAnimateReverse, gi.nDir < 0);
   CheckMenu(cmdAnimatePause, gi.fPause);
@@ -2608,7 +2674,7 @@ flag API FRedraw(void)
   PAINTSTRUCT ps;
   HDC hdcWin;
   HCURSOR hcurPrev = NULL;
-  HBITMAP hbmp, hbmpOld;
+  HBITMAP hbmpOld;
   HFONT hfontOld = NULL;
   char szFile[cchSzDef];
   int nScrollRow, i;
@@ -2639,8 +2705,8 @@ flag API FRedraw(void)
     hdcWin = BeginPaint(wi.hwnd, &ps);
     if (wi.fBuffer) {
       wi.hdc = CreateCompatibleDC(hdcWin);
-      hbmp = CreateCompatibleBitmap(hdcWin, wi.xClient, wi.yClient);
-      hbmpOld = (HBITMAP)SelectObject(wi.hdc, hbmp);
+      wi.hbmp = CreateCompatibleBitmap(hdcWin, wi.xClient, wi.yClient);
+      hbmpOld = (HBITMAP)SelectObject(wi.hdc, wi.hbmp);
       if (gs.fJetTrail)
         BitBlt(wi.hdc, 0, 0, wi.xClient, wi.yClient, hdcWin, 0, 0, SRCCOPY);
     } else
@@ -2665,13 +2731,22 @@ flag API FRedraw(void)
       TextClearScreen();
     FBmpDrawBack(NULL);
     i = gs.nScale/100;
-    wi.xChar = i < 2 ? 6 : (i < 3 ? 8 : (i < 4 ? 10 : 12));
-    wi.yChar = i < 2 ? 8 : (i < 3 ? 12 : (i < 4 ? 18 : 16));
-    wi.hfont = CreateFont(wi.yChar /*nHeight*/, wi.xChar /*nWidth*/,
-      0 /*nEscapement*/, 0 /*nOrientation*/, FW_DONTCARE,
-      0 /*fbItalic*/, 0 /*fbUnderline*/, 0 /*fbStrikeOut*/,
-      DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,
-      DRAFT_QUALITY, FIXED_PITCH | FF_DONTCARE, "Terminal");
+    if (gs.nFontTxt > 0) {
+      wi.xChar = 3 + 3*i;
+      wi.yChar = (wi.xChar * 3 + 1) / 2;
+      wi.hfont = CreateFont(wi.xChar*2, 0, 0, 0, !gs.fThick ? 400 : 800,
+        fFalse, fFalse, fFalse, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_MODERN,
+        rgszFontName[gs.nFontTxt]);
+    } else {
+      wi.xChar = i < 2 ? 6 : (i < 3 ? 8 : (i < 4 ? 10 : 12));
+      wi.yChar = i < 2 ? 8 : (i < 3 ? 12 : (i < 4 ? 18 : 16));
+      wi.hfont = CreateFont(wi.yChar /*nHeight*/, wi.xChar /*nWidth*/,
+        0 /*nEscapement*/, 0 /*nOrientation*/, FW_DONTCARE,
+        0 /*fbItalic*/, 0 /*fbUnderline*/, 0 /*fbStrikeOut*/,
+        DEFAULT_CHARSET, OUT_RASTER_PRECIS, CLIP_DEFAULT_PRECIS,
+        DRAFT_QUALITY, FIXED_PITCH | FF_DONTCARE, "Terminal");
+    }
     hfontOld = (HFONT)SelectObject(wi.hdc, wi.hfont);
     // If printing, set the number of text rows per page.
     if (wi.hdcPrint != hdcNil) {
@@ -2735,7 +2810,7 @@ flag API FRedraw(void)
       BitBlt(hdcWin, 0, 0, wi.xClient, wi.yClient,
         wi.hdc, -gi.xOffset, -gi.yOffset, SRCCOPY);
       SelectObject(wi.hdc, hbmpOld);
-      DeleteObject(hbmp);
+      DeleteObject(wi.hbmp);
       DeleteDC(wi.hdc);
     }
     EndPaint(wi.hwnd, &ps);
@@ -2988,6 +3063,7 @@ flag FCreateProgramGroup(flag fAll)
   DeleteShortcut(szDir, "Astrolog 7.40");
   DeleteShortcut(szDir, "Astrolog 7.50");
   DeleteShortcut(szDir, "Astrolog 7.60");
+  DeleteShortcut(szDir, "Astrolog 7.70");
 
   // Add main shortcuts in folder.
   sprintf(szName, "%s %s", szAppName, szVersionCore);

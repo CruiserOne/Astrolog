@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: extern.h
+** Astrolog (Version 7.80) File: extern.h
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 /*
@@ -73,6 +73,7 @@ extern int NParseCommandLine P((char *, char **));
 extern int NPromptSwitches P((char *, char *[MAXSWITCHES]));
 extern int NProcessSwitchesRare P((int, char **, int, flag, flag, flag));
 extern flag FProcessSwitches P((int, char **));
+extern void InitRestrictions P((flag));
 extern void InitProgram P((void));
 extern void FinalizeProgram P((flag));
 
@@ -200,12 +201,14 @@ extern CONST char *szAppName, *szSignName[cSign+1], *szSignAbbrev[cSign+1],
   *szAspectGlyph[cAspect2+1], *szAspectConfig[cAspConfig],
   *szElem[cElem], *szMode[3], *szMonth[cSign+1], *szDay[cWeek], *szZon[cZone],
   *rgszDir[4], *szSuffix[cSign+1], *szEphem[cmMax];
-extern CONST int rgAspConfig[cAspConfig];
+extern CONST int rgAspConfig[cAspConfig], dxOff[4], dyOff[4],
+  iCnstlZodiac[cSign+1];
 extern CONST real rZon[cZone];
 extern CONST char *szObjName[objMax+4], *szCnstlName[cCnstl+1],
   *szCnstlAbbrev[cCnstl+1], *szCnstlMeaning[cCnstl+1],
   *szCnstlGenitive[cCnstl+1];
-extern CONST real rStarBrightMatrix[cStar+1], rStarData[cStar*6];
+extern CONST real rStarBrightMatrix[cStar+1], rStarData[cStar*6],
+  lonCnstlZodiac[cSign+2];
 extern CONST char *szMindPartDef[objMax], *szDescDef[cSign+1],
   *szDesireDef[cSign+1], *szLifeAreaDef[cSign+1], *szInteractDef[cAspect+1],
   *szThereforeDef[cAspect+1], *szModify[3][cAspect];
@@ -213,8 +216,8 @@ extern CONST char *szMindPart[objMax], *szDesc[cSign+1], *szDesire[cSign+1],
   *szLifeArea[cSign+1], *szInteract[cAspect+1], *szTherefore[cAspect+1];
 extern CONST StrLook rgObjName[], rgSystem[], rgAspectName[];
 extern CONST StrLookR rgZodiacOffset[];
-extern CONST char *szNakshatra[27+1], *szEclipse[etMax], rgchEclipse[etMax+1],
-  *szAppSep[6], rgchAppSep[6+1];
+extern CONST char *szNakshatra[cNakshat+1], *rgszDecan[ddMax],
+  *szEclipse[etMax], rgchEclipse[etMax+1], *szAppSep[6], rgchAppSep[6+1];
 
 extern real rStarBrightDef[cStar+1], rStarBright[cStar+1],
   rStarBrightDistDef[cStar+1];
@@ -245,6 +248,7 @@ extern CONST char *szRayName[cRay+1], *szRayWill[cRay+1];
 #define FEqSzI(sz1, sz2) (NCompareSzI(sz1, sz2) == 0)
 #define RgAllocate(n, t, sz) ((t *)PAllocate((n) * sizeof(t), sz))
 #define FCloneSz(szSrc, pszDst) FCloneSzCore(szSrc, pszDst, fFalse)
+#define SzTime(h, m, s) SzTimeR(h, m, s, -1.0)
 #define PrintAltitude(deg) PrintSz(SzAltitude(deg))
 #define FEqCI(ci1, ci2) (\
   ci1.mon == ci2.mon && ci1.day == ci2.day && ci1.yea == ci2.yea && \
@@ -333,15 +337,17 @@ extern flag FErrorSubswitch P((CONST char *, char, flag));
 extern void ErrorEphem P((CONST char *, long));
 extern void AnsiColor P((int));
 extern void PrintZodiac P((real));
+extern char ChRet P((real));
 extern char *SzZodiac P((real));
 extern char *SzAltitude P((real));
 extern char *SzDegree P((real));
 extern char *SzDegree2 P((real));
 extern char *SzHMS P((int));
 extern char *SzDate P((int, int, int, int));
-extern char *SzTime P((int, int, int));
+extern char *SzTimeR P((int, int, int, real));
 extern char *SzTim P((real));
 extern char *SzZone P((real));
+extern char *SzOffset P((real, real, real));
 extern char *SzLocation P((real, real));
 extern char *SzElevation P((real));
 extern char *SzTemperature P((real));
@@ -458,9 +464,11 @@ extern int GetParallel P((CONST real *, CONST real *, CONST real *,
   CONST real *, CONST real *, CONST real *, int, int, real *));
 extern flag FCreateGrid P((flag));
 extern flag FCreateGridRelation P((flag));
+extern int NCheckEclipseSolar P((int, int, int, real *));
 extern int NCheckEclipse P((int, int, real *));
 extern int NCheckEclipseLunar P((int, int, int, real *));
 extern int NCheckEclipseAny P((int, int, int, real *));
+extern int NCheckEclipseSolarLoc P((real, real, real *));
 extern void CreateElemTable P((ET *));
 
 #ifdef SWISS
@@ -474,8 +482,10 @@ extern void SwissHouse P((real, real, real, int,
   real *, real *, real *, real *, real *, real *, real *, real *));
 extern void SwissComputeStars P((real, flag));
 extern flag SwissComputeStar P((real, ES *));
+extern flag SwissComputeStarSort P((real, ES *));
 extern flag SwissTestStar P((char *));
 extern flag SwissComputeAsteroid P((real, ES *, flag));
+extern flag SwissComputeAsteroidSort P((real, ES *));
 extern void SwissGetObjName P((char *, int));
 extern flag FSwissPlanetData P((real, int, real *, real *, real *));
 extern real SwissRefract P((real));
@@ -714,12 +724,13 @@ extern CONST char *rgszFontName[cFont], rgszFontAllow[6][cFont+1];
 extern CONST real rgrObjRing[oNep-oJup+3][2];
 extern CONST PT3R rgvObjRing[oNep-oJup+3];
 extern CONST char
-  *szDrawSign[cSign+2], *szDrawSign2[cSign+2], *szDrawSign3[cSign+2],
+  *szDrawSign[cSign+3], *szDrawSign2[cSign+3], *szDrawSign3[cSign+3],
   *szDrawObjectDef[objMaxG], *szDrawObjectDef2[objMaxG],
   *szDrawHouse[cSign+1], *szDrawHouse2[cSign+1], *szDrawHouse3[cSign+1],
   *szDrawAspectDef[cAspect3+1], *szDrawAspectDef2[cAspect3+1],
   *szDrawCh[256-32], *szDrawCh2[256-32],
-  *szWorldData[62*3], *szDrawConstel[cCnstl+1];
+  *szWorldData[62*3],
+  *szDrawConstel[cCnstl+1], *szDrawConstelLine[(cCnstl+1)*2+1];
 extern CONST char *szDrawObject[objMaxG], *szDrawObject2[objMaxG],
   *szDrawAspect[cAspect3+1], *szDrawAspect2[cAspect3+1];
 
@@ -865,6 +876,7 @@ extern void BmpCopyWin P((CONST Bitmap *, HDC, int, int));
 extern flag FBmpDrawBack P((Bitmap *));
 extern flag FBmpDrawMap P((void));
 extern flag FBmpDrawMap2 P((int, int, int, int, real, real, real, real));
+extern flag FBmpAntialias P((void));
 extern void WriteXBitmap P((FILE *, CONST char *, char));
 extern void WriteAscii P((FILE *));
 extern void WriteBmp P((FILE *));
@@ -900,13 +912,14 @@ extern flag DrawFillWheel P((int, int, int, int));
 extern void DrawWheel P((real *, real *, int, int, real, real,
   real, real, real));
 extern void DrawRing P((int, int, real *, real *, int, int, real,
-  real, real, real, real, real, real, real));
+  real, real, real, real, real, real, real, real));
 extern void DrawObjects P((ObjDraw *, int, int));
 extern void DrawAspectLine
-  P((int, int, int, int, real, real, real, real, real));
+  P((int, int, int, int, real, real, real, real, real, flag));
 extern flag EnumWorldLines P((int *, int *, int *, int *, int *));
 #ifdef CONSTEL
 extern flag EnumConstelLines P((int *, int *, int *, int *, int *));
+extern int LookupConstel P((real, real));
 #endif
 extern flag FReadWorldData P((CONST char **, CONST char **, CONST char **));
 extern flag FGlobeCalc P((real, real, int *, int *, CONST CIRC *, real));
@@ -987,6 +1000,7 @@ extern void SquareX P((int *, int *, flag));
 extern void InteractX P((void));
 extern void EndX P((void));
 #endif
+extern flag FProcessYXU P((CONST char *, CONST char *, flag));
 extern int NProcessSwitchesX P((int, char **, int, flag, flag, flag));
 extern int NProcessSwitchesRareX P((int, char **, int, flag, flag, flag));
 extern int DetectGraphicsChartMode P((void));

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: wdialog.cpp
+** Astrolog (Version 7.80) File: wdialog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -134,8 +134,7 @@ void SetEditSZOA(HWND hdlg, int idDst, int idZon, int idLon, int idLat,
   real dst, real zon, real lon, real lat)
 {
   char sz[cchSzDef];
-  int i;
-  flag fT;
+  int i, nSav;
 
   ClearCombo(idDst);
   ClearCombo(idZon);
@@ -163,10 +162,10 @@ void SetEditSZOA(HWND hdlg, int idDst, int idZon, int idLon, int idLat,
       SetCombo(idZon, sz);
     }
   }
-  fT = us.fAnsiChar; us.fAnsiChar = fFalse;
+  nSav = us.fAnsiChar; us.fAnsiChar = fFalse;
   sprintf(sz, "%s", SzLocation(lon, lat));
-  us.fAnsiChar = fT;
-  i = 7 + is.fSeconds*3;
+  us.fAnsiChar = nSav;
+  i = 7 + VSeconds(0, 3, 7);
   sz[i] = chNull;
   SetEditSz(hdlg, idLon, &sz[0]);
   SetCombo(idLon, "122W20"); SetCombo(idLon, "0E00");
@@ -760,8 +759,8 @@ flag API DlgList(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
   DLGPROC dlgproc;
   char sz[cchSzLine], sz1[cchSzDef], sz2[cchSzDef];
-  int i, i2, j;
-  flag fT;
+  int i, i2, j, nSav;
+  flag fSav;
   CI ciT, *pci;
   HCURSOR hcurPrev = NULL;
   static flag fFilter = fFalse;
@@ -812,13 +811,14 @@ flag API DlgList(HWND hdlg, uint message, WORD wParam, LONG lParam)
 #endif
       }
       j = DayOfWeek(pci->mon, pci->day, pci->yea);
-      fT = us.fAnsiChar; us.fAnsiChar = fFalse;
+      nSav = us.fAnsiChar; us.fAnsiChar = 2;
+      fSav = us.fGraphics; us.fGraphics = fTrue;
       sprintf(sz, "%.3s %s %s (%cT Zone %s) %s %s%s%s", szDay[j],
         SzDate(pci->mon, pci->day, pci->yea, 3), SzTim(pci->tim),
         ChDst(pci->dst), SzZone(pci->zon), SzLocation(pci->lon, pci->lat),
         pci->nam, FSzSet(pci->nam) && FSzSet(pci->loc) ? "; " : "",
         pci->loc);
-      us.fAnsiChar = fT;
+      us.fAnsiChar = nSav; us.fGraphics = fSav;
       SetListN(dlLi, sz, i, j);
       i2++;
     }
@@ -1031,7 +1031,7 @@ LInit:
     SetEditMDYT(hdlg, dcInMon, dcInDay, dcInYea, dcInTim,
       ci.mon, ci.day, ci.yea, ci.tim);
     SetEditSZOA(hdlg, dcInDst, dcInZon, dcInLon, dcInLat,
-      ci.dst != dstAuto ? ci.dst : (real)is.fDst, ci.zon, ci.lon, ci.lat);
+      DstReal(ci.dst), ci.zon, ci.lon, ci.lat);
     SetFocus(GetDlgItem(hdlg, dcInMon));
 #ifndef ATLAS
     ShowWindow(GetDlgItem(hdlg, dbInCity), SW_HIDE);
@@ -1168,13 +1168,14 @@ flag API DlgInfoAll(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
   DLGPROC dlgproc;
   char sz[cchSzMax];
-  int i, n;
-  flag fT;
+  int i, n, nSav;
+  flag fSav;
   CI *pci;
 
   switch (message) {
   case WM_INITDIALOG:
-    fT = us.fAnsiChar; us.fAnsiChar = fFalse;
+    nSav = us.fAnsiChar; us.fAnsiChar = 2;
+    fSav = us.fGraphics; us.fGraphics = fTrue;
     for (i = 1; i <= cRing; i++) {
       pci = rgpci[i];
       n = DayOfWeek(pci->mon, pci->day, pci->yea);
@@ -1186,7 +1187,7 @@ flag API DlgInfoAll(HWND hdlg, uint message, WORD wParam, LONG lParam)
         "; " : "", pci->loc);
       SetDlgItemText(hdlg, ds02 + (i-1)*2, sz);
     }
-    us.fAnsiChar = fT;
+    us.fAnsiChar = nSav; us.fGraphics = fSav;
     if (wParam == (WORD)-1 && lParam == -1)
       return fFalse;
     i = us.nRel;
@@ -1596,7 +1597,7 @@ flag API DlgCustom(HWND hdlg, uint message, WORD wParam, LONG lParam)
           if (k == 0 || k >= 3)
             pch++;
           l = (k == 2 ? NParseSz(pch, pmObject) : NFromSz(pch));
-          EnsureN(l, l > 0 || k >= 4, "definition");
+          EnsureN(l, l >= (int)(k != 2) || k >= 4, "definition");
 #endif
           if (j) {
 #ifdef SWISS
@@ -1720,20 +1721,20 @@ flag API DlgCustomS(HWND hdlg, uint message, WORD wParam, LONG lParam)
 
 flag API DlgRestrict(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
-  byte *lpb, *lpb2;
+  byte *pb;
   int i;
 
   switch (message) {
   case WM_INITDIALOG:
     if (wi.wCmd == cmdRes)
-      lpb = ignore;
+      pb = ignore;
     else {
       SetWindowText(hdlg, "Transit Object Restrictions");
       SetDlgItemText(hdlg, dbRT, "Copy &From Standard Restriction Set");
-      lpb = ignore2;
+      pb = ignore2;
     }
     for (i = 0; i <= dwarfHi; i++)
-      SetCheck(dx01 + i, lpb[i]);
+      SetCheck(dx01 + i, pb[i]);
     return fTrue;
 
   case WM_COMMAND:
@@ -1763,16 +1764,21 @@ flag API DlgRestrict(HWND hdlg, uint message, WORD wParam, LONG lParam)
         SetCheck(dx01 + i, !GetCheck(dx01 + i));
       break;
     case dbRT:
-      lpb2 = wi.wCmd == cmdRes ? ignore2 : ignore;
+      pb = (wi.wCmd == cmdRes ? ignore2 : ignore);
       for (i = 0; i <= dwarfHi; i++)
-        SetCheck(dx01 + i, lpb2[i]);
+        SetCheck(dx01 + i, pb[i]);
+      break;
+    case dbRe_YRi:
+      pb = (wi.wCmd == cmdRes ? ignoreMem : ignore2Mem);
+      for (i = 0; i <= dwarfHi; i++)
+        SetCheck(dx01 + i, pb[i]);
       break;
     }
 
     if (wParam == IDOK) {
-      lpb = wi.wCmd == cmdRes ? ignore : ignore2;
+      pb = (wi.wCmd == cmdRes ? ignore : ignore2);
       for (i = 0; i <= dwarfHi; i++)
-        lpb[i] = GetCheck(dx01 + i);
+        pb[i] = GetCheck(dx01 + i);
       if (!us.fCusp) {
         for (i = cuspLo; i <= cuspHi; i++)
           if (!ignore[i] || !ignore2[i]) {
@@ -2447,9 +2453,6 @@ flag API DlgProgress(HWND hdlg, uint message, WORD wParam, LONG lParam)
 CONST char *rgszSort[asMax] = {"Power", "Orb Magnitude",
   "Orb Value", "1st Object Index", "2nd Object Index",
   "Aspect", "1st Object Position", "2nd Object Position", "Midpoint"};
-CONST char *rgszDecan[ddMax] = {"None", "Decan Ruler", "Decan Sign",
-  "Chaldean Decan", "Egyptian Term", "Ptolemaic Term", "Navamsa",
-  "12th Harmonic", "Dwad", "Nakshatra"};
 
 // Processing function for the chart subsettings dialog, as brought up with
 // the Chart / Chart Settings menu command.
@@ -2458,7 +2461,6 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
 {
   char sz[cchSzMax];
   int nw, nl, nl2, np, nn, yb, nT, i;
-  flag f;
 
   switch (message) {
   case WM_INITDIALOG:
@@ -2522,11 +2524,7 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
       EnsureN(np, FValidPart(np), "Arabic part");
       EnsureN(nn, nn >= 0, "nearest city count");
       EnsureN(yb, FValidBioday(yb), "Biorhythm days");
-      f = GetCheck(dxCh_v0);
-      if (us.fVelocity != f) {
-        us.fVelocity = f;
-        WiCheckMenu(cmdGraphicsSidebar, !f);
-      }
+      us.fVelocity = GetCheck(dxCh_v0);
       us.nWheelRows = nw;
       us.fWheelReverse = GetCheck(dxCh_w0);
       us.fGridConfig = GetCheck(dxCh_g0);
@@ -2559,6 +2557,8 @@ flag API DlgChart(HWND hdlg, uint message, WORD wParam, LONG lParam)
       for (i = 0; i < ddMax; i++)
         if (FMatchSz(sz, rgszDecan[i]))
           break;
+      if (i >= ddMax)
+        i = 0;
       us.fListDecan = (i > ddNone);
       if (i > ddNone)
         us.nDecanType = i;

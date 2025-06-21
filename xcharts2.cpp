@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: xcharts2.cpp
+** Astrolog (Version 7.80) File: xcharts2.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -178,6 +178,9 @@ void FillSymbolRingM(int obj, real *symbol, real factor)
   int i, j, l;
   flag fMoved = fTrue;
 
+  // Keep adjusting as long as can still make changes, or until 'n' rounds are
+  // done. (With many moons, there just may not be enough room for all.)
+
   for (l = 0; fMoved && l < us.nDivision*2; l++) {
     fMoved = fFalse;
     for (i = custLo; i <= custHi; i++) {
@@ -195,10 +198,17 @@ void FillSymbolRingM(int obj, real *symbol, real factor)
         else if (temp > k2 && temp <= 0.0)
           k2 = temp;
       }
+
+      // If a moon's too close on one side, then move in other direction.
+
       if (k2 > -orb && k1 > orb) {
         fMoved = fTrue; symbol[i] = Mod(symbol[i]+orb*0.51+k2*0.49);
       } else if (k1 < orb && k2 < -orb) {
         fMoved = fTrue; symbol[i] = Mod(symbol[i]-orb*0.51+k1*0.49);
+
+      // If moon bracketed by close moons on both sides, then move it to the
+      // midpoint, so it's as far away as possible from either one.
+
       } else if (k2 > -orb && k1 < orb) {
         fMoved = fTrue; symbol[i] = Mod(symbol[i]+(k1+k2)*0.5);
       }
@@ -322,7 +332,7 @@ void DrawAspectRelation(int n1, int n2, real obj1[objMax], real obj2[objMax],
     for (i = is.nObj; i >= 0; i--)
       if (grid->n[i][j] && FProper2(i) && FProper(j) &&
         obj1[j] >= 0.0 && obj2[i] >= 0.0)
-        DrawAspectLine(i, j, cx, cy, obj1[j], obj2[i], rx, ry, rz);
+        DrawAspectLine(i, j, cx, cy, obj1[j], obj2[i], rx, ry, rz, fFalse);
 
 LExit:
   if (n1 != 1)
@@ -348,12 +358,13 @@ void XChartWheelRelation()
     symbol[objMax];
   byte ignoreT[objMax];
   int cx, cy, i;
-  real unitx, unity;
+  real ra, rp1, rl11, rl21, rz1, rg1, ri, rc, rp2, rl12, rl22, rz2, rg2,
+    rh1, rh2, rs, unitx, unity;
 
   // Set up variables and temporarily automatically decrease the horizontal
   // chart size to leave room for the sidebar if that mode is in effect.
 
-  if (gs.fText && !us.fVelocity)
+  if (gs.fText && gs.fDoSidebar)
     gs.xWin -= xSideT;
   cx = gs.xWin/2 - 1; cy = gs.yWin/2 - 1;
   unitx = (real)cx; unity = (real)cy;
@@ -361,6 +372,15 @@ void XChartWheelRelation()
     rDegQuad*(gs.objLeft < 0) : cp1.cusp[1];
   if (us.fIndian)
     gi.rAsc = gs.objLeft ? (gs.objLeft < 0 ? 120.0 : -60.0)-gi.rAsc : 0.0;
+  if (!gs.fLabelCity) {
+    ra = 0.40; rp1 = 0.41; rl11 = 0.43; rl21 = 0.46; rz1 = 0.0; rg1 = 0.50;
+    ri = 0.54; rc = 0.55; rp2 = 0.56; rl12 = 0.58; rl22 = 0.61; rz2 = 0.0;
+    rg2 = 0.65; rh1 = 0.70; rh2 = 0.78; rs = 0.82;
+  } else {
+    ra = 0.26; rp1 = 0.27; rl11 = 0.29; rl21 = 0.32; rz1 = 0.38; rg1 = 0.46;
+    ri = 0.50; rc = 0.51; rp2 = 0.52; rl12 = 0.54; rl22 = 0.57; rz2 = 0.63;
+    rg2 = 0.71; rh1 = 0.76; rh2 = 0.82; rs = 0.86;
+  }
 
   // Fill out arrays with the degree of each object, cusp, and sign glyph.
 
@@ -382,11 +402,9 @@ void XChartWheelRelation()
   // Go draw the outer sign and house rings. We are drawing only the houses
   // of one of the two charts in the relationship, however.
 
-  if (gs.fColor) {
-    DrawColor(kDkGreenB);
-    DrawCircle(cx, cy, (int)(unitx*0.55+rRound), (int)(unity*0.55+rRound));
-  }
-  DrawWheel(xsign, xhouse1, cx, cy, unitx, unity, 0.70, 0.78, 0.82);
+  DrawColor(kDkGreenB);
+  DrawCircle(cx, cy, (int)(unitx*rc+rRound), (int)(unity*rc+rRound));
+  DrawWheel(xsign, xhouse1, cx, cy, unitx, unity, rh1, rh2, rs);
 
   // Draw the outer ring of planets (based on the planets in the chart which
   // the houses do not reflect - the houses belong to the inner ring below).
@@ -400,7 +418,7 @@ void XChartWheelRelation()
       ignore[i] = ignore2[i];
     }
   DrawRing(2, 2 /* so lines are dotted */ + 1, xplanet2, symbol, cx, cy,
-    0.41, 0.43, 0.54, 0.56, 0.58, 0.61, 0.65, 1.0);
+    rp1, rl11, ri, rp2, rl12, rl22, rz2, rg2, 1.0);
   if (us.nRel <= rcTransit)
     for (i = 0; i <= is.nObj; i++)
       ignore[i] = ignoreT[i];
@@ -410,13 +428,13 @@ void XChartWheelRelation()
   // only one set of planets. Again, draw glyph, and a line to the true point.
 
   DrawRing(1, 2, xplanet1, symbol, cx, cy,
-    0.0, 0.0, 0.0, 0.41, 0.43, 0.46, 0.50, 1.1);
+    0.0, 0.0, 0.0, rp1, rl11, rl21, rz1, rg1, 1.1);
   FProcessCommandLine(szWheelX[0]);
 
   // Draw lines connecting planets between the two charts that have aspects.
 
   if (!gs.fEquator)
-    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, 0.40);
+    DrawAspectRelation(1, 2, xplanet1, xplanet2, cx, cy, ra);
 
   // Draw sidebar with chart information and positions if need be.
 
@@ -424,9 +442,10 @@ void XChartWheelRelation()
 }
 
 
-// Draw a tri-wheel chart or quad-wheel chart, in which there are three or
-// four rings, among three or four sets of chart data being compared. This
-// chart is obtained when the -r3 or -r4 switch is combined with -X switch.
+// Draw a tri-wheel chart, quad-wheel chart, quin-wheel, or hexa-wheel, in
+// which there are three to six rings, among three to six sets of chart data
+// being compared. This chart is obtained when the -r3, -r4, -r5, or -r6
+// switch is combined with -X switch.
 
 void XChartWheelMulti()
 {
@@ -441,7 +460,7 @@ void XChartWheelMulti()
   // Set up variables and temporarily automatically decrease the horizontal
   // chart size to leave room for the sidebar if that mode is in effect.
 
-  if (gs.fText && !us.fVelocity)
+  if (gs.fText && gs.fDoSidebar)
     gs.xWin -= xSideT;
   cx = gs.xWin/2 - 1; cy = gs.yWin/2 - 1;
   unitx = (real)cx; unity = (real)cy;
@@ -493,22 +512,20 @@ void XChartWheelMulti()
   // Go draw the outer sign and house rings. We are drawing the houses of only
   // the outermost ring of the wheel, however.
 
-  if (gs.fColor) {
-    DrawColor(kDkGreenB);
-    rT = fQuin ? 0.64 : 0.61;
-    DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+  DrawColor(kDkGreenB);
+  rT = fQuin ? 0.64 : 0.61;
+  DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+  rT -= off;
+  DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
+  if (fQuad) {
     rT -= off;
     DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
-    if (fQuad) {
+    if (fQuin) {
       rT -= off;
       DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
-      if (fQuin) {
+      if (fHexa)
         rT -= off;
         DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
-        if (fHexa)
-          rT -= off;
-          DrawCircle(cx, cy, (int)(unitx*rT+rRound), (int)(unity*rT+rRound));
-      }
     }
   }
   if (fQuin)
@@ -527,14 +544,14 @@ void XChartWheelMulti()
     ri2 = 0.59; rp = 0.62; rl1 = 0.63; rl2 = 0.66; rg = 0.70;
   }
   DrawRing(1, nRing, xplanet1, symbol, cx, cy,
-    base, base2, ri2, rp, rl1, rl2, rg, 0.9);
+    base, base2, ri2, rp, rl1, rl2, 0.0, rg, 0.9);
 
   // Now draw the second to outermost ring of planets. Again, draw each glyph,
   // a line to its true point, and a line to the innermost ring.
 
   ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
   DrawRing(2, nRing, xplanet2, symbol, cx, cy,
-    base, base2, ri2, rp, rl1, rl2, rg, 1.1);
+    base, base2, ri2, rp, rl1, rl2, 0.0, rg, 1.1);
 
   // The third ring is next. Chart was cast earlier, and draw the glyphs and
   // lines to true point. If a fourth ring is being done, first finish the
@@ -542,7 +559,7 @@ void XChartWheelMulti()
 
   ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
   DrawRing(3, nRing, xplanet3, symbol, cx, cy,
-    base, base2, ri2, rp, rl1, rl2, rg, 1.4);
+    base, base2, ri2, rp, rl1, rl2, 0.0, rg, 1.4);
 
   if (fQuad) {
     // If the fourth ring is being done, take the chart that was cast earlier,
@@ -552,7 +569,7 @@ void XChartWheelMulti()
 
     ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
     DrawRing(4, nRing, xplanet4, symbol, cx, cy,
-      base, base2, ri2, rp, rl1, rl2, rg, 1.8);
+      base, base2, ri2, rp, rl1, rl2, 0.0, rg, 1.8);
 
     if (fQuin) {
       // If the fifth ring is being done, take the chart that was cast
@@ -562,7 +579,7 @@ void XChartWheelMulti()
 
       ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
       DrawRing(5, nRing, xplanet5, symbol, cx, cy,
-        base, base2, ri2, rp, rl1, rl2, rg, 2.3);
+        base, base2, ri2, rp, rl1, rl2, 0.0, rg, 2.3);
 
       if (fHexa) {
         // If the sixth (innermost) ring is being done, take the chart that was
@@ -570,7 +587,7 @@ void XChartWheelMulti()
 
         ri2 -= off; rp -= off; rl1 -= off; rl2 -= off; rg -= off;
         DrawRing(6, nRing, xplanet6, symbol, cx, cy,
-          base, base2, ri2, rp, rl1, rl2, rg, 3.8);
+          base, base2, ri2, rp, rl1, rl2, 0.0, rg, 3.8);
       }
     }
   }
@@ -1181,8 +1198,7 @@ void XChartTransit(flag fTrans, flag fProg)
           continue;
         ppw = &(*rgEph)[x][y][asp];
         if (*ppw == NULL) {
-          *ppw = (word *)PAllocate(cTot * sizeof(word),
-            "transit ephemeris entry");
+          *ppw = RgAllocate(cTot, word, "transit ephemeris entry");
           if (*ppw == NULL)
             goto LDone;
           pw = *ppw;
@@ -1200,8 +1216,7 @@ void XChartTransit(flag fTrans, flag fProg)
           if (et > etNone) {
             ppw = &(*rgEph)[y][x][asp];
             if (*ppw == NULL) {
-              *ppw = (word *)PAllocate(cTot * sizeof(word),
-                "transit eclipse entry");
+              *ppw = RgAllocate(cTot, word, "transit eclipse entry");
               if (*ppw == NULL)
                 goto LDone;
               pw2 = *ppw;

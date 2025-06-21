@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: astrolog.cpp
+** Astrolog (Version 7.80) File: astrolog.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -527,6 +527,16 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     SwitchF(us.fRound);
     break;
 
+  case 'w':
+    if (FErrorArgc("Yw", argc, 1))
+      return tcError;
+    r = RFromSz(argv[1]);
+    if (FErrorValR("Yw", r < 0.0, r, 0))
+      return tcError;
+    us.rStation = r;
+    darg++;
+    break;
+
   case 'C':
     SwitchF(us.fSmartCusp);
     break;
@@ -605,6 +615,9 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
   case 'z':
     if (ch1 == '0' && fAnd) {
       us.rDeltaT = rInvalid;
+      break;
+    } else if (ch1 == '1') {
+      SwitchF(us.fOffsetOnly);
       break;
     }
     if (FErrorArgc("Yz", argc, 1))
@@ -689,7 +702,7 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
     if (j > 0)
       ch1 = ch2;
     k = (j == 2 ? NParseSz(argv[2], pmObject) : NFromSz(argv[2]));
-    if (FErrorValN("Ye", k <= 0 && j < 4, k, 2))
+    if (FErrorValN("Ye", k < (int)(j != 2) && j < 4, k, 2))
       return tcError;
     rgObjSwiss[i] = k;
     rgTypSwiss[i] = j;
@@ -787,24 +800,10 @@ int NProcessSwitchesRare(int argc, char **argv, int pos,
       darg++;
       break;
     } else if (ch1 == 'o') {
-      CopyRgb(ignore,  ignoreMem,  sizeof(ignore));
-      CopyRgb(ignore2, ignore2Mem, sizeof(ignore2));
-      CopyRgb(ignorea, ignoreaMem, sizeof(ignorea));
-      CopyRgb(ignorez, ignorezMem, sizeof(ignorez));
-      CopyRgb(ignore7, ignore7Mem, sizeof(ignore7));
-      ignorefMem[0] = us.fIgnoreSign;   ignorefMem[1] = us.fIgnoreDir;
-      ignorefMem[2] = us.fIgnoreDiralt; ignorefMem[3] = us.fIgnoreDirlen;
-      ignorefMem[4] = us.fIgnoreAlt0;   ignorefMem[5] = us.fIgnoreDisequ;
+      InitRestrictions(fTrue);
       break;
     } else if (ch1 == 'i') {
-      CopyRgb(ignoreMem,  ignore,  sizeof(ignore));
-      CopyRgb(ignore2Mem, ignore2, sizeof(ignore2));
-      CopyRgb(ignoreaMem, ignorea, sizeof(ignorea));
-      CopyRgb(ignorezMem, ignorez, sizeof(ignorez));
-      CopyRgb(ignore7Mem, ignore7, sizeof(ignore7));
-      us.fIgnoreSign   = ignorefMem[0]; us.fIgnoreDir    = ignorefMem[1];
-      us.fIgnoreDiralt = ignorefMem[2]; us.fIgnoreDirlen = ignorefMem[3];
-      us.fIgnoreAlt0   = ignorefMem[4]; us.fIgnoreDisequ = ignorefMem[5];
+      InitRestrictions(fFalse);
       AdjustRestrictions();
       break;
     }
@@ -1325,9 +1324,10 @@ flag FProcessSwitches(int argc, char **argv)
     // Switches which determine the type of chart to display:
 
     case 'v':
-      if (ch1 == '0')
+      if (ch1 == '0') {
         SwitchF(us.fVelocity);
-      else if (ch1 == '3') {
+        break;
+      } else if (ch1 == '3') {
         SwitchF(us.fListDecan);
         if (argc > 1 && ((i = NFromSz(argv[1])) > 0 || FNumCh(argv[1][0]) ||
           argv[1][0] == '~')) {
@@ -1361,14 +1361,23 @@ flag FProcessSwitches(int argc, char **argv)
         SwitchF(us.fGridConfig);
       else if (ch1 == 'm' || ch2 == 'm')
         SwitchF(us.fGridMidpoint);
-      if (ch1 == 'a')
-        us.nAppSep = FSwitchF(us.nAppSep);
-      else if (ch1 == 'x')
-        us.nAppSep = FSwitchF(us.nAppSep) * 2;
-      else if (ch1 == 'p')
+      if (ch1 == 'p')
         SwitchF(us.fParallel);
       else if (ch1 == 'd')
         SwitchF(us.fDistance);
+      else if (ch1 == 'a')
+        us.nAppSep = FSwitchF(us.nAppSep);
+      else if (ch1 == 'x')
+        us.nAppSep = FSwitchF(us.nAppSep) * 2;
+      else if (ch1 == 's') {
+        if (FErrorArgc("gs", argc, 1))
+          return fFalse;
+        i = NFromSz(argv[1]);
+        if (FErrorValN("gs", !FValidAppSep(i), i, 0))
+          return fFalse;
+        us.nAppSep = i;
+        argc--; argv++;
+      }
 #ifdef X11
       else if (ch1 == 'e') {
         if (FErrorArgc("geometry", argc, 1))
@@ -1395,18 +1404,26 @@ flag FProcessSwitches(int argc, char **argv)
         SwitchF(us.fAspSummary);
         ch1 = ch2;
       }
-      if (ch1 == 'a') {
-        us.nAppSep = FSwitchF(us.nAppSep);
-        ch1 = ch2;
-      } else if (ch1 == 'x') {
-        us.nAppSep = FSwitchF(us.nAppSep) * 2;
-        ch1 = ch2;
-      } else if (ch1 == 'p') {
+      if (ch1 == 'p') {
         SwitchF(us.fParallel);
         ch1 = ch2;
       } else if (ch1 == 'd') {
         SwitchF(us.fDistance);
         ch1 = ch2;
+      } else if (ch1 == 'a') {
+        us.nAppSep = FSwitchF(us.nAppSep);
+        ch1 = ch2;
+      } else if (ch1 == 'x') {
+        us.nAppSep = FSwitchF(us.nAppSep) * 2;
+        ch1 = ch2;
+      } else if (ch1 == 's') {
+        if (FErrorArgc("as", argc, 1))
+          return fFalse;
+        i = NFromSz(argv[1]);
+        if (FErrorValN("as", !FValidAppSep(i), i, 0))
+          return fFalse;
+        us.nAppSep = i;
+        argc--; argv++;
       }
       switch (ch1) {
       case 'j': us.nAspectSort = asj; break;
@@ -1594,8 +1611,8 @@ flag FProcessSwitches(int argc, char **argv)
       if (j) {
         ch1 = argv[1][0];
         if (ch1) {
-          us.nEphemRate =
-            ch1 == 'h' ? -1 : (ch1 == 'm' ? 1 : (ch1 == 'y' ? 2 : 0));
+          us.nEphemRate = (ch1 == 'n' ? -2 : (ch1 == 'h' ? -1 :
+            (ch1 == 'm' ? 1 : (ch1 == 'y' ? 2 : 0))));
           i = NFromSz(&argv[1][1]);
           us.nEphemFactor = Max(i, 1);
         }
@@ -2060,6 +2077,10 @@ flag FProcessSwitches(int argc, char **argv)
       break;
 
     case 'i':
+      if (ch1 == 'x') {
+        SwapTemp(ciCore, ciTwin, ci);
+        break;
+      }
       if (us.fNoRead) {
         ErrorArgv("i");
         return tcError;
@@ -2079,6 +2100,7 @@ flag FProcessSwitches(int argc, char **argv)
       if (FBetween(ch1, '1', '0' + cRing)) {
         *rgpci[ch1 - '0'] = ciCore;
         ciCore = ci;
+        *rgpcp[ch1 - '0'] = cp0;
       } else if (ch1 == 'D') {
         ciDefa = ciCore;
         ciCore = ci;
@@ -2320,7 +2342,9 @@ flag FProcessSwitches(int argc, char **argv)
     case 'b':
       if (ch1 == '0') {
         SwitchF(us.fSeconds);
-        is.fSeconds = us.fSeconds;
+        break;
+      } else if (ch1 == '1') {
+        SwitchF(us.fSecond1K);
         break;
       } else if (ch1 == 'j')
         us.nSwissEph = FSwitchF(us.nSwissEph == 2) * 2;
@@ -2645,10 +2669,12 @@ flag FProcessSwitches(int argc, char **argv)
       ciCore = ciTwin;
       if (!FInputData(argv[2]))
         return fFalse;
+      cp2 = cp0;
       ciTwin = ciCore;
       ciCore = ci;
       if (!FInputData(argv[1]))
         return fFalse;
+      cp1 = cp0;
       if (i > 2) {
         us.nRatio1 = NFromSz(argv[3]);
         us.nRatio2 = NFromSz(argv[4]);
@@ -2926,6 +2952,33 @@ flag FProcessSwitches(int argc, char **argv)
 ******************************************************************************
 */
 
+// Store or recall the current state of restrictions, as done with the -YRo
+// and -YRi switches.
+
+void InitRestrictions(flag fStore)
+{
+  if (fStore) {
+    CopyRgb(ignore,  ignoreMem,  sizeof(ignore));
+    CopyRgb(ignore2, ignore2Mem, sizeof(ignore2));
+    CopyRgb(ignorea, ignoreaMem, sizeof(ignorea));
+    CopyRgb(ignorez, ignorezMem, sizeof(ignorez));
+    CopyRgb(ignore7, ignore7Mem, sizeof(ignore7));
+    ignorefMem[0] = us.fIgnoreSign;   ignorefMem[1] = us.fIgnoreDir;
+    ignorefMem[2] = us.fIgnoreDiralt; ignorefMem[3] = us.fIgnoreDirlen;
+    ignorefMem[4] = us.fIgnoreAlt0;   ignorefMem[5] = us.fIgnoreDisequ;
+  } else {
+    CopyRgb(ignoreMem,  ignore,  sizeof(ignore));
+    CopyRgb(ignore2Mem, ignore2, sizeof(ignore2));
+    CopyRgb(ignoreaMem, ignorea, sizeof(ignorea));
+    CopyRgb(ignorezMem, ignorez, sizeof(ignorez));
+    CopyRgb(ignore7Mem, ignore7, sizeof(ignore7));
+    us.fIgnoreSign   = ignorefMem[0]; us.fIgnoreDir    = ignorefMem[1];
+    us.fIgnoreDiralt = ignorefMem[2]; us.fIgnoreDirlen = ignorefMem[3];
+    us.fIgnoreAlt0   = ignorefMem[4]; us.fIgnoreDisequ = ignorefMem[5];
+  }
+}
+
+
 // Initialize program variables and tables that aren't done so at compile
 // time. Called once when the program starts from main() or WinMain().
 
@@ -2940,14 +2993,7 @@ void InitProgram()
   SetCI(ciDefa, MM, DD, YY, TT, 0, DEFAULT_ZONE, DEFAULT_LONG, DEFAULT_LAT);
   is.S = stdout;
   ClearB((pbyte)szStarCustom, sizeof(szStarCustom));
-  CopyRgb(ignore,  ignoreMem,  sizeof(ignore));
-  CopyRgb(ignore2, ignore2Mem, sizeof(ignore2));
-  CopyRgb(ignorea, ignoreaMem, sizeof(ignorea));
-  CopyRgb(ignorez, ignorezMem, sizeof(ignorez));
-  CopyRgb(ignore7, ignore7Mem, sizeof(ignore7));
-  ignorefMem[0] = us.fIgnoreSign;   ignorefMem[1] = us.fIgnoreDir;
-  ignorefMem[2] = us.fIgnoreDiralt; ignorefMem[3] = us.fIgnoreDirlen;
-  ignorefMem[4] = us.fIgnoreAlt0;   ignorefMem[5] = us.fIgnoreDisequ;
+  InitRestrictions(fTrue);
   for (i = 0; i < objMax; i++) {
     szObjDisp[i] = szObjName[i];
     rgobjList[i] = i;
@@ -3179,6 +3225,7 @@ void FinalizeProgram(flag fSkip)
   DeallocatePIf(gi.bmpWorld.rgb);
   DeallocatePIf(gi.bmpRising.rgb);
   DeallocatePIf(gi.rgspace);
+  DeallocatePIf(gi.rgConstel);
   DeallocatePIf(gi.szFileOut);
   DeallocatePIf(gs.szSidebar);
   for (i = 0; i <= cRing; i++)
@@ -3199,6 +3246,7 @@ void FinalizeProgram(flag fSkip)
   DeallocatePIf(gi.rges);
   DeallocatePIf(gs.szStarsLin);
   DeallocatePIf(gs.szStarsLnk);
+  DeallocatePIf(is.rgesSort);
 #endif
 #endif // GRAPH
 #ifdef X11

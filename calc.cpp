@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: calc.cpp
+** Astrolog (Version 7.80) File: calc.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -128,7 +128,7 @@ void JulianToMdy(real JD, int *mon, int *day, int *yea)
     return;
   }
 #endif
-  *mon = mJan; *day = 1; *yea = 2024;
+  *mon = mJan; *day = 1; *yea = 2025;
 }
 
 
@@ -1302,15 +1302,15 @@ real CastChart(int nContext)
     r2 = ret[oMoo] - ret[oSun];
     planetalt[oFor] = us.fHouse3D ? planetalt[oMoo] - planetalt[oSun] : 0.0;
     retalt[oFor] = us.fHouse3D ? retalt[oMoo] - retalt[oSun] : 0.0;
-    // Invert formula for night charts. Note since planet positions are still
-    // being computed, house placements haven't been determined yet.
-    i = us.nHouseSystem; us.nHouseSystem = hsCampanus;
-    if (us.nArabicNight < 0 || (us.nArabicNight == 0 &&
-      NHousePlaceIn(planet[oSun], planetalt[oSun]) < sLib)) {
+    // Invert formula for night charts, when Sun below horizon.
+    i = us.nHouse3D; us.nHouse3D = hmPrime;
+    if (us.nArabicNight < 0 || (us.nArabicNight == 0 && (!us.fHouse3D ?
+      MinDifference(planet[oSun], is.Asc) < 0.0 :
+      RHousePlaceIn3DCore(planet[oSun], planetalt[oSun]) < rDegHalf))) {
       neg(r); neg(r2);
       neg(planetalt[oFor]); neg(retalt[oFor]);
     }
-    us.nHouseSystem = i;
+    us.nHouse3D = i;
     planet[oFor] = Mod(r + is.Asc);
     ret[oFor] += r2;                 // Already contains ret[oAsc].
   }
@@ -1825,16 +1825,16 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
   real rDiff, rOrb, azi, alt1, alt2, retalt1a;
 
   // Compute the declination of the two planets.
-  alt1 = planetalt1[j];
-  alt2 = planetalt2[i];
+  alt1 = planetalt1[i];
+  alt2 = planetalt2[j];
   if (!us.fEquator2 && !us.fParallel2) {
     // If have ecliptic latitude and want equatorial declination, convert.
-    azi = planet1[j]; EclToEqu(&azi, &alt1);
-    azi = planet2[i]; EclToEqu(&azi, &alt2);
+    azi = planet1[i]; EclToEqu(&azi, &alt1);
+    azi = planet2[j]; EclToEqu(&azi, &alt2);
   } else if (us.fEquator2 && us.fParallel2) {
     // If have equatorial declination and want ecliptic latitude, convert.
-    azi = planet1[j]; EquToEcl(&azi, &alt1);
-    azi = planet2[i]; EquToEcl(&azi, &alt2);
+    azi = planet1[i]; EquToEcl(&azi, &alt1);
+    azi = planet2[j]; EquToEcl(&azi, &alt2);
   }
 
   // Check each vertical aspect type to see if it applies.
@@ -1842,7 +1842,7 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
     if (!FAcceptAspect(i, asp, j))
       continue;
     if (asp == aCon)
-      rDiff = alt1 - alt2;
+      rDiff = alt2 - alt1;
     else if (asp == aOpp)
       rDiff = alt1 + alt2;
     else {
@@ -1856,8 +1856,8 @@ int GetParallel(CONST real *planet1, CONST real *planet2,
     rOrb = GetOrb(i, j, asp);
     if (us.nAppSep == 1) {
       if (FCmSwissAny()) {
-        retalt1a = us.nRel > rcTransit ? retalt1[j] : 0.0;
-        rDiff *= RSgn2(retalt1a - retalt2[i]);
+        retalt1a = us.nRel > rcTransit ? retalt1[i] : 0.0;
+        rDiff *= RSgn2(retalt1a - retalt2[j]);
       } else {
         // If no declination velocity, make aspect separating.
         rDiff = RAbs(rDiff);
@@ -2099,7 +2099,7 @@ int NCheckEclipseSolar(int iEar, int iMoo, int iSun, real *prPct)
   if (radiU < 0.0)
     radiU = 0.0;
 
-  // If Sun/Moon ray intersects Earth, must be an annular or solar eclipse.
+  // If Sun/Moon ray intersects Earth, must be an annular or total eclipse.
   if (lNear - radiU < radiE) {
     if (prPct != NULL)
       *prPct = 100.0;
@@ -2110,7 +2110,7 @@ int NCheckEclipseSolar(int iEar, int iMoo, int iSun, real *prPct)
 
   // Check if Earth intersects penumbra shadow, for a partial solar eclipse.
   radiP = (radiS + radiM) / lSM * lSN - radiS;
-  if (lNear - radiE < radiP) {
+  if (lNear - radiE < radiP && radiM > 0.0) {
     if (prPct != NULL)
       *prPct = 100.0 - (lNear - radiE) / radiP * 100.0;
     return etPartial;
@@ -2252,6 +2252,60 @@ int NCheckEclipseAny(int obj1, int asp, int obj2, real *prEclipse)
 }
 
 
+#ifdef SWISS
+// Check whether a solar eclipse is taking place at a particular location upon
+// the Earth. Detects partial, annular, and total solar eclipses. Called from
+// BmpDarkenKv() to darken parts on the globe that are under a solar eclipse.
+
+int NCheckEclipseSolarLoc(real lon, real lat, real *prPct)
+{
+  CI ciSav;
+  PT3R ptSav[oMoo+1], ptDiff;
+  real obj[oMoo+1], alt[oMoo+1], r1, r2, r3, r4, r5, r6;
+  int i, et = etUndefined;
+  flag fSav1, fSav2;
+
+  // Save existing chart settings to be restored later.
+  ciSav = ciCore;
+  fSav1 = us.fEclipseAny; us.fEclipseAny = fFalse;
+  fSav2 = us.fTopoPos; us.fTopoPos = 2;
+  for (i = oSun; i <= oMoo; i++) {
+    ptSav[i] = space[i];
+    obj[i] = planet[i]; alt[i] = planetalt[i];
+  }
+
+  // Compute the topocentric position of the Sun at a particular location.
+  i = oSun;
+  OO = lon; AA = lat;
+  if (!FSwissPlanet(i, JulianDayFromTime(is.T), us.objCenter,
+    &r1, &r2, &r3, &r4, &r5, &r6))
+    goto LDone;
+  planet[i] = Mod(r1 + is.rSid); planetalt[i] = r2;
+  SphToRec(r4, planet[i], planetalt[i],
+    &space[i].x, &space[i].y, &space[i].z);
+
+  // For the Moon, for speed just apply the vector between the Sun positions.
+  i = oMoo;
+  ptDiff = space[oSun]; PtSub2(ptDiff, ptSav[oSun]);
+  PtAdd2(space[i], ptDiff);
+  RecToSph3(space[i].x, space[i].y, space[i].z, &planet[i], &planetalt[i]);
+
+  et = NCheckEclipse(oSun, oMoo, prPct);
+
+LDone:
+  // Restore chart settings saved earlier.
+  ciCore = ciSav;
+  us.fEclipseAny = fSav1;
+  us.fTopoPos = fSav2;
+  for (i = oSun; i <= oMoo; i++) {
+    planet[i] = obj[i]; planetalt[i] = alt[i];
+    space[i] = ptSav[i];
+  }
+  return et;
+}
+#endif
+
+
 /*
 ******************************************************************************
 ** Other Calculations.
@@ -2360,19 +2414,20 @@ void SwissEnsurePath()
   while (*pch && (*pch = pch[1]) != chNull)
     pch++;
   env = getenv(szT);
-  if (env && *env)
-    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  if (FSzSet(env))
+    sprintf2(SO(szPath + CchSz(szPath), szPath), "%s%s", PATH_SEPARATOR, env);
   // Next look in the directory in the general environment variable.
   env = getenv(ENVIRONALL);
-  if (env && *env)
-    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  if (FSzSet(env))
+    sprintf2(SO(szPath + CchSz(szPath), szPath), "%s%s", PATH_SEPARATOR, env);
   // Next look in the directory in the version prefix environment variable.
   env = getenv(ENVIRONVER);
-  if (env && *env)
-    sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, env);
+  if (FSzSet(env))
+    sprintf2(SO(szPath + CchSz(szPath), szPath), "%s%s", PATH_SEPARATOR, env);
 #endif
   // Finally look in a directory specified at compile time.
-  sprintf(szPath + CchSz(szPath), "%s%s", PATH_SEPARATOR, EPHE_DIR);
+  sprintf2(SO(szPath + CchSz(szPath), szPath), "%s%s", PATH_SEPARATOR,
+    EPHE_DIR);
   swe_set_ephe_path(szPath);
   is.fSwissPathSet = fTrue;
 }
@@ -2498,6 +2553,8 @@ flag FSwissPlanet(int ind, real jd, int indCent,
   if (us.fTopoPos && !fHelio) {
     swe_set_topo(-OO, AA, us.elvDef);
     iflag |= SEFLG_TOPOCTR;
+    if (us.fTopoPos > 1)      // Special value for faster lookup.
+      iflag &= ~SEFLG_SPEED;
   }
 
   // Compute position of planet or node/helion.
@@ -2552,16 +2609,22 @@ flag FSwissPlanet(int ind, real jd, int indCent,
       nRet = swe_calc_pctr(jde, iobj, iobjCent, iflag, xx, serr);
     }
   } else {
-    nRet = swe_nod_aps(jde, iobj, iflag, us.fTrueNode ? SE_NODBIT_OSCU :
-      SE_NODBIT_MEAN, xnasc, xndsc, xperi, xaphe, serr);
-    switch (nPnt) {
-    case 1:  px = xnasc; break;
-    case 2:  px = xndsc; break;
-    case 3:  px = xperi; break;
-    default: px = xaphe; break;
+    if (us.fNaturalNode && iobj == SE_MOON && nPnt == 3) {
+      // Special case to get access to SE_INTP_PERG.
+      nRet = swe_calc(jde, SE_INTP_PERG, iflag, xx, serr);
+    } else {
+      // Standard case to get node or apsis position.
+      nRet = swe_nod_aps(jde, iobj, iflag, us.fTrueNode ? SE_NODBIT_OSCU :
+        SE_NODBIT_MEAN, xnasc, xndsc, xperi, xaphe, serr);
+      switch (nPnt) {
+      case 1:  px = xnasc; break;
+      case 2:  px = xndsc; break;
+      case 3:  px = xperi; break;
+      default: px = xaphe; break;
+      }
+      for (ix = 0; ix < 6; ix++)
+        xx[ix] = px[ix];
     }
-    for (ix = 0; ix < 6; ix++)
-      xx[ix] = px[ix];
   }
 
   // Clean up and return position.
@@ -2934,6 +2997,96 @@ LNext:
 }
 
 
+// Like SwissComputeStar(), but potentially apply the star sorting method to
+// the order stars are returned.
+
+flag SwissComputeStarSort(real jd, ES *pes)
+{
+  static int ces = 0, istar = 0;
+  int i, j;
+  ES es, *pes2;
+
+  // Simple cases when not sorting or when sorted list has been created.
+  if (us.nStarSort <= 0)
+    return SwissComputeStar(jd, pes);
+  if (pes != NULL) {
+    if (istar >= ces)
+      return fFalse;
+    *pes = is.rgesSort[istar];
+    istar++;
+    return fTrue;
+  }
+
+  // Allocate list and put all stars within it.
+  ces = 1500;
+  if (ces > is.cesSort) {
+    if (is.rgesSort != NULL)
+      DeallocateP(is.rgesSort);
+    is.rgesSort = RgAllocate(ces, ES, "star sort");
+    if (is.rgesSort == NULL)
+      return fFalse;
+    is.cesSort = ces;
+  }
+  SwissComputeStar(jd, pes);
+  for (i = 0; i < 1500 && SwissComputeStar(jd, &is.rgesSort[i]); i++)
+    ;
+  ces = i;
+  istar = 0;
+
+  // Temporarily convert pointers to offsets, since sorting may move them.
+  for (i = 0; i < ces; i++) {
+    pes2 = &is.rgesSort[i];
+    pes2->pchNam = (char *)(pes2->pchNam - pes2->sz);
+    if (*pes2->pchDes)
+      pes2->pchDes = (char *)(pes2->pchDes - pes2->sz);
+    pes2->pchBest = (char *)(pes2->pchBest - pes2->sz);
+  }
+  for (i = 1; i < ces; i++) {
+    j = i-1;
+
+    // Compare star names for -Un switch.
+    if (us.nStarSort == 'n') while (j >= 0 && NCompareSz(
+      is.rgesSort[j].sz + (time_t)is.rgesSort[j].pchBest,
+      is.rgesSort[j+1].sz + (time_t)is.rgesSort[j+1].pchBest) > 0) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare star brightnesses for -Ub switch.
+    } else if (us.nStarSort == 'b') while (j >= 0 &&
+      is.rgesSort[j].mag > is.rgesSort[j+1].mag) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare star zodiac locations for -Uz switch.
+    } else if (us.nStarSort == 'z') while (j >= 0 &&
+      is.rgesSort[j].lon > is.rgesSort[j+1].lon) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare star latitudes for -Ul switch.
+    } else if (us.nStarSort == 'l') while (j >= 0 &&
+      is.rgesSort[j].lat > is.rgesSort[j+1].lat) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare star velocities for -Uv switch.
+    } else if (us.nStarSort == 'v') while (j >= 0 &&
+      is.rgesSort[j].dir > is.rgesSort[j+1].dir) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+    }
+  }
+  for (i = 0; i < ces; i++) {
+    pes2 = &is.rgesSort[i];
+    pes2->pchNam = pes2->sz + (time_t)(pes2->pchNam);
+    if (pes2->pchDes < (char *)cchSzDef)
+      pes2->pchDes = pes2->sz + (time_t)(pes2->pchDes);
+    pes2->pchBest = pes2->sz + (time_t)(pes2->pchBest);
+  }
+  return fTrue;
+}
+
+
 // Given a star definition string for a star from sefstars.txt, change that
 // buffer to contain that star's human readable name instead.
 
@@ -2960,7 +3113,7 @@ flag SwissTestStar(char *sz)
 
 #ifdef GRAPH
 // Compute one asteroid location. Given an asteroid number and time, call
-// Swiss Ephemeris to compute it. This is similar to SwissComputeStars().
+// Swiss Ephemeris to compute it. This is similar to SwissComputeStar().
 
 flag SwissComputeAsteroid(real jd, ES *pes, flag fBack)
 {
@@ -3079,6 +3232,74 @@ LNext:
   }
 
   iast += (fBack ? -1 : 1);
+  return fTrue;
+}
+
+
+// Like SwissComputeAsteroid(), but potentially apply a sorting method to the
+// order asteroids are returned.
+
+flag SwissComputeAsteroidSort(real jd, ES *pes)
+{
+  static int ces = 0, iast = 0;
+  int i, j;
+  ES es;
+
+  // Simple cases when not sorting or when sorted list has been created.
+  if (us.nStarSort <= 0)
+    return SwissComputeAsteroid(jd, pes, fFalse);
+  if (pes != NULL) {
+    if (iast >= ces)
+      return fFalse;
+    *pes = is.rgesSort[iast];
+    iast++;
+    return fTrue;
+  }
+
+  // Allocate list and put all asteroids within it.
+  ces = gs.nAstHi - gs.nAstLo + 1;
+  if (ces > is.cesSort) {
+    if (is.rgesSort != NULL)
+      DeallocateP(is.rgesSort);
+    is.rgesSort = RgAllocate(ces, ES, "asteroid sort");
+    if (is.rgesSort == NULL)
+      return fFalse;
+    is.cesSort = ces;
+  }
+  SwissComputeAsteroid(jd, pes, fFalse);
+  for (i = 0; SwissComputeAsteroid(jd, &is.rgesSort[i], fFalse); i++)
+    ;
+  ces = i;
+  iast = 0;
+
+  for (i = 1; i < ces; i++) {
+    j = i-1;
+
+    // Compare asteroid names for -Un switch.
+    if (us.nStarSort == 'n') while (j >= 0 && NCompareSz(
+      is.rgesSort[j].sz, is.rgesSort[j+1].sz) > 0) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare asteroid zodiac locations for -Uz switch.
+    } else if (us.nStarSort == 'z') while (j >= 0 &&
+      is.rgesSort[j].lon > is.rgesSort[j+1].lon) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare asteroid latitudes for -Ul switch.
+    } else if (us.nStarSort == 'l') while (j >= 0 &&
+      is.rgesSort[j].lat > is.rgesSort[j+1].lat) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+
+    // Compare asteroid velocities for -Uv switch.
+    } else if (us.nStarSort == 'v') while (j >= 0 &&
+      is.rgesSort[j].dir > is.rgesSort[j+1].dir) {
+      SwapTemp(is.rgesSort[j], is.rgesSort[j+1], es);
+      j--;
+    }
+  }
   return fTrue;
 }
 #endif

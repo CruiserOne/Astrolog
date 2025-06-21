@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: atlas.cpp
+** Astrolog (Version 7.80) File: atlas.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -1477,7 +1477,7 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
   AtlasEntry *pae;
   char szCity[cchSzMax], sz[cchSzMax], *pch1, *pch2, *pch;
   int rgiae[ilistMax], rgn[ilistMax], ilistHi,
-    clist = 0, icn, istateUS, istateCA, iae, nPower, i, j, fSav;
+    clist = 0, icn, istateUS, istateCA, iae, nPower, i, j, nSav, fSav;
   flag fTimezoneChanges;
   real zon;
 #ifdef WIN
@@ -1584,7 +1584,8 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
   // Display header.
   fTimezoneChanges = FEnsureTimezoneChanges();
   if (lDialog != 0) {
-    fSav = us.fAnsiChar; us.fAnsiChar = 2;
+    nSav = us.fAnsiChar; us.fAnsiChar = 2;
+    fSav = us.fGraphics; us.fGraphics = fTrue;
   } else {
     if (piae != NULL) {
 
@@ -1642,8 +1643,9 @@ flag DisplayAtlasLookup(CONST char *szIn, size_t lDialog, int *piae)
 #endif
       PrintSz("No matches found.");
   }
-  if (lDialog != 0)
-    us.fAnsiChar = fSav;
+  if (lDialog != 0) {
+    us.fAnsiChar = nSav; us.fGraphics = fSav;
+  }
   return fTrue;
 }
 
@@ -1657,7 +1659,7 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
   AtlasEntry *pae;
   char sz[cchSzMax], *pch;
   int rgiae[ilistMax], rgn[ilistMax], ilistHi, clist = 0, iae, nDist,
-    i, j, fSav;
+    i, j, nSav, fSav;
   flag fTimezoneChanges;
   real rDist, zon;
 #ifdef WIN
@@ -1694,7 +1696,8 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
 
   // Display header.
   if (lDialog != 0) {
-    fSav = us.fAnsiChar; us.fAnsiChar = 2;
+    nSav = us.fAnsiChar; us.fAnsiChar = 2;
+    fSav = us.fGraphics; us.fGraphics = fTrue;
   } else {
     if (piae != NULL) {
       // If piae set, then just return index of nearest city.
@@ -1740,14 +1743,15 @@ flag DisplayAtlasNearby(real lon, real lat, size_t lDialog, int *piae,
     PrintL();
   }
 
-  if (lDialog != 0)
-    us.fAnsiChar = fSav;
+  if (lDialog != 0) {
+    us.fAnsiChar = nSav; us.fGraphics = fSav;
+  }
   return fTrue;
 }
 
 
 // Sanitize a time, in which the individual parameters may be out of range.
-// For example, 25:00 on 32 Dec 2023 gets converted to 1:00 on 2 Jan 2024.
+// For example, 25:00 on 32 Dec 2024 gets converted to 1:00 on 2 Jan 2025.
 
 void AdjustTime(int *mon, int *day, int *yea, int *tim)
 {

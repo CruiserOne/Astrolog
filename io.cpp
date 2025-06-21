@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: io.cpp
+** Astrolog (Version 7.80) File: io.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -143,8 +143,8 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
     // specific system environment variable.
     sprintf(sz, "%s%s", ENVIRONVER, szVerCore);
     env = getenv(sz);
-    if (env && *env) {
-      sprintf(sz, "%s%c%s", env, chDirSep, szFileT);
+    if (FSzSet(env)) {
+      sprintf2(S(sz), "%s%c%s", env, chDirSep, szFileT);
       file = fopen(sz, szMode);
       if (file != NULL)
         goto LDone;
@@ -152,8 +152,8 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
 
     // Next look in the directory in the general environment variable.
     env = getenv(ENVIRONALL);
-    if (env && *env) {
-      sprintf(sz, "%s%c%s", env, chDirSep, szFileT);
+    if (FSzSet(env)) {
+      sprintf2(S(sz), "%s%c%s", env, chDirSep, szFileT);
       file = fopen(sz, szMode);
       if (file != NULL)
         goto LDone;
@@ -161,8 +161,8 @@ FILE *FileOpen(CONST char *szFile, int nFileMode, char *szPath)
 
     // Next look in directory in the version prefix environment variable.
     env = getenv(ENVIRONVER);
-    if (env && *env) {
-      sprintf(sz, "%s%c%s", env, chDirSep, szFileT);
+    if (FSzSet(env)) {
+      sprintf2(S(sz), "%s%c%s", env, chDirSep, szFileT);
       file = fopen(sz, szMode);
       if (file != NULL)
         goto LDone;
@@ -229,10 +229,11 @@ dword LRead(FILE *file)
 
 flag FProcessSwitchFile(CONST char *szFile, FILE *file)
 {
-  char szLine[cchSzLine], *argv[MAXSWITCHES], ch;
-  int argc, i;
+  char rgchLine[cchSzLine], *argv[MAXSWITCHES], *szLine = rgchLine, *szNew, ch;
+  int argc, cchLine = cchSzLine, i;
   flag fHaveFile, fRet = fFalse;
 
+  // Open a file if don't already have one.
   fHaveFile = (file != NULL);
   if (!fHaveFile) {
     file = FileOpen(szFile, 0, NULL);
@@ -250,12 +251,25 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
     PrintWarning(szLine);
     goto LDone;
   }
+
+  // Read the file one line at a time.
   loop {
     while (!feof(file) && (ch = getbyte()) < ' ')
       ;
     if (feof(file))
       break;
-    for (szLine[0] = ch, i = 1; i < cchSzLine-1 && !feof(file); i++) {
+    for (szLine[0] = ch, i = 1; !feof(file); i++) {
+      if (i >= cchLine-1) {
+        // Double the size of the buffer if the line overfills it.
+        szNew = (char *)RgReallocate(szLine, cchLine, sizeof(char), cchLine*2,
+          "line");
+        if (szNew == NULL)
+          goto LDone;
+        if (szLine != rgchLine)
+          DeallocateP(szLine);
+        szLine = szNew;
+        cchLine *= 2;
+      }
       ch = getbyte();
       if (!((uchar)ch >= ' ' || ch == chTab))
         break;
@@ -274,6 +288,8 @@ flag FProcessSwitchFile(CONST char *szFile, FILE *file)
   fRet = fTrue;
 
 LDone:
+  if (szLine != rgchLine)
+    DeallocateP(szLine);
   is.fileIn = NULL;
   if (!fHaveFile && file != NULL)
     fclose(file);
@@ -290,7 +306,7 @@ flag FOutputData(void)
   char sz[cchSzMax], *pch;
   FILE *file;
   int i, j, iMax;
-  real dst, rT;
+  real rT;
 
   if (us.fNoWrite)
     return fFalse;
@@ -325,11 +341,9 @@ flag FOutputData(void)
       return fFalse;
     }
     if (us.fWriteOld) {
-      dst = Dst;
-      if (dst == dstAuto)
-        dst = (real)is.fDst;
       fprintf(file, "%d\n%d\n%d\n%.2f\n%.2f\n%.2f\n%.2f\n", Mon, Day, Yea,
-        DegToDec(Tim), DegToDec(Zon-dst), DegToDec(Lon), DegToDec(Lat));
+        DegToDec(Tim), DegToDec(GetOffsetCI(&ciMain)),
+        DegToDec(Lon), DegToDec(Lat));
     } else {
       fprintf(file, "@AI%s  ; %s chart info.\n", szVerCore, szAppName);
       i = us.fAnsiChar;
@@ -696,8 +710,8 @@ flag FOutputQuickFile(void)
 {
   char sz[cchSzMax];
   FILE *file = NULL;
-  real rOff, rDst;
-  int i, iMax, j, fSav1;
+  real rOff, rDst, rLon, rLat;
+  int i, iMax, j, k, j2, k2, fSav1;
   flag fRet = fFalse, fSav2;
   CI *pci;
 
@@ -724,12 +738,11 @@ flag FOutputQuickFile(void)
     fprintf(file, "%c%c%c", szMonth[pci->mon][0],
       ChCap(szMonth[pci->mon][1]), ChCap(szMonth[pci->mon][2]));
     fSav1 = us.fAnsiChar; us.fAnsiChar = 4;
-    fSav2 = is.fSeconds; is.fSeconds = fTrue;
+    fSav2 = us.fSeconds; us.fSeconds = fTrue;
     fprintf(file, "%3d,%5d%s", pci->day, pci->yea, SzTim(pci->tim));
-    us.fAnsiChar = fSav1; is.fSeconds = fSav2;
-    rDst = (pci->dst == dstAuto ? (real)is.fDst : pci->dst);
-    rOff = (pci->zon == zonLMT || pci->zon == zonLAT ? pci->lon / 15.0 :
-      pci->zon) - rDst;
+    us.fAnsiChar = fSav1; us.fSeconds = fSav2;
+    rDst = DstReal(pci->dst);
+    rOff = GetOffsetCI(pci);
     if (pci->zon == zonLMT || pci->zon == zonLAT)
       sprintf(sz, "LMT");
     else {
@@ -742,12 +755,18 @@ flag FOutputQuickFile(void)
           break;
         }
     }
+    rLon = RSgn(pci->lon) * (RAbs(pci->lon) + rSmall);
+    rLat = RSgn(pci->lat) * (RAbs(pci->lat) + rSmall);
+    j = (int)(RFract(RAbs(rLon))*60.0);
+    k = (int)(RFract(RAbs(rLat))*60.0);
+    j2 = (int)(RFract(RAbs(rLon))*3600.0) % 60;
+    k2 = (int)(RFract(RAbs(rLat))*3600.0) % 60;
     fprintf(file, " %s%c%02d:%02d", sz, rOff < 0.0 ? '-' : '+',
       (int)RAbs(rOff), (int)(RFract(RAbs(rOff))*60.0+rRound/60.0));
-    fprintf(file, "%03d%c%02d'%02d", (int)RAbs(pci->lon), pci->lon < 0.0 ?
-      'E' : 'W', (int)(RFract(RAbs(pci->lon))*60.0+rRound/60.0), 0);
-    fprintf(file, " %02d%c%02d'%02d", (int)RAbs(pci->lat), pci->lat < 0.0 ?
-      'S' : 'N', (int)(RFract(RAbs(pci->lat))*60.0+rRound/60.0), 0);
+    fprintf(file, "%03d%c%02d'%02d", (int)RAbs(rLon), rLon < 0.0 ?
+      'E' : 'W', j, j2);
+    fprintf(file, " %02d%c%02d'%02d", (int)RAbs(rLat), rLat < 0.0 ?
+      'S' : 'N', k, k2);
     fprintf(file, " %-25.25s \n", pci->loc);
   }
 
@@ -1023,7 +1042,7 @@ flag FProcessSFTextFile(CONST char *szFile, FILE *file)
     if (FBetween(*pch, 'A', 'Z')) {
       while (*pch > ' ')
         pch++;
-      SS = pch[-2] == 'D' ? 1.0 : 0.0;
+      SS = (pch - szLine >= 3 && FZonDst(&pch[-3]) ? 1.0 : 0.0);
     } else
       SS = 0.0;
     ZZ = RParseSz(pch, pmZon) + SS;
@@ -1077,15 +1096,16 @@ LDone:
 }
 
 
-// Output the chart list in memory to an Astrolog chart list file. (If the
-// chart list is empty, output a length 1 list consisting of the main chart.)
+// Output the chart list in memory to an Astrolog chart list file. If the
+// chart list is empty, output a length zero list.
 
 flag FOutputChartList()
 {
   char sz[cchSzDef], *pch;
   FILE *file;
   CI *pci;
-  int cci, i, nSav;
+  int i, nSav;
+  real dst;
 
   if (us.fNoWrite)
     return fFalse;
@@ -1097,15 +1117,14 @@ flag FOutputChartList()
   }
 
   sprintf(sz, "@AL%s  ; %s chart list.\n", szVerCore, szAppName); PrintF(sz);
-  cci = is.cci <= 0 ? 1 : is.cci;
-  for (i = 0; i < cci; i++) {
-    pci = is.cci <= 0 ? &ciMain : &is.rgci[i];
+  for (i = 0; i < is.cci; i++) {
+    pci = &is.rgci[i];
+    dst = DstReal(pci->dst);
     nSav = us.fAnsiChar;
     us.fAnsiChar = fFalse;
     fprintf(file, "%cqcl %.3s %2d %d %s %s ",
       chSwitch, szMonth[pci->mon], pci->day, pci->yea, SzTim(pci->tim),
-      pci->dst == 0.0 ? "ST" : (pci->dst == 1.0 ? "DT" :
-      SzZone(pci->dst == dstAuto ? (real)is.fDst : pci->dst)));
+      dst == 0.0 ? "ST" : (dst == 1.0 ? "DT" : SzZone(DstReal(dst))));
     fprintf(file, "%s %s ", SzZone(pci->zon), SzLocation(pci->lon, pci->lat));
     // Don't put double quotes within double quoted string parameters.
     putc('"', file);
@@ -1229,9 +1248,9 @@ flag FOutputSettings()
     "; \"File / Save Program Settings\" menu command, or with the -od "
     "command switch.\n\n");
 
-  f1 = is.fSeconds; is.fSeconds = fTrue;
+  f1 = us.fSeconds; us.fSeconds = fTrue;
   sprintf(sz, "-z %s                ", SzZone(ciDefa.zon)); PrintFSz();
-  is.fSeconds = f1;
+  us.fSeconds = f1;
   PrintF("; Default time zone     [hours W or E of UTC   ]\n");
   if (ciDefa.dst != dstAuto)
     sprintf(sz, "-z0 %d                   ", (int)ciDefa.dst);
@@ -1240,9 +1259,9 @@ flag FOutputSettings()
   PrintFSz();
   PrintF("; Default Daylight time [0 standard, 1 daylight]\n");
   f1 = us.fAnsiChar; us.fAnsiChar = 3;
-  f2 = is.fSeconds; is.fSeconds = fTrue;
+  f2 = us.fSeconds; us.fSeconds = fTrue;
   sprintf(sz, "-zl %s  ", SzLocation(ciDefa.lon, ciDefa.lat)); PrintFSz();
-  us.fAnsiChar = f1; is.fSeconds = f2;
+  us.fAnsiChar = f1; us.fSeconds = f2;
   PrintF("; Default location      [longitude and latitude]\n");
   sprintf(sz, "-zv %s               ", SzElevation(us.elvDef)); PrintFSz();
   PrintF("; Default elevation     [in feet or meters     ]\n");
@@ -1295,12 +1314,21 @@ flag FOutputSettings()
   sprintf(sz, "%cb0     ", ChDashF(us.fSeconds)); PrintFSz();
   PrintF(
     "; Print zodiac seconds      [\"_b0\" to minute, \"=b0\" to second  ]\n");
+  sprintf(sz, "%cb1     ", ChDashF(us.fSecond1K)); PrintFSz();
+  PrintF(
+    "; Print zodiac milliseconds [\"_b1\" to second, \"=b1\" to millisec]\n");
   sprintf(sz, "%cb      ", ChDashF(us.fEphemFiles)); PrintFSz();
   PrintF(
     "; Use ephemeris files       [\"=b\" uses them, \"_b\" doesn't      ]\n");
   sprintf(sz, "%c0b     ", ChDashF(us.fNoPlacalc)); PrintFSz();
   PrintF(
     "; Disable old calculations  [\"=0b\" disables them, \"_0b\" allows ]\n");
+  sprintf(sz, "%cv0     ", ChDashF(us.fVelocity)); PrintFSz();
+  PrintF(
+    "; Show average velocities   [\"=v0\" average, \"_v0\" does absolute]\n");
+  sprintf(sz, "=v3 %d   ", us.fListDecan ? us.nDecanType : 0); PrintFSz();
+  PrintF(
+    "; Wheel subdivision type    [Change \"0\" to desired subdivision ]\n");
   sprintf(sz, ":w %d    ", us.nWheelRows); PrintFSz();
   PrintF(
     "; Wheel chart text rows     [Change \"0\" to desired wheel rows  ]\n");
@@ -1313,6 +1341,9 @@ flag FOutputSettings()
   sprintf(sz, "%csr0    ", ChDashF(us.fEquator2)); PrintFSz();
   PrintF(
     "; Latitudes or declinations [\"_sr0\" shows lat., \"=sr0\" declin. ]\n");
+  sprintf(sz, ":gs %d   ", us.nAppSep); PrintFSz();
+  PrintF("; Aspect orb type           "
+    "[\"0\" +/-, \"1\" app/sep, \"2\" wax/wan ]\n");
   sprintf(sz, "%cYs     ", ChDashF(us.fSidereal2)); PrintFSz();
   PrintF(
     "; Use plane of solar system [\"_Ys\" is ecliptic, \"=Ys\" is solar ]\n");
@@ -1323,9 +1354,6 @@ flag FOutputSettings()
   PrintFSz();
   PrintF(
     "; Show eclipse information  [\"=Yu0\" shows, \"_Yu0\" doesn't show ]\n");
-  sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
-  PrintF(
-    "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
   sprintf(sz, "%cYd     ", ChDashF(us.fEuroDate)); PrintFSz();
   PrintF(
     "; European date format      [\"_Yd\" is M/D/Y, \"=Yd\" is D-M-Y    ]\n");
@@ -1335,6 +1363,9 @@ flag FOutputSettings()
   sprintf(sz, "%cYv     ", ChDashF(us.fEuroDist)); PrintFSz();
   PrintF(
     "; European length units     [\"_Yv\" is imperial, \"=Yv\" is metric]\n");
+  sprintf(sz, "%cYr     ", ChDashF(us.fRound)); PrintFSz();
+  PrintF(
+    "; Show rounded positions    [\"=Yr\" rounds, \"_Yr\" doesn't       ]\n");
   sprintf(sz, "%cYC     ", ChDashF(us.fSmartCusp)); PrintFSz();
   PrintF(
     "; Smart cusp displays       [\"=YC\" is smart, \"_YC\" is normal   ]\n");
@@ -1347,6 +1378,9 @@ flag FOutputSettings()
   sprintf(sz, "-Ya%d    ", us.nCharset); PrintFSz();
   PrintF(
     "; Input character encoding  [0-3 is Default, IBM, Latin-1, UTF8]\n");
+  sprintf(sz, "%cYz1    ", ChDashF(us.fOffsetOnly)); PrintFSz();
+  PrintF(
+    "; Combine DST and time zone [\"=Yz1\" combines, \"_Yz1\" doesn't   ]\n");
   sprintf(sz, "-YP %d   ", us.nArabicNight); PrintFSz();
   PrintF(
     "; Arabic part formula       [\"1\" is fixed, \"0\" checks if night ]\n");
@@ -1354,8 +1388,10 @@ flag FOutputSettings()
   PrintF(
     "; Internet Web queries      [\"=0n\" disables them, \"_0n\" allows ]\n");
 
+  PrintF("\n-Yw "); FormatR(sz, us.rStation, 5); PrintFSz();
+  PrintF("       ; Stationary movement threshold  [0.0 is never \"S\"]\n");
   sprintf(sz,
-    "\n:pd %9.5f ; Progression degrees per day    [365 is secondary]\n",
+    ":pd %9.5f ; Progression degrees per day    [365 is secondary]\n",
     us.rProgDay); PrintFSz();
   PrintF(":pC "); FormatR(sz, us.rProgCusp, 5); PrintFSz();
   PrintF("       ; Progressed cusp movement ratio [1.0 is quotidian]\n");
@@ -1363,7 +1399,7 @@ flag FOutputSettings()
   PrintF("\n\n; FILE PATHS (-Yi1 through -Yi9):\n; For example, "
     "point -Yi1 to ephemeris dir, -Yi2 to chart files dir, etc.\n\n");
   for (i = 0; i < 10; i++)
-    if (us.rgszPath[i] && *us.rgszPath[i]) {
+    if (FSzSet(us.rgszPath[i])) {
       sprintf(sz, "-Yi%d \"%s\"\n", i, us.rgszPath[i]); PrintFSz();
     }
 
@@ -1373,7 +1409,8 @@ flag FOutputSettings()
     "; 22-33: Asc 2nd 3rd Nad 5th 6th Des 8th 9th MC 11th 12th\n"
     "; 34-42: Vul Cup Had Zeu Kro Apo Adm Vulk Pos\n"
     "; 43-51: Hyg Pho Eri Hau Mak Gon Qua Sed Orc\n"
-    "; 52-83: Planetary moons\n"
+    "; 52-78: Planetary moons\n"
+    "; 79-83: Planetary centers of body\n"
     "; 84-133: Fixed stars\n"
     "\n-YR 0 10     ");
   for (i = 0; i <= 10; i++) PrintF(SzNumF(ignore[i]));
@@ -1389,7 +1426,7 @@ flag FOutputSettings()
   for (i = 52; i <= 78; i++) PrintF(SzNumF(ignore[i]));
   PrintF(" ; Moons\n-YR 79 83    ");
   for (i = 79; i <= 83; i++) PrintF(SzNumF(ignore[i]));
-  PrintF("               ; Centers of Body\n-YR 84 108   ");
+  PrintF("               ; Centers of body\n-YR 84 108   ");
   for (i = 84; i <= 108; i++) PrintF(SzNumF(ignore[i]));
   PrintF(" ; Fixed stars\n-YR 109 133  ");
   for (i = 109; i <= 133; i++) PrintF(SzNumF(ignore[i]));
@@ -1425,7 +1462,7 @@ flag FOutputSettings()
     SzNumF(us.fIgnoreAlt0), SzNumF(us.fIgnoreDisequ)); PrintFSz();
   PrintF("-YR7 ");
   for (i = 0; i < rrMax; i++) PrintF(SzNumF(ignore7[i]));
-  PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, ray\n-YRZ ");
+  PrintF(" ; Restrict rulerships: std, esoteric, hierarch, exalt, Ray\n-YRZ ");
   for (i = 0; i < arMax; i++) PrintF(SzNumF(ignorez[i]));
   PrintF("   ; Restrict angle events: rising, zenith, setting, nadir\n\n\n");
 
@@ -1675,12 +1712,24 @@ flag FOutputSettings()
   sprintf(sz, "%cXu              ", ChDashF(gs.fBorder)); PrintFSz();
   PrintF(
     "; Chart border  [\"=Xu\" shows border, \"_Xu\" doesn't show     ]\n");
-  sprintf(sz, ":Xv %d            ", gs.nDecaFill); PrintFSz();
-  PrintF(
-    "; Wheel fill    [\"0\" for none, \"1\" for standard, \"2\" rainbow]\n");
   sprintf(sz, "%cXx              ", ChDashF(gs.fThick)); PrintFSz();
   PrintF(
     "; Thicker lines [\"=Xx\" is thicker, \"_Xx\" is thinner         ]\n");
+  sprintf(sz, "%cXx0             ", ChDashF(gs.fAntialias)); PrintFSz();
+  PrintF(
+    "; Antialiasing  [\"=Xx0\" is antialiased lines, \"_Xx0\" is not ]\n");
+  sprintf(sz, "%cXA              ", ChDashF(gs.fLabelAsp)); PrintFSz();
+  PrintF(
+    "; Glyphed lines [\"=XA\" glyphs on aspect lines, \"_XA\" doesn't]\n");
+  sprintf(sz, "%cXL              ", ChDashF(gs.fLabelCity)); PrintFSz();
+  PrintF(
+    "; Show cities   [\"=XL\" shows them in charts, \"_XL\" doesn't  ]\n");
+  sprintf(sz, "%cXv0             ", ChDashF(gs.fDoSidebar)); PrintFSz();
+  PrintF(
+    "; Show sidebar  [\"=Xv0\" shows on right edge, \"_Xv0\" doesn't ]\n");
+  sprintf(sz, ":Xv %d            ", gs.nDecaFill); PrintFSz();
+  PrintF(
+    "; Wheel fill    [\"0\" for none, \"1\" for standard, \"2\" rainbow]\n");
   sprintf(sz, ":Xb%c             ", gi.fBmp ? 'w' : ChUncap(gs.chBmpMode));
   PrintFSz();
   PrintF(
@@ -1694,7 +1743,7 @@ flag FOutputSettings()
   sprintf(sz, ":YXj %d           ", gs.cspace); PrintFSz();
   PrintF("; Orbit trail count\n");
   sprintf(sz, ":YX7 %d         ", gs.nRayWidth); PrintFSz();
-  PrintF("; Esoteric ray column influence width\n");
+  PrintF("; Esoteric Ray column influence width\n");
   sprintf(sz, ":YXf %06d      ", gs.nFontAll); PrintFSz();
   PrintF("; Fonts to use [text, signs, houses, planets, aspects, naks.]\n");
   sprintf(sz, ":YXp %d           ", gs.nOrient); PrintFSz();
@@ -1724,7 +1773,7 @@ void OpenDir(CONST char *szDir)
   long hFile;
   flag fAll = us.fWriteOld, fHaveFile;
 
-  // Only look at *.as (or *.dat) extension files.
+  // Only look at *.as extension files.
   sprintf(szPath, "%s\\*.%s", szDir, !fAll ? "as" : "*");
   hFile = _findfirst(szPath, &fi);
   fHaveFile = (hFile != -1);
@@ -2045,13 +2094,15 @@ real RParseSz(CONST char *szEntry, int pm)
       }
     }
   } else if (pm == pmOffset) {
+    // For sidereal offsets, check for ayanamsa names.
     for (i = 0; *rgZodiacOffset[i].sz; i++)
       if (FMatchSz(sz, rgZodiacOffset[i].sz))
         return rgZodiacOffset[i].r;
   }
 
   // Anything still at this point should be in a numeric format.
-  if (!FNumCh(ch) && ch != '+' && ch != '-' && ch != '.')
+  if (!(FNumCh(ch) || ch == '.' || ch == '+' ||
+    (ch == '-' && (FNumCh(sz[1]) || sz[1] == '.'))))
     return rLarge;
   r = atof(sz);
   if (r < 0.0) {
@@ -2286,7 +2337,7 @@ flag FInputData(CONST char *szFile)
       1, 12, pmMon);
     DD = NInputRange("Enter day   for chart (e.g. '1' '31') ",
       1, DayInMonth(MM, 0), pmDay);
-    YY = NInputRange("Enter year  for chart (e.g. '2024')   ",
+    YY = NInputRange("Enter year  for chart (e.g. '2025')   ",
       -32000, 32000, pmYea);
     if (FBetween(YY, 0, 99)) {
       sprintf(sz,
@@ -2395,7 +2446,7 @@ flag FInputData(CONST char *szFile)
       PrintWarning("Values in old style chart info file are out of range.");
       return fFalse;
     }
-    ciCore.nam = ciCore.loc = NULL;
+    ciCore.nam = ciCore.loc = "";
     if (!us.fWriteOld) {
       // Set chart name to filename (minus path and extension) unless -Yo on.
       sprintf(sz, "%s", szFile);
@@ -2516,12 +2567,12 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *dist,
   real *diralt, real *dirlen, char *szOut)
 {
   char szUrl[cchSzLine], szLine[cchSzLine], szName[cchSzMax],
-    szMon[3][4], hr[3], min[3], *pch, *pch2, ch;
+    szMon[3][4], *pch, *pch2, ch;
   CI ci[3];
   PT3R pt[3];
   FILE *file;
   real sec[3], len[3], rT;
-  int phase = -1, i;
+  int hr[3], min[3], phase = -1, i;
   flag fSemicolon;
 
   if (us.fNoNetwork) {    // Don't allow if -0n set.
@@ -2545,7 +2596,7 @@ flag GetJPLHorizons(int id, real *obj, real *objalt, real *dir, real *dist,
       *pch = ChCap(*pch);
     hr[i] = NFloor(ci[i].tim);
     min[i] = (int)(RFract(RAbs(ci[i].tim))*60.0);
-    sec[i] = (int)(RFract(RAbs(ci[i].tim))*3600.0) % 60;
+    sec[i] =  RMod(RFract(RAbs(ci[i].tim))*3600.0 + rSmall, 60.0);
   }
 
   // Compose URL to download from internet.

@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: xgeneral.cpp
+** Astrolog (Version 7.80) File: xgeneral.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -488,7 +488,7 @@ void DrawClearScreen()
           (int)(gs.yInch*72.0 + gs.yWin*rT)/2);
       }
     } else {
-      fprintf(gi.file, "0 %d translate\n", gs.yWin);
+      fprintf(gi.file, "0 %d translate\n", gs.yWin / PSMUL);
       rT = 1.0 / (real)PSMUL;
     }
     fprintf(gi.file, "1 -1 scale\n");
@@ -1002,10 +1002,6 @@ void DrawCrescent(int x1, int y1, int x2, int y2, real rProp, real rRotate,
 }
 
 
-#define iFillMax 255
-CONST int dxOff[4] = { 0,-1, 0, 1};
-CONST int dyOff[4] = {-1, 0, 1, 0};
-
 // Draw pixels filling in an irregular shaped area of orthoginally connected
 // pixels in the background color, in the specified color starting from the
 // specified coordinates.
@@ -1084,9 +1080,9 @@ void DrawFill(int x, int y, KV kv)
 }
 
 
-// Print a string of text on the graphic window at specified location. To
-// do this, either use Astrolog's own "font" (6x10) and draw each letter
-// separately, or else specify system fonts for PostScript and metafiles.
+// Print a string of text on the graphic window at specified location. To do
+// this, either use Astrolog's own internal vector font (6x10 or 9x15) and
+// draw each letter separately, or else specify and output as system fonts.
 
 void DrawSz(CONST char *sz, int x, int y, int dt)
 {
@@ -1143,7 +1139,7 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
   if (!gi.fFile && nFont > 0) {
     hfont = CreateFont(6*nScale2, 0, 0, 0, !gs.fThick ? 400 : 800,
       fFalse, fFalse, fFalse, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-      CLIP_DEFAULT_PRECIS, PROOF_QUALITY, VARIABLE_PITCH | FF_DECORATIVE,
+      CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_MODERN,
       rgszFontName[nFont]);
     if (hfont == NULL)
       return;
@@ -1205,9 +1201,9 @@ void DrawSz(CONST char *sz, int x, int y, int dt)
 }
 
 
-//                                        ATGCLVLSSCAPc
-CONST uchar szSignFontEnigma[cSign+3]  = "1234567890-=+";
-CONST uchar szSignFontHamburg[cSign+3] = "asdfghjklzxcv";
+//                                        ATGCLVLSSCAPco
+CONST uchar szSignFontEnigma[cSign+4]  = "1234567890-=+ ";
+CONST uchar szSignFontHamburg[cSign+4] = "asdfghjklzxcv ";
 
 // Draw the glyph of a sign at particular coordinates on the screen. To do
 // this either use Astrolog's turtle vector representation, or else specify
@@ -1234,6 +1230,9 @@ void DrawSign(int i, int x, int y)
       y -= gi.nScale;
   } else if (nFont >= fiCourier && gs.ft != ftPS && gs.ft != ftWmf)
     ch = 0x2648 + i - 1;
+  // A few fonts support Ophiuchus, which is specified as "sign" #13.
+  if (i > cSign)
+    ch = (nFont >= fiCourier && gs.ft != ftPS && gs.ft != ftWmf) ? 0x26CE : -1;
 #ifdef EXPRESS
   AdjustGlyph(&ch, &x, &y, &nFont, &nScale, i, us.szExpFontSig);
   if (!FBetween(nFont, 0, cFont-1))
@@ -1268,6 +1267,8 @@ void DrawSign(int i, int x, int y)
 #endif
   if (i == sCap && gs.nGlyphCap > 1)
     i = cSign+1;
+  else if (i == cSign+1)
+    i = cSign+2;
   if (gi.nScale % 3 == 0 && szDrawSign3[i][0]) {
     gi.nScale /= 3;
     DrawTurtle(szDrawSign3[i], x, y);  // Special extra hi-res sign glyphs.
@@ -1616,6 +1617,7 @@ void DrawAspect(int asp, int x, int y)
   if (us.fParallel && asp <= aOpp)
     asp += cAspect;
   else if (asp > cAspect2) {
+    // Special case of (asp > cAspect2) limit means draw eclipse Con or Opp.
     fEclipse = fTrue;
     asp -= cAspect2;
   }

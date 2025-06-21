@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: express.cpp
+** Astrolog (Version 7.80) File: express.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -61,14 +61,14 @@
 ******************************************************************************
 */
 
-#define cfunA 449
+#define cfunA 470
 #ifdef GRAPH
-#define cfunX 68
+#define cfunX 70
 #else
 #define cfunX 0
 #endif
 #ifdef ISG
-#define cfunI 2
+#define cfunI 3
 #else
 #define cfunI 0
 #endif
@@ -98,6 +98,7 @@
 #define I_IIIX P5(I_, I_, I_, I_, X_)
 #define I_R    P2(I_, R_)
 #define I_RI   P3(I_, R_, I_)
+#define I_RR   P3(I_, R_, R_)
 #define I_E    P2(I_, E_)
 #define I_EE   P3(I_, E_, E_)
 #define I_EEE  P4(I_, E_, E_, E_)
@@ -249,7 +250,7 @@ enum _functionindex {
   funMonN, funDayN, funYeaN, funTimN, funDstN, funZonN, funLonN, funLatN,
   funMonL, funDayL, funYeaL, funTimL, funDstL, funZonL, funLonL, funLatL,
   funMonS, funDayS, funYeaS, funTimS, funDstS, funZonS, funLonS, funLatS,
-  funMonT, funDayT, funYeaT, funTimT, funDstT,
+  funMonT, funDayT, funYeaT, funTimT, funDstT, funZonT,
   funMonG, funDayG, funYeaG,
   funDstD, funZonD, funLonD, funLatD,
   funOff,  funOff1, funOff2, funOff3, funOff4, funOff5, funOff6,
@@ -289,6 +290,7 @@ enum _functionindex {
   funObjYear,
   funObjDiam,
   funObjDay,
+  funObjAng,
   funAspOn,
   funAspAng,
   funAspOrb,
@@ -342,6 +344,7 @@ enum _functionindex {
   funGridVal,
   funGridDo,
   funGridDo2,
+  funConstel,
   funListCnt,
   funListCur,
   funList1,
@@ -359,7 +362,21 @@ enum _functionindex {
   fun_v3,
   fun_v31,
   fun_w1,
+  fun_g0,
+  fun_gm,
+  fun_gp,
+  fun_gd,
+  fun_ga,
+  fun_gx,
+  fun_gs,
+  fun_a0,
+  fun_ad,
+  fun_aa,
+  fun_ax,
+  fun_as,
   fun_aj,
+  fun_m0,
+  fun_ma,
   fun_L1,
   fun_L2,
   fun_d1,
@@ -372,11 +389,13 @@ enum _functionindex {
   fun_I1,
   fun_zv,
   fun_zf,
+  fun_RO,
   fun_A3,
   fun_Ap,
   fun_AP,
   fun_b,
   fun_b0,
+  fun_b1,
   fun_c,
   fun_c3,
   fun_c31,
@@ -407,10 +426,12 @@ enum _functionindex {
   fun_Ys1,
   fun_Yn,
   fun_Yn0,
+  fun_Yn1,
   fun_Yz0,
   fun_Yu,
   fun_Yu0,
   fun_Yr,
+  fun_Yw,
   fun_YC,
   fun_YO,
   fun_Y8,
@@ -439,6 +460,7 @@ enum _functionindex {
   fun_Xi,
   fun_Xu,
   fun_Xx,
+  fun_Xx0,
   fun_Xl,
   fun_XA,
   fun_XL,
@@ -462,6 +484,7 @@ enum _functionindex {
   fun_XL0,
   fun_X1,
   fun_Xv,
+  fun_Xv0,
   fun_XJ,
   fun_X8,
   fun_XGx,
@@ -505,6 +528,7 @@ enum _functionindex {
 
 #ifdef ISG
   // Functions related to interactive screen graphics
+  fun_Xk,
   fun_Xnp,
   fun_Xnf,
 #endif
@@ -720,6 +744,7 @@ CONST FUN rgfun[cfun] = {
 {funYeaT,    "YeaT",     0, I_},
 {funTimT,    "TimT",     0, R_},
 {funDstT,    "DstT",     0, R_},
+{funZonT,    "ZonT",     0, R_},
 {funMonG,    "MonG",     0, I_},
 {funDayG,    "DayG",     0, I_},
 {funYeaG,    "YeaG",     0, I_},
@@ -820,6 +845,7 @@ CONST FUN rgfun[cfun] = {
 {funObjYear, "ObjYear",  1, R_I},
 {funObjDiam, "ObjDiam",  1, R_I},
 {funObjDay,  "ObjDay",   1, R_I},
+{funObjAng,  "ObjAng",   1, R_I},
 {funAspOn,   "AspOn",    1, I_I},
 {funAspAng,  "AspAngle", 1, R_I},
 {funAspOrb,  "AspOrb",   1, R_I},
@@ -880,6 +906,7 @@ CONST FUN rgfun[cfun] = {
 {funGridVal, "GridVal",  2, R_II},
 {funGridDo,  "DoGrid",   0, I_},
 {funGridDo2, "DoGrid2",  1, I_I},
+{funConstel, "Constel",  2, I_RR},
 {funListCnt, "ListCnt",  0, I_},
 {funListCur, "ListCur",  0, I_},
 {funList1,   "List1",    0, I_},
@@ -897,7 +924,21 @@ CONST FUN rgfun[cfun] = {
 {fun_v3,  "_v3",  0, I_},
 {fun_v31, "_v31", 0, I_},
 {fun_w1,  "_w1",  0, I_},
+{fun_g0,  "_g0",  0, I_},
+{fun_gm,  "_gm",  0, I_},
+{fun_gp,  "_gp",  0, I_},
+{fun_gd,  "_gd",  0, I_},
+{fun_ga,  "_ga",  0, I_},
+{fun_gx,  "_gx",  0, I_},
+{fun_gs,  "_gs",  0, I_},
+{fun_a0,  "_a0",  0, I_},
+{fun_ad,  "_ad",  0, I_},
+{fun_aa,  "_aa",  0, I_},
+{fun_ax,  "_ax",  0, I_},
+{fun_as,  "_as",  0, I_},
 {fun_aj,  "_aj",  0, I_},
+{fun_m0,  "_m0",  0, I_},
+{fun_ma,  "_ma",  0, I_},
 {fun_L1,  "_L1",  0, I_},
 {fun_L2,  "_L2",  0, I_},
 {fun_d1,  "_d1",  0, I_},
@@ -910,11 +951,13 @@ CONST FUN rgfun[cfun] = {
 {fun_I1,  "_I1",  0, I_},
 {fun_zv,  "_zv",  0, R_},
 {fun_zf,  "_zf",  0, R_},
+{fun_RO,  "_RO",  0, I_},
 {fun_A3,  "_A3",  0, I_},
 {fun_Ap,  "_Ap",  0, I_},
 {fun_AP,  "_APP", 0, I_},
 {fun_b,   "_b",   0, I_},
 {fun_b0,  "_b0",  0, I_},
+{fun_b1,  "_b1",  0, I_},
 {fun_c,   "_c",   0, I_},
 {fun_c3,  "_c3",  0, I_},
 {fun_c31, "_c31", 0, I_},
@@ -945,10 +988,12 @@ CONST FUN rgfun[cfun] = {
 {fun_Ys1, "_Ys1", 0, R_},
 {fun_Yn,  "_Yn",  0, I_},
 {fun_Yn0, "_Yn0", 0, I_},
+{fun_Yn1, "_Yn1", 0, I_},
 {fun_Yz0, "_Yz0", 0, R_},
 {fun_Yu,  "_Yu",  0, I_},
 {fun_Yu0, "_Yu0", 0, I_},
 {fun_Yr,  "_Yr",  0, I_},
+{fun_Yw,  "_Yw",  0, R_},
 {fun_YC,  "_YC",  0, I_},
 {fun_YO,  "_YO",  0, I_},
 {fun_Y8,  "_Y8",  0, I_},
@@ -977,6 +1022,7 @@ CONST FUN rgfun[cfun] = {
 {fun_Xi,   "_Xi",   0, I_},
 {fun_Xu,   "_Xuu",  0, I_},
 {fun_Xx,   "_Xx",   0, I_},
+{fun_Xx0,  "_Xx0",  0, I_},
 {fun_Xl,   "_Xll",  0, I_},
 {fun_XA,   "_XA",   0, I_},
 {fun_XL,   "_XL",   0, I_},
@@ -1000,6 +1046,7 @@ CONST FUN rgfun[cfun] = {
 {fun_XL0,  "_XL0",  0, I_},
 {fun_X1,   "_X1",   0, I_},
 {fun_Xv,   "_Xv",   0, I_},
+{fun_Xv0,  "_Xv0",  0, I_},
 {fun_XJ,   "_XJJ",  0, I_},
 {fun_X8,   "_X8",   0, I_},
 {fun_XGx,  "_XGx",  0, R_},
@@ -1043,6 +1090,7 @@ CONST FUN rgfun[cfun] = {
 
 #ifdef ISG
 // Functions related to interactive screen graphics
+{fun_Xk,  "_Xk",  0, I_},
 {fun_Xnp, "_Xnp", 0, I_},
 {fun_Xnf, "_Xnf", 0, I_},
 #endif
@@ -1379,6 +1427,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funYeaT: n = ciTran.yea; break;
   case funTimT: r = ciTran.tim; break;
   case funDstT: r = ciTran.dst; break;
+  case funZonT: r = ciTran.zon; break;
   case funMonG: n = ciGreg.mon; break;
   case funDayG: n = ciGreg.day; break;
   case funYeaG: n = ciGreg.yea; break;
@@ -1481,7 +1530,9 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case funObjYear: r = FNorm(n1)        ? rObjYear[n1]  : 0.0; break;
   case funObjDiam: r = RObjDiam(n1); break;
   case funObjDay:  r = FNorm(n1)        ? rObjDay[n1]   : 0.0; break;
-  case funAspOn:   n = FValidAspect(n1) ? FIgnoreA(n1)  : 0;   break;
+  case funObjAng:  r = FValidObj(n1) ? RAtnD((RObjDiam(n1) / 2.0) /
+    (cp0.dist[n1] * rAUToKm))*2.0: 0.0; break;
+  case funAspOn:   n = FValidAspect(n1) ? !FIgnoreA(n1) : 0;   break;
   case funAspAng:  r = FValidAspect(n1) ? rAspAngle[n1] : 0.0; break;
   case funAspOrb:  r = FValidAspect(n1) ? rAspOrb[n1]   : 0.0; break;
   case funAspInf:  r = FValidAspect(n1) ? rAspInf[n1]   : 0.0; break;
@@ -1548,6 +1599,13 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
     grid->v[n1][n2] : 0; break;
   case funGridDo:  n = FCreateGrid(fFalse); break;
   case funGridDo2: n = FCreateGridRelation(n1 != 0); break;
+  case funConstel:
+#ifdef CONSTELGRAPH
+    n = LookupConstel(r1, r2);
+#else
+    n = 0;
+#endif
+    break;
   case funListCnt: n = is.cci;       break;
   case funListCur: n = is.iciCur;    break;
   case funList1:   n = is.iciIndex1; break;
@@ -1590,7 +1648,21 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_v3:  n = us.fListDecan;      break;
   case fun_v31: n = us.nDecanType;      break;
   case fun_w1:  n = us.nWheelRows;      break;
+  case fun_g0:  n = us.fGridConfig;     break;
+  case fun_gm:  n = us.fGridMidpoint;   break;
+  case fun_gp:  n = us.fParallel;       break;
+  case fun_gd:  n = us.fDistance;       break;
+  case fun_ga:  n = (us.nAppSep == 1);  break;
+  case fun_gx:  n = (us.nAppSep == 2);  break;
+  case fun_gs:  n = us.nAppSep;         break;
+  case fun_a0:  n = us.fAspSummary;     break;
+  case fun_ad:  n = us.fDistance;       break;
+  case fun_aa:  n = (us.nAppSep == 1);  break;
+  case fun_ax:  n = (us.nAppSep == 2);  break;
+  case fun_as:  n = us.nAppSep;         break;
   case fun_aj:  n = us.nAspectSort;     break;
+  case fun_m0:  n = us.fMidSummary;     break;
+  case fun_ma:  n = us.fMidAspect;      break;
   case fun_L1:  n = us.nAstroGraphStep; break;
   case fun_L2:  n = us.nAstroGraphDist; break;
   case fun_d1:  n = us.nDivision;       break;
@@ -1603,11 +1675,13 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_I1:  n = us.nScreenWidth;    break;
   case fun_zv:  r = us.elvDef;        break;
   case fun_zf:  r = us.tmpDef;        break;
+  case fun_RO:  n = us.objRequire;    break;
   case fun_A3:  n = us.fAspect3D;     break;
   case fun_Ap:  n = us.fAspectLat;    break;
   case fun_AP:  n = us.fParallel2;    break;
   case fun_b:   n = us.fEphemeris;    break;
   case fun_b0:  n = us.fSeconds;      break;
+  case fun_b1:  n = us.fSecond1K;     break;
   case fun_c:   n = us.nHouseSystem;  break;
   case fun_c3:  n = us.fHouse3D;      break;
   case fun_c31: n = us.nHouse3D;      break;
@@ -1638,10 +1712,12 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Ys1: r = us.rZodiacOffsetAll; break;
   case fun_Yn:  n = us.fTrueNode;   break;
   case fun_Yn0: n = us.fNoNutation; break;
+  case fun_Yn1: n = us.fOffsetOnly; break;
   case fun_Yz0: r = us.rDeltaT;     break;
   case fun_Yu:  n = us.fEclipse;    break;
   case fun_Yu0: n = us.fEclipseAny; break;
   case fun_Yr:  n = us.fRound;      break;
+  case fun_Yw:  r = us.rStation;    break;
   case fun_YC:  n = us.fSmartCusp;  break;
   case fun_YO:  n = us.fSmartSave;  break;
   case fun_Y8:  n = us.fClip80;     break;
@@ -1673,6 +1749,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_Xi:   n = gs.fAlt;         break;
   case fun_Xu:   n = gs.fBorder;      break;
   case fun_Xx:   n = gs.fThick;       break;
+  case fun_Xx0:  n = gs.fAntialias;   break;
   case fun_Xl:   n = gs.fLabel;       break;
   case fun_XA:   n = gs.fLabelAsp;    break;
   case fun_XL:   n = gs.fLabelCity;   break;
@@ -1696,6 +1773,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
   case fun_XL0:  n = gs.nLabelCity;   break;
   case fun_X1:   n = gs.objLeft;      break;
   case fun_Xv:   n = gs.nDecaFill;    break;
+  case fun_Xv0:  n = gs.fDoSidebar;   break;
   case fun_XJ:   n = gs.fIndianWheel; break;
   case fun_X8:   n = gs.fMoonWheel;   break;
   case fun_XGx:  r = gs.rRot;         break;
@@ -1755,6 +1833,7 @@ flag FEvalFunction(int ifun, PAR *rgpar, char *rgpchEval[2])
 
 #ifdef ISG
   // Functions related to interactive screen graphics
+  case fun_Xk:  n = gi.kiPen;  break;
   case fun_Xnp: n = gi.fPause; break;
   case fun_Xnf: n = gi.nDir;   break;
 #endif

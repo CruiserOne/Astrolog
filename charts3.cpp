@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: charts3.cpp
+** Astrolog (Version 7.80) File: charts3.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -71,7 +71,7 @@
 void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
 {
   char sz[cchSzDef];
-  int fVoid, nVoid, nSkip = 0, i, j, k, s1, s2, s3;
+  int fVoid, nVoid, nSkip = 0, i, j, k;
   CI ciCast = ciSave, ciEvent;
 #ifdef EXPRESS
   int nEclipse;
@@ -149,9 +149,6 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     }
 
     // Display the current transit event.
-    s1 = (int)pid[i].time/60;
-    s2 = (int)pid[i].time-s1*60;
-    s3 = us.fSeconds ? (int)(pid[i].time*60.0)-((s1*60+s2)*60) : -1;
     SetCI(ciCast, pid[i].mon, pid[i].day, pid[i].yea,
       pid[i].time / 60.0, Dst, Zon, Lon, Lat);
     if ((!us.fExpOff && FSzSet(us.szExpDay)) || (us.fEclipse &&
@@ -231,7 +228,7 @@ void PrintInDays(InDayInfo *pid, int occurcount, int counttotal, flag fProg)
     AnsiColor(kDefault);
     sprintf(sz, "%s %s ",
       SzDate(pid[i].mon, pid[i].day, pid[i].yea, fFalse),
-      SzTime(s1, s2, s3)); PrintSz(sz);
+      SzTim(pid[i].time / 60.0)); PrintSz(sz);
     PrintAspect(pid[i].source, pid[i].pos1, pid[i].ret1, pid[i].aspect,
       pid[i].dest, pid[i].pos2, pid[i].ret2, fProg ? 'e' : 'd');
     PrintInDayEvent(pid[i].source, pid[i].aspect, pid[i].dest, nVoid);
@@ -693,8 +690,9 @@ void ChartTransitSearch(flag fProg)
   TransInfo ti[MAXINDAY], tiT, *pti;
   char sz[cchSzDef];
   int M1, M2, Y1, Y2, counttotal = 0, occurcount, division, div, nAsp, fNoCusp,
-    nSkip = 0, i, j, k, s1, s2, s3, s4, s1prev = 0;
-  real divsiz, daysiz, d, e1, e2, f1, f2, mc = is.MC, ob = is.OB;
+    nSkip = 0, i, j, k, s1, s2, s1prev = 0;
+  real cuspSav[cSign+1], divsiz, daysiz, d, e1, e2, f1, f2,
+    mc = is.MC, ob = is.OB, lonSav;
   flag fPrint = fTrue;
   CP cpA, cpB, cpN = cp0;
   CI ciSav, ciCast = ciSave, ciEvent;
@@ -794,8 +792,13 @@ void ChartTransitSearch(flag fProg)
 
         if (us.fHouse3D && !us.fIgnoreSign && !FIgnore2(i)) {
           is.MC = mc; is.OB = ob;
+          lonSav = cp0.lonMC; cp0.lonMC = cpN.lonMC;
+          CopyRgb((pbyte)cp0.cusp3, (pbyte)cuspSav, sizeof(cuspSav));
+          CopyRgb((pbyte)cpN.cusp3, (pbyte)cp0.cusp3, sizeof(cuspSav));
           e1 = cpA.obj[i]; f1 = RHousePlaceIn3D(e1, cpA.alt[i]);
           e2 = cpB.obj[i]; f2 = RHousePlaceIn3D(e2, cpB.alt[i]);
+          CopyRgb((pbyte)cuspSav, (pbyte)cp0.cusp3, sizeof(cuspSav));
+          cp0.lonMC = lonSav;
           s1 = SFromZ(f1)-1; s2 = SFromZ(f2)-1;
           k = NAbs(s1-s2);
           if (s1 != s2 && (k == 1 || k == cSign-1) && !FIgnore(cuspLo+s2) &&
@@ -963,10 +966,6 @@ void ChartTransitSearch(flag fProg)
           j = j - s1 * (24*60*60);
         } else
           s1 = DayT-1;
-        s2 = j / (60*60);
-        k = j - s2 * (60*60);
-        s3 = k / 60;
-        s4 = us.fSeconds ? k - s3*60 : -1;
         SetCI(ciCast, MonT, s1+1, YeaT, (real)j / (60.0*60.0),
           DstT, ZonT, LonT, LatT);
 #ifdef EXPRESS
@@ -1028,8 +1027,8 @@ void ChartTransitSearch(flag fProg)
           sprintf(sz, "%.3s ", szDay[k]); PrintSz(sz);
           AnsiColor(kDefault);
         }
-        sprintf(sz, "%s %s ",
-          SzDate(MonT, s1+1, YeaT, fFalse), SzTime(s2, s3, s4)); PrintSz(sz);
+        sprintf(sz, "%s %s ", SzDate(MonT, s1+1, YeaT, fFalse),
+          SzTim(pti->time / 60.0)); PrintSz(sz);
         PrintAspect(pti->source, pti->posT, pti->retT, pti->aspect,
           pti->dest, pti->posN, cpN.dir[pti->dest], fProg ? 'u' : 't');
 
@@ -1177,8 +1176,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
           continue;
         ppw = &(*rgEph)[x][y][asp];
         if (*ppw == NULL) {
-          *ppw = (word *)PAllocate(cSlice * sizeof(word),
-            "transit ephemeris entry");
+          *ppw = RgAllocate(cSlice, word, "transit ephemeris entry");
           if (*ppw == NULL)
             goto LDone;
           pw = *ppw;
@@ -1195,8 +1193,7 @@ void ChartTransitGraph(flag fTrans, flag fProg)
           if (et > etNone) {
             ppw = &(*rgEph)[y][x][asp];
             if (*ppw == NULL) {
-              *ppw = (word *)PAllocate(cSlice * sizeof(word),
-                "transit eclipse entry");
+              *ppw = RgAllocate(cSlice, word, "transit eclipse entry");
               if (*ppw == NULL)
                 goto LDone;
               pw2 = *ppw;
@@ -1379,11 +1376,11 @@ void ChartHorizonRising(void)
 {
   char sz[cchSzDef];
   int source[MAXINDAY], type[MAXINDAY], fRet[MAXINDAY],
-    occurcount, division, div, s1, s2, s3, i, j, fT;
+    occurcount, division, div, i, j, fT;
   real time[MAXINDAY], rgalt1[objMax], rgalt2[objMax], azialt[MAXINDAY],
     pos[MAXINDAY], azi1, azi2, alt1, alt2, mc1, mc2, xA, yA, xV, yV, d, k;
   int yea0, yea1, yea2, mon0, mon1, mon2, day0, day1, day2, counttotal = 0;
-  flag fSav = is.fSeconds, fYear;
+  flag fSav = us.fSeconds, fYear;
   CI ciSav, ciEvent;
 
   fT = us.fSidereal; us.fSidereal = fFalse;
@@ -1527,11 +1524,8 @@ void ChartHorizonRising(void)
     AnsiColor(kRainbowA[j + 1]);
     sprintf(sz, "%.3s ", szDay[j]); PrintSz(sz);
     AnsiColor(kDefault);
-    s1 = (int)time[i]/60;
-    s2 = (int)time[i]-s1*60;
-    s3 = is.fSeconds ? (int)(time[i]*60.0)-((s1*60+s2)*60) : -1;
     sprintf(sz, "%s %s ", SzDate(mon0, day0, yea0, fFalse),
-      SzTime(s1, s2, s3));
+      SzTim(time[i] / 60.0));
     PrintSz(sz);
     AnsiColor(kObjA[source[i]]);
     sprintf(sz, "%7.7s ", szObjDisp[source[i]]); PrintSz(sz);
@@ -1543,9 +1537,10 @@ void ChartHorizonRising(void)
     if (!us.fSeconds) {
       sprintf(sz, "%.3s", szSignName[SFromZ(pos[i])]); PrintSz(sz);
     } else {
-      is.fSeconds = fFalse;
+      if (!us.fSecond1K)
+        us.fSeconds = fFalse;
       PrintZodiac(pos[i]);
-      is.fSeconds = fSav;
+      us.fSeconds = fSav;
       AnsiColor(j);
     }
     sprintf(sz, "%c ", fRet[i] > 0 ? ')' : (fRet[i] < 0 ? ']' : '>'));
@@ -1558,8 +1553,13 @@ void ChartHorizonRising(void)
     if (FOdd(type[i])) {
       j = (int)(azialt[i]*60.0)%60;
       sprintf(sz, "%3d%c%02d'", (int)azialt[i], chDegC, j); PrintSz(sz);
-      if (is.fSeconds) {
-        sprintf(sz, "%02d\"", (int)(azialt[i]*3600.0)%60); PrintSz(sz);
+      if (us.fSeconds) {
+        sprintf(sz, "%02d", (int)(azialt[i]*3600.0)%60); PrintSz(sz);
+        if (us.fSecond1K) {
+          sprintf(sz, ".%03d", (int)(azialt[i]*3600.0*1000.0)%1000);
+          PrintSz(sz);
+        }
+        PrintCh('\"');
       }
 
       // For rising and setting events, also display a direction vector to
@@ -1598,9 +1598,9 @@ void ChartHorizonRising(void)
 
 void ChartEphemeris(void)
 {
-  char sz[cchSzDef];
+  char sz[cchSzDef], ch;
   int yea, yea1, yea2, mon, mon1, mon2, daysiz, timsiz, t, i, j, k, s, d, m;
-  real tim, rT;
+  real tim;
   flag fDidBlank = fFalse, fWantHeader = fTrue;
 
   // If -Ey is in effect, then loop through all months in the whole year.
@@ -1613,7 +1613,8 @@ void ChartEphemeris(void)
     yea2 = yea1;
     mon1 = mon2 = !us.fProgress ? Mon : MonT;
   }
-  timsiz = us.nEphemRate < 0 ? (24-1)/us.nEphemFactor : 0;
+  timsiz = us.nEphemRate >= 0 ? 0 : (us.nEphemRate == -1 ?
+    (24-1)/us.nEphemFactor : (24*60-1)/us.nEphemFactor);
 
   // Loop through the year or years in question.
 
@@ -1635,7 +1636,7 @@ void ChartEphemeris(void)
         fDidBlank = fTrue;
       else
         PrintL();
-      if (is.fSeconds)
+      if (us.fSeconds)
         PrintSz(us.fEuroDate ? "Dy/Mo/Year" : "Mo/Dy/Year");
       else
         PrintSz(us.fEuroDate ? "Dy/Mo/Yr" : "Mo/Dy/Yr");
@@ -1647,12 +1648,12 @@ void ChartEphemeris(void)
         j = rgobjList[k];
         if (FIgnore(j))
           continue;
-        if (is.fSeconds)
+        if (us.fSeconds)
           sprintf(sz, "  %-10.10s", szObjDisp[j]);
         else
           sprintf(sz, "  %-4.4s", szObjDisp[j]);
         PrintSz(sz);
-        PrintTab(' ', us.fParallel ? 2*!is.fSeconds : 1);
+        PrintTab(' ', (us.fParallel ? !us.fSeconds*2 : 1) + f1K*4);
       }
       PrintL();
     }
@@ -1662,7 +1663,8 @@ void ChartEphemeris(void)
 
       // Loop through each day in the month, casting a chart for that day.
 
-      tim = us.nEphemRate < 0 ? (real)(t*us.nEphemFactor): Tim;
+      tim = us.nEphemRate >= 0 ? Tim : (us.nEphemRate == -1 ?
+        (real)(t*us.nEphemFactor) : (real)(t*us.nEphemFactor)/60.0);
       if (!us.fProgress) {
         SetCI(ciCore, mon, i, yea, tim, Dst, Zon, Lon, Lat);
       } else {
@@ -1675,7 +1677,7 @@ void ChartEphemeris(void)
         continue;
 #endif
       fWantHeader = fTrue;
-      PrintSz(SzDate(mon, i, yea, is.fSeconds-1));
+      PrintSz(SzDate(mon, i, yea, us.fSeconds-1));
       PrintCh(' ');
       if (us.nEphemRate < 0) {
         PrintSz(SzTim(tim));
@@ -1686,7 +1688,7 @@ void ChartEphemeris(void)
         if (FIgnore(j))
           continue;
         if (!us.fParallel) {
-          if (is.fSeconds)
+          if (us.fSeconds)
             PrintZodiac(planet[j]);
           else {
             AnsiColor(kObjA[j]);
@@ -1716,13 +1718,13 @@ void ChartEphemeris(void)
           AnsiColor(kObjA[j]);
           PrintAltitude(planetalt[j]);
         }
-        rT = (!us.fParallel ? ret[j] : retalt[j]);
-        if (rT < 0.0) {
+        ch = ChRet(!us.fParallel ? ret[j] : retalt[j]);
+        if (ch != ' ') {
           AnsiColor(kDefault);
-          PrintCh(is.fSeconds ? chRet : chRet2);
+          PrintCh(us.fSeconds ? ch : ChUncap(ch));
         }
         if (k < is.nObj)
-          PrintTab(' ', 1 - (rT < 0.0) + is.fSeconds);
+          PrintTab(' ', 1 - (ch != ' ') + us.fSeconds);
       }
       PrintL();
       AnsiColor(kDefault);
@@ -1838,17 +1840,17 @@ flag ChartExoplanet(flag fColor)
     PrintSz(":\nName");
     PrintTab(' ', !fTOI ? 11 : 14);
     PrintSz("Location");
-    PrintTab(' ', !us.fSeconds ? 7 : 14);
+    PrintTab(' ', VSeconds(7, 14, 22));
     PrintSz("Mag.                 Start");
-    PrintTab(' ', (!us.fSeconds ? 11 : 17) - us.fEuroTime*4);
+    PrintTab(' ', VSeconds(11, 17, 25) - us.fEuroTime*4);
     PrintSz("Middle");
-    PrintTab(' ', (!us.fSeconds ? 10 : 16) - us.fEuroTime*4);
+    PrintTab(' ', VSeconds(10, 16, 24) - us.fEuroTime*4);
     PrintSz("End");
-    PrintTab(' ', 5 - us.fEuroTime*2);
+    PrintTab(' ', VSeconds(5, 8, 12) - us.fEuroTime*2);
     if (!us.fSeconds)
       PrintSz("Dur.  Unc");
     else
-      PrintSz("   Durat.   Uncert");
+      PrintSz("Durat.   Uncert");
     PrintSz(".\n\n");
   }
 
@@ -1905,8 +1907,8 @@ flag ChartExoplanet(flag fColor)
 
     JulianToMdy(jd, &ci.mon, &ci.day, &ci.yea);
 
-    ci.tim = RFract(jd - 0.5) * 24.0 -
-      (Zon - (Dst == dstAuto ? (real)is.fDst : Dst)) - (pexod->dur/2.0 + off);
+    ci.tim = RFract(jd - 0.5)*24.0 - GetOffsetCI(&ciMain) -
+      (pexod->dur/2.0 + off);
     AddTime(&ci, 2, 0);     // Sanitize time if hour out of range
     ci2 = ci; ci2.tim += (off*2.0);
     AddTime(&ci2, 2, 0);    // Sanitize time if hour out of range

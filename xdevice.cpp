@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: xdevice.cpp
+** Astrolog (Version 7.80) File: xdevice.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -339,6 +339,40 @@ void BmpCopyBlock(CONST Bitmap *bs, int x1, int y1, int x2, int y2,
 }
 
 
+// Adjust the color of a pixel on a world map, based on whether the location
+// is at night time, or whether the location is under a solar eclipse.
+
+void BmpDarkenKv(real lon, real lat, real lonS, real latS, flag fDoEclipse,
+  KV *pkv)
+{
+  KV kv = *pkv;
+#ifdef SWISS
+  int et;
+  real rEclipse;
+#endif
+
+  // Check whether the location is in the night time half of the world.
+  if (SphDistance(lonS, latS, lon, rDegQuad - lat) > rDegQuad) {
+    *pkv = Rgb(RgbR(kv) / 3, RgbG(kv) / 3, RgbB(kv) / 3);
+    return;
+  }
+
+#ifdef SWISS
+  // Check for a partial or annular/total solar eclipse at the location.
+  if (!fDoEclipse)
+    return;
+  et = NCheckEclipseSolarLoc(rDegHalf - lon, rDegQuad - lat, &rEclipse);
+  if (et <= etNone)
+    return;
+  if (et <= etPartial) {
+    *pkv = KvBlend(kv, kBlack, 0.33 + rEclipse/100.0*0.33);
+    return;
+  }
+  *pkv = KvBlend(kv, rgbbmp[kRed], 0.5);
+#endif
+}
+
+
 // Like BmpCopyBlock() but the source rectangle coordinates are reals instead
 // of integers. Can be used to render only subsections of source pixels.
 
@@ -346,8 +380,10 @@ void BmpCopyBlock2(CONST Bitmap *bs, real x1, real y1, real x2, real y2,
   Bitmap *bd, int x3, int y3, int x4, int y4)
 {
   int xd = x4-x3+1, yd = y4-y3+1, x, y, xT, yT, nR, nG, nB;
-  real xs, ys;
+  real xs, ys, lonS, latS, rx, ry;
   byte *pbDst;
+  flag fDoEclipse = fFalse;
+  KV kv;
 
   // Sanity checks of coordinate bounds, which shouldn't ever fail.
   Assert(FBetween(x1, 0.0, (real)bs->x - rSmall));
@@ -359,16 +395,41 @@ void BmpCopyBlock2(CONST Bitmap *bs, real x1, real y1, real x2, real y2,
   Assert(FBetween(x4, 0, bd->x-1));
   Assert(FBetween(y4, 0, bd->y-1));
 
+  if (gs.fMollewide) {
+    lonS = Tropical(planet[oSun]);
+    latS = planetalt[oSun];
+    EclToEqu(&lonS, &latS);
+    lonS = Mod(lonS - cp0.lonMC + rDegHalf - Lon);
+    if (us.fEclipse &&
+      NCheckEclipseSolar(oEar, oMoo, oSun, NULL) > etNone)
+      fDoEclipse = fTrue;
+  }
+
   xs = (x2-x1) / (real)xd;
   ys = (y2-y1) / (real)yd;
   for (y = y3; y <= y4; y++) {
     pbDst = _PbXY(bd, x3, y);
-    yT = (int)(y1 + (real)(y-y3) * ys);
-    for (x = x3; x <= x4; x++) {
-      xT = (int)(x1 + (real)(x-x3) * xs);
-      _GetRGB(_PbXY(bs, xT, yT), &nR, &nG, &nB);
-      _SetRGB(pbDst, nR, nG, nB);
-      pbDst += cbPixelK;
+    ry = y1 + (real)(y-y3) * ys;
+    yT = (int)ry;
+    if (!gs.fMollewide) {
+      // Fast loop that just copies pixels.
+      for (x = x3; x <= x4; x++) {
+        xT = (int)(x1 + (real)(x-x3) * xs);
+        _GetRGB(_PbXY(bs, xT, yT), &nR, &nG, &nB);
+        _SetRGB(pbDst, nR, nG, nB);
+        pbDst += cbPixelK;
+      }
+    } else {
+      // Slower loop that may modify colors based on position on Earth.
+      ry = ry * rDegMax / (real)bs->x;
+      for (x = x3; x <= x4; x++) {
+        rx = x1 + (real)(x-x3) * xs;
+        xT = (int)rx;
+        rx = rx * rDegMax / (real)bs->x;
+        kv = _GetXY(bs, xT, yT);
+        BmpDarkenKv(rx, ry, lonS, latS, fDoEclipse, &kv);
+        BmpSetXY(bd, x, y, kv);
+      }
     }
   }
 }
@@ -519,6 +580,7 @@ flag FBmpDrawMap()
   real deg = Mod(rDegMax - gs.rRot), lonS, latS, rxc, ryc, rzc,
     lon, lat, lat0, rT, rLen, sint, cost, sina, cosa;
   KV kv;
+  flag fDoEclipse = fFalse;
 
   // Do nothing if not drawing bitmaps, or if the Earth bitmap fails to load.
   if (!gi.fBmp || (gi.fFile && gs.ft != ftBmp))
@@ -532,6 +594,9 @@ flag FBmpDrawMap()
     bmp = &wi.bmpWin;
   }
 #endif
+  if (gs.fMollewide && us.fEclipse &&
+    NCheckEclipseSolar(oEar, oMoo, oSun, NULL) > etNone)
+    fDoEclipse = fTrue;
 
   // Compute center coordinates and horizontal map dimensions.
   xc = (gs.xWin >> 1) - !FOdd(gs.xWin); yc = (gs.yWin >> 1) - !FOdd(gs.yWin);
@@ -609,9 +674,8 @@ flag FBmpDrawMap()
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
         y2 = (int)(lat * ((real)gi.bmpWorld.y - rSmall) / rDegHalf);
         kv = _GetXY(&gi.bmpWorld, x2, y2);
-        if (gs.fMollewide &&
-          SphDistance(lonS, latS, lon, rDegQuad - lat) > rDegQuad)
-          kv = Rgb(RgbR(kv) / 3, RgbG(kv) / 3, RgbB(kv) / 3);
+        if (gs.fMollewide)
+          BmpDarkenKv(lon, lat, lonS, latS, fDoEclipse, &kv);
         BmpSetXY(bmp, x1, y1, kv);
       }
     }
@@ -683,9 +747,8 @@ flag FBmpDrawMap()
         x2 = (int)(lon * ((real)gi.bmpWorld.x - rSmall) / rDegMax);
         y2 = (int)(lat * ((real)gi.bmpWorld.y - rSmall) / rDegHalf);
         kv = _GetXY(&gi.bmpWorld, x2, y2);
-        if (gs.fMollewide &&
-          SphDistance(lonS, latS, lon, rDegQuad - lat) > rDegQuad)
-          kv = Rgb(RgbR(kv) / 3, RgbG(kv) / 3, RgbB(kv) / 3);
+        if (gs.fMollewide)
+          BmpDarkenKv(lon, lat, lonS, latS, fDoEclipse, &kv);
         BmpSetXY(bmp, x1, y1, kv);
       }
     }
@@ -726,7 +789,7 @@ flag FBmpDrawMap2(int x1, int y1, int x2, int y2,
   rx1 = Mod(rx1); rx2 = Mod(rx2);
   x3 = rx1 * rx; y3 = ry1 * ry;
   x4 = rx2 * rx; y4 = ry2 * ry;
-  if (x3 <= x4) {
+  if (x3 < x4 && x4-x3 > rSmall) {
     // In most cases, just copy the entire rectangle all at once.
     BmpCopyBlock2(&gi.bmpWorld, x3, y3, x4, y4, bmp, x1, y1, x2, y2);
   } else {
@@ -736,6 +799,88 @@ flag FBmpDrawMap2(int x1, int y1, int x2, int y2,
     BmpCopyBlock2(&gi.bmpWorld, x3, y3, x34, y4, bmp, x1,    y1, x12, y2);
     BmpCopyBlock2(&gi.bmpWorld, 0,  y3, x4,  y4, bmp, x12+1, y1, x2,  y2);
   }
+
+#ifdef WINANY
+  if (!gi.fFile)
+    BmpCopyWin(bmp, wi.hdc, 0, 0);
+#endif
+  return fTrue;
+}
+
+
+// Adjust the window or bitmap's content to be smoother, and look antialiased.
+
+flag FBmpAntialias()
+{
+#ifdef WINANY
+  BITMAPINFO bi;
+#endif
+  Bitmap *bmp = &gi.bmp;
+  int x, y, n1, n2, n3, n4;
+  KV kv1, kv2, kv3, kv4;
+  real rBlend = !gs.fInverse ? 0.55 : 0.67;
+
+  if (!gi.fBmp || (gi.fFile && gs.ft != ftBmp))
+    return fTrue;
+#ifdef WINANY
+  // Copy the contents of the window about to be displayed to a bitmap.
+  if (!gi.fFile) {
+#ifdef WIN
+    if (!wi.fBuffer || wi.hdcPrint != NULL)
+      return fTrue;
+#endif
+    if (!FAllocateBmp(bmp, gs.xWin, gs.yWin))
+      return fFalse;
+    bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = cbPixelK << 3;
+    bi.bmiHeader.biCompression = BI_RGB;
+    bi.bmiHeader.biSizeImage = 0;
+    bi.bmiHeader.biXPelsPerMeter = bi.bmiHeader.biYPelsPerMeter = 1000;
+    bi.bmiHeader.biClrUsed = 0;
+    bi.bmiHeader.biClrImportant = 0;
+    bi.bmiColors[0].rgbBlue = bi.bmiColors[0].rgbGreen =
+      bi.bmiColors[0].rgbRed = bi.bmiColors[0].rgbReserved = 0;
+    bi.bmiHeader.biWidth  =  (bmp->x);
+    bi.bmiHeader.biHeight = -(bmp->y);
+    GetDIBits(wi.hdc, wi.hbmp, 0, gs.yWin, bmp->rgb, &bi, DIB_RGB_COLORS);
+  }
+#endif
+
+  // Antialias the content on the bitmap.
+  for (y = 0; y < gs.yWin - 1; y++)
+    for (x = 0; x < gs.xWin - 1; x++) {
+      // Check each 2x2 pixel section.
+      kv1 = BmpGetXY(bmp, x, y);
+      kv2 = BmpGetXY(bmp, x+1, y);
+      kv3 = BmpGetXY(bmp, x, y+1);
+      kv4 = BmpGetXY(bmp, x+1, y+1);
+      // If all four pixels the same, skip this block.
+      if (kv1 == kv2 && kv2 == kv3 && kv3 == kv4)
+        continue;
+      // If there isn't any diagonal of pixels the same, skip.
+      if (kv1 != kv4 && kv2 != kv3)
+        continue;
+      n1 = RgbR(kv1) + RgbG(kv1) + RgbB(kv1);
+      n2 = RgbR(kv2) + RgbG(kv2) + RgbB(kv2);
+      n3 = RgbR(kv3) + RgbG(kv3) + RgbB(kv3);
+      n4 = RgbR(kv4) + RgbG(kv4) + RgbB(kv4);
+      if (gs.fInverse) {
+        n1 = 768 - n1;
+        n2 = 768 - n2;
+        n3 = 768 - n3;
+        n4 = 768 - n4;
+      }
+      // If a diagonal of pixels is brigher than the other two, blend.
+      if (kv1 == kv4 && n1 >= n2 && n1 >= n3) {
+        BmpSetXY(bmp, x+1, y, KvBlend(kv1, kv2, rBlend));
+        BmpSetXY(bmp, x, y+1, KvBlend(kv1, kv3, rBlend));
+      }
+      if (kv2 == kv3 && n2 >= n1 && n2 >= n4) {
+        BmpSetXY(bmp, x, y,     KvBlend(kv2, kv1, rBlend));
+        BmpSetXY(bmp, x+1, y+1, KvBlend(kv2, kv4, rBlend));
+      }
+    }
 
 #ifdef WINANY
   if (!gi.fFile)
@@ -755,14 +900,14 @@ flag FBmpDrawMap2(int x1, int y1, int x2, int y2,
 // read in by the Unix X11 commands bitmap and xsetroot. The 'mode' parameter
 // defines how much white space is put in the file.
 
-void WriteXBitmap(FILE *file, CONST char *name, char mode)
+void WriteXBitmap(FILE *file, CONST char *szName, char mode)
 {
   int x, y, i, temp = 0;
   uint value;
   char szT[cchSzDef], *pchStart, *pchEnd;
 
   // Determine variable name from filename.
-  sprintf(szT, "%s", name);
+  sprintf(szT, "%s", szName);
   for (pchEnd = szT; *pchEnd != chNull; pchEnd++)
     ;
   for (pchStart = pchEnd; pchStart > szT &&
@@ -2159,7 +2304,7 @@ void WireChartSphere()
 #endif
 
   // Initialize variables.
-  if (gs.fText && !us.fVelocity)
+  if (gs.fText && gs.fDoSidebar)
     gs.xWin -= xSideT;
 
   fNoHorizon = ignorez[0] && ignorez[1] && ignorez[2] && ignorez[3];

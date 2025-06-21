@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: intrpret.cpp
+** Astrolog (Version 7.80) File: intrpret.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -1306,7 +1306,7 @@ void ChartInfluence(void)
   SortRank(power2, rank2, is.nObj, fTrue);
   SortRank(power,  rank,  is.nObj, fTrue);
   sprintf(sz, "  Planet:    Position      Aspects    Total Rank  %sPercent\n",
-    is.fSeconds ? " " : ""); PrintSz(sz);
+    us.fSeconds ? " " : ""); PrintSz(sz);
   for (j = 0; j <= is.nObj; j++) {
     i = rgobjList[j];
     if (FIgnore(i))
@@ -1316,12 +1316,12 @@ void ChartInfluence(void)
     sprintf(sz, "%6.1f (%2d) +%6.1f (%2d) =%7.1f (%2d) /",
       power1[i], rank1[i], power2[i], rank2[i], power[i], rank[i]);
     PrintSz(sz);
-    sprintf(sz, is.fSeconds ? "%7.2f%%\n" : "%6.1f%%\n",
+    sprintf(sz, us.fSeconds ? "%7.2f%%\n" : "%6.1f%%\n",
       total > 0.0 ? power[i]/total*100.0 : 0.0); PrintSz(sz);
   }
   AnsiColor(kDefault);
   sprintf(sz, "   Total: %6.1f      +%6.1f      =%7.1f      / 100.0%s%%\n",
-    total1, total2, total, is.fSeconds ? "0" : ""); PrintSz(sz);
+    total1, total2, total, us.fSeconds ? "0" : ""); PrintSz(sz);
 
   // Now, print out a list of power values and relative rankings, based on the
   // power of each sign of the zodiac, as indicated by the placement of the
@@ -1383,23 +1383,23 @@ void ChartInfluence(void)
   SortRank(power1, rank1, cSign, fFalse);
   sprintf(sz,
     "\n       Sign:  Power Rank  %sPercent  -   Element  Power  %sPercent\n",
-    is.fSeconds ? " " : "", is.fSeconds ? " " : ""); PrintSz(sz);
+    us.fSeconds ? " " : "", us.fSeconds ? " " : ""); PrintSz(sz);
   for (i = 1; i <= cSign; i++) {
     AnsiColor(kSignA(i));
     sprintf(sz, "%11.11s: ", szSignName[i]); PrintSz(sz);
     sprintf(sz, "%6.1f (%2d) /", power1[i], rank1[i]); PrintSz(sz);
-    sprintf(sz, is.fSeconds ? "%7.2f%%" : "%6.1f%%",
+    sprintf(sz, us.fSeconds ? "%7.2f%%" : "%6.1f%%",
       total1 > 0.0 ? power1[i]/total1*100.0 : 0.0); PrintSz(sz);
     if (i <= 4) {
       sprintf(sz, "  -%9.9s:", szElem[i-1]); PrintSz(sz);
       total2 = 0.0;
       for (j = 1; j < cSign; j += 4)
         total2 += power1[i-1+j];
-      sprintf(sz, is.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total2,
+      sprintf(sz, us.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total2,
         total1 > 0.0 ? total2/total1*100.0 : 0.0); PrintSz(sz);
     } else if (i == 6) {
       AnsiColor(kDefault);
-      sprintf(sz, "  -      Mode  Power  %sPercent", is.fSeconds ? " " : "");
+      sprintf(sz, "  -      Mode  Power  %sPercent", us.fSeconds ? " " : "");
       PrintSz(sz);
     } else if (i >= 7 && i <= 9) {
       AnsiColor(kModeA(i-7));
@@ -1407,14 +1407,14 @@ void ChartInfluence(void)
       total2 = 0.0;
       for (j = 1; j < cSign; j += 3)
         total2 += power1[i-7+j];
-      sprintf(sz, is.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total2,
+      sprintf(sz, us.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total2,
         total1 > 0.0 ? total2/total1*100.0 : 0.0); PrintSz(sz);
     }
     PrintL();
   }
   AnsiColor(kDefault);
   sprintf(sz, "      Total:%7.1f      / 100.0%s%%\n",
-    total1, is.fSeconds ? "0" : ""); PrintSz(sz);
+    total1, us.fSeconds ? "0" : ""); PrintSz(sz);
 
   // For each house, determine its power based on the power of the objects.
 
@@ -1452,23 +1452,23 @@ void ChartInfluence(void)
   SortRank(power2, rank1, cSign, fFalse);
   sprintf(sz,
     "\nHouse:  Power Rank  %sPercent  -    Element  Power  %sPercent\n",
-    is.fSeconds ? " " : "", is.fSeconds ? " " : ""); PrintSz(sz);
+    us.fSeconds ? " " : "", us.fSeconds ? " " : ""); PrintSz(sz);
   for (i = 1; i <= cSign; i++) {
     AnsiColor(kSignA(i));
     sprintf(sz, "%3d%s: ", i, szSuffix[i]); PrintSz(sz);
     sprintf(sz, "%6.1f (%2d) /", power2[i], rank1[i]); PrintSz(sz);
-    sprintf(sz, is.fSeconds ? "%7.2f%%" : "%6.1f%%",
+    sprintf(sz, us.fSeconds ? "%7.2f%%" : "%6.1f%%",
       total2 > 0.0 ? power2[i]/total2*100.0 : 0.0); PrintSz(sz);
     if (i <= 4) {
       sprintf(sz, "  - %9.9s:", szElemHouse[i-1]); PrintSz(sz);
       total1 = 0.0;
       for (j = 1; j < cSign; j += 4)
         total1 += power2[i-1+j];
-      sprintf(sz, is.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total1,
+      sprintf(sz, us.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total1,
         total1 > 0.0 ? total1/total2*100.0 : 0.0); PrintSz(sz);
     } else if (i == 6) {
       AnsiColor(kDefault);
-      sprintf(sz, "  -       Mode  Power  %sPercent", is.fSeconds ? " " : "");
+      sprintf(sz, "  -       Mode  Power  %sPercent", us.fSeconds ? " " : "");
       PrintSz(sz);
     } else if (i >= 7 && i <= 9) {
       AnsiColor(kModeA(i-7));
@@ -1476,14 +1476,14 @@ void ChartInfluence(void)
       total1 = 0.0;
       for (j = 1; j < cSign; j += 3)
         total1 += power2[i-7+j];
-      sprintf(sz, is.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total1,
+      sprintf(sz, us.fSeconds ? "%7.1f /%7.2f%%" : "%7.1f /%6.1f%%", total1,
         total1 > 0.0 ? total1/total2*100.0 : 0.0); PrintSz(sz);
     }
     PrintL();
   }
   AnsiColor(kDefault);
   sprintf(sz, "Total:%7.1f      / 100.0%s%%\n",
-    total2, is.fSeconds ? "0" : ""); PrintSz(sz);
+    total2, us.fSeconds ? "0" : ""); PrintSz(sz);
 }
 
 /* intrpret.cpp */

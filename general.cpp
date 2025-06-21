@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: general.cpp
+** Astrolog (Version 7.80) File: general.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -763,14 +763,20 @@ void AddTime(CI *pci, int mode, int toadd)
   int d, h;
   real m;
 
-  if (!FBetween(mode, 1, 9))
-    mode = 4;
+  if (mode < 1 || mode == iAnimNow)
+    mode = iAnimDay;
 
   h = (int)RFloor(pci->tim);
   m = RFract(pci->tim)*60.0;
   if (m < 60.0 && m + 1.0/rLarge >= 60.0)  // Avoid roundoff error.
     m = 60.0;
-  if (mode == 1)
+  if (mode == 13)
+    m += 1.0/60000.0*(real)toadd;          // Add milliseconds.
+  else if (mode == 12)
+    m += 1.0/6000.0*(real)toadd;           // Add 1/100th seconds.
+  else if (mode == 11)
+    m += 1.0/600.0*(real)toadd;            // Add 1/10th seconds.
+  else if (mode == 1)
     m += 1.0/60.0*(real)toadd;             // Add seconds.
   else if (mode == 2)
     m += (real)toadd;                      // Add minutes.
@@ -826,7 +832,11 @@ void AddTime(CI *pci, int mode, int toadd)
     pci->yea += 100 * toadd;     // Add centuries.
   else if (mode == 9)
     pci->yea += 1000 * toadd;    // Add millenia.
+
   pci->tim = (real)h + m/60.0;   // Recalibrate hour time.
+  d = DayInMonth(pci->mon, pci->yea);
+  if (pci->day > d)              // Truncate day in new month if illegal.
+    pci->day = d;
 }
 
 
@@ -842,8 +852,7 @@ real GetOffsetCI(CONST CI *pci)
     zon = pci->lon / 15.0;
   else if (zon == zonLAT)
     zon = pci->lon / 15.0 - SwissLatLmt(is.JD);
-  if (dst == dstAuto)
-    dst = (real)is.fDst;
+  dst = DstReal(dst);
   return zon - dst;
 }
 
@@ -1577,11 +1586,13 @@ void PrintZodiac(real deg)
 {
   if (us.fRound) {
     if (us.nDegForm == dfZod)
-      deg = Mod(deg + (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0));
+      deg = Mod(deg +
+        VSeconds(rRound/60.0, rRound/3600.0, rRound/3600.0/1000.0));
     else if (us.nDegForm == dfHM)
-      deg = Mod(deg + (is.fSeconds ? rRound/4.0/60.0 : rRound/4.0));
+      deg = Mod(deg +
+        VSeconds(rRound/4.0, rRound/4.0/60.0, rRound/4.0/60.0/1000.0));
   }
-  AnsiColor(kSignA((int)(deg / 30.0) + 1));
+  AnsiColor(kSignA(SFromZ(deg)));
   PrintSz(SzZodiac(deg));
   AnsiColor(kDefault);
 }
@@ -1599,9 +1610,27 @@ char ChDeg()
     chDeg = (us.nCharset == ccIBM ? chDegI : chDegL);
   else
 #endif
+#ifdef WIN
+    if (!us.fGraphics && gs.nFontTxt > 0)
+      chDeg = chDegL;
+  else
+#endif
     // Otherwise degree depends on the current output codepage environment.
     chDeg = (us.fAnsiChar > 1 ? chDegT : chDegC);
   return chDeg;
+}
+
+
+// Return a letter representing retrogradation status. That means "R" for
+// retrograde, or potentially "S" for stationary if the velocity is near 0.
+
+char ChRet(real dir)
+{
+  if (RAbs(dir) < us.rStation)
+    return 'S';
+  if (dir < 0.0)
+    return chRet;
+  return ' ';
 }
 
 
@@ -1610,7 +1639,7 @@ char ChDeg()
 
 char *SzZodiac(real deg)
 {
-  static char szZod[12];
+  static char szZod[16];
   int sign, d, m;
   real s;
 
@@ -1622,9 +1651,13 @@ char *SzZodiac(real deg)
     d = (int)deg - sign*30;
     m = (int)(RFract(deg)*60.0);
     sprintf(szZod, "%2d%.3s%02d", d, szSignName[sign + 1], m);
-    if (is.fSeconds) {
+    if (us.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       sprintf(&szZod[7], "'%02d\"", (int)s);
+      if (us.fSecond1K) {
+        s = RFract(s)*1000.0;
+        sprintf(&szZod[10], ".%03d\"", (int)s);
+      }
     }
     break;
 
@@ -1634,9 +1667,13 @@ char *SzZodiac(real deg)
     d = (int)deg / 15;
     m = (int)((deg - (real)d*15.0)*4.0);
     sprintf(szZod, "%2dh,%02dm", d, m);
-    if (is.fSeconds) {
+    if (us.fSeconds) {
       s = RFract(deg)*4.0; s = RFract(s)*60.0;
       sprintf(&szZod[7], ",%02ds", (int)s);
+      if (us.fSecond1K) {
+        s = RFract(s)*1000.0;
+        sprintf(&szZod[10], ".%03ds", (int)s);
+      }
     }
     break;
 
@@ -1647,12 +1684,12 @@ char *SzZodiac(real deg)
     if (!us.fExpOff && FSzSet(us.szExpDegree)) {
       ExpSetR(iLetterZ, deg);
       deg = RParseExpression(us.szExpDegree);
-      sprintf(szZod, "%11.11f", deg);
-      szZod[is.fSeconds ? 11 : 7] = chNull;
+      sprintf(szZod, "%15.15f", deg);
+      szZod[VSeconds(7, 11, 15)] = chNull;
       break;
     }
 #endif
-    sprintf(szZod, is.fSeconds ? "%11.7f" : "%7.3f", deg);
+    sprintf(szZod, VSeconds("%7.3f", "%11.7f", "%15.11f"), deg);
     break;
 
   default:
@@ -1660,11 +1697,18 @@ char *SzZodiac(real deg)
 
     deg = Mod(deg + rSmall);
     sign = (int)(deg / (rDegMax/27.0));
-    d = (int)((deg - (real)sign*(rDegMax/27.0)) * 40.0 / (rDegMax/27.0));
+    d = (int)((deg - (real)sign*(rDegMax/27.0))*40.0 / (rDegMax/27.0));
     sprintf(szZod, "%2d%.4s%d", sign+1, szNakshatra[sign + 1], d/10 + 1);
-    if (is.fSeconds)
-      sprintf(&szZod[7], ".%d%s", d%10,
-        szSignAbbrev[Mod12((int)(deg/(rDegMax/27.0/4.0))+1)]);
+    if (us.fSeconds) {
+      if (!us.fSecond1K) {
+        sprintf(&szZod[7], ".%d%s", d%10,
+          szSignAbbrev[Mod12((int)(deg/(rDegMax/27.0/4.0))+1)]);
+      } else {
+        d = (int)((deg - (real)sign*(rDegMax/27.0))*40000.0 / (rDegMax/27.0));
+        sprintf(&szZod[7], ".%04d%.3s", d%10000,
+          szSignName[Mod12((int)(deg/(rDegMax/27.0/4.0))+1)]);
+      }
+    }
     break;
   }
   return szZod;
@@ -1684,20 +1728,27 @@ char *SzAltitude(real deg)
   deg = RAbs(deg);
   if (us.nDegForm != df360) {
     if (us.fRound)
-      deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
+      deg = Mod(deg +
+        VSeconds(rRound/60.0, rRound/3600.0, rRound/3600.0/1000.0));
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
     sprintf(szAlt, "%c%2d%c%02d'", f ? '-' : '+', d, ChDeg(), m);
-    if (is.fSeconds) {
+    if (us.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       sprintf(&szAlt[7], "%02d\"", (int)s);
+      if (us.fSecond1K) {
+        s = RFract(s)*1000.0;
+        sprintf(&szAlt[9], ".%03d\"", (int)s);
+      }
     }
   } else {
     s = RAbs(deg);
-    if (!is.fSeconds)
+    if (!us.fSeconds)
       sprintf(szAlt, s < 10.0 ? "%c%1.4f" : "%c%2.3f", f ? '-' : '+', s);
-    else
+    else if (!us.fSecond1K)
       sprintf(szAlt, s < 10.0 ? "%c%1.7f" : "%c%2.6f", f ? '-' : '+', s);
+    else
+      sprintf(szAlt, s < 10.0 ? "%c%1.11f" : "%c%2.10f", f ? '-' : '+', s);
   }
   return szAlt;
 }
@@ -1715,19 +1766,26 @@ char *SzDegree(real deg)
   deg = RAbs(deg);
   if (us.nDegForm != df360) {
     if (us.fRound)
-      deg += (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0);
+      deg = Mod(deg +
+        VSeconds(rRound/60.0, rRound/3600.0, rRound/3600.0/1000.0));
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
     sprintf(szPos, "%3d%c%02d'", d, ChDeg(), m);
-    if (is.fSeconds) {
+    if (us.fSeconds) {
       s = RFract(deg)*60.0; s = RFract(s)*60.0;
       sprintf(&szPos[7], "%02d\"", (int)s);
+      if (us.fSecond1K) {
+        s = RFract(s)*1000.0;
+        sprintf(&szPos[9], ".%03d\"", (int)s);
+      }
     }
   } else {
-    if (!is.fSeconds)
+    if (!us.fSeconds)
       sprintf(szPos, "%7.3f", deg);
-    else
+    else if (!us.fSecond1K)
       sprintf(szPos, "%10.6f", deg);
+    else
+      sprintf(szPos, "%14.10f", deg);
   }
   return szPos;
 }
@@ -1744,6 +1802,9 @@ char *SzDegree2(real deg)
 
   deg = RAbs(deg);
   if (us.nDegForm != df360) {
+    if (us.fRound)
+      deg = Mod(deg +
+        VSeconds(rRound/60.0, rRound/3600.0, rRound/3600.0/1000.0));
     d = (int)deg;
     m = (int)(RFract(deg)*60.0);
     sprintf(szPos, "%d%c%02d'", d, ChDeg(), m);
@@ -1752,12 +1813,20 @@ char *SzDegree2(real deg)
       for (pch = szPos; *pch; pch++)
         ;
       sprintf(pch, "%02d\"", (int)s);
+      if (us.fSecond1K) {
+        while (*pch)
+          pch++;
+        s = RFract(s)*1000.0;
+        sprintf(pch-1, ".%03d\"", (int)s);
+      }
     }
   } else {
     if (!us.fSeconds)
       sprintf(szPos, "%.3f", deg);
-    else
+    else if (!us.fSecond1K)
       sprintf(szPos, "%.6f", deg);
+    else
+      sprintf(szPos, "%.10f", deg);
   }
   return szPos;
 }
@@ -1821,9 +1890,9 @@ char *SzDate(int mon, int day, int yea, int nFormat)
 // (and second) quantity. This is formatted in 24 hour or am/pm time based on
 // whether the "European" time format flag is set or not.
 
-char *SzTime(int hr, int min, int sec)
+char *SzTimeR(int hr, int min, int sec, real rSec)
 {
-  static char szTim[11];
+  static char szTim[16];
 
   while (min >= 60) {
     min -= 60;
@@ -1842,14 +1911,19 @@ char *SzTime(int hr, int min, int sec)
   if (us.fEuroTime) {
     if (sec < 0)
       sprintf(szTim, "%2d:%02d", hr, min);
-    else
+    else if (rSec < 0.0)
       sprintf(szTim, "%2d:%02d:%02d", hr, min, sec);
+    else
+      sprintf(szTim, "%2d:%02d:%06.3f", hr, min, rSec);
   } else {
     if (sec < 0)
       sprintf(szTim, "%2d:%02d%cm", Mod12(hr), min, hr < 12 ? 'a' : 'p');
-    else
+    else if (rSec < 0.0)
       sprintf(szTim, "%2d:%02d:%02d%cm",
         Mod12(hr), min, sec, hr < 12 ? 'a' : 'p');
+    else
+      sprintf(szTim, "%2d:%02d:%06.3f%cm",
+        Mod12(hr), min, rSec, hr < 12 ? 'a' : 'p');
   }
   return szTim;
 }
@@ -1860,8 +1934,9 @@ char *SzTime(int hr, int min, int sec)
 char *SzTim(real tim)
 {
   tim += rSmall;
-  return SzTime(NFloor(tim), (int)(RFract(RAbs(tim))*60.0),
-    is.fSeconds ? (int)(RFract(RAbs(tim))*3600.0) % 60 : -1);
+  return SzTimeR(NFloor(tim), (int)(RFract(RAbs(tim))*60.0),
+    us.fSeconds ? (int)(RFract(RAbs(tim))*3600.0) % 60 : -1,
+    f1K ? RMod(RFract(RAbs(tim))*3600.0, 60.0) : -1.0);
 }
 
 
@@ -1876,12 +1951,43 @@ char *SzZone(real zon)
     sprintf(szZon, "LMT");
   else if (zon == zonLAT)
     sprintf(szZon, "LAT");
-  else if (!is.fSeconds && RFract(RAbs(zon)) < rSmall)
+  else if (!us.fSeconds && RFract(RAbs(zon)) < rSmall)
     sprintf(szZon, "%d%c", (int)RAbs(zon), zon < 0.0 ? 'E' : 'W');
   else
     sprintf(szZon, "%d:%02d%c", (int)RAbs(zon), (int)(RFract(RAbs(zon))*60.0+
       rRound/60.0), zon < 0.0 ? 'E' : 'W');
   return szZon;
+}
+
+
+// Return a string containing the given offset from UTC, given as a time zone
+// and Daylight Time offsets. This may display Daylight Time and time zone
+// separately, or display one combined value for the overall offset.
+
+char *SzOffset(real zon, real dst, real lon)
+{
+  static char szOff[15], *pch;
+  real off;
+  int min;
+  flag fLMT;
+
+  if (!us.fOffsetOnly)
+    sprintf(szOff, "%cT %s%s", ChDst(Dst), !f1K ? "Zone " : "", SzZone(Zon));
+  else {
+    fLMT = (zon == zonLMT || zon == zonLAT);
+    if (dst == dstAuto)
+      dst = (real)is.fDst;
+    off = (!fLMT ? zon - dst : lon - dst*15.0);
+    min = (int)(RFract(RAbs(off))*60.0);
+    sprintf(szOff, "Zone %c%d%c", !fLMT ? 'h' : 'm', NAbs((int)off),
+      off > 0.0 ? 'w' : 'e');
+    if (min != 0) {
+      for (pch = szOff; *pch; pch++)
+        ;
+      sprintf(pch, "%02d", min);
+    }
+  }
+  return szOff;
 }
 
 
@@ -1891,30 +1997,32 @@ char *SzZone(real zon)
 
 char *SzLocation(real lon, real lat)
 {
-  static char szLoc[21];
-  int i, j, i2, j2;
+  static char szLoc[25];
+  int i, j, i2, j2, i3, j3;
+  real rT;
   char chDeg, chLon, chLat;
 
-  if (us.fRound) {
-    lon = RSgn(lon) *
-      (RAbs(lon) + (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0));
-    lat = RSgn(lat) *
-      (RAbs(lat) + (is.fSeconds ? rRound/60.0/60.0 : rRound/60.0));
-  } else {
-    lon = RSgn(lon) * (RAbs(lon) + rSmall);
-    lat = RSgn(lat) * (RAbs(lat) + rSmall);
-  }
+  if (us.fRound)
+    rT = VSeconds(rRound/60.0, rRound/3600.0, rRound/3600.0/1000.0);
+  else
+    rT = rSmall;
+  lon = RSgn(lon) * (RAbs(lon) + rT);
+  lat = RSgn(lat) * (RAbs(lat) + rT);
   i = (int)(RFract(RAbs(lon))*60.0);
   j = (int)(RFract(RAbs(lat))*60.0);
-  if (is.fSeconds) {
+  if (us.fSeconds) {
     i2 = (int)(RFract(RAbs(lon))*3600.0) % 60;
     j2 = (int)(RFract(RAbs(lat))*3600.0) % 60;
+    if (us.fSecond1K) {
+      i3 = (int)(RFract(RAbs(lon))*3600.0*1000.0) % 1000;
+      j3 = (int)(RFract(RAbs(lat))*3600.0*1000.0) % 1000;
+    }
   }
   chLon = (lon < 0.0 ? 'E' : 'W');
   chLat = (lat < 0.0 ? 'S' : 'N');
   if (us.fAnsiChar == 4) {
     // Format like "47N36,122W19", as seen in AAF files.
-    if (!is.fSeconds)
+    if (!us.fSeconds)
       sprintf(szLoc, "%.0f%c%02d,%.0f%c%02d",
         RFloor(RAbs(lat)), chLat, j, RFloor(RAbs(lon)), chLon, i);
     else
@@ -1925,16 +2033,20 @@ char *SzLocation(real lon, real lat)
   if (us.fAnsiChar != 3) {
     chDeg = ChDeg();
     if (us.nDegForm != df360) {
-      if (!is.fSeconds)
+      if (!us.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%c%3.0f%c%02d%c",
           RFloor(RAbs(lon)), chDeg, i, chLon,
           RFloor(RAbs(lat)), chDeg, j, chLat);
-      else
+      else if (!us.fSecond1K)
         sprintf(szLoc, "%3.0f%c%02d'%02d%c%3.0f%c%02d'%02d%c",
           RFloor(RAbs(lon)), chDeg, i, i2, chLon,
           RFloor(RAbs(lat)), chDeg, j, j2, chLat);
+      else
+        sprintf(szLoc, "%3.0f%c%02d'%02d.%03d%c%3.0f%c%02d'%02d.%03d%c",
+          RFloor(RAbs(lon)), chDeg, i, i2, i3, chLon,
+          RFloor(RAbs(lat)), chDeg, j, j2, j3, chLat);
     } else {
-      if (!is.fSeconds)
+      if (!us.fSeconds)
         sprintf(szLoc, "%6.2f%c%6.2f%c",
           RAbs(lon), chLon, RAbs(lat), chLat);
       else
@@ -1943,16 +2055,20 @@ char *SzLocation(real lon, real lat)
     }
   } else {
     if (us.nDegForm != df360) {
-      if (!is.fSeconds)
+      if (!us.fSeconds)
         sprintf(szLoc, "%3.0f%c%02d%3.0f%c%02d",
           RFloor(RAbs(lon)), chLon, i,
           RFloor(RAbs(lat)), chLat, j);
-      else
+      else if (!us.fSecond1K)
         sprintf(szLoc, "%3.0f%c%02d'%02d%3.0f%c%02d'%02d",
           RFloor(RAbs(lon)), chLon, i, i2,
           RFloor(RAbs(lat)), chLat, j, j2);
+      else
+        sprintf(szLoc, "%3.0f%c%02d'%02d.%03d%3.0f%c%02d'%02d.%03d",
+          RFloor(RAbs(lon)), chLon, i, i2, i3,
+          RFloor(RAbs(lat)), chLat, j, j2, j3);
     } else {
-      if (!is.fSeconds)
+      if (!us.fSeconds)
         sprintf(szLoc, "%5.1f%c%5.1f%c",
           RAbs(lon), chLon, RAbs(lat), chLat);
       else
@@ -2142,7 +2258,7 @@ flag FAppendCIList(CONST CI *pci)
   // Extend the size of the chart list allocation if necessary.
   if (is.cci >= is.cciAlloc) {
     cciAlloc = is.cciAlloc + 500;
-    pciNew = (CI *)RgAllocate(cciAlloc, CI, "chart list");
+    pciNew = RgAllocate(cciAlloc, CI, "chart list");
     if (pciNew == NULL)
       return fFalse;
     if (is.rgci != NULL) {
@@ -2506,6 +2622,201 @@ wchar WchFromChIBM(uchar ch)
 }
 
 
+// Convert a Unicode character to low-Ascii if possible, by translating to the
+// equivalent letter without an accent or other diacritical mark.
+
+uchar ChLowAscii(wchar wch)
+{
+  if (FBetween(wch, 0, 127))
+    return (uchar)wch;
+  // This translation table originally public domain code by Alois Treindl.
+  switch (wch) {
+  case 0x00e1: return 'a';  // Latin Small Letter A with acute
+  case 0x00c1: return 'A';  // Latin Capital Letter A with acute
+  case 0x00e2: return 'a';  // Latin Small Letter A with circumflex
+  case 0x00c2: return 'A';  // Latin Capital Letter A with circumflex
+  case 0x00e0: return 'a';  // Latin Small Letter A with grave
+  case 0x00c0: return 'A';  // Latin Capital Letter A with grave
+  case 0x00e4: return 'a';  // Latin Small Letter A with umlaut
+  case 0x00c4: return 'A';  // Latin Capital Letter A with umlaut
+  case 0x00e5: return 'a';  // Latin Small Letter A with ring above
+  case 0x00c5: return 'A';  // Latin Capital Letter A with ring above
+  case 0x00e3: return 'a';  // Latin Small Letter A with tilde
+  case 0x00c3: return 'A';  // Latin Capital Letter A with tilde
+  case 0x00e6: return 'a';  // Latin Small Letter AE
+  case 0x00c6: return 'A';  // Latin Capital Letter AE
+  case 0x0101: return 'a';  // Latin Small Letter A with macron
+  case 0x0100: return 'A';  // Latin Capital Letter A with macron
+  case 0x0103: return 'a';  // Latin Small Letter A with breve
+  case 0x0102: return 'A';  // Latin Capital Letter A with breve
+  case 0x0105: return 'a';  // Latin Small Letter A with ogonek
+  case 0x0104: return 'A';  // Latin Capital Letter A with ogonek
+  case 0x00c7: return 'C';  // Latin Capital Letter C with cedilla
+  case 0x00e7: return 'c';  // Latin Small Letter C with cedilla
+  case 0x0106: return 'C';  // Latin Capital Letter C with acute
+  case 0x0107: return 'c';  // Latin Small Letter C with acute
+  case 0x0108: return 'C';  // Latin Capital Letter C with circumflex
+  case 0x0109: return 'c';  // Latin Small Letter C with circumflex
+  case 0x010c: return 'C';  // Latin Capital Letter C with caron
+  case 0x010d: return 'c';  // Latin Small Letter C with caron
+  case 0x010e: return 'D';  // Latin Capital Letter D with caron
+  case 0x010f: return 'd';  // Latin Small Letter D with caron
+  case 0x0110: return 'D';  // Latin Capital Letter D with stroke
+  case 0x0111: return 'd';  // Latin Small Letter D with stroke
+  case 0x00e9: return 'e';  // Latin Small Letter E with acute
+  case 0x00c9: return 'E';  // Latin Capital Letter E with acute
+  case 0x00ea: return 'e';  // Latin Small Letter E with circumflex
+  case 0x00ca: return 'E';  // Latin Capital Letter E with circumflex
+  case 0x00e8: return 'e';  // Latin Small Letter E with grave
+  case 0x00c8: return 'E';  // Latin Capital Letter E with grave
+  case 0x00eb: return 'e';  // Latin Small Letter E with umlaut
+  case 0x00cb: return 'E';  // Latin Capital Letter E with umlaut
+  case 0x0113: return 'e';  // Latin Small Letter E with macron
+  case 0x0112: return 'E';  // Latin Capital Letter E with macron
+  case 0x0115: return 'e';  // Latin Small Letter E with breve
+  case 0x0114: return 'E';  // Latin Capital Letter E with breve
+  case 0x0119: return 'e';  // Latin Small Letter E with ogonek
+  case 0x0118: return 'E';  // Latin Capital Letter E with ogonek
+  case 0x0117: return 'e';  // Latin Small Letter E with dot above
+  case 0x0116: return 'E';  // Latin Capital Letter E with dot above
+  case 0x011b: return 'e';  // Latin Small Letter E with caron
+  case 0x011a: return 'E';  // Latin Capital Letter E with caron
+  case 0x011c: return 'G';  // Latin Capital Letter G with circumflex
+  case 0x011d: return 'g';  // Latin Small Letter G with circumflex
+  case 0x011e: return 'G';  // Latin Capital Letter G with breve
+  case 0x011f: return 'g';  // Latin Small Letter G with breve
+  case 0x0120: return 'G';  // Latin Capital Letter G with dot above
+  case 0x0121: return 'g';  // Latin Small Letter G with dot above
+  case 0x0122: return 'G';  // Latin Capital Letter G with cedilla
+  case 0x0123: return 'g';  // Latin Small Letter G with cedilla
+  case 0x0124: return 'H';  // Latin Capital Letter H with circumflex
+  case 0x0125: return 'h';  // Latin Small Letter H with circumflex
+  case 0x0126: return 'H';  // Latin Capital Letter H with stroke
+  case 0x0127: return 'h';  // Latin Small Letter H with stroke
+  case 0x00ed: return 'i';  // Latin Small Letter I with acute
+  case 0x00cd: return 'I';  // Latin Capital Letter I with acute
+  case 0x00ee: return 'i';  // Latin Small Letter I with circumflex
+  case 0x00ce: return 'I';  // Latin Capital Letter I with circumflex
+  case 0x00ec: return 'i';  // Latin Small Letter I with grave
+  case 0x00cc: return 'I';  // Latin Capital Letter I with grave
+  case 0x00ef: return 'i';  // Latin Small Letter I with umlaut
+  case 0x00cf: return 'I';  // Latin Capital Letter I with umlaut
+  case 0x0129: return 'i';  // Latin Small Letter I with tilde
+  case 0x0128: return 'I';  // Latin Capital Letter I with tilde
+  case 0x012b: return 'i';  // Latin Small Letter I with macron
+  case 0x012a: return 'I';  // Latin Capital Letter I with macron
+  case 0x012d: return 'i';  // Latin Small Letter I with breve
+  case 0x012c: return 'I';  // Latin Capital Letter I with breve
+  case 0x012f: return 'i';  // Latin Small Letter I with ogonek
+  case 0x012e: return 'I';  // Latin Capital Letter I with ogonek
+  case 0x0131: return 'i';  // Latin Small Letter dotless I
+  case 0x0130: return 'I';  // Latin Capital Letter I with dot above
+  case 0x0134: return 'J';  // Latin Capital Letter J with circumflex
+  case 0x0135: return 'j';  // Latin Small Letter J with circumflex
+  case 0x0136: return 'K';  // Latin Capital Letter K with cedilla
+  case 0x0137: return 'k';  // Latin Small Letter K with cedilla
+  case 0x0138: return 'k';  // Latin Small Letter Kra
+  case 0x0139: return 'L';  // Latin Capital Letter L with acute
+  case 0x013a: return 'l';  // Latin Small Letter L with acute
+  case 0x013b: return 'L';  // Latin Capital Letter L with cedilla
+  case 0x013c: return 'l';  // Latin Small Letter L with cedilla
+  case 0x013d: return 'L';  // Latin Capital Letter L with caron
+  case 0x013e: return 'l';  // Latin Small Letter L with caron
+  case 0x013f: return 'L';  // Latin Capital Letter L with middle dot
+  case 0x0140: return 'l';  // Latin Small Letter L with middle dot
+  case 0x0141: return 'L';  // Latin Capital Letter L with stroke
+  case 0x0142: return 'l';  // Latin Small Letter L with stroke
+  case 0x00f1: return 'n';  // Latin Small Letter N with tilde
+  case 0x00d1: return 'N';  // Latin Capital Letter N with tilde
+  case 0x0143: return 'N';  // Latin Capital Letter N with acute
+  case 0x0144: return 'n';  // Latin Small Letter N with acute
+  case 0x0145: return 'N';  // Latin Capital Letter N with cedilla
+  case 0x0146: return 'n';  // Latin Small Letter N with cedilla
+  case 0x0147: return 'N';  // Latin Capital Letter N with caron
+  case 0x0148: return 'n';  // Latin Small Letter N with caron
+  case 0x0149: return 'n';  // Latin Small Letter N preceded by apostrophe
+  case 0x014a: return 'N';  // Latin Capital Letter Eng
+  case 0x014b: return 'n';  // Latin Small Letter Eng
+  case 0x00f3: return 'o';  // Latin Small Letter O with acute
+  case 0x00d3: return 'O';  // Latin Capital Letter O with acute
+  case 0x00f4: return 'o';  // Latin Small Letter O with circumflex
+  case 0x00d4: return 'O';  // Latin Capital Letter O with circumflex
+  case 0x00f2: return 'o';  // Latin Small Letter O with grave
+  case 0x00d2: return 'O';  // Latin Capital Letter O with grave
+  case 0x00f6: return 'o';  // Latin Small Letter O with umlaut
+  case 0x00d6: return 'O';  // Latin Capital Letter O with umlaut
+  case 0x00f5: return 'o';  // Latin Small Letter O with tilde
+  case 0x00d5: return 'O';  // Latin Capital Letter O with tilde
+  case 0x00f8: return 'o';  // Latin Small Letter O with stroke
+  case 0x00d8: return 'O';  // Latin Capital Letter O with stroke
+  case 0x0151: return 'o';  // Latin Small Letter O with double acute
+  case 0x0150: return 'O';  // Latin Capital Letter O with double acute
+  case 0x0153: return 'o';  // Latin Small Ligature OE
+  case 0x0152: return 'O';  // Latin Capital Ligature OE
+  case 0x014d: return 'o';  // Latin Small Letter O with macron
+  case 0x014c: return 'O';  // Latin Capital Letter O with macron
+  case 0x014f: return 'o';  // Latin Small Letter O with breve
+  case 0x014e: return 'O';  // Latin Capital Letter O with breve
+  case 0x0154: return 'R';  // Latin Capital Letter R with acute
+  case 0x0155: return 'r';  // Latin Small Letter R with acute
+  case 0x0156: return 'R';  // Latin Capital Letter R with cedilla
+  case 0x0157: return 'r';  // Latin Small Letter R with cedilla
+  case 0x0158: return 'R';  // Latin Capital Letter R with caron
+  case 0x0159: return 'r';  // Latin Small Letter R with caron
+  case 0x015a: return 'S';  // Latin Capital Letter S with acute
+  case 0x015b: return 's';  // Latin Small Letter S with acute
+  case 0x00df: return 's';  // Latin Small Letter sharp S
+  case 0x015c: return 'S';  // Latin Capital Letter S with circumflex
+  case 0x015d: return 's';  // Latin Small Letter S with circumflex
+  case 0x015e: return 'S';  // Latin Capital Letter S with cedilla
+  case 0x015f: return 's';  // Latin Small Letter S with cedilla
+  case 0x0160: return 'S';  // Latin Capital Letter S with caron
+  case 0x0161: return 's';  // Latin Small Letter S with caron
+  case 0x017f: return 's';  // Latin Small Letter long S
+  case 0x0162: return 'T';  // Latin Capital Letter T with cedilla
+  case 0x0163: return 't';  // Latin Small Letter T with cedilla
+  case 0x0164: return 'T';  // Latin Capital Letter T with caron
+  case 0x0165: return 't';  // Latin Small Letter T with caron
+  case 0x0166: return 'T';  // Latin Capital Letter T with stroke
+  case 0x0167: return 't';  // Latin Small Letter T with stroke
+  case 0x00fa: return 'u';  // Latin Small Letter U with acute
+  case 0x00da: return 'U';  // Latin Capital Letter U with acute
+  case 0x00fb: return 'u';  // Latin Small Letter U with circumflex
+  case 0x00db: return 'U';  // Latin Capital Letter U with circumflex
+  case 0x00f9: return 'u';  // Latin Small Letter U with grave
+  case 0x00d9: return 'U';  // Latin Capital Letter U with grave
+  case 0x00fc: return 'u';  // Latin Small Letter U with umlaut
+  case 0x00dc: return 'U';  // Latin Capital Letter U with umlaut
+  case 0x0171: return 'u';  // Latin Small Letter U with double acute
+  case 0x0170: return 'U';  // Latin Capital Letter U with double acute
+  case 0x0169: return 'u';  // Latin Small Letter U with tilde
+  case 0x0168: return 'U';  // Latin Capital Letter U with tilde
+  case 0x016b: return 'u';  // Latin Small Letter U with macron
+  case 0x016a: return 'U';  // Latin Capital Letter U with macron
+  case 0x016d: return 'u';  // Latin Small Letter U with breve
+  case 0x016c: return 'U';  // Latin Capital Letter U with breve
+  case 0x0173: return 'u';  // Latin Small Letter U with ogonek
+  case 0x0172: return 'U';  // Latin Capital Letter U with ogonek
+  case 0x016f: return 'u';  // Latin Small Letter U with ring above
+  case 0x016e: return 'U';  // Latin Capital Letter U with ring above
+  case 0x0174: return 'W';  // Latin Capital Letter W with circumflex
+  case 0x0175: return 'w';  // Latin Small Letter W with circumflex
+  case 0x00ff: return 'y';  // Latin Small Letter Y with umlaut
+  case 0x0178: return 'Y';  // Latin Capital Letter Y with umlaut
+  case 0x0177: return 'y';  // Latin Small Letter Y with circumflex
+  case 0x0176: return 'Y';  // Latin Capital Letter Y with circumflex
+  case 0x0179: return 'Z';  // Latin Capital Letter Z with acute
+  case 0x017a: return 'z';  // Latin Small Letter Z with acute
+  case 0x017b: return 'Z';  // Latin Capital Letter Z with dot above
+  case 0x017c: return 'z';  // Latin Small Letter Z with dot above
+  case 0x017d: return 'Z';  // Latin Capital Letter Z with caron
+  case 0x017e: return 'z';  // Latin Small Letter Z with caron
+  }
+  // If nothing close, only then display character as a "?".
+  return '?';
+}
+
+
 // Convert a Unicode character to a byte in the Windows-1252 codepage.
 
 uchar ChLatinFromWch(wchar wch)
@@ -2517,7 +2828,7 @@ uchar ChLatinFromWch(wchar wch)
   for (i = 0; i < 32; i++)
     if (wch == rgwch1252[i])
       return 128 + i;
-  return (wch < 256 ? wch : '?');
+  return (wch < 256 ? wch : ChLowAscii(wch));
 }
 
 
@@ -2532,7 +2843,7 @@ uchar ChIBMFromWch(wchar wch)
   for (i = 0; i < 128; i++)
     if (wch == rgwch437[i])
       return 128 + i;
-  return (wch < 256 ? wch : '?');
+  return (wch < 256 ? wch : ChLowAscii(wch));
 }
 
 

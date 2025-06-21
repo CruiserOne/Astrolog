@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: xscreen.cpp
+** Astrolog (Version 7.80) File: xscreen.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -268,7 +268,7 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
     }
     hdc = GetDC(hwnd);
     hpen = (HPEN)CreatePen(PS_SOLID, !gs.fThick ? 0 : 2,
-      (COLORREF)rgbbmp[wi.kiPen]);
+      (COLORREF)rgbbmp[gi.kiPen]);
     hpenOld = (HPEN)SelectObject(hdc, hpen);
 
     // Ctrl+click means draw a rectangle. Ctrl+Shift+click does ellipse.
@@ -291,7 +291,7 @@ LRESULT API WndProcWCLI(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
     // A simple click means set a pixel and remember that location.
     } else {
-      SetPixel(hdc, x, y, (COLORREF)rgbbmp[wi.kiPen]);
+      SetPixel(hdc, x, y, (COLORREF)rgbbmp[gi.kiPen]);
       wi.xMouse = x; wi.yMouse = y;
     }
     SelectObject(hdc, hpenOld);
@@ -455,7 +455,7 @@ void Animate(int mode, int toadd)
   }
 
   mode = NAbs(mode);
-  if (mode >= 10) {
+  if (mode == iAnimNow) {
 #ifdef TIME
     // For the continuous chart update to present moment animation mode, go
     // get whatever time it is now.
@@ -497,7 +497,7 @@ LNotNow:
 // This routine exits graphics mode, prompts the user for a set of command
 // switches, processes them, and returns to the previous graphics with the
 // new settings in effect, allowing one to change most any setting without
-// having to lose their graphics state or fall way back to a -Q loop.
+// having to lose their graphics state or fall back to a -Q loop.
 
 void CommandLineX()
 {
@@ -603,7 +603,7 @@ void InteractX()
   KeySym keysym;
 #endif
 #ifdef WCLI
-  HBITMAP hbmp, hbmpOld;
+  HBITMAP hbmpOld;
   HDC hdcWin;
   PAINTSTRUCT ps;
   MSG msg;
@@ -612,7 +612,6 @@ void InteractX()
   int fAutosize = fFalse, fResize = fFalse, fRedraw = fTrue, fNoChart = fFalse,
     fBreak = fFalse, fCast = fFalse, mousex = -1, mousey = -1,
     buttonx = -1, buttony = -1, length, key, i;
-  KI coldrw = gi.kiLite;
 
   neg(gs.nAnim);
   while (!fBreak) {
@@ -747,8 +746,8 @@ void InteractX()
       ClearB((pbyte)&ps, sizeof(PAINTSTRUCT));
       hdcWin = BeginPaint(wi.hwnd, &ps);
       wi.hdc = CreateCompatibleDC(hdcWin);
-      hbmp = CreateCompatibleBitmap(hdcWin, wi.xClient, wi.yClient);
-      hbmpOld = (HBITMAP)SelectObject(wi.hdc, hbmp);
+      wi.hbmp = CreateCompatibleBitmap(hdcWin, wi.xClient, wi.yClient);
+      hbmpOld = (HBITMAP)SelectObject(wi.hdc, wi.hbmp);
       if (gs.fJetTrail)
         BitBlt(wi.hdc, 0, 0, wi.xClient, wi.yClient, hdcWin, 0, 0, SRCCOPY);
       SetWindowOrg(wi.hdc, 0, 0);
@@ -775,7 +774,7 @@ void InteractX()
       BitBlt(hdcWin, 0, 0, wi.xClient, wi.yClient,
         wi.hdc, 0, 0, SRCCOPY);
       SelectObject(wi.hdc, hbmpOld);
-      DeleteObject(hbmp);
+      DeleteObject(wi.hbmp);
       DeleteDC(wi.hdc);
       EndPaint(wi.hwnd, &ps);
 #endif
@@ -836,7 +835,7 @@ void InteractX()
 
       // Check for user dragging any of the mouse buttons across window.
       case MotionNotify:
-        DrawColor(coldrw);
+        DrawColor(gi.kiPen);
         DrawLine(mousex, mousey, xevent.xbutton.x, xevent.xbutton.y);
         XSync(gi.disp, 0);
         XCopyArea(gi.disp, gi.pmap, gi.wind, gi.gc,
@@ -866,7 +865,6 @@ void InteractX()
             fRedraw = fTrue;
             break;
           default:
-            wi.kiPen = coldrw;
             DispatchMessage(&msg);
           }
         } else {
@@ -884,6 +882,11 @@ void InteractX()
           }
 #endif
           switch (key) {
+          case -1:                    // In case ~XQ returns -1
+            break;
+          case -2:
+            fResize = fCast = fTrue;  // Special ~XQ return value
+            break;
           case ' ':
             fRedraw = fTrue;
             break;
@@ -1096,7 +1099,7 @@ void InteractX()
             break;
 #endif
           case 'N':                        // The continuous update animation.
-            gs.nAnim = gs.nAnim ? 0 : -10;
+            gs.nAnim = gs.nAnim ? 0 : -iAnimNow;
             break;
 
           // These are the nine different "add time to chart" animations.
@@ -1188,22 +1191,22 @@ void InteractX()
           case chDelete:
             fRedraw = fNoChart = fTrue;
             break;
-          case 'z'-'`': coldrw = kBlack;   break;
-          case 'e'-'`': coldrw = kMaroon;  break;
-          case 'f'-'`': coldrw = kDkGreen; break;
-          case 'o'-'`': coldrw = kOrange;  break;
-          case 'n'-'`': coldrw = kDkBlue;  break;
-          case 'u'-'`': coldrw = kPurple;  break;
-          case 'k'-'`': coldrw = kDkCyan;  break;
-          case 'l'-'`': coldrw = kLtGray;  break;
-          case 'd'-'`': coldrw = kDkGray;  break;
-          case 'r'-'`': coldrw = kRed;     break;
-          case 'g'-'`': coldrw = kGreen;   break;
-          case 'y'-'`': coldrw = kYellow;  break;
-          case 'b'-'`': coldrw = kBlue;    break;
-          case 'v'-'`': coldrw = kMagenta; break;  // Ctrl+m is Enter
-          case 'j'-'`': coldrw = kCyan;    break;
-          case 'a'-'`': coldrw = kWhite;   break;
+          case 'z'-'`': gi.kiPen = kBlack;   break;
+          case 'e'-'`': gi.kiPen = kMaroon;  break;
+          case 'f'-'`': gi.kiPen = kDkGreen; break;
+          case 'o'-'`': gi.kiPen = kOrange;  break;
+          case 'n'-'`': gi.kiPen = kDkBlue;  break;
+          case 'u'-'`': gi.kiPen = kPurple;  break;
+          case 'k'-'`': gi.kiPen = kDkCyan;  break;
+          case 'l'-'`': gi.kiPen = kLtGray;  break;
+          case 'd'-'`': gi.kiPen = kDkGray;  break;
+          case 'r'-'`': gi.kiPen = kRed;     break;
+          case 'g'-'`': gi.kiPen = kGreen;   break;
+          case 'y'-'`': gi.kiPen = kYellow;  break;
+          case 'b'-'`': gi.kiPen = kBlue;    break;
+          case 'v'-'`': gi.kiPen = kMagenta; break;  // Ctrl+m is Enter
+          case 'j'-'`': gi.kiPen = kCyan;    break;
+          case 'a'-'`': gi.kiPen = kWhite;   break;
           case chEscape: case chBreak:
             fBreak = fTrue;
             break;
@@ -1213,13 +1216,13 @@ void InteractX()
               gi.nDir = (gi.nDir > 0 ? 1 : -1)*(key-'0');
               break;
             } else if (FBetween(key, 201, 248)) {
-              is.fSzInteract = fTrue;
               if (is.rgszMacro != NULL && is.rgszMacro[key-200]) {
+                is.fSzInteract = fTrue;
                 FProcessCommandLine(is.rgszMacro[key-200]);
+                is.fSzInteract = fFalse;
                 fResize = fCast = fTrue;
+                break;
               }
-              is.fSzInteract = fFalse;
-              break;
             }
             putchar(chBell);    // Any key not bound will sound a beep.
           } // switch
@@ -1261,6 +1264,54 @@ void EndX()
 ** Main Graphics Processing.
 ******************************************************************************
 */
+
+#ifdef SWISS
+// Process an instance of the -YXU command switch.
+
+flag FProcessYXU(CONST char *szLin, CONST char *szLnk, flag fAdd)
+{
+  char *pch;
+
+  // Allocate or extend allocation of star name list.
+  pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLin) + 1 : 0) +
+    CchSz(szLin) + 1, "star name list");
+  if (pch == NULL)
+    return fFalse;
+  if (fAdd)
+    sprintf(pch, "%s;%s", gs.szStarsLin, szLin);
+  else
+    sprintf(pch, "%s", szLin);
+  DeallocatePIf(gs.szStarsLin);
+  gs.szStarsLin = pch;
+
+  // Allocate or extend allocation of star link list.
+  pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLnk) + 1 : 0) +
+    CchSz(szLnk) + 2, "star link list");
+  if (pch == NULL)
+    return fFalse;
+  if (fAdd)
+    sprintf(pch, "%s;%s", gs.szStarsLnk, szLnk);
+  else
+    sprintf(pch, "%s", szLnk);
+  DeallocatePIf(gs.szStarsLnk);
+  gs.szStarsLnk = pch;
+
+  // Count total number of star names present, and reserve that many slots.
+  gi.cStarsLin = *gs.szStarsLin != chNull;
+  for (pch = gs.szStarsLin; *pch; pch++)
+    if (*pch == chSep || *pch == chSep2)
+      gi.cStarsLin++;
+  if (gi.rges != NULL) {
+    DeallocateP(gi.rges);
+    gi.rges = NULL;
+  }
+  gi.rges = RgAllocate(gi.cStarsLin, ES, "extra stars");
+  if (gi.rges == NULL)
+    gi.cStarsLin = 0;
+  return fTrue;
+}
+#endif
+
 
 // Process one command line switch passed to the program dealing with the
 // graphics features. This is just like the processing of each switch in the
@@ -1466,6 +1517,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
     break;
 
   case 'x':
+    if (ch1 == '0') {
+      SwitchF(gs.fAntialias);
+      break;
+    }
     SwitchF(gs.fThick);
     break;
 
@@ -1559,6 +1614,10 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 #endif
 
   case 'v':
+    if (ch1 == '0') {
+      SwitchF(gs.fDoSidebar);
+      break;
+    }
     if (FErrorArgc("Xv", argc, 1))
       return tcError;
     i = NFromSz(argv[1]);
@@ -1665,6 +1724,13 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
 #endif
 
 #ifdef ISG
+  case 'k':
+    if (FErrorArgc("Xk", argc, 1))
+      return tcError;
+    gi.kiPen = NParseSz(argv[1], pmColor);
+    darg++;
+    break;
+
   case 'n':
     if (ch1 == 'p') {
       SwitchF(gi.fPause);
@@ -1683,9 +1749,9 @@ int NProcessSwitchesX(int argc, char **argv, int pos,
       darg++;
     else
       i = 10;
-    if (FErrorValN("Xn", !FBetween(i, 1, 10), i, 0))
+    if (FErrorValN("Xn", !FBetween(i, 1, 13), i, 0))
       return tcError;
-    gs.nAnim = fAnd ? -i : i;
+    gs.nAnim = (fOr || fNot ? i : -i);
     break;
 
   case 'N':
@@ -1711,10 +1777,13 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
 {
   int darg = 0, i, j;
   real rT;
-  char ch1, *pch = NULL;
+  char ch1;
 #ifdef SWISS
   flag fAdd;
+#ifdef CONSTEL
+  CONST char **ppch;
 #endif
+#endif // SWISS
 
   ch1 = argv[0][pos+1];
   switch (argv[0][pos]) {
@@ -1928,46 +1997,23 @@ int NProcessSwitchesRareX(int argc, char **argv, int pos,
 
 #ifdef SWISS
   case 'U':
-    if (FErrorArgc("YXU", argc, 2))
-      return tcError;
-    fAdd = (ch1 == '0' && FSzSet(gs.szStarsLin) && FSzSet(gs.szStarsLnk));
-    // Allocate or extend allocation of star name list.
-    pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLin) + 1 : 0) +
-      CchSz(argv[1]) + 1, "star name list");
-    if (pch == NULL)
-      return tcError;
-    if (fAdd)
-      sprintf(pch, "%s;%s", gs.szStarsLin, argv[1]);
-    else
-      sprintf(pch, "%s", argv[1]);
-    DeallocatePIf(gs.szStarsLin);
-    gs.szStarsLin = pch;
-    // Allocate or extend allocation of star link list.
-    pch = (char *)PAllocate((fAdd ? CchSz(gs.szStarsLnk) + 1 : 0) +
-      CchSz(argv[2]) + 2, "star link list");
-    if (pch == NULL)
-      return tcError;
-    if (fAdd)
-      sprintf(pch, "%s;%s", gs.szStarsLnk, argv[2]);
-    else
-      sprintf(pch, "%s", argv[2]);
-    DeallocatePIf(gs.szStarsLnk);
-    gs.szStarsLnk = pch;
-    // Count total number of star names present, and reserve that many slots.
-    gi.cStarsLin = *gs.szStarsLin != chNull;
-    for (pch = gs.szStarsLin; *pch; pch++)
-      if (*pch == chSep || *pch == chSep2)
-        gi.cStarsLin++;
-    if (gi.rges != NULL) {
-      DeallocateP(gi.rges);
-      gi.rges = NULL;
-    }
-    gi.rges = (ES *)PAllocate(gi.cStarsLin * sizeof(ES), "extra stars");
-    if (gi.rges == NULL)
-      gi.cStarsLin = 0;
-    darg += 2;
-    break;
+    if (ch1 != '1') {
+      if (FErrorArgc("YXU", argc, 2))
+        return tcError;
+      fAdd = (ch1 == '0' && FSzSet(gs.szStarsLin) && FSzSet(gs.szStarsLnk));
+      if (!FProcessYXU(argv[1], argv[2], fAdd))
+        return tcError;
+      darg += 2;
+    } else {
+#ifdef CONSTEL
+      for (ppch = szDrawConstelLine; *ppch != NULL; ppch += 2) {
+        if (!FProcessYXU(ppch[0], ppch[1], ppch != szDrawConstelLine))
+          return tcError;
+      }
 #endif
+    }
+    break;
+#endif // SWISS
 
   case 'f':
     if (FErrorArgc("YXf", argc, 1))

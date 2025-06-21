@@ -84,7 +84,7 @@ BEGIN
             MENUITEM "Save Chart &List...\tCtrl++", cmdSaveList
             MENUITEM SEPARATOR
             MENUITEM "Save Chart &Exchange...\tCtrl+Alt+p", cmdSaveAAF
-            MENUITEM "Save Chart &Quick*Chart...\tCtrl+Alt+q", cmdSaveQuick
+            MENUITEM "Save Chart &Quick*Chart...\tCtrl+Alt+k", cmdSaveQuick
         END
         MENUITEM SEPARATOR
         MENUITEM "Export Chart &Text Output...\tCtrl+5", cmdSaveText
@@ -97,7 +97,7 @@ BEGIN
         BEGIN
             MENUITEM "&Tile Bitmap\tCtrl+Alt+t",    cmdSaveWallTile
             MENUITEM "&Center Bitmap\tCtrl+Alt+c",  cmdSaveWallCenter
-            MENUITEM "&Stretch Bitmap\tCtrl+Alt+s", cmdSaveWallStretch
+            MENUITEM "&Stretch Bitmap\tCtrl+Alt+h", cmdSaveWallStretch
             MENUITEM "&Fit Bitmap\tCtrl+Alt+i",     cmdSaveWallFit
             MENUITEM "Fi&ll Bitmap\tCtrl+Alt+l",    cmdSaveWallFill
         END
@@ -196,7 +196,7 @@ BEGIN
             MENUITEM "&Hourglass on Redraw\tAlt+u", cmdWinHourglass
             MENUITEM SEPARATOR
             MENUITEM "Ch&art Resizes Window\tAlt+Q", cmdChartResizesWindow
-            MENUITEM "&Window Resizes Chart\tAlt+q", cmdWindowResizesChart
+            MENUITEM "&Window Resizes Chart\tCtrl+Alt+q", cmdWindowResizesChart
             MENUITEM "Si&ze Chart to Window\tB",    cmdSizeChartToWindow
             MENUITEM "&Size Window to Chart\tAlt+U", cmdSizeWindowToChart
             MENUITEM "Size Window &Full Screen\tShift+Tab", cmdSizeWindowFull
@@ -231,6 +231,8 @@ BEGIN
             MENUITEM SEPARATOR
             MENUITEM "&First Chart\tCtrl+Up",       cmdListFirst
             MENUITEM "&Last Chart\tCtrl+Down",      cmdListLast
+            MENUITEM SEPARATOR
+            MENUITEM "Swap Chart #&1 and #2\tCtrl+X", cmdSwap12
         END
         MENUITEM SEPARATOR
         MENUITEM "No &Relationship Chart\tc",   cmdRelNo
@@ -257,7 +259,7 @@ BEGIN
             MENUITEM "&Topocentric\tCtrl+T",        cmdHouse08
             MENUITEM "Alca&bitius\tCtrl+A",         cmdHouse09
             MENUITEM "Kr&usinski\tCtrl+S",          cmdHouse10
-            MENUITEM "A&.P.C.\tCtrl+X",             cmdHouse18
+            MENUITEM "A&.P.C.\tCtrl+L",             cmdHouse18
             MENUITEM "Savard-&A\tCtrl+F",           cmdHouse21
             MENUITEM SEPARATOR
             MENUITEM "Porph&yry\tCtrl+Y",           cmdHouse06
@@ -365,6 +367,9 @@ BEGIN
             MENUITEM SEPARATOR
             MENUITEM "&Decrease\t<",                cmdScaleDecrease
             MENUITEM "&Increase\t>",                cmdScaleIncrease
+            MENUITEM SEPARATOR
+            MENUITEM "D&ecrease Text\tCtrl+,",      cmdTextDecrease
+            MENUITEM "I&ncrease Text\tCtrl+.",      cmdTextIncrease
         END
         POPUP "&Chart Effects"
         BEGIN
@@ -373,20 +378,22 @@ BEGIN
             MENUITEM "Show Info &Sidebar\tAlt+t",   cmdGraphicsSidebar
             MENUITEM SEPARATOR
             MENUITEM "&Thicker Lines\tq",           cmdGraphicsThick
+            MENUITEM "&Antialias Lines\tAlt+q",     cmdGraphicsAntialias
             MENUITEM "Show Glyph &Labels\tl",       cmdGraphicsLabel
-            MENUITEM "Show Glyphs on &Aspect Lines\tk", cmdGraphicsAspect
+            MENUITEM "Show &Glyphs on Aspect Lines\tk", cmdGraphicsAspect
         END
         POPUP "Map &Effects"
         BEGIN
             MENUITEM "Show &Constellations\tF",     cmdConstellation
             MENUITEM "Show Full &Star List\tCtrl+s", cmdGraphicsAllStar
             MENUITEM "Show E&xoplanets\tCtrl+`",    cmdGraphicsExo
+            MENUITEM "Show Constellation &Lines\tCtrl+Alt+s", cmdGraphicsStarLine
             MENUITEM SEPARATOR
             MENUITEM "Show &House Details\td",      cmdGraphicsHouse
             MENUITEM "Show &Equator\te",            cmdGraphicsEquator
             MENUITEM "Show C&ities\tCtrl+c",        cmdGraphicsCity
             MENUITEM SEPARATOR
-            MENUITEM "Use Detailed World Map\tw",   cmdGraphicsBmp
+            MENUITEM "Use Detailed World &Map\tw",  cmdGraphicsBmp
             MENUITEM "Use Ecliptic &Axis\tCtrl+x",  cmdGraphicsAxis
         END
         POPUP "Map &Orientation"
@@ -450,6 +457,10 @@ BEGIN
             MENUITEM "&Decades\t&&",                cmdAnimateNo7
             MENUITEM "&Centuries\t*",               cmdAnimateNo8
             MENUITEM "Mi&llennia\t(",               cmdAnimateNo9
+            MENUITEM SEPARATOR
+            MENUITEM "1/&10th Seconds\tAlt+!",      cmdAnimateNo_11
+            MENUITEM "1/1&00th Seconds\tAlt+@",     cmdAnimateNo_12
+            MENUITEM "1&/1000th Seconds\tAlt+#",    cmdAnimateNo_13
         END
         POPUP "Jump &Factor"
         BEGIN
@@ -490,7 +501,7 @@ BEGIN
             MENUITEM "Open &Default Settings\tCtrl+(", cmdDocDefault
             MENUITEM SEPARATOR
             MENUITEM "Open &Atlas\tCtrl+Alt+m",     cmdDocAtlas
-            MENUITEM "Open &Time Zone Changes\tCtrl+Alt+h", cmdDocTimezone
+            MENUITEM "Open &Time Zone Changes\tCtrl+Alt+y", cmdDocTimezone
             MENUITEM SEPARATOR
             MENUITEM "Open &Star List\tCtrl+Alt+r", cmdDocStar
             MENUITEM "Open &Orbital Elements\tCtrl+Alt+e", cmdDocOrbit
@@ -536,7 +547,8 @@ BEGIN
         MENUITEM "Show &Aspect Lines\te",       cmdGraphicsEquator
         MENUITEM "Aspect Lines Show &Glyphs\tk", cmdGraphicsAspect
         MENUITEM "Aspect Lines Dotted Based on Max &Orb\ti", cmdGraphicsModify
-        MENUITEM "Show Big Planet &Dots\td",    cmdGraphicsHouse
+        MENUITEM "Show Big &Planet Dots\td",    cmdGraphicsHouse
+        MENUITEM "Show &Degrees on Wheel\tCtrl+c", cmdGraphicsCity
         MENUITEM "Show Info &Sidebar\tAlt+t",   cmdGraphicsSidebar
     END
 END
@@ -707,6 +719,7 @@ BEGIN
         MENUITEM "&Increase Map Size\t>",       cmdScaleIncrease
         MENUITEM "&Decrease Map Size\t<",       cmdScaleDecrease
         MENUITEM SEPARATOR
+        MENUITEM "Ignore Planet &Latitudes\ta", cmdHouseSet3D
         MENUITEM "Show Detailed &World Map\tw", cmdGraphicsBmp
         MENUITEM "Show Latitude &Crossing\t0",  cmdChartModify
         MENUITEM "Only Show &Midheaven Lines\ti", cmdGraphicsModify
@@ -754,6 +767,8 @@ BEGIN
         MENUITEM "Zoom &In\tCtrl+]",            cmdZoomIn
         MENUITEM SEPARATOR
         MENUITEM "Show Lines to &Planets\tz",   cmdHouseSetIndian
+        MENUITEM "Lines are &Astro-Graph\t0",   cmdChartModify
+        MENUITEM "Ignore Planet La&titudes\ta", cmdHouseSet3D
         MENUITEM "Show &Equator\te",            cmdGraphicsEquator
         MENUITEM "Show &Degree Grid\td",        cmdGraphicsHouse
         MENUITEM SEPARATOR
@@ -828,6 +843,7 @@ BEGIN
         MENUITEM "Show Astro-Graph &Lines\ti",  cmdGraphicsModify
         MENUITEM "Show &Constellations\tF",     cmdConstellation
         MENUITEM SEPARATOR
+        MENUITEM "&Ignore Planet Latitudes\ta", cmdHouseSet3D
         MENUITEM "Show Detailed &World Map\tw", cmdGraphicsBmp
         MENUITEM "Show Sign &Boundaries\td",    cmdGraphicsHouse
         MENUITEM "Show &Equator\te",            cmdGraphicsEquator
@@ -917,7 +933,7 @@ menu_M MENU
 BEGIN
     POPUP "Text Midpoint"
     BEGIN
-        MENUITEM "&View Graphic Midpoint Chart\tv", cmdGraphics
+        MENUITEM "&View Graphic Dial Chart\tv", cmdGraphics
         MENUITEM SEPARATOR
         MENUITEM "Toggle &Comparison Chart\tc", cmdRelComparison
         MENUITEM "Print Nearest &Second\tAlt+b", cmdSecond
@@ -989,6 +1005,7 @@ BEGIN
     BEGIN
         MENUITEM "&View Graphic Astro-Graph Chart\tv", cmdGraphics
         MENUITEM SEPARATOR
+        MENUITEM "Ignore Planet &Latitudes\ta", cmdHouseSet3D
         MENUITEM "Print Nearest &Second\tAlt+b", cmdSecond
     END
 END
@@ -1095,30 +1112,30 @@ END
 // Dialog
 //
 
-dlgInfo DIALOGEX 32, 32, 393, 158
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+dlgInfo DIALOGEX 32, 32, 415, 158
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Set Chart Info"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,105,105,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,105,85,50,14
-    COMBOBOX        dcInMon,45,5,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInDay,45,20,55,70,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInYea,45,35,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInTim,45,50,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInDst,45,65,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInZon,45,80,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInLon,45,95,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcInLat,45,110,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        deInNam,45,125,110,13,ES_AUTOHSCROLL
-    EDITTEXT        deInLoc,45,140,110,13,ES_AUTOHSCROLL
-    PUSHBUTTON      "&Now",dbInNow,105,5,50,14
-    PUSHBUTTON      "&Recall",dbInSet,105,25,50,14
-    PUSHBUTTON      "Lookup &City",dbInCity,174,12,44,14
-    PUSHBUTTON      "Near&by Cities",dbInCoor,224,12,48,14
-    PUSHBUTTON      "&Time Changes",dbInChan,278,12,52,14
-    PUSHBUTTON      "&Apply Info",dbInAppl,342,12,42,14
-    LISTBOX         dlIn,174,30,210,118,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,125,105,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,125,85,50,14
+    COMBOBOX        dcInMon,45,5,75,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInDay,45,20,75,70,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInYea,45,35,75,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInTim,45,50,75,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInDst,45,65,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInZon,45,80,75,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInLon,45,95,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcInLat,45,110,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        deInNam,45,125,130,13,ES_AUTOHSCROLL
+    EDITTEXT        deInLoc,45,140,130,13,ES_AUTOHSCROLL
+    PUSHBUTTON      "&Now",dbInNow,125,5,50,14
+    PUSHBUTTON      "&Recall",dbInSet,125,25,50,14
+    PUSHBUTTON      "Lookup &City",dbInCity,195,10,44,14
+    PUSHBUTTON      "Near&by Cities",dbInCoor,245,10,48,14
+    PUSHBUTTON      "&Time Changes",dbInChan,300,10,52,14
+    PUSHBUTTON      "&Apply Info",dbInAppl,364,10,41,14
+    LISTBOX         dlIn,195,30,210,118,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Month:",IDC_STATIC,5,5,35,8
     LTEXT           "Day:",IDC_STATIC,5,20,35,8
     LTEXT           "Year:",IDC_STATIC,5,35,35,8
@@ -1129,8 +1146,8 @@ BEGIN
     LTEXT           "Latitude:",IDC_STATIC,5,115,35,8
     LTEXT           "Name:",IDC_STATIC,5,130,35,8
     LTEXT           "Location:",IDC_STATIC,5,145,35,8
-    GROUPBOX        "Atlas Lookups",IDC_STATIC,168,1,222,153
-    ICON            icon3,IDC_STATIC,120,55,21,20
+    GROUPBOX        "Atlas Lookups",IDC_STATIC,189,1,221,153
+    ICON            icon3,IDC_STATIC,140,55,20,20
 END
 
 dlgAbout DIALOG 32, 32, 268, 238
@@ -1392,7 +1409,7 @@ BEGIN
 END
 
 dlgRestrict DIALOGEX 32, 32, 371, 148
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Object Restrictions"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -1457,30 +1474,36 @@ BEGIN
     PUSHBUTTON      "Toggle Uran.",dbRe_Ru,315,75,50,14
     PUSHBUTTON      "Toggle Dwarfs",dbRe_Ry,315,91,50,14
     PUSHBUTTON      "Copy &from Transit Restriction Set",dbRT,5,130,125,14
+    PUSHBUTTON      "Recall",dbRe_YRi,200,130,50,14
     GROUPBOX        "Planets",IDC_STATIC,5,0,50,125
     GROUPBOX        "Minor Objects",IDC_STATIC,60,0,70,125
     GROUPBOX        "House Cusps",IDC_STATIC,135,0,60,135
     GROUPBOX        "Uranians",IDC_STATIC,200,0,50,110
     GROUPBOX        "Dwarfs",IDC_STATIC,255,0,55,110
-    ICON            icon3,IDC_STATIC,241,119,20,20
+    ICON            icon3,IDC_STATIC,270,120,21,20
 END
 
-dlgDefault DIALOGEX 32, 32, 393, 142
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+dlgDefault DIALOGEX 32, 32, 415, 142
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Default Chart Info"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,105,90,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,105,70,50,14
-    COMBOBOX        dcDeDst,45,5,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeZon,45,20,55,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeCor,45,35,55,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeLon,45,50,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeLat,45,65,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeElv,45,80,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        dcDeTmp,45,95,55,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        deDeNam,45,110,110,13,ES_AUTOHSCROLL
-    EDITTEXT        deDeLoc,45,126,110,13,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,125,90,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,125,70,50,14
+    COMBOBOX        dcDeDst,45,5,75,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeZon,45,20,75,115,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeCor,45,35,75,50,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeLon,45,50,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeLat,45,65,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeElv,45,80,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcDeTmp,45,95,75,35,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        deDeNam,45,110,130,13,ES_AUTOHSCROLL
+    EDITTEXT        deDeLoc,45,126,130,13,ES_AUTOHSCROLL
+    PUSHBUTTON      "Lookup &City",dbInCity,195,10,44,14
+    PUSHBUTTON      "Near&by Cities",dbInCoor,245,10,48,14
+    PUSHBUTTON      "&Time Changes",dbInChan,300,10,52,14
+    PUSHBUTTON      "&Apply Info",dbInAppl,364,10,41,14
+    LISTBOX         dlIn,195,29,210,101,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Daylight:",IDC_STATIC,5,5,35,8
     LTEXT           "Time Zone:",IDC_STATIC,5,20,37,8
     LTEXT           "Correction for Now:",IDC_STATIC,5,33,35,20
@@ -1490,13 +1513,8 @@ BEGIN
     LTEXT           "Temperat.:",IDC_STATIC,5,100,35,8
     LTEXT           "Name:",IDC_STATIC,5,116,35,8
     LTEXT           "Location:",IDC_STATIC,5,130,35,8
-    ICON            icon3,IDC_STATIC,120,25,20,20
-    PUSHBUTTON      "Lookup &City",dbInCity,174,11,44,14
-    PUSHBUTTON      "Near&by Cities",dbInCoor,224,11,48,14
-    PUSHBUTTON      "&Time Changes",dbInChan,278,11,52,14
-    PUSHBUTTON      "&Apply Info",dbInAppl,342,11,42,14
-    LISTBOX         dlIn,174,29,210,101,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
-    GROUPBOX        "Atlas Lookups",IDC_STATIC,168,0,222,136
+    GROUPBOX        "Atlas Lookups",IDC_STATIC,189,0,221,136
+    ICON            icon3,IDC_STATIC,140,25,20,20
 END
 
 dlgProgress DIALOGEX 32, 32, 172, 181
@@ -1640,7 +1658,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,205,205,50,14
     CONTROL         "Text Listing &Velocities Relative to Average Speed",dxCh_v0,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,170,10
-    COMBOBOX        dcCh_v3,105,15,70,100,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        dcCh_v3,105,15,70,110,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
     EDITTEXT        deCh_w,90,30,25,13,ES_AUTOHSCROLL
     CONTROL         "Text House &Wheel Reverses Object Order",dxCh_w0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,45,170,10
     CONTROL         "Text Aspect &Grid Shows Aspect Configurations",dxCh_g0,
@@ -1670,8 +1688,8 @@ BEGIN
     EDITTEXT        deCh_Nl,125,215,25,13,ES_AUTOHSCROLL
     EDITTEXT        deCh_Yb,140,230,25,13,ES_AUTOHSCROLL
     CONTROL         "Object Index",dr01,"Button",BS_AUTORADIOBUTTON | WS_GROUP,185,15,60,10
-    CONTROL         "Azimuth",dr02,"Button",BS_AUTORADIOBUTTON,185,25,60,10
-    CONTROL         "Altitude",dr03,"Button",BS_AUTORADIOBUTTON,185,35,60,10
+    CONTROL         "Longitude",dr02,"Button",BS_AUTORADIOBUTTON,185,25,60,10
+    CONTROL         "Latitude",dr03,"Button",BS_AUTORADIOBUTTON,185,35,60,10
     CONTROL         "Name",dr04,"Button",BS_AUTORADIOBUTTON,185,45,60,10
     CONTROL         "Brightness",dr05,"Button",BS_AUTORADIOBUTTON,185,55,60,10
     CONTROL         "Distance",dr06,"Button",BS_AUTORADIOBUTTON,185,65,60,10
@@ -1751,8 +1769,8 @@ BEGIN
     CONTROL         "Applying/Separating",dr13,"Button",BS_AUTORADIOBUTTON,185,204,78,10
     CONTROL         "Waxing/Waning",dr14,"Button",BS_AUTORADIOBUTTON,185,214,78,10
     CONTROL         "Aspects &Measure Distance",dxDi_gd,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,170,232,100,10
-    LTEXT           "Number of Aspects to Include:",IDC_STATIC,5,55,95,8
-    LTEXT           "Required Object for Aspects:",IDC_STATIC,5,70,95,8
+    LTEXT           "Number of Aspects to Include:",IDC_STATIC,5,55,97,8
+    LTEXT           "Required Object for Aspects:",IDC_STATIC,5,70,97,8
     LTEXT           "Text Columns:",IDC_STATIC,130,110,50,8
     LTEXT           "Horizontal PostScript Paper Size:",IDC_STATIC,5,190,105,8
     LTEXT           "Vertical PostScript Paper Size:",IDC_STATIC,5,205,100,8
@@ -2930,14 +2948,17 @@ BEGIN
     "1",            cmdScale1,              VIRTKEY, CONTROL, NOINVERT
     "1",            cmdHouseSetSolar,       VIRTKEY, ALT, NOINVERT
     "1",            cmdDocUpdate,           VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "1",            cmdAnimateNo_11,        VIRTKEY, SHIFT, ALT, NOINVERT
     "2",            cmdAnimateF2,           VIRTKEY, NOINVERT
     "2",            cmdScale2,              VIRTKEY, CONTROL, NOINVERT
     "2",            cmdHelpSign,            VIRTKEY, ALT, NOINVERT
     "2",            cmdDocLicense,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "2",            cmdAnimateNo_12,        VIRTKEY, SHIFT, ALT, NOINVERT
     "3",            cmdAnimateF3,           VIRTKEY, NOINVERT
     "3",            cmdScale3,              VIRTKEY, CONTROL, NOINVERT
     "3",            cmdHelpObject,          VIRTKEY, ALT, NOINVERT
     "3",            cmdDocWebsite,          VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "3",            cmdAnimateNo_13,        VIRTKEY, SHIFT, ALT, NOINVERT
     "4",            cmdAnimateF4,           VIRTKEY, NOINVERT
     "4",            cmdScale4,              VIRTKEY, CONTROL, NOINVERT
     "4",            cmdHelpAspect,          VIRTKEY, ALT, NOINVERT
@@ -3015,7 +3036,7 @@ BEGIN
     "G",            cmdSettingGraphics,     VIRTKEY, SHIFT, ALT, NOINVERT
     "H",            cmdHeliocentric,        VIRTKEY, NOINVERT
     "H",            cmdDocHelpfile,         VIRTKEY, CONTROL, NOINVERT
-    "H",            cmdDocTimezone,         VIRTKEY, CONTROL, ALT, NOINVERT
+    "H",            cmdSaveWallStretch,     VIRTKEY, CONTROL, ALT, NOINVERT
     "H",            cmdChartSector,         VIRTKEY, SHIFT, NOINVERT
     "H",            cmdHouse17,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "H",            cmdHouseSetGeodetic,    VIRTKEY, SHIFT, ALT, NOINVERT
@@ -3035,6 +3056,7 @@ BEGIN
     "K",            cmdGraphicsAspect,      VIRTKEY, NOINVERT
     "K",            cmdPen06,               VIRTKEY, CONTROL, NOINVERT
     "K",            cmdColoredText,         VIRTKEY, ALT, NOINVERT
+    "K",            cmdSaveQuick,           VIRTKEY, CONTROL, ALT, NOINVERT
     "K",            cmdChartCalendar,       VIRTKEY, SHIFT, NOINVERT
     "K",            cmdHouse01,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "K",            cmdColor,               VIRTKEY, SHIFT, ALT, NOINVERT
@@ -3043,6 +3065,7 @@ BEGIN
     "L",            cmdChartAspect,         VIRTKEY, ALT, NOINVERT
     "L",            cmdSaveWallFill,        VIRTKEY, CONTROL, ALT, NOINVERT
     "L",            cmdChartAstroGraph,     VIRTKEY, SHIFT, NOINVERT
+    "L",            cmdHouse18,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "L",            cmdChartLocal,          VIRTKEY, SHIFT, ALT, NOINVERT
     "M",            cmdGraphicsMonochrome,  VIRTKEY, NOINVERT
     "M",            cmdPen13,               VIRTKEY, CONTROL, NOINVERT
@@ -3073,8 +3096,8 @@ BEGIN
     "P",            cmdProgress,            VIRTKEY, SHIFT, ALT, NOINVERT
     "Q",            cmdGraphicsThick,       VIRTKEY, NOINVERT
     "Q",            cmdPrintSetup,          VIRTKEY, CONTROL, NOINVERT
-    "Q",            cmdWindowResizesChart,  VIRTKEY, ALT, NOINVERT
-    "Q",            cmdSaveQuick,           VIRTKEY, CONTROL, ALT, NOINVERT
+    "Q",            cmdGraphicsAntialias,   VIRTKEY, ALT, NOINVERT
+    "Q",            cmdWindowResizesChart,  VIRTKEY, CONTROL, ALT, NOINVERT
     "Q",            cmdGraphicsSquare,      VIRTKEY, SHIFT, NOINVERT
     "Q",            cmdHouse11,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "Q",            cmdChartResizesWindow,  VIRTKEY, SHIFT, ALT, NOINVERT
@@ -3087,7 +3110,7 @@ BEGIN
     "R",            cmdResTransit,          VIRTKEY, SHIFT, ALT, NOINVERT
     "S",            cmdSidereal,            VIRTKEY, NOINVERT
     "S",            cmdGraphicsAllStar,     VIRTKEY, CONTROL, NOINVERT
-    "S",            cmdSaveWallStretch,     VIRTKEY, CONTROL, ALT, NOINVERT
+    "S",            cmdGraphicsStarLine,    VIRTKEY, CONTROL, ALT, NOINVERT
     "S",            cmdChartOrbit,          VIRTKEY, SHIFT, NOINVERT
     "S",            cmdHouse10,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "S",            cmdSettingCalc,         VIRTKEY, SHIFT, ALT, NOINVERT
@@ -3177,8 +3200,10 @@ BEGIN
     VK_OEM_6,       cmdTiltSouth,           VIRTKEY, NOINVERT
     VK_OEM_6,       cmdZoomIn,              VIRTKEY, CONTROL, NOINVERT
     VK_OEM_6,       cmdRotateEast,          VIRTKEY, SHIFT, NOINVERT
+    VK_OEM_COMMA,   cmdTextDecrease,        VIRTKEY, CONTROL, NOINVERT
     VK_OEM_MINUS,   cmdSaveWire,            VIRTKEY, CONTROL, NOINVERT
     VK_OEM_MINUS,   cmdCopyWire,            VIRTKEY, SHIFT, CONTROL, NOINVERT
+    VK_OEM_PERIOD,  cmdTextIncrease,        VIRTKEY, CONTROL, NOINVERT
     VK_OEM_PLUS,    cmdChartIndian,         VIRTKEY, NOINVERT
     VK_OEM_PLUS,    cmdChartIndianS,        VIRTKEY, CONTROL, NOINVERT
     VK_OEM_PLUS,    cmdChartIndianN,        VIRTKEY, ALT, NOINVERT
@@ -3208,11 +3233,12 @@ BEGIN
     "X",            cmdParallel,            VIRTKEY, ALT, NOINVERT
     "X",            cmdSetupExtension,      VIRTKEY, CONTROL, ALT, NOINVERT
     "X",            cmdChartSphere,         VIRTKEY, SHIFT, NOINVERT
-    "X",            cmdHouse18,             VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "X",            cmdSwap12,              VIRTKEY, SHIFT, CONTROL, NOINVERT
     "X",            cmdApplying,            VIRTKEY, SHIFT, ALT, NOINVERT
     "Y",            cmdResDwarf,            VIRTKEY, NOINVERT
     "Y",            cmdPen11,               VIRTKEY, CONTROL, NOINVERT
     "Y",            cmdRelSynastry,         VIRTKEY, ALT, NOINVERT
+    "Y",            cmdDocTimezone,         VIRTKEY, CONTROL, ALT, NOINVERT
     "Y",            cmdRelBiorhythm,        VIRTKEY, SHIFT, NOINVERT
     "Y",            cmdHouse06,             VIRTKEY, SHIFT, CONTROL, NOINVERT
     "Y",            cmdRelComposite,        VIRTKEY, SHIFT, ALT, NOINVERT
@@ -3232,8 +3258,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 7,7,0,0
- PRODUCTVERSION 7,7,0,0
+ FILEVERSION 7,8,0,0
+ PRODUCTVERSION 7,8,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -3249,13 +3275,13 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "astrolog.org"
-            VALUE "FileDescription", "Astrolog 7.70 for Windows"
-            VALUE "FileVersion", "7, 7, 0, 0"
+            VALUE "FileDescription", "Astrolog 7.80 for Windows"
+            VALUE "FileVersion", "7, 8, 0, 0"
             VALUE "InternalName", "Astrolog"
-            VALUE "LegalCopyright", "Copyright (c) 2024"
+            VALUE "LegalCopyright", "Copyright (c) 2025"
             VALUE "OriginalFilename", "astrolog.exe"
             VALUE "ProductName", "Astrolog"
-            VALUE "ProductVersion", "7, 7, 0, 0"
+            VALUE "ProductVersion", "7, 8, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -3275,7 +3301,7 @@ GUIDELINES DESIGNINFO
 BEGIN
     dlgInfo, DIALOG
     BEGIN
-        RIGHTMARGIN, 373
+        RIGHTMARGIN, 395
     END
 
     dlgCommand, DIALOG
@@ -3301,7 +3327,7 @@ BEGIN
 
     dlgDefault, DIALOG
     BEGIN
-        RIGHTMARGIN, 168
+        RIGHTMARGIN, 190
         BOTTOMMARGIN, 130
     END
 

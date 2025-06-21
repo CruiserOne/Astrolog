@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: data.cpp
+** Astrolog (Version 7.80) File: data.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -86,7 +86,7 @@ US us = {
 #else
   1,
 #endif
-  0, 0, 0,
+  0, 0, 0, 0,
 #ifdef PLACALC
 #ifndef SWISS
   1,
@@ -104,7 +104,7 @@ US us = {
   0, 0, 0, 0, 0, 0, 0,
 
   // Obscure flags
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
   1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
   // Value settings
@@ -142,7 +142,7 @@ US us = {
 
   // Value subsettings
   0, 5, 200, cPart, 22, 0.0, 0.0, rDayInYear, 1.0, 1, 1, ccNone, ccNone,
-  24, 0, 0, rInvalid, 0.0, 0.0, oEar, oEar, 0, 0, BIODAYS, 0, 0, 0,
+  24, 0, 0, rInvalid, 0.0, 0.0, 0.0, oEar, oEar, 0, 0, BIODAYS, 0, 0, 0,
 
   // AstroExpressions
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -152,11 +152,11 @@ US us = {
   NULL};
 
 IS is = {
-  fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
+  fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
   NULL, {0,0,0,0,0,0,0,0,0}, NULL, NULL, NULL,
-  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0, 0, 0, 0,
-  0.0, 0.0, 0.0, 0.0, 0.0,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  0, cObj, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0, 0, 0,
+  0, 0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rAxis, 0.0, rInvalid, 0.0};
 
 CI ciCore = {11, 19, 1971, HM(11, 1),     0.0, 8.0, DEFAULT_LOC, NULL, NULL};
@@ -167,8 +167,8 @@ CI ciFour = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
 CI ciFive = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
 CI ciHexa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
 CI ciDefa = {-1, 0,  0,    0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
-CI ciTran = {1,  1,  2024, 0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
-CI ciSave = {4,  23, 2024, HMS(16,48,58), 1.0, 8.0, DEFAULT_LOC, NULL, NULL};
+CI ciTran = {1,  1,  2025, 0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
+CI ciSave = {6,  20, 2025, HMS(19,42,16), 1.0, 8.0, DEFAULT_LOC, NULL, NULL};
 CI ciGreg = {10, 15, 1582, 0.0,           0.0, 0.0, 0.0, 0.0,    NULL, NULL};
 CP cp0, cp1, cp2, cp3, cp4, cp5, cp6;
 
@@ -397,6 +397,8 @@ CONST real rZon[cZone] = {
   zonLMT, zonLMT, zonLAT};
 
 CONST char *rgszDir[4] = {"North", "East", "South", "West"};
+CONST int dxOff[4] = { 0,-1, 0, 1};
+CONST int dyOff[4] = {-1, 0, 1, 0};
 
 CONST char *szSuffix[cSign+1] = {"",
   "st", "nd", "rd", "th", "th", "th", "th", "th", "th", "th", "th", "th"};
@@ -412,12 +414,16 @@ CONST StrLookR rgZodiacOffset[] = {{"Fagan-Bradley", 0.0},
   {"Djwhal Khul", -3.619379}, {"Yukteshwar", 2.261497},
   {"J.N. Bhasin", 1.978163}, {"Galactic Center", -2.105736}, {"", 0.0}};
 
-CONST char *szNakshatra[27+1] = {"",
+CONST char *szNakshatra[cNakshat+1] = {"",
   "Ashvini", "Bharani", "Krittika", "Rohini", "Mrigashirsha", "Ardra",
   "Punarvasu", "Pushya", "Ashlesha", "Magha", "PPhalguni", "UPhalguni",
   "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
   "Mula", "PAshadha", "UAshadha", "Sravana", "Dhanishta", "Shatabhisha",
   "PBhadrapada", "UBhadrapada", "Revati"};
+
+CONST char *rgszDecan[ddMax] = {"None", "Decan Ruler", "Decan Sign",
+  "Chaldean Decan", "Egyptian Term", "Ptolemaic Term", "Navamsa",
+  "12th Harmonic", "Dwad", "Nakshatra", "Constellation"};
 
 CONST char *szEclipse[etMax] =
   {"No", "Penumbral", "Total Penumbral", "Partial", "Annular", "Total"};
@@ -667,7 +673,7 @@ CONST real rObjYear[oNorm+1] = {1.0, 0.0, 27.32166/rDayInYear,
   1.12/rDayInYear, 360.11/rDayInYear, 6.39/rDayInYear, 38.2/rDayInYear,
   24.85/rDayInYear, 32.17/rDayInYear, 20.16/rDayInYear,
   11.8623, 29.458, 84.01, 164.79, 248.54};  // Units: years
-real rObjDiam[oNorm+1] = {12756.28, 1392700.0, 3475.0,
+real rObjDiam[oNorm+1] = {12742.0168, 1392000.0, 3475.0,
   4878.8, 12103.6, 6779.0, 139822.0, 116464.0, 50724.0, 49244.0, 2376.6,
   271.37, 939.4, 545.0, 246.596, 525.4, 0.0, 0.0, 0.0,
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -904,7 +910,7 @@ CONST AI ai[cPart] = {
 
 #ifdef CONSTEL
 CONST char *szCnstlName[cCnstl+1] = {"",
-  "Andromeda", "Antilia", "Apus", "Aquarius",
+  "Andromeda", "Antlia", "Apus", "Aquarius",
   "Aquila", "Ara", "Aries", "Auriga",
   "Bootes", "Caelum", "Camelopardalis", "Cancer",
   "Canes Venatici", "Canis Major", "Canis Minor", "Capricornus",
@@ -976,6 +982,15 @@ CONST char *szCnstlGenitive[cCnstl+1] = {"",
   "is", "2ium", "", "", "1dis", "", "", "",
   "", "is", "", "!1is", "1tis", "", "", "",
   "2i1is", "", " is", " is", "1orum", "1inis", "1tis", ""};
+
+CONST int iCnstlZodiac[cSign+1] = {0,
+  7, 78, 38, 12, 46, 86, 49, 73, 72, 16, 4, 66};
+CONST real lonCnstlZodiac[cSign+2] = {0.0,
+  ZDMS(sAri, 29, 2, 44), ZDMS(sTau, 23, 23, 20), ZDMS(sCan, 0, 0, 0),
+  ZDMS(sCan, 27, 54, 38), ZDMS(sLeo, 18, 34, 4), ZDMS(sVir, 23, 27, 53),
+  ZDMS(sSco, 8, 22, 30), ZDMS(sSag, 2, 5, 21), ZDMS(sSag, 7, 46, 49),
+  ZDMS(sSag, 26, 19, 44), ZDMS(sCap, 29, 49, 33), ZDMS(sAqu, 26, 46, 45),
+  ZDMS(sPis, 22, 26, 21)};
 #endif // CONSTEL
 
 

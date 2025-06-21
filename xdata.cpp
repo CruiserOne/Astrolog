@@ -1,8 +1,8 @@
 /*
-** Astrolog (Version 7.70) File: xdata.cpp
+** Astrolog (Version 7.80) File: xdata.cpp
 **
 ** IMPORTANT NOTICE: Astrolog and all chart display routines and anything
-** not enumerated below used in this program are Copyright (C) 1991-2024 by
+** not enumerated below used in this program are Copyright (C) 1991-2025 by
 ** Walter D. Pullen (Astara@msn.com, http://www.astrolog.org/astrolog.htm).
 ** Permission is granted to freely use, modify, and distribute these
 ** routines provided these credits and notices remain unmodified with any
@@ -48,7 +48,7 @@
 ** Initial programming 8/28-30/1991.
 ** X Window graphics initially programmed 10/23-29/1991.
 ** PostScript graphics initially programmed 11/29-30/1992.
-** Last code change made 4/22/2024.
+** Last code change made 6/19/2025.
 */
 
 #include "astrolog.h"
@@ -67,10 +67,10 @@ GS gs = {
 #else
   ftBmp,
 #endif
-  fTrue, fTrue, fFalse, fFalse, fTrue, 000000, 0, 0, 0, 0, 0, 0,
+  fTrue, fTrue, fFalse, fFalse, fTrue, fTrue, 000000, 0, 0, 0, 0, 0, 0,
   fFalse, fTrue, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
   fFalse, fFalse, fFalse, fFalse, fFalse, fFalse, fTrue, fFalse, fFalse,
-  fFalse, fFalse,
+  fFalse, fFalse, fFalse,
   DEFAULTX, DEFAULTY,
 #ifdef WIN
   -10,
@@ -85,14 +85,14 @@ GI gi = {
   0, fFalse, -1,
   NULL, 0, NULL, NULL, 0.0, fFalse, fFalse, 1.0,
   2, 1, 1, 1, 1, 20, 10, 618229, kWhite, kBlack, kLtGray, kDkGray, 0, 0, 0, 0,
-  -1, -1, NULL, 0, 0, NULL,
+  -1, -1, NULL, 0, 0, NULL, NULL,
   fTrue, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL}, {0, 0, 0, NULL},
   {0, 0, 0, NULL},
 #ifdef SWISS
   NULL, 0,
 #endif
 #ifdef ISG
-  fFalse, 1, DEFAULTX, DEFAULTY,
+  kMagenta, fFalse, 1, DEFAULTX, DEFAULTY,
 #endif
 #ifdef X11
   NULL, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -112,14 +112,14 @@ GI gi = {
 WI wi = {
   (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, (HMENU)NULL, (HACCEL)NULL, hdcNil,
   hdcNil, hdcNil, (HWND)NULL, (HPEN)NULL, (HBRUSH)NULL, (HFONT)NULL,
-  (HBITMAP)NULL, (HBITMAP)NULL, (HANDLE)NULL,
+  (HBITMAP)NULL, (HBITMAP)NULL, (HBITMAP)NULL, (HANDLE)NULL,
   0, 0, 0, 0, 0, 0, 0, -1, -1,
   0, 0, 0, -1, fFalse, fTrue, fFalse, fFalse, fTrue, fFalse, fFalse, fFalse,
   1, fFalse, {0, 0, 0, 0}, fFalse, fFalse, {0, 0, 0, NULL},
 
   // Window user settings.
   fTrue, fTrue, fFalse, fTrue, fFalse, fFalse, fFalse, fFalse, fFalse, fFalse,
-  0, kBlack, 1000};
+  fFalse, 0, 1000};
 
 OPENFILENAME ofn = {
   sizeof(OPENFILENAME), (HWND)NULL, (HINSTANCE)NULL, NULL, NULL, 0, 1, NULL,
@@ -144,9 +144,9 @@ char *szFileTemp = szFileTempCore;
 #ifdef WCLI
 WI wi = {
   (HINSTANCE)NULL, (HWND)NULL, (HWND)NULL, hdcNil, hdcNil, (HPEN)NULL,
-  (HBRUSH)NULL, (HBITMAP)NULL, (HBITMAP)NULL,
+  (HBRUSH)NULL, (HBITMAP)NULL, (HBITMAP)NULL, (HBITMAP)NULL,
   0, 0, fFalse, fFalse, fFalse, fFalse, fFalse, 0, 0, 0,
-  {0, 0, 0, NULL}, kLtGray};
+  {0, 0, 0, NULL}};
 #endif
 
 // Color tables for Astrolog's graphics palette.
@@ -223,7 +223,7 @@ char xkey[10];
 ******************************************************************************
 */
 
-CONST char *szDrawSign[cSign+2] = {"",
+CONST char *szDrawSign[cSign+3] = {"",
   "ND4HU2HLGDFBR6EUHLGD2G",                 // Aries
   "BL3D2F2R2E2U2H2NE2L2NH2G2",              // Taurus
   "BLU3LHBR7GLNL3D6NL3RFBL7ERU3",           // Gemini
@@ -236,9 +236,10 @@ CONST char *szDrawSign[cSign+2] = {"",
   "BH3BLED4FND2EU2EUFNDERFDGLNHF2D2G",      // Capricorn #1
   "BG4EUEDFDEUEDFDEUEBU5GDGUHUGDGUHUGDG",   // Aquarius
   "NL4NR4BH4F2D4G2BR8H2U4E2",               // Pisces
-  "BH4RFR2ER3G3D2GDFR2EU2HL3G2DG"};         // Capricorn #2
+  "BH4RFR2ER3G3D2GDFR2EU2HL3G2DG",          // Capricorn #2
+  "BH4BRD3NG2NRD4FR2EU2NE2NU5LH2"};         // Ophiuchus
 
-CONST char *szDrawSign2[cSign+2] = {"",
+CONST char *szDrawSign2[cSign+3] = {"",
   "BD8U7HU3HU2H2L2G2D2F2BR12E2U2H2L2G2D2GD3G",      // Aries
   "BH6BU2FDFRFNR4GLGDGD4FDFRFR4EREUEU4HUHLHEREUE",  // Taurus
   "BL3U6LHLHBR14GLGLNL6D12NL6RFRFBL14ERERU6",       // Gemini
@@ -252,9 +253,10 @@ CONST char *szDrawSign2[cSign+2] = {"",
   "BG8EUE2UEDFD2FDEUE2UEDFD2FDEUE2UEBU10GDG2DGUHU2HUGDG2DGUHU2HUGDG2DG",
     // Aquarius
   "NL8NR8BH8F3DFD6GDG3BR16H3UHU6EUE3",              // Pisces
-  "BH8RFRFR4ER2ER4G5DGD2GDGD2F2R4E2U4H2L6G4DGDG"};  // Capricorn #2
+  "BH8RFRFR4ER2ER4G5DGD2GDGD2F2R4E2U4H2L6G4DGDG",   // Capricorn #2
+  ""};                                              // Ophiuchus
 
-CONST char *szDrawSign3[cSign+2] = {"",
+CONST char *szDrawSign3[cSign+3] = {"",
   "BD12U10HU4HU2HU2H3L3G3D3F3BR18E3U3H3L3G3D2GD2GD4",      // Aries
   "BL9D6FDF3RFR6ERE3UEU6HUH3LHNL6ERE3UEBL18FDF3RFGLG3DG",  // Taurus
   "BL4U9L2HLH2BR21G2LGL2NL9D18NL9R2FRF2BL21E2RER2U9",      // Gemini
@@ -270,8 +272,9 @@ CONST char *szDrawSign3[cSign+2] = {"",
   "BG12E2UEUEUE2D2FDFDFD2E2UEUEUE2D2FDFDFD2E2UEUEUE2BU15"
     "G2DGDGDG2U2HUHUHU2G2DGDGDG2U2HUHUHU2G2DGDGDG2",       // Aquarius
   "NL12NR12BH12F4DFDFD8GDGDG4BR24H4UHUHU8EUEUE4",          // Pisces
-  "BH12RFRFR2FR6ER2ER2ER4G8DGD3GDGDGD3F3R6E3U6H3L8GLG4DGDGDG2"};
+  "BH12RFRFR2FR6ER2ER2ER4G8DGD3GDGDGD3F3R6E3U6H3L8GLG4DGDGDG2",
     // Capricorn #2
+  ""};                                                     // Ophiuchus
 
 CONST char *szDrawObjectDef[objMaxG] = {
   "ND4NL4NR4U4LGLDGD2FDRFR2ERUEU2HULHL",     // Earth
@@ -815,7 +818,7 @@ LLLLGGHGHGLLLGLDLLLLHLLGHGLLLLLLLLLLLLLLHLGLLLLLLLLLLLLLL",
 CONST char *szDrawConstel[cCnstl+1] = {"",
 "550210+51DDd3r8d2Rr7d2Rr3Dd5l2d3r10uru6rUu2Rr2ur4u2RrUUu3Ll7d2l3DdLl5d2Lu2l4\
 Uul8Dd2Ll3Uul7", // Andromeda
-"660913-25d2Ll5Dl5d2l4d4LlDRRr8Uu5l6", // Antila
+"660913-25d2Ll5Dl5d2l4d4LlDRRr8Uu5l6", // Antlia
 "561804-68DDd3RRRRRr2Uu9LLLLl3Uu2Ll4", // Apus
 "362213+02Dd3Ll14DDd5RRrUUur7Dd4Rr6UUu2Ll9ul3dLl13", // Aquarius
 "562003+16Ddl3d7l3Dd9r7Dd2RRUu6r5Uu2l4u4r3Uu2l3u7Lld2l13dLl3", // Aquila
@@ -917,6 +920,160 @@ r6Uu3LLLl7", // Ursa Major
 "551309+14Dd2LLl3DdRr3d7r6DDd3RRrUu8RrUu3r5UULu3l14uLl9", // Virgo
 "560900-64Dd5RRr7Uu6LLL", // Volans
 "462100+29dl8d4r3DRr5ur5uRrDr9u2Rru3Ll5u2l6u2LL"}; // Vulpecula
+
+CONST char *szDrawConstelLine[(cCnstl+1)*2+1] = {
+"Bharani,Hamal,Sheratan,Mesarthim", "0_1_2_3", // Aries
+"Elnath,Ain,Secunda Hyadum,Prima Hyadum,Althaur,Ushakaron,Furibundus,Phaesula\
+,Aldebaran,Al Hecka", "0_1_2_3_4_5_6,3_7_8_9", // Taurus
+"Castor,taGem,Propus iotGem,upGem,Pollux,Nageba,Mebsuta,nuGem,Tejat,Propus,Al\
+ Krikab,Wasat,Mekbuda,Alhena,Kebash,Alzirr", "0_1_2_3_4,5_1_6_7,6_8_9,10_3_11\
+_12_13,11_14_15", // Gemini
+"Decapoda,Asellus Borealis,Asellus Australis,Acubens,Al Tarf", "0_1_2_3,2_4",
+// Cancer
+"Zosma,Denebola,Coxa,Algieba,Adhafera,Ras Elased Borealis,Alminhar,Alterf,Ras\
+ Elased Australis,Al Jabhah,Regulus,Tse Tseng,Shishimai", "0_1_2_0_3_4_5_6_7_\
+8_9_10,3_9_2_11_12,5_8", // Leo
+"109Vir,taVir,Heze,Porrima,Zaniah,omiVir,nuVir,Zavijava,Vindemiatrix,Auva,thV\
+ir,Spica,Syrma,Rijl al Awwa", "0_1_2_3_4_5_6_7_4,8_9_3_10_11,2_12_13",
+// Virgo
+"taLib,upLib,Zubenelakrab,Zubeneshamali,Zubenelgenubi,Brachium", "0_1_2_3_4_5\
+,2_4", // Libra
+"Fuyue,Shaula,Lesath,Girtab,io-1Sco,Sargas,etSco,ze-2Sco,Xamidimura,Wei,taSco\
+,Antares,Alniyat,Dschubba,Jabbah,Graffias,Fang,Iklil", "0_1_2_3_4_5_6_7_8_9_1\
+0_11_12_13,14_15_13_16_17", // Scorpius
+"Sephdar,Kaus Australis,Ascella,Hecatebolus,Nunki,Nanto,Kaus Borealis,Kaus Me\
+dia,Alnasl,Polis", "0_1_2_3_4_5_6_7_8_1,1_7_5_2,6_9", // Sagittarius
+"Deneb Algedi,Nashira,Dorsum,Algedi,Dabih,Pazan,Baten Algiedi,Marakk,Castra",
+"0_1_2_3_4_5_6_7_8_0", // Capricornus
+"Albali,muAqr,Sadalsuud,Sadalmelek,Seat,Sadaltager,Hydria,Sadalachbia,Ancha,E\
+kkhysis,phAqr,ps-1Aqr,Skat,ta-2Aqr,98Aqr,88Aqr,ioAqr", "0_1_2_3_4_5_6,5_7_3_8\
+_9_10_11_12_13_9,14_11_15,2_16", // Aquarius
+"phPsc,upPsc,Anunitum,Al Pherg,Torcularis Septentrionalis,Alrischa,nuPsc,Kaht\
+,Vernalis,ioPsc,laPsc,kaPsc,Simmah,thPsc", "0_1_2_0_3_4_5_6_7_8_9_10_11_12_13\
+_9", // Pisces
+"Almaak,Mirach,muAnd,nuAnd,Nembus,deAnd,Alpheratz,epAnd,zeAnd,piAnd,ioAnd,kaA\
+nd,laAnd,omiAnd", "0_1_2_3_4,1_5_6,1_9_5_7_8,9_10_11_12,10_13", // Andromeda
+"ioAnt,alAnt,epAnt", "0_1_2", // Antlia
+"gaAps,beAps,de-1Aps,alAps", "0_1_2_3", // Apus
+"Alshain,Altair,Tarazed,Delta Aquilae,Bazak,Tseen Foo,Al Thalimaim Posterior,\
+Al Thalimaim Anterior,Bered,Deneb el Okab Australis,Deneb el Okab Borealis",
+"0_1_2_3_4_5_6_7_8,9_3_7_9_10", // Aquila
+"thAra,Ara,beAra,ep-1Ara,zeAra,etAra,deAra,gaAra", "0_1_2,1_3_4_5_6_7", // Ara
+"Menkalinan,Prijipati,Capella,Bogardus,chAur,Hasseleh,Hoedus II,Maaz,Haedi",
+"0_1_2_0_3_4_5_6_2_7_8_6", // Auriga
+"zeBoo,Arcturus,Mufrid,taBoo,Izar,Princeps,Nekkar,Seginus,Hemelein Prima,Xuan\
+ge,Asellus Primus,Asellus Tertius", "0_1_2_3,1_4_5_6_7_8_1,7_9_10_11_9",
+// Bootes
+"beCae,alCae,deCae", "0_1_2", // Caelum
+"7Cam,beCam,alCam,gaCam", "0_1_2_3", // Camelopardalis
+"Cor Caroli,Asterion", "0_1", // Canes Venatici
+"Sirius,Mirzam,Adara,Wezen,Aludra,Muliphein,thCMa", "0_1_2_3_4,3_0_5_6",
+// Canis Major
+"Procyon,Gomeisa", "0_1", // Canis Minor
+"Miaplacidus,Simiram,Vathorz Posterior,qCar,Foramen,Scutulum,Avior,Drus,Canop\
+us", "0_1_2_3_4,3_5_6_7_8", // Carina
+"Segin,Ruchbah,Tsih,Schedar,Caph", "0_1_2_3_4", // Cassiopeia
+"Rigil Kentaurus,Hadar,Birdun,Muhlifain,siCen,rhCen,deCen,piCen,zeCen,Kabkent\
+ Tertia,etCen,Ke Kwan,psCen,Menkent,Kabkent Secunda,dCen,Alhakim", "0_1_2_3_4\
+_5,4_6_7,2_8_9_10_11,9_12_13_14_8_3,14_15_16", // Centaurus
+"Alvahet,Alrai,Alphirk,Alradif,Kurhah,Phicares,Erakis,Alderamin,Alagemin,Alki\
+dr", "0_1_2_0_3_4_5_6_7_2,7_8_9", // Cepheus
+"Kaffaljidhma,Menkar,muCet,xi-2Cet,Phycochroma,Mira,Baten Kaitos,Altawk,Deneb\
+ Algenubi,Deneb Kaitos,Diphda,taCet", "0_1_2_3_0_4_5_6_7_8_9_10_11_6",
+// Cetus
+"alCha,gaCha,beCha,de-2Cha", "0_1_2_3_1", // Chamaeleon
+"alCir,beCir", "0_1", // Circinus
+"Ghusn al Zaitun,gaCol,Wazn,Phact,epCol,etCol", "0_1_2_3_4,2_5", // Columba
+"Diadem,Aldafirah,Kissin", "0_1_2", // Coma Berenices
+"gaCrA,Alfecca Meridiana,beCrA,deCrA,thCrA", "0_1_2_3_4", // Corona Australis
+"ioCrB,epCrB,deCrB,gaCrB,Alphecca,Nusakan,thCrB", "0_1_2_3_4_5_6",
+// Corona Borealis
+"Alchiba,Minkar,Kraz,Algorab,Gienah", "0_1_2_3_4_1", // Corvus
+"thCrt,epCrt,Labrum,Alkes,Alsharasif,gaCrt,zeCrt,etCrt", "0_1_2_3_4_5_6_7,2_5\
+", // Crater
+"Gacrux,Acrux,Mimosa,Decrux", "0_1,2_3", // Crux
+"Deneb,nuCyg,zeCyg,Gienah Cygni,Sador,Albireo,Ruc,io-2Cyg,kaCyg", "0_1_2_3_4_\
+0,5_4_6_7_8,7_0", // Cygnus
+"Rotanev,deDel,ga-2Del,Sualocin,Deneb Dulphim", "0_1_2_3_0_4", // Delphinus
+"gaDor,alDor,zeDor,beDor,deDor", "0_1_2_3_4,3_1", // Dorado
+"Tyl,Nodus II,Grumium,Eltanin,Alwaid,Kuma,Batentaban Australis,Batentaban Bor\
+ealis,Nodus I,Aldhibain,thDra,Edasich,Thuban,Ketu,Giansar", "0_1_2_3_4_5_2,1_\
+6_7,6_8_9_10_11_12_13_14", // Draco
+"Kitalpha,deEqu,gaEqu", "0_1_2", // Equuleus
+"Cursa,muEri,nuEri,Beid,Zaurak,piEri,Rana,Ran,Azha,Al Sadr al Ketus,ta-1Eri,t\
+a-3Eri,ta-4Eri,ta-5Eri,ta-6Eri,ta-8Eri,ta-9Eri,up-1Eri,Theemin,Beemim,up-4Eri\
+,gEri,eEri,Acamar,ioEri,kaEri,chEri,Achernar", "0_1_2_3_4_5_6_7_8_9_10_11_12_\
+13_14_15_16_17_18_19_20_21_22_23_24_25_26_27", // Eridanus
+"Fornacis,beFor,nuFor", "0_1_2", // Fornax
+"zeGru,epGru,Gruid,Alnair,de-1Gru,laGru,Aldhanab", "0_1_2_3_4_2,4_5_6",
+// Grus
+"omiHer,xiHer,Melkarth,Masym,Sarin,Ras Algethi,Kornephoros,gaHer,Kajam omeHer\
+,Al Jathiyah,Rukbalgethi Genubi,rhHer,Fudail,Kajam epsHer,Rutilicus,Sofian,si\
+Her,Rukbalgethi Shemali,phHer,chHer", "0_1_2_3_4_5_6_7_8,9_10_11_12_13_14_15_\
+16_17_18_19,12_15,4_13,6_14", // Hercules
+"alHor,ioHor,etHor,zeHor,muHor,beHor", "0_1_2_3_4_5", // Horologium
+"Sataghni,Cauda Hydrae,beHya,xiHya,Pleura,muHya,laHya,up-2Hya,Zhang,Alphard,i\
+oHya,thHya,Hydrobius,Ashlesha,Mautinah,Al Minliar al Shuja,etHya", "0_1_2_3_4\
+_5_6_7_8_9_10_11_12_13_14_15_16_13", // Hydra
+"alHyi,beHyi,gaHyi", "0_1_2_0", // Hydrus
+"alInd,etInd,beInd,deInd,thInd", "0_1_2_3_4_0", // Indus
+"5Lac,alLac,beLac,4Lac,2Lac,6Lac,1Lac", "0_1_2_3_0_4_5_6", // Lacerta
+"Praecipua,beLMi,21LMi", "0_1_2", // Leo Minor
+"Arneb,zeLep,etLep,deLep,gaLep,Nihal,Sasin,muLep,laLep", "0_1_2_3_4_5_0_7_6_5\
+,7_8", // Lepus
+"Kakkab,zeLup,epLup,Thusia,Hilasmus,Kekouan,etLup,chLup,ph-1Lup", "0_1_2_3_4_\
+5,1_6_7_8_6_3", // Lupus
+"Alvashak,Maculosa,Alsciaukat,21Lyn,15Lyn,2Lyn", "0_1_2_3_4_5", // Lynx
+"Vega,ep-2Lyr,ze-2Lyr,de-2Lyr,Sulaphat,Sheliak", "0_1_2_3_4_5_2_0", // Lyra
+"alMen,gaMen,etMen,beMen", "0_1_2_3", // Mensa
+"alMic,gaMic,epMic,th-1Mic", "0_1_2_3", // Microscopium
+"alMon,zeMon,deMon,beMon,gaMon,18Mon,epMon,13Mon", "0_1_2_3_4,2_5_6_7_5",
+// Monoceros
+"alMus,beMus,deMus,gaMus,epMus,laMus", "0_1_2_3_0_4_5", // Musca
+"deNor,epNor,ga-2Nor,etNor", "0_1_2_3_0", // Norma
+"beOct,deOct,nuOct", "0_1_2_0", // Octans
+"Sinistra,Al Durajah,Celbalrai,Rasalhague,Helkath,Marfik,Yed Prior,Yed Poster\
+ior,Han,Sabik,Imad,45Oph", "0_1_2_3_4_5_6_7_8_9_10_11,2_9,4_8", // Ophiuchus
+"ch-2Ori,xiOri,nuOri,muOri,Betelgeuse,Meissa,Bellatrix,Tabit,pi-2Ori,pi-1Ori,\
+omi-1Ori,pi-5Ori,pi-6Ori,Saiph,Alnitak,Alnilam,Mintaka,Rigel", "0_1_2,1_3_4_5\
+_6_7_8_9_10,7_11_12,13_14_15_16_17,14_4_6_16", // Orion
+"dePav,Peacock,gaPav,bePav,laPav,xiPav,etPav,epPav,zePav", "0_1_2_3_0_4_5_6_0\
+_7,0_8", // Pavo
+"pi-2Peg,Matar,Scheat,psPeg,Algenib,Markab,Homam,Biham,Enif,muPeg,Sadalbari,i\
+oPeg,Jih", "0_1_2_3_4_5_6_7_8,5_2_9_10_11_12", // Pegasus
+"laPer,muPer,dePer,Mirfak,gaPer,Miram,taPer,ioPer,thPer,phPer,Misam,Algol,Gor\
+gona Tertia,epPer,Menkib,zePer,Atik", "0_1_2_3_4_5_6_7_8_9,4_6,3_7_8_9,7_10_1\
+1_12,11_13_14_15_16,2_13", // Perseus
+"Ankaa,bePhe,gaPhe,dePhe,Wurren,epPhe", "0_1_2_3_4_1_5_0", // Phoenix
+"bePic,gaPic,alPic", "0_1_2", // Pictor
+"Fomalhaut,epPsA,muPsA,thPsA,ioPsA,Tien Kang,gaPsA,Aboras", "0_1_2_3_4_2_5_6_\
+7_0", // Piscis Austrinus
+"Naos,Turais,Azmidiske,k01Pup,pPup,Ahadi,Kaimana,Al Rihla", "0_1_2_3_4_5_6_7",
+// Puppis
+"gaPyx,alPyx,bePyx", "0_1_2", // Pyxis
+"alRet,beRet,deRet,ioRet,epRet", "0_1_2_3_4_0", // Reticulum
+"Sham,deSge,beSge,gaSge", "0_1_2,1_3", // Sagitta
+"alScl,deScl,gaScl,beScl", "0_1_2_3", // Sculptor
+"alSct,beSct,deSct,gaSct", "0_1_2_3_0", // Scutum
+"Chow,kaSer,Ainalhai,Qin,Unukalhai,Nulla Pambu,Leiolepis", "0_1_2_0_3_4_5_6",
+// Serpens Caput
+"Alya,Gliese 710,Nehushtan,nuSer", "0_1_2_3", // Serpens Cauda
+"deSex,beSex,alSex,gaSex", "0_1_2_3", // Sextans
+"epTel,alTel,zeTel", "0_1_2", // Telescopium
+"Ras Mutallah,beTri,gaTri", "0_1_2_0", // Triangulum
+"Atria,beTrA,gaTrA", "0_1_2_0", // Triangulum Australe
+"alTuc,gaTuc,be-2Tuc,zeTuc,epTuc", "0_1_2_3_4_0", // Tucana
+"Alkaid,Mizar,Alioth,Megrez,Phecda,Merak,Dubhe,23UMa,Muscida,upUMa,Al Haud,Ta\
+litha Australis,Talitha,El Kophrah,psUMa,Tania Australis,Tania Borealis,Alula\
+ Borealis,Alula Australis", "0_1_2_3_4_5_6_7_8_9_10_11_12,3_6,7_9_5,4_13_14_1\
+5_16,13_17_18", // Ursa Major
+"Polaris,Yildun,Urodelus,Alifa Al Farkadain,etUMi,Pherkad,Kochab", "0_1_2_3_4\
+_5_6_3", // Ursa Minor
+"Suhail al Muhlif,Alsuhail,psVel,qVel,Peregrini,Tseen Ke,Markeb,Alsephina", "\
+0_1_2_3_4_5_6_7_0", // Vela
+"alVol,beVol,epVol,deVol,ga-2Vol", "0_1_2_3_4_2_0", // Volans
+"Anser,12Vul", "0_1", // Vulpecula
+NULL};
 #endif // CONSTEL
 #endif // GRAPH
 
