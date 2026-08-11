@@ -1019,11 +1019,24 @@ void DrawEllipse2(int x1, int y1, int x2, int y2)
     }
 #endif
 #ifdef META
-    else {
+    else if (gs.ft == ftWmf) {
       gi.kiFillDes = gi.kiCur;    // Specify a solid fill brush.
       MetaSelect();
       MetaEllipse(x1+gi.nPenWid/3, y1+gi.nPenWid/3,
         x2+1+gi.nPenWid/3, y2+1+gi.nPenWid/3);
+    }
+#endif
+#ifdef SVG
+    else if (gs.ft == ftSVG) {
+      SvgSetColor();
+      if (rx == ry)
+        fprintf(gi.file,
+          "<circle r=\"%d\" cx=\"%d\" cy=\"%d\" fill=\"%s\"/>\n",
+          rx, x, y, SzColorHTML(gi.kiSvgAct));
+      else
+        fprintf(gi.file, "<ellipse rx=\"%d\" ry=\"%d\" "
+          "cx=\"%d\" cy=\"%d\" fill=\"%s\"/>\n",
+          rx, ry, x, y, SzColorHTML(gi.kiSvgAct));
     }
 #endif
   }
