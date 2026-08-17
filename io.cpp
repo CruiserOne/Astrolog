@@ -331,7 +331,7 @@ flag FOutputData(void)
     return FOutputDaedalusStar();
 #endif
 
-  file = fopen(is.szFileOut, "w");  // Create and open the file for output.
+  file = FEqSz(is.szFileOut, "-") ? stdout : fopen(is.szFileOut, "w");
   if (file == NULL) {
     sprintf(sz, "File '%s' can not be created.", is.szFileOut);
     PrintError(sz);
@@ -342,7 +342,8 @@ flag FOutputData(void)
     // Write the chart information to the file.
 
     if (Mon < 1) {
-      fclose(file);
+      if (file != stdout)
+        fclose(file);
       PrintError("Can't output chart with no time/space to file.");
       return fFalse;
     }
@@ -438,7 +439,10 @@ flag FOutputData(void)
 
   for (i = 0; i < is.cszComment; i++)
     fprintf(file, "%s%s\n", us.fWriteOld ? "" : "; ", is.rgszComment[i]);
-  fclose(file);
+  if (file == stdout)
+    fflush(file);
+  else
+    fclose(file);
   return fTrue;
 }
 

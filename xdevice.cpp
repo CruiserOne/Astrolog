@@ -1308,8 +1308,11 @@ flag BeginFileX()
         WaitForSingleObject(wi.hMutex, 1000);
     }
 #endif
-    gi.file = fopen(gi.szFileOut, (gs.ft == ftBmp && (gs.chBmpMode == 'B' ||
-      gs.chBmpMode == 'P')) || gs.ft == ftWmf ? "wb" : "w");
+    if (gs.ft == ftSVG && FEqSz(gi.szFileOut, "-"))
+      gi.file = stdout;
+    else
+      gi.file = fopen(gi.szFileOut, (gs.ft == ftBmp && (gs.chBmpMode == 'B' ||
+        gs.chBmpMode == 'P')) || gs.ft == ftWmf ? "wb" : "w");
     if (gi.file != NULL)
       break;
 #ifdef WIN
@@ -1373,7 +1376,11 @@ void EndFileX()
     WriteWire(gi.file);
   }
 #endif
-  fclose(gi.file);
+  if (gi.file == stdout)
+    fflush(gi.file);
+  else
+    fclose(gi.file);
+  gi.file = NULL;
 #ifdef WIN
   if (wi.fAutoSave && wi.hMutex != NULL)
     ReleaseMutex(wi.hMutex);

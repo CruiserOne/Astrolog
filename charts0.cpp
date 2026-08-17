@@ -417,6 +417,7 @@ void DisplaySwitches(void)
   PrintS(" _ix: Swap contents of chart #1 and chart #2.");
   PrintS(" _o <file> [..]: Write parameters of current chart to file.");
   PrintS(" _o0 <file> [..]: Like _o but output planet/house positions.");
+  PrintS("  Use '-' as the file to write planet/house positions to stdout.");
   PrintS(" _ol <file>: Write current chart list to Astrolog chart list file.");
   PrintS(" _oa <file>: Write current chart or chart list to AAF format file.");
   PrintS(" _oq <file>: Write current chart list to Quick*Chart format file.");
@@ -1811,6 +1812,7 @@ void DisplaySwitchesX(void)
   PrintS(" _X3: Create Daedalus wireframe vector file instead of bitmap.");
 #endif
   PrintS(" _Xo <file>: Write output bitmap or graphic to specified file.");
+  PrintS("  For SVG output, use '-' as the file to write SVG to stdout.");
 #ifdef X11
   PrintS(" _XB: Display X chart on root instead of in a separate window.");
 #endif
